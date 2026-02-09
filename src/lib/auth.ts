@@ -1,11 +1,8 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { skipCSRFCheck } from "@auth/core";
-import type { NextAuthConfig } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
-export const authConfig: NextAuthConfig = {
-  skipCSRFCheck,
-  trustHost: true,
+export const authConfig: NextAuthOptions = {
   pages: {
     signIn: "/login",
     signOut: "/logout",
@@ -60,7 +57,7 @@ export const authConfig: NextAuthConfig = {
     },
   },
   providers: [
-    Credentials({
+    CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -126,4 +123,6 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET || "tesotunes-secret-key-change-in-production-2026",
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+const handler = NextAuth(authConfig);
+export { handler as GET, handler as POST };
+export default handler;

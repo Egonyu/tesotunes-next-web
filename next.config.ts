@@ -2,13 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker deployment
-  output: "standalone",
-
-  // Set the turbopack root to the frontend directory
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+  // Use default output for Vercel deployment (remove "standalone" for Vercel)
+  // output: "standalone",
 
   // Image optimization configuration
   images: {

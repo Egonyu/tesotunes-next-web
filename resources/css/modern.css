@@ -1,0 +1,480 @@
+/* TesoTunes Modern Design System */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    /* Hide scrollbars but keep functionality */
+    .sidebar-scroll {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .sidebar-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* CSS Variables for Theme */
+    :root {
+        /* Light Mode Colors */
+        --brand-green: #10B981;
+        --brand-purple: #8A2BE2;
+        --brand-blue: #2E77D0;
+        --brand-orange: #FFA500;
+        
+        /* Light Mode Backgrounds */
+        --background: #FFFFFF;
+        --background-secondary: #F9FAFB;
+        --card: #F3F4F6;
+        --card-glass: rgba(255, 255, 255, 0.95);
+        
+        /* Light Mode Borders & Dividers */
+        --border: #E5E7EB;
+        --border-secondary: #D1D5DB;
+        
+        /* Light Mode Text */
+        --text-primary: #111827;
+        --text-secondary: #6B7280;
+        --text-tertiary: #9CA3AF;
+        
+        /* Light Mode Text Classes */
+        color: #111827;
+    }
+    
+    .dark {
+        /* Dark Mode Colors (same brand colors) */
+        --brand-green: #1DB954;
+        --brand-purple: #8A2BE2;
+        --brand-blue: #2E77D0;
+        --brand-orange: #FFA500;
+        
+        /* Dark Mode Backgrounds */
+        --background: #0D1117;
+        --background-secondary: #0D1117;
+        --card: #161B22;
+        --card-glass: rgba(22, 27, 34, 0.6);
+        
+        /* Dark Mode Borders & Dividers */
+        --border: #30363D;
+        --border-secondary: #21262D;
+        
+        /* Dark Mode Text */
+        --text-primary: #E6EDF3;
+        --text-secondary: #8B949E;
+        --text-tertiary: #6E7681;
+        
+        /* Dark Mode Text Classes */
+        color: #E6EDF3;
+    }
+    
+    body {
+        font-family: 'Sora', sans-serif;
+        background-color: #FFFFFF;
+        color: #111827;
+    }
+    
+    body.dark {
+        background-color: #0D1117;
+        color: #E6EDF3;
+    }
+    
+    /* Material Symbols Configuration */
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    
+    .material-symbols-outlined.filled {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+}
+
+@layer components {
+    /* ===== Surface/Background Utility Classes ===== */
+    /* Use these instead of hardcoded bg-gray-800 or bg-[#161B22] */
+    
+    .surface {
+        @apply bg-white dark:bg-[#161B22];
+    }
+    
+    .surface-secondary {
+        @apply bg-gray-50 dark:bg-[#0D1117];
+    }
+    
+    .surface-elevated {
+        @apply bg-white dark:bg-[#1C2128];
+    }
+    
+    .surface-sunken {
+        @apply bg-gray-100 dark:bg-[#0D1117];
+    }
+    
+    .surface-hover {
+        @apply bg-gray-100 dark:bg-[#21262D];
+    }
+    
+    .surface-input {
+        @apply bg-gray-50 dark:bg-[#0D1117];
+    }
+    
+    .border-default {
+        @apply border-gray-200 dark:border-[#30363D];
+    }
+    
+    .text-default {
+        @apply text-gray-900 dark:text-white;
+    }
+    
+    .text-muted {
+        @apply text-gray-600 dark:text-gray-400;
+    }
+    
+    /* Header & Navigation */
+    .header-glass {
+        @apply sticky top-0 z-30 backdrop-blur-lg border-b;
+        background-color: var(--card-glass);
+        border-color: var(--border);
+    }
+    
+    .nav-link {
+        @apply flex items-center space-x-1 text-sm font-semibold transition-colors;
+        color: var(--text-secondary);
+    }
+    
+    .nav-link:hover {
+        color: var(--text-primary);
+    }
+    
+    .nav-link.active {
+        color: var(--brand-green);
+    }
+    
+    /* Cards */
+    .card {
+        @apply rounded-lg shadow-sm border;
+        background-color: var(--card);
+        border-color: var(--border);
+    }
+    
+    .card-glass {
+        @apply rounded-lg backdrop-blur-lg border;
+        background-color: var(--card-glass);
+        border-color: var(--border);
+    }
+    
+    .card-hover {
+        @apply transition-all duration-300 hover:-translate-y-1;
+    }
+    
+    .card-hover:hover {
+        border-color: var(--brand-green);
+    }
+    
+    /* Buttons */
+    .btn {
+        @apply font-semibold rounded-full transition-colors inline-flex items-center justify-center;
+    }
+    
+    .btn-primary {
+        @apply bg-brand-green text-white hover:bg-green-500;
+    }
+    
+    .btn-secondary {
+        @apply border text-white hover:bg-white/10;
+        border-color: var(--border);
+    }
+    
+    .btn-ghost {
+        @apply text-white hover:bg-white/10;
+    }
+    
+    /* Sidebar Navigation */
+    .sidebar-link {
+        @apply flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors;
+    }
+    
+    .sidebar-link:hover {
+        background-color: var(--card);
+    }
+    
+    .sidebar-link.active {
+        background-color: var(--card);
+        color: var(--brand-green);
+    }
+    
+    .sidebar-link .material-symbols-outlined {
+        color: var(--text-secondary);
+    }
+    
+    .sidebar-link.active .material-symbols-outlined {
+        color: var(--brand-green);
+    }
+    
+    /* Form Elements */
+    .form-input {
+        @apply rounded-full border text-sm focus:ring-brand-green focus:border-brand-green;
+        background-color: var(--background);
+        border-color: var(--border);
+        color: var(--text-primary);
+    }
+    
+    .form-input::placeholder {
+        color: var(--text-secondary);
+    }
+    
+    /* Sections */
+    .section-header {
+        @apply flex justify-between items-center mb-4;
+    }
+    
+    .section-title {
+        @apply text-2xl font-bold text-primary dark:text-white;
+    }
+    
+    .section-link {
+        @apply text-sm font-semibold flex items-center transition-colors;
+        color: var(--text-secondary);
+    }
+    
+    .section-link:hover {
+        color: var(--text-primary);
+    }
+    
+    /* Horizontal Scroll */
+    .horizontal-scroll {
+        @apply flex space-x-6 overflow-x-auto pb-4;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .horizontal-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Album/Playlist Cards */
+    .media-card {
+        @apply flex-shrink-0 w-48;
+    }
+    
+    .media-card-image {
+        @apply w-full h-48 rounded-lg object-cover;
+    }
+    
+    .play-button-overlay {
+        @apply absolute bottom-2 right-2 bg-brand-green text-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110;
+    }
+    
+    /* Artist Cards */
+    .artist-card {
+        @apply flex-shrink-0 w-40 p-4 rounded-lg text-center transition-all duration-300 hover:-translate-y-1;
+        background-color: var(--card);
+    }
+    
+    .artist-card:hover {
+        border-color: var(--brand-purple);
+    }
+    
+    .artist-avatar {
+        @apply w-32 h-32 rounded-lg mx-auto mb-3 object-cover;
+    }
+    
+    .artist-scroll-container {
+        @apply flex space-x-4 overflow-x-auto pb-4 scroll-smooth;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .artist-scroll-container::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        @apply grid grid-cols-2 md:grid-cols-4 gap-6 text-center;
+    }
+    
+    .stat-item {
+        @apply text-3xl font-bold;
+    }
+    
+    /* Gradient Backgrounds */
+    .gradient-hero {
+        @apply bg-gradient-to-br from-brand-purple/20 via-brand-blue/20 to-brand-green/20 relative overflow-hidden;
+    }
+    
+    .dark .gradient-hero {
+        @apply bg-gradient-to-br from-brand-purple/30 via-brand-blue/30 to-brand-green/30;
+    }
+    
+    .gradient-overlay {
+        @apply absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-green-500/10;
+    }
+    
+    .dark .gradient-overlay {
+        @apply bg-gradient-to-br from-purple-500/20 via-blue-500/20 to-green-500/20;
+    }
+    
+    /* Poll/Progress Bars */
+    .poll-option {
+        @apply relative w-full rounded-lg p-3 text-sm font-medium cursor-pointer text-left transition-colors;
+        background-color: var(--border);
+    }
+    
+    .poll-option:hover {
+        opacity: 0.7;
+    }
+    
+    .poll-progress {
+        @apply absolute top-0 left-0 h-full rounded-lg;
+        background-color: var(--brand-green);
+    }
+    
+    .poll-progress.secondary {
+        background-color: rgba(16, 185, 129, 0.3);
+    }
+    
+    /* Activity/Post Cards */
+    .post-card {
+        @apply rounded-lg shadow-md border;
+        background-color: var(--card);
+        border-color: var(--border);
+    }
+    
+    .post-header {
+        @apply p-4;
+    }
+    
+    .post-actions {
+        @apply flex justify-around p-2 border-t;
+        border-color: var(--border);
+        color: var(--text-secondary);
+    }
+    
+    .post-action-btn {
+        @apply flex items-center space-x-2 p-2 rounded-lg transition-colors hover:bg-white/10;
+    }
+    
+    /* Verified Badge */
+    .verified-badge {
+        @apply text-brand-blue text-base ml-1;
+    }
+    
+    /* Sidebar Widgets */
+    .widget {
+        @apply p-4 rounded-lg border;
+        background-color: var(--card);
+        border-color: var(--border);
+    }
+    
+    .widget-title {
+        @apply text-lg font-bold mb-4;
+    }
+    
+    /* Event Cards */
+    .event-date-badge {
+        @apply flex-shrink-0 text-center p-2 rounded-md;
+        background-color: var(--background);
+    }
+    
+    /* Store Product Cards */
+    .product-card {
+        @apply rounded-lg overflow-hidden border border-transparent transition-all duration-300;
+        background: var(--card);
+    }
+    
+    .product-card:hover {
+        border-color: var(--border);
+        transform: translateY(-4px);
+        background: var(--card);
+    }
+    
+    .product-image {
+        @apply w-full aspect-square object-cover;
+    }
+    
+    /* Feature Cards */
+    .feature-card {
+        @apply p-6 rounded-lg border flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1;
+        background-color: var(--card);
+        border-color: var(--border);
+    }
+    
+    .feature-card.green:hover {
+        border-color: var(--brand-green);
+    }
+    
+    .feature-card.purple:hover {
+        border-color: var(--brand-purple);
+    }
+    
+    .feature-card.blue:hover {
+        border-color: var(--brand-blue);
+    }
+    
+    .feature-card.orange:hover {
+        border-color: var(--brand-orange);
+    }
+    
+    /* Theme Toggle Button */
+    .theme-toggle {
+        @apply p-2 rounded-full transition-colors;
+    }
+    
+    .theme-toggle:hover {
+        background-color: var(--background-secondary);
+    }
+}
+
+@layer utilities {
+    /* Text Colors with CSS Variables */
+    .text-primary {
+        color: var(--text-primary);
+    }
+    
+    .text-secondary {
+        color: var(--text-secondary);
+    }
+    
+    .text-tertiary {
+        color: var(--text-tertiary);
+    }
+    
+    /* Background Colors */
+    .bg-primary {
+        background-color: var(--background);
+    }
+    
+    .bg-secondary {
+        background-color: var(--background-secondary);
+    }
+    
+    .bg-card {
+        background-color: var(--card);
+    }
+    
+    /* Border Colors */
+    .border-primary {
+        border-color: var(--border);
+    }
+    
+    .border-secondary {
+        border-color: var(--border-secondary);
+    }
+    
+    /* Truncate with tooltip */
+    .truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .truncate-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+}

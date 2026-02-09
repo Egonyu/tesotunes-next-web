@@ -1,0 +1,47 @@
+{
+  "squash_analysis": {
+    "timestamp": "2025-11-05T11:06:00Z",
+    "branch": "fix/migrations/squash-base",
+    "db_host": "localhost",
+    "total_migrations": 51,
+    "base_migrations": 13,
+    "patch_migrations_identified": 11
+  },
+  "consolidation_summary": {
+    "user_system_tables": {
+      "base_migration": "2025_01_10_000002_create_user_system_tables.php",
+      "patches_to_inline": 4,
+      "patches": [
+        "add_cancellation_reason_to_user_subscriptions",
+        "add_extension_fields_to_user_subscriptions",
+        "add_distribution_suspended_to_artists",
+        "add_username_to_users (data logic to seeder)"
+      ]
+    },
+    "playlist_tables": {
+      "base_migration": "2025_01_10_000006_create_playlist_tables.php",
+      "patches_to_inline": 1,
+      "patches": ["add_allow_comments_to_playlists"]
+    },
+    "credit_system_tables": {
+      "base_migration": "2025_01_10_000008_create_credit_system_tables.php",
+      "patches_to_inline": 6,
+      "patches": [
+        "add_missing_columns_to_credit_rates",
+        "add_missing_columns_to_credit_transactions",
+        "make_legacy_credit_rate_columns_nullable",
+        "add_additional_fields_to_user_credits",
+        "make_description_nullable_in_credit_transactions"
+      ]
+    },
+    "extended_modules": {
+      "base_migration": "2025_01_10_000011_create_extended_modules.php",
+      "patches_to_inline": 2,
+      "patches": [
+        "add_status_to_podcast_subscriptions",
+        "make_artwork_nullable_in_podcasts"
+      ]
+    }
+  },
+  "requires_doctrine_dbal": true
+}

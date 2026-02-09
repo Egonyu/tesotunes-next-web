@@ -1,0 +1,14 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgb(59,130,246);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:rgb(147,51,234);stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#grad2)"/>
+  <rect x="120" y="120" width="160" height="160" rx="8" fill="none" stroke="white" stroke-width="6" opacity="0.3"/>
+  <circle cx="160" cy="200" r="15" fill="white" opacity="0.3"/>
+  <circle cx="200" cy="200" r="15" fill="white" opacity="0.3"/>
+  <circle cx="240" cy="200" r="15" fill="white" opacity="0.3"/>
+  <text x="200" y="340" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle" opacity="0.5">Album Artwork</text>
+</svg>

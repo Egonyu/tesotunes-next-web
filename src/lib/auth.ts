@@ -1,4 +1,3 @@
-import NextAuth from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -135,7 +134,3 @@ export const authConfig: NextAuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET || "tesotunes-secret-key-change-in-production-2026",
 };
-
-const handler = NextAuth(authConfig);
-export { handler as GET, handler as POST };
-export default handler;

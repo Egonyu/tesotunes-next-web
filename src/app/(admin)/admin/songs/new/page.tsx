@@ -83,22 +83,22 @@ export default function CreateSongPage() {
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?per_page=1000'),
   });
 
   const { data: albums } = useQuery({
     queryKey: ['admin', 'albums', 'list'],
-    queryFn: () => apiGet<{ data: Album[] }>('/admin/albums?per_page=1000'),
+    queryFn: () => apiGet<{ data: Album[] }>('/api/admin/albums?per_page=1000'),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/songs', data, {
+      return apiPost('/api/admin/songs', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

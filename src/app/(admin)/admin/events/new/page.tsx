@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Calendar, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -90,14 +90,12 @@ export default function CreateEventPage() {
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/events', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm('/api/admin/events', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });

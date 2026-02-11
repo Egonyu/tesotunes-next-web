@@ -71,12 +71,12 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const { data: rolesData } = useQuery({
     queryKey: ['admin', 'roles'],
-    queryFn: () => apiGet<{ data: Role[] }>('/admin/roles'),
+    queryFn: () => apiGet<{ data: Role[] }>('/api/admin/roles'),
   });
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
   });
 
   useEffect(() => {

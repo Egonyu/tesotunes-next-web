@@ -30,7 +30,7 @@ export default function AdminStoreShippingPage() {
 
   const { data: zones, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'shipping'],
-    queryFn: () => apiGet<{ data: ShippingZone[] }>('/admin/store/shipping').then(r => r.data),
+    queryFn: () => apiGet<{ data: ShippingZone[] }>('/api/admin/store/shipping').then(r => r.data),
   });
 
   const deleteZone = useMutation({

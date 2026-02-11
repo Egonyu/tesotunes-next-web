@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -23,6 +23,7 @@ import {
   Loader2,
   Heart,
   Headphones,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -34,16 +35,14 @@ import {
 } from "@/hooks/useArtist";
 
 // ============================================================================
-// Step Configuration
+// Step Configuration - Simplified to 4 steps
 // ============================================================================
 
 const STEPS = [
   { id: 0, title: "Welcome", icon: Sparkles, description: "Why become an artist?" },
-  { id: 1, title: "Your Identity", icon: User, description: "Tell us about yourself" },
-  { id: 2, title: "Your Sound", icon: Music, description: "Define your artistry" },
-  { id: 3, title: "Verification", icon: Shield, description: "Verify your identity" },
-  { id: 4, title: "Get Paid", icon: Wallet, description: "Set up payouts" },
-  { id: 5, title: "Review", icon: FileText, description: "Review & submit" },
+  { id: 1, title: "Your Music", icon: Music, description: "Tell us about your artistry" },
+  { id: 2, title: "Get Paid", icon: Wallet, description: "Set up payouts" },
+  { id: 3, title: "Review", icon: FileText, description: "Review & submit" },
 ] as const;
 
 // ============================================================================
@@ -57,19 +56,24 @@ export default function BecomeArtistPage() {
 
   // Check application status
   const { data: appStatus, isLoading: statusLoading } = useArtistApplicationStatus();
-  const { data: genresData } = useAvailableGenres();
+  const { data: genresData, isLoading: genresLoading, error: genresError } = useAvailableGenres();
   const submitApplication = useSubmitArtistApplication();
 
-  // Form state
+  // Pre-fill user data from session
+  const userEmail = session?.user?.email || "";
+  const userName = session?.user?.name || "";
+  
+  // Form state - simplified and pre-filled
   const [formData, setFormData] = useState<Partial<ArtistApplicationData>>({
-    stage_name: "",
+    stage_name: userName, // Pre-fill with user's name
     bio: "",
     primary_genre: "",
     secondary_genres: [],
-    full_name: "",
+    full_name: userName, // Pre-fill with user's name
     phone: "",
     payout_method: "mtn_momo",
     mobile_money_provider: "mtn",
+    country: "UG",
     terms_accepted: false,
     artist_agreement_accepted: false,
     social_links: {},
@@ -85,7 +89,20 @@ export default function BecomeArtistPage() {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auth guard
+  // Pre-fill form when session loads - MUST be before any early returns
+  useEffect(() => {
+    if (session?.user?.name && !formData.stage_name) {
+      setFormData(prev => ({
+        ...prev,
+        stage_name: session.user.name || "",
+        full_name: session.user.name || "",
+      }));
+    }
+  }, [session?.user?.name]);
+
+  const genres = genresData?.data ?? [];
+
+  // Auth guard - these can cause early returns, so all hooks MUST be above
   if (status === "loading" || statusLoading) {
     return <LoadingScreen />;
   }
@@ -101,8 +118,6 @@ export default function BecomeArtistPage() {
   if (appStatus?.data?.status === "approved" || appStatus?.data?.is_artist) {
     redirect("/artist/dashboard");
   }
-
-  const genres = genresData?.data ?? [];
 
   const updateForm = (updates: Partial<ArtistApplicationData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -128,20 +143,21 @@ export default function BecomeArtistPage() {
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 0:
+      case 0: // Welcome
         return true;
-      case 1:
-        return !!(formData.stage_name && formData.full_name);
-      case 2:
-        return !!(formData.primary_genre && formData.bio && formData.bio.length >= 50);
-      case 3:
-        return !!(formData.phone);
-      case 4:
+      case 1: // Your Music (stage name, genre, bio)
+        return !!(
+          formData.stage_name && 
+          formData.primary_genre && 
+          formData.bio && 
+          formData.bio.length >= 50
+        );
+      case 2: // Get Paid (phone, payout)
         if (formData.payout_method === "bank") {
-          return !!(formData.bank_name && formData.bank_account);
+          return !!(formData.phone && formData.bank_name && formData.bank_account);
         }
-        return !!(formData.mobile_money_number);
-      case 5:
+        return !!(formData.phone && formData.mobile_money_number);
+      case 3: // Review (terms)
         return !!(formData.terms_accepted && formData.artist_agreement_accepted);
       default:
         return true;
@@ -195,10 +211,11 @@ export default function BecomeArtistPage() {
         mobile_money_provider: formData.mobile_money_provider,
         bank_name: formData.bank_name,
         bank_account: formData.bank_account,
-        avatar: avatarFile ?? undefined,
-        national_id_front: idFrontFile ?? undefined,
-        national_id_back: idBackFile ?? undefined,
-        selfie_with_id: selfieFile ?? undefined,
+        // Only include files if they exist
+        ...(avatarFile && { avatar: avatarFile }),
+        ...(idFrontFile && { national_id_front: idFrontFile }),
+        ...(idBackFile && { national_id_back: idBackFile }),
+        ...(selfieFile && { selfie_with_id: selfieFile }),
         terms_accepted: true,
         artist_agreement_accepted: true,
       };
@@ -266,36 +283,19 @@ export default function BecomeArtistPage() {
       <div className="mx-auto max-w-3xl px-4 py-8">
         {currentStep === 0 && <StepWelcome />}
         {currentStep === 1 && (
-          <StepIdentity
+          <StepMusic
             formData={formData}
             updateForm={updateForm}
+            genres={genres}
+            genresLoading={genresLoading}
             avatarPreview={avatarPreview}
             onAvatarChange={handleAvatarChange}
           />
         )}
         {currentStep === 2 && (
-          <StepSound
-            formData={formData}
-            updateForm={updateForm}
-            genres={genres}
-          />
-        )}
-        {currentStep === 3 && (
-          <StepVerification
-            formData={formData}
-            updateForm={updateForm}
-            idFrontFile={idFrontFile}
-            idBackFile={idBackFile}
-            selfieFile={selfieFile}
-            onIdFrontChange={(e) => handleFileChange(e, setIdFrontFile)}
-            onIdBackChange={(e) => handleFileChange(e, setIdBackFile)}
-            onSelfieChange={(e) => handleFileChange(e, setSelfieFile)}
-          />
-        )}
-        {currentStep === 4 && (
           <StepPayout formData={formData} updateForm={updateForm} />
         )}
-        {currentStep === 5 && (
+        {currentStep === 3 && (
           <StepReview
             formData={formData}
             updateForm={updateForm}
@@ -475,23 +475,44 @@ function StepWelcome() {
 }
 
 // ============================================================================
-// Step 1: Identity (Name, Stage Name, Photo)
+// Step 1: Your Music (Combined: Identity + Sound)
 // ============================================================================
 
-interface StepIdentityProps {
+interface StepMusicProps {
   formData: Partial<ArtistApplicationData>;
   updateForm: (data: Partial<ArtistApplicationData>) => void;
+  genres: Array<{ id: string; name: string; emoji: string }>;
+  genresLoading: boolean;
   avatarPreview: string | null;
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-function StepIdentity({ formData, updateForm, avatarPreview, onAvatarChange }: StepIdentityProps) {
+function StepMusic({ 
+  formData, 
+  updateForm, 
+  genres, 
+  genresLoading,
+  avatarPreview, 
+  onAvatarChange 
+}: StepMusicProps) {
+  const toggleSecondaryGenre = (genreId: string) => {
+    const current = formData.secondary_genres ?? [];
+    if (genreId === formData.primary_genre) return;
+    if (current.includes(genreId)) {
+      updateForm({ secondary_genres: current.filter((g) => g !== genreId) });
+    } else if (current.length < 5) {
+      updateForm({ secondary_genres: [...current, genreId] });
+    }
+  };
+
+  const bioLength = formData.bio?.length ?? 0;
+
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Who Are You?</h2>
+        <h2 className="text-2xl font-bold">Tell Us About Your Music</h2>
         <p className="text-muted-foreground">
-          Let&apos;s start with the basics — your name and artist identity.
+          Set up your artist profile so fans can discover you
         </p>
       </div>
 
@@ -530,129 +551,20 @@ function StepIdentity({ formData, updateForm, avatarPreview, onAvatarChange }: S
         </label>
       </div>
 
-      {/* Name Fields */}
-      <div className="space-y-5">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Full Legal Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={formData.full_name ?? ""}
-            onChange={(e) => updateForm({ full_name: e.target.value })}
-            placeholder="e.g. John Bosco Mugisha"
-            className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Your real name as it appears on your ID. This won&apos;t be shown publicly.
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Stage Name / Artist Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={formData.stage_name ?? ""}
-            onChange={(e) => updateForm({ stage_name: e.target.value })}
-            placeholder="e.g. DJ Kaweesi, Mama Africa"
-            className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            This is how fans will discover you. Choose something memorable!
-          </p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Country</label>
-            <select
-              value={formData.country ?? "UG"}
-              onChange={(e) => updateForm({ country: e.target.value })}
-              className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-            >
-              <option value="UG">Uganda 🇺🇬</option>
-              <option value="KE">Kenya 🇰🇪</option>
-              <option value="TZ">Tanzania 🇹🇿</option>
-              <option value="RW">Rwanda 🇷🇼</option>
-              <option value="BI">Burundi 🇧🇮</option>
-              <option value="SS">South Sudan 🇸🇸</option>
-              <option value="CD">DR Congo 🇨🇩</option>
-              <option value="NG">Nigeria 🇳🇬</option>
-              <option value="GH">Ghana 🇬🇭</option>
-              <option value="ZA">South Africa 🇿🇦</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">City</label>
-            <input
-              type="text"
-              value={formData.city ?? ""}
-              onChange={(e) => updateForm({ city: e.target.value })}
-              placeholder="e.g. Kampala, Nairobi"
-              className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            When did you start making music?
-          </label>
-          <select
-            value={formData.career_start_year ?? ""}
-            onChange={(e) =>
-              updateForm({
-                career_start_year: e.target.value ? Number(e.target.value) : undefined,
-              })
-            }
-            className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-          >
-            <option value="">Select year</option>
-            {Array.from({ length: 40 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Step 2: Sound (Genre, Bio, Social Links)
-// ============================================================================
-
-interface StepSoundProps {
-  formData: Partial<ArtistApplicationData>;
-  updateForm: (data: Partial<ArtistApplicationData>) => void;
-  genres: Array<{ id: string; name: string; emoji: string }>;
-}
-
-function StepSound({ formData, updateForm, genres }: StepSoundProps) {
-  const toggleSecondaryGenre = (genreId: string) => {
-    const current = formData.secondary_genres ?? [];
-    if (genreId === formData.primary_genre) return; // Can't be both primary and secondary
-    if (current.includes(genreId)) {
-      updateForm({ secondary_genres: current.filter((g) => g !== genreId) });
-    } else if (current.length < 5) {
-      updateForm({ secondary_genres: [...current, genreId] });
-    }
-  };
-
-  const bioLength = formData.bio?.length ?? 0;
-
-  return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Define Your Sound</h2>
-        <p className="text-muted-foreground">
-          Help fans find you by describing your music and style.
+      {/* Artist/Stage Name */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium">
+          Artist / Stage Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.stage_name ?? ""}
+          onChange={(e) => updateForm({ stage_name: e.target.value, full_name: e.target.value })}
+          placeholder="e.g. DJ Kaweesi, Mama Africa"
+          className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          This is how fans will discover you. Choose something memorable!
         </p>
       </div>
 
@@ -661,34 +573,51 @@ function StepSound({ formData, updateForm, genres }: StepSoundProps) {
         <label className="mb-2 block text-sm font-medium">
           Primary Genre <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {genres.map((genre) => (
-            <button
-              key={genre.id}
-              onClick={() => {
-                updateForm({ primary_genre: genre.id });
-                // Remove from secondary if it was there
-                const secs = formData.secondary_genres ?? [];
-                if (secs.includes(genre.id)) {
-                  updateForm({ secondary_genres: secs.filter((g) => g !== genre.id) });
-                }
-              }}
-              className={cn(
-                "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all",
-                formData.primary_genre === genre.id
-                  ? "border-primary bg-primary/10 text-primary font-medium ring-1 ring-primary/30"
-                  : "border-muted hover:border-primary/30 hover:bg-accent"
-              )}
-            >
-              <span>{genre.emoji}</span>
-              <span>{genre.name}</span>
-            </button>
-          ))}
-        </div>
+        {genresLoading ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+            <p>Loading genres...</p>
+          </div>
+        ) : genres.length === 0 ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-6 text-center">
+            <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Unable to load genres. Please refresh the page or contact support.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {genres.map((genre) => (
+              <button
+                key={genre.id}
+                type="button"
+                onClick={() => {
+                  updateForm({ primary_genre: genre.id });
+                  const secs = formData.secondary_genres ?? [];
+                  if (secs.includes(genre.id)) {
+                    updateForm({ secondary_genres: secs.filter((g) => g !== genre.id) });
+                  }
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all",
+                  formData.primary_genre === genre.id
+                    ? "border-primary bg-primary/10 text-primary font-medium ring-2 ring-primary/20"
+                    : "border-muted hover:border-primary/30 hover:bg-accent"
+                )}
+              >
+                <span className="text-lg">{genre.emoji}</span>
+                <span>{genre.name}</span>
+                {formData.primary_genre === genre.id && (
+                  <Check className="h-4 w-4 ml-auto" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Secondary Genres */}
-      {formData.primary_genre && (
+      {formData.primary_genre && genres.length > 0 && (
         <div>
           <label className="mb-2 block text-sm font-medium">
             Other Genres You Explore
@@ -704,11 +633,12 @@ function StepSound({ formData, updateForm, genres }: StepSoundProps) {
                 return (
                   <button
                     key={genre.id}
+                    type="button"
                     onClick={() => toggleSecondaryGenre(genre.id)}
                     className={cn(
                       "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
                       selected
-                        ? "border-primary/50 bg-primary/10 text-primary"
+                        ? "border-primary/50 bg-primary/10 text-primary ring-1 ring-primary/20"
                         : "border-muted hover:border-primary/30"
                     )}
                   >
@@ -738,11 +668,11 @@ function StepSound({ formData, updateForm, genres }: StepSoundProps) {
         <div className="mt-1 flex justify-between">
           <p className={cn(
             "text-xs",
-            bioLength < 50 ? "text-amber-500" : "text-muted-foreground"
+            bioLength < 50 ? "text-amber-500 font-medium" : "text-muted-foreground"
           )}>
             {bioLength < 50
-              ? `${50 - bioLength} more characters needed`
-              : "Looking good!"}
+              ? `${50 - bioLength} more characters needed (minimum 50)`
+              : "✓ Looking good!"}
           </p>
           <p className="text-xs text-muted-foreground">
             {bioLength}/2000
@@ -750,20 +680,17 @@ function StepSound({ formData, updateForm, genres }: StepSoundProps) {
         </div>
       </div>
 
-      {/* Social Links */}
-      <div>
-        <label className="mb-2 block text-sm font-medium">
-          Social Media Links
-          <span className="ml-2 text-xs text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <div className="space-y-3">
+      {/* Optional: Social Links - Collapsed by default */}
+      <details className="rounded-lg border">
+        <summary className="cursor-pointer p-4 font-medium hover:bg-accent">
+          Social Media Links (Optional)
+        </summary>
+        <div className="space-y-3 p-4 pt-0">
           {[
             { key: "instagram", label: "Instagram", placeholder: "@yourhandle" },
             { key: "twitter", label: "X (Twitter)", placeholder: "@yourhandle" },
             { key: "youtube", label: "YouTube", placeholder: "youtube.com/c/yourchannel" },
             { key: "tiktok", label: "TikTok", placeholder: "@yourhandle" },
-            { key: "facebook", label: "Facebook", placeholder: "facebook.com/yourpage" },
-            { key: "spotify", label: "Spotify", placeholder: "open.spotify.com/artist/..." },
           ].map(({ key, label, placeholder }) => (
             <div key={key} className="flex items-center gap-3">
               <span className="w-24 text-sm text-muted-foreground">{label}</span>
@@ -784,182 +711,13 @@ function StepSound({ formData, updateForm, genres }: StepSoundProps) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Website */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium">
-          Website
-          <span className="ml-2 text-xs text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <input
-          type="url"
-          value={formData.website_url ?? ""}
-          onChange={(e) => updateForm({ website_url: e.target.value })}
-          placeholder="https://yourwebsite.com"
-          className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-        />
-      </div>
+      </details>
     </div>
   );
 }
 
 // ============================================================================
-// Step 3: Verification
-// ============================================================================
-
-interface StepVerificationProps {
-  formData: Partial<ArtistApplicationData>;
-  updateForm: (data: Partial<ArtistApplicationData>) => void;
-  idFrontFile: File | null;
-  idBackFile: File | null;
-  selfieFile: File | null;
-  onIdFrontChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onIdBackChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSelfieChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-function StepVerification({
-  formData,
-  updateForm,
-  idFrontFile,
-  idBackFile,
-  selfieFile,
-  onIdFrontChange,
-  onIdBackChange,
-  onSelfieChange,
-}: StepVerificationProps) {
-  return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Verify Your Identity</h2>
-        <p className="text-muted-foreground">
-          Verification helps protect your music and builds trust with fans.
-        </p>
-      </div>
-
-      {/* Phone */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium">
-          Phone Number <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="tel"
-          value={formData.phone ?? ""}
-          onChange={(e) => updateForm({ phone: e.target.value })}
-          placeholder="e.g. +256 700 123 456"
-          className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-        />
-        <p className="mt-1 text-xs text-muted-foreground">
-          We may call or text to verify your identity.
-        </p>
-      </div>
-
-      {/* NIN */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium">
-          National ID Number (NIN)
-          <span className="ml-2 text-xs text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <input
-          type="text"
-          value={formData.nin_number ?? ""}
-          onChange={(e) => updateForm({ nin_number: e.target.value })}
-          placeholder="e.g. CM12345678ABCDE"
-          className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-        />
-      </div>
-
-      {/* ID Document Uploads */}
-      <div>
-        <label className="mb-3 block text-sm font-medium">
-          National ID Documents
-          <span className="ml-2 text-xs text-muted-foreground font-normal">
-            (optional — required for verified artist badge ✓)
-          </span>
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <FileUploadCard
-            label="ID Front"
-            description="Front side of your National ID"
-            fileName={idFrontFile?.name}
-            onChange={onIdFrontChange}
-          />
-          <FileUploadCard
-            label="ID Back"
-            description="Back side of your National ID"
-            fileName={idBackFile?.name}
-            onChange={onIdBackChange}
-          />
-          <FileUploadCard
-            label="Selfie with ID"
-            description="Photo of you holding your ID"
-            fileName={selfieFile?.name}
-            onChange={onSelfieChange}
-          />
-        </div>
-
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-500/5 border border-blue-500/20 p-3">
-          <Shield className="h-4 w-4 shrink-0 text-blue-500 mt-0.5" />
-          <p className="text-xs text-muted-foreground">
-            Your documents are encrypted and stored securely. They are only used
-            for identity verification and are never shared with third parties.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// File Upload Card
-// ============================================================================
-
-function FileUploadCard({
-  label,
-  description,
-  fileName,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  fileName?: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
-  return (
-    <label className={cn(
-      "group flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed p-4 text-center transition-all",
-      fileName
-        ? "border-green-500/50 bg-green-500/5"
-        : "border-muted-foreground/20 hover:border-primary/50 hover:bg-accent/50"
-    )}>
-      {fileName ? (
-        <>
-          <Check className="h-8 w-8 text-green-500 mb-2" />
-          <span className="text-xs font-medium text-green-600 truncate max-w-full">
-            {fileName}
-          </span>
-        </>
-      ) : (
-        <>
-          <Camera className="h-8 w-8 text-muted-foreground/50 group-hover:text-primary/70 mb-2 transition-colors" />
-          <span className="text-xs font-medium">{label}</span>
-          <span className="text-[10px] text-muted-foreground mt-0.5">{description}</span>
-        </>
-      )}
-      <input
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        onChange={onChange}
-        className="hidden"
-      />
-    </label>
-  );
-}
-
-// ============================================================================
-// Step 4: Payout Setup
+// Step 2: Payout Setup (includes phone verification)
 // ============================================================================
 
 interface StepPayoutProps {
@@ -973,7 +731,7 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">Set Up Your Payouts</h2>
         <p className="text-muted-foreground">
-          Choose how you want to receive your earnings. You can change this later.
+          Choose how you want to receive your earnings
         </p>
       </div>
 
@@ -992,6 +750,23 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
         </div>
       </div>
 
+      {/* Phone Number */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium">
+          Phone Number <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="tel"
+          value={formData.phone ?? ""}
+          onChange={(e) => updateForm({ phone: e.target.value })}
+          placeholder="e.g. 0770 123 456"
+          className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Used for account verification and payout notifications
+        </p>
+      </div>
+
       {/* Payout Method Selection */}
       <div>
         <label className="mb-3 block text-sm font-medium">
@@ -1005,6 +780,7 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
           ].map((method) => (
             <button
               key={method.id}
+              type="button"
               onClick={() => {
                 updateForm({
                   payout_method: method.id as ArtistApplicationData["payout_method"],
@@ -1015,13 +791,16 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
               className={cn(
                 "rounded-xl border p-4 text-left transition-all",
                 formData.payout_method === method.id
-                  ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                   : "hover:border-primary/30 hover:bg-accent"
               )}
             >
               <span className="text-2xl">{method.icon}</span>
               <h4 className="mt-2 text-sm font-medium">{method.label}</h4>
               <p className="text-xs text-muted-foreground">{method.desc}</p>
+              {formData.payout_method === method.id && (
+                <Check className="h-4 w-4 text-primary mt-2" />
+              )}
             </button>
           ))}
         </div>
@@ -1090,6 +869,8 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
   );
 }
 
+// ============================================================================
+// Step 3: Verification
 // ============================================================================
 // Step 5: Review & Submit
 // ============================================================================

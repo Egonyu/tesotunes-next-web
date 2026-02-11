@@ -67,17 +67,17 @@ export default function ArtistsPage() {
       params.set('per_page', '12');
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<ArtistsResponse>(`/admin/artists?${params.toString()}`);
+      return apiGet<ArtistsResponse>(`/api/admin/artists?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'artists', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: ArtistsStats }>('/admin/artists/statistics'),
+    queryFn: () => apiGet<{ success: boolean; data: ArtistsStats }>('/api/admin/artists/statistics'),
   });
 
   const verifyMutation = useMutation({
-    mutationFn: (artistId: number) => apiPost(`/admin/artists/${artistId}/verify`, {}),
+    mutationFn: (artistId: number) => apiPost(`/api/admin/artists/${artistId}/verify`, {}),
     onSuccess: () => {
       toast.success('Artist verified');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });

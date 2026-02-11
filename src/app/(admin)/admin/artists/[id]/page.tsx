@@ -64,7 +64,8 @@ interface Artist {
   updated_at: string;
 }
 
-function formatNumber(num: number): string {
+function formatNumber(num: number | undefined | null): string {
+  if (num === undefined || num === null) return '0';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
@@ -78,7 +79,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
 
   const { data: artist, isLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
-    queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
+    queryFn: () => apiGet<{ data: Artist }>(`/api/admin/artists/${id}`),
   });
 
   const deleteMutation = useMutation({

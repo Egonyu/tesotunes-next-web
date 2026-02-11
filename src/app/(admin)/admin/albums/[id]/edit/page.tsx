@@ -94,12 +94,12 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?per_page=1000'),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
   });
 
   // Populate form when album data loads

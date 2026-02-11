@@ -85,7 +85,8 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-background transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen flex-col border-r bg-background transition-all duration-300",
+        "hidden lg:flex", // Hide on mobile, show on desktop
         sidebarCollapsed ? "w-16" : "w-64"
       )}
     >

@@ -62,7 +62,7 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data: usersData, isLoading } = useQuery({
+  const { data: usersData, isLoading, error } = useQuery({
     queryKey: ['admin', 'users', { page: currentPage, role: roleFilter, status: statusFilter, search: searchQuery }],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -71,17 +71,17 @@ export default function UsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<UsersResponse>(`/admin/users?${params.toString()}`);
+      return apiGet<UsersResponse>(`/api/admin/users?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'users', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: UsersStats }>('/admin/users/statistics'),
+    queryFn: () => apiGet<{ success: boolean; data: UsersStats }>('/api/admin/users/statistics'),
   });
 
   const banMutation = useMutation({
-    mutationFn: (userId: number) => apiPost(`/admin/users/${userId}/ban`, {}),
+    mutationFn: (userId: number) => apiPost(`/api/admin/users/${userId}/ban`, {}),
     onSuccess: () => {
       toast.success('User banned');
       setSelectedUsers([]);
@@ -99,8 +99,15 @@ export default function UsersPage() {
     onError: () => toast.error('Failed to delete user'),
   });
 
-  const users = usersData?.data || [];
-  const meta = usersData?.meta;
+  // Handle different possible API response shapes
+  const rawUsersData = usersData as Record<string, unknown> | undefined;
+  const users: User[] = Array.isArray(usersData?.data)
+    ? usersData.data
+    : Array.isArray((rawUsersData?.data as Record<string, unknown>)?.data) 
+      ? ((rawUsersData?.data as Record<string, unknown>).data as User[])
+      : [];
+  const meta = usersData?.meta 
+    || (rawUsersData?.data as Record<string, unknown>)?.meta as UsersResponse['meta'] | undefined;
   const stats = statsData?.data;
   
   const roleStyles: Record<string, string> = {
@@ -137,6 +144,15 @@ export default function UsersPage() {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-500">Failed to load users</p>
+        <p className="text-muted-foreground text-sm mt-2">Please check your connection and try again</p>
       </div>
     );
   }
@@ -259,11 +275,11 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                         <span className="text-sm font-medium">
-                          {user.name.split(' ').map(n => n[0]).join('')}
+                          {user.name ? user.name.split(' ').map(n => n[0]).join('') : user.username?.charAt(0) || '?'}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">{user.name || user.username}</p>
                         <p className="text-sm text-muted-foreground">@{user.username}</p>
                       </div>
                     </div>
@@ -326,7 +342,7 @@ export default function UsersPage() {
         {meta && (
           <div className="flex items-center justify-between p-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Showing {((meta.current_page - 1) * meta.per_page) + 1}-{Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total.toLocaleString()} users
+              Showing {((meta.current_page - 1) * (meta.per_page || 20)) + 1}-{Math.min(meta.current_page * (meta.per_page || 20), meta.total || 0)} of {(meta.total ?? 0).toLocaleString()} users
             </p>
             <div className="flex items-center gap-2">
               <button 

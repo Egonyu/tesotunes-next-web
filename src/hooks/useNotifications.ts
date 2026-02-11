@@ -98,7 +98,8 @@ export function useUnreadCount() {
     queryKey: ['notifications-unread'],
     queryFn: () => apiGet<UnreadCountsResponse>('/notifications/unread-counts'),
     staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000, // Refetch every minute as fallback
+    refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 1 minute
+    refetchOnWindowFocus: false,
   });
 }
 

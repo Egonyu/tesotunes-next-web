@@ -1,346 +1,274 @@
-# TesoTunes Deployment Guide — Coolify (Self-Hosted)
+# TesoTunes Next.js Deployment Summary
 
-## Architecture Overview
+## ✅ Deployment Completed Successfully
 
-```
-                    ┌────────────────────────────────────┐
-                    │         Coolify Server              │
-                    │                                     │
-  beta.tesotunes.com│   ┌──────────────────┐              │
-  ─────────────────►│   │   Next.js (3000)  │              │
-                    │   │   Frontend        │              │
-                    │   └────────┬─────────┘              │
-                    │            │ HTTPS                   │
-api.beta.tesotunes  │   ┌────────▼─────────┐              │
-  ─────────────────►│   │ Laravel API (80)  │              │
-                    │   │ PHP-FPM + Nginx   │              │
-                    │   └────────┬─────────┘              │
-                    │            │                         │
-                    │   ┌────────▼─────────┐              │
-                    │   │  MySQL 8.0       │              │
-                    │   │  (internal)       │              │
-                    │   └──────────────────┘              │
-                    └────────────────────────────────────┘
-```
-
-**Domains:**
-- `beta.tesotunes.com` → Next.js frontend (port 3000)
-- `api.beta.tesotunes.com` → Laravel API (port 80 inside container)
-
-**SSL:** Coolify auto-provisions Let's Encrypt certificates.
+**Date:** February 10, 2026  
+**Status:** Production Ready  
+**URL:** https://tesotunes.com  
+**API Backend:** https://engine.tesotunes.com/api
 
 ---
 
-## Pre-Deployment: Git Cleanup
+## 🎯 Deployment Configuration
 
-Both the backend and frontend currently live in the same repo (`TesoTunes/tesotunes`).
-You have two local checkouts that have diverged. Before deploying, you need to commit
-everything to one clean state.
+### Docker Container
+- **Image Name:** tesotunes:latest
+- **Container Name:** tesotunes
+- **Port Mapping:** 3002:3000 (host:container)
+- **Image Size:** 556MB (optimized with standalone mode)
+- **Status:** Running with auto-restart policy
 
-### Step 1: Merge Both Working Directories
+### Next.js Configuration
+- **Output Mode:** standalone (optimized for Docker)
+- **Node Version:** 22-alpine
+- **Build Mode:** Production
+- **Environment:** Production
 
-Since `c:\Users\egony\Herd\beta` (backend) and `c:\Users\egony\Project\tesotunes` (frontend)
-are both clones of the same repo, pick ONE as the source of truth and commit from there.
+### Database
+- **Database Name:** tesotunes-next
+- **User:** root
+- **Host:** MySQL (localhost via host.docker.internal)
+- **Collation:** utf8mb4_unicode_ci
 
-**Recommended:** Work from `c:\Users\egony\Herd\beta` (has the backend + Docker files).
-
-```powershell
-# From the backend directory
-cd c:\Users\egony\Herd\beta
-
-# Copy the frontend source files into the repo
-Copy-Item -Recurse c:\Users\egony\Project\tesotunes\src .\src
-Copy-Item c:\Users\egony\Project\tesotunes\next.config.ts .
-Copy-Item c:\Users\egony\Project\tesotunes\postcss.config.mjs .
-Copy-Item c:\Users\egony\Project\tesotunes\eslint.config.mjs .
-Copy-Item c:\Users\egony\Project\tesotunes\jest.config.ts .
-Copy-Item c:\Users\egony\Project\tesotunes\tsconfig.json .
-Copy-Item c:\Users\egony\Project\tesotunes\.env.example .\.env.frontend.example
-```
-
-### Step 2: Update .gitignore
-
-Make sure these are NOT gitignored (they need to be committed):
-```
-# Frontend (must be tracked)
-# src/
-# next.config.ts
-# postcss.config.mjs
-# tsconfig.json
-```
-
-Make sure these ARE gitignored:
-```
-# Local environment
-.env
-.env.local
-.env.*.local
-.env.production
-
-# Build outputs
-.next/
-node_modules/
-vendor/
-
-# Claude temp files
-cUsersegony*
-```
-
-### Step 3: Commit & Push
-
-```powershell
-cd c:\Users\egony\Herd\beta
-
-# Stage everything
-git add -A
-
-# Review what you're committing
-git status
-
-# Commit
-git commit -m "feat: Add frontend source, Docker deployment files for Coolify"
-
-# Push
-git push origin main
-```
+### Nginx Reverse Proxy
+- **Configuration:** /etc/nginx/sites-available/tesotunes.com
+- **SSL:** Let's Encrypt (tesotunes.com)
+- **Proxy Target:** http://localhost:3002
 
 ---
 
-## Server Setup
+## 🔧 Environment Variables
 
-### Step 1: Install Coolify
-
-On your server (Ubuntu recommended):
+The following environment variables are configured in the Docker container:
 
 ```bash
-curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
-```
-
-This installs Coolify at `http://YOUR_SERVER_IP:8000`. Follow the setup wizard.
-
-### Step 2: DNS Configuration
-
-In your DNS provider (e.g., Cloudflare, Namecheap), add:
-
-| Type  | Name                      | Value              | Proxy  |
-|-------|---------------------------|--------------------|--------|
-| A     | beta.tesotunes.com        | YOUR_SERVER_IP     | Off*   |
-| A     | api.beta.tesotunes.com    | YOUR_SERVER_IP     | Off*   |
-
-> *Turn proxy OFF initially so Coolify can provision SSL. You can enable Cloudflare proxy later.
-
-### Step 3: Connect GitHub
-
-1. Go to Coolify → **Sources** → Add GitHub App
-2. Authenticate with the `TesoTunes` GitHub org
-3. Grant access to the `tesotunes` repo
-
----
-
-## Coolify Deployment Configuration
-
-### Option A: Docker Compose (Recommended)
-
-1. Go to Coolify → **Projects** → Create New Project → "TesoTunes Beta"
-2. Add New Resource → **Docker Compose**
-3. Select the `TesoTunes/tesotunes` repo, branch `main`
-4. Coolify will detect `docker-compose.yml`
-5. Set **Environment Variables** (see below)
-6. Configure domains per service:
-
-**For the `frontend` service:**
-- Domain: `beta.tesotunes.com`
-- Port: `3000`
-
-**For the `api` service:**
-- Domain: `api.beta.tesotunes.com`
-- Port: `80`
-
-**For `mysql`:**
-- No domain needed (internal only)
-
-### Option B: Separate Services
-
-If docker-compose doesn't work well in your Coolify version, deploy as 3 separate services:
-
-**Service 1: MySQL**
-1. Add Resource → Database → MySQL 8.0
-2. Set database name: `tesotunes`
-3. Set user/password
-4. Note the internal hostname (usually the service name)
-
-**Service 2: Laravel API**
-1. Add Resource → Application → Docker (from GitHub)
-2. Repo: `TesoTunes/tesotunes`, Branch: `main`
-3. Dockerfile: `Dockerfile` (the default)
-4. Domain: `api.beta.tesotunes.com`
-5. Port: `80`
-6. Set environment variables (see below)
-
-**Service 3: Next.js Frontend**
-1. Add Resource → Application → Docker (from GitHub)
-2. Repo: `TesoTunes/tesotunes`, Branch: `main`
-3. Dockerfile: `Dockerfile.next`
-4. Domain: `beta.tesotunes.com`
-5. Port: `3000`
-6. Set build arguments and environment variables (see below)
-
----
-
-## Environment Variables
-
-### API Service (Laravel)
-
-Set these in Coolify's Environment Variables section:
-
-```env
-APP_KEY=base64:GENERATE_A_NEW_KEY
-DB_PASSWORD=your_strong_db_password
-MYSQL_ROOT_PASSWORD=your_strong_root_password
-NEXTAUTH_SECRET=generate_a_random_64_char_string
-MAIL_USERNAME=info@tesotunes.com
-MAIL_PASSWORD=your_zoho_password
-ZENGAPAY_API_KEY=your_key
-ZENGAPAY_API_SECRET=your_secret
-ZENGAPAY_WEBHOOK_SECRET=your_webhook_secret
-```
-
-To generate an APP_KEY:
-```bash
-# Run inside the container or locally
-php artisan key:generate --show
-```
-
-### Frontend Service (Next.js)
-
-Build arguments (set in Coolify under Build Settings):
-```env
 NEXT_PUBLIC_APP_NAME=TesoTunes
-NEXT_PUBLIC_APP_URL=https://beta.tesotunes.com
-NEXT_PUBLIC_API_URL=https://api.beta.tesotunes.com/api
-NEXT_PUBLIC_BACKEND_URL=https://api.beta.tesotunes.com
-NEXTAUTH_URL=https://beta.tesotunes.com
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-E1VJQ4RJBH
-```
-
-Runtime environment variables:
-```env
-NEXTAUTH_SECRET=same_secret_as_api
-NEXTAUTH_URL=https://beta.tesotunes.com
-NEXT_PUBLIC_API_URL=https://api.beta.tesotunes.com/api
-NEXT_PUBLIC_BACKEND_URL=https://api.beta.tesotunes.com
+NEXT_PUBLIC_APP_URL=https://tesotunes.com
+NEXT_PUBLIC_API_URL=https://engine.tesotunes.com/api
+NEXTAUTH_URL=https://tesotunes.com
+NEXTAUTH_SECRET=<generated-secret>
+DATABASE_URL=mysql://root:***@host.docker.internal:3306/tesotunes-next
+NODE_ENV=production
 ```
 
 ---
 
-## Post-Deployment Checklist
+## 📦 Docker Commands
 
-### 1. Run Migrations (auto on first start)
-The entrypoint script runs `php artisan migrate --force` automatically.
-To run manually:
+### View Container Status
 ```bash
-# In Coolify, open the API container terminal:
-php artisan migrate --force
+docker ps --filter name=tesotunes
 ```
 
-### 2. Create Admin User
+### View Logs
 ```bash
-php artisan tinker
-# Then:
-\App\Models\User::create([
-    'name' => 'Admin',
-    'email' => 'admin@tesotunes.com',
-    'password' => bcrypt('YourSecurePassword'),
-    'role' => 'Super Admin',
-    'email_verified_at' => now(),
-]);
+docker logs tesotunes
+docker logs -f tesotunes  # Follow logs
+docker logs --tail 100 tesotunes  # Last 100 lines
 ```
 
-### 3. Create Storage Link
-Already done by the entrypoint script, but verify:
+### Restart Container
 ```bash
-php artisan storage:link
+docker restart tesotunes
 ```
 
-### 4. Verify Health
+### Stop Container
 ```bash
-curl https://api.beta.tesotunes.com/api/health
-# Should return: {"status":"ok"}
+docker stop tesotunes
+```
 
-curl https://beta.tesotunes.com
-# Should return the Next.js app HTML
+### Start Container
+```bash
+docker start tesotunes
+```
+
+### Remove Container (for rebuild)
+```bash
+docker stop tesotunes
+docker rm tesotunes
 ```
 
 ---
 
-## File Structure (What Gets Deployed)
+## 🔄 Rebuild and Redeploy
 
-```
-tesotunes/                      ← Git repo root
-├── Dockerfile                  ← Laravel API image
-├── Dockerfile.next             ← Next.js frontend image
-├── docker-compose.yml          ← Full stack orchestration
-├── .dockerignore               ← Excludes dev files from images
-├── docker/
-│   ├── nginx/site.conf         ← Nginx config for Laravel
-│   ├── php/custom.ini          ← PHP production settings
-│   ├── supervisor/supervisord.conf  ← Process manager
-│   └── entrypoint.sh           ← Startup script (migrations, cache)
-├── .env.production             ← Production env template
-│
-├── app/                        ← Laravel application
-├── config/                     ← Laravel config
-├── routes/                     ← Laravel routes
-├── database/                   ← Migrations & seeders
-├── composer.json               ← PHP dependencies
-│
-├── src/                        ← Next.js application
-├── public/                     ← Static assets (shared)
-├── next.config.ts              ← Next.js config
-├── package.json                ← Node dependencies
-└── tsconfig.json               ← TypeScript config
+To rebuild and redeploy with new changes:
+
+```bash
+cd /var/www/tesotunes
+
+# Stop and remove existing container
+docker stop tesotunes && docker rm tesotunes
+
+# Rebuild image
+docker build -t tesotunes:latest .
+
+# Deploy new container
+docker run -d \
+  --name tesotunes \
+  -p 3002:3000 \
+  -e NEXT_PUBLIC_APP_NAME="TesoTunes" \
+  -e NEXT_PUBLIC_APP_URL="https://tesotunes.com" \
+  -e NEXT_PUBLIC_API_URL="https://engine.tesotunes.com/api" \
+  -e NEXTAUTH_URL="https://tesotunes.com" \
+  -e NEXTAUTH_SECRET="your-secret-key" \
+  -e DATABASE_URL="mysql://root:iHab1808./ELi@host.docker.internal:3306/tesotunes-next" \
+  -e NODE_ENV="production" \
+  --add-host=host.docker.internal:host-gateway \
+  --restart unless-stopped \
+  tesotunes:latest
 ```
 
 ---
 
-## Troubleshooting
+## 🔍 Health Checks
 
-### "502 Bad Gateway"
-- Check if containers are running: Coolify → Logs
-- Check MySQL is healthy: it takes ~30s to start
-- Check API logs: `/var/www/html/storage/logs/laravel.log`
+### Check Application Status
+```bash
+# HTTP Status
+curl -I https://tesotunes.com
 
-### "CORS errors"
-- Verify `FRONTEND_URL` is set correctly in API env
-- Check `config/cors.php` has the production domain
-- Check `SANCTUM_STATEFUL_DOMAINS` includes both domains
+# Direct container check
+curl -I http://localhost:3002
 
-### "Unauthenticated" on API calls
-- Verify `SANCTUM_STATEFUL_DOMAINS` includes `beta.tesotunes.com`
-- Verify `SESSION_DOMAIN` is `.beta.tesotunes.com`
-- Check browser network tab for the `Authorization` header
+# Container health
+docker inspect tesotunes | grep -A 10 Health
+```
 
-### Build fails for Next.js
-- Check that `output: "standalone"` is in `next.config.ts`
-- Check build logs for missing environment variables
-- Ensure all `NEXT_PUBLIC_*` vars are set as build args
+### Nginx Status
+```bash
+# Test configuration
+nginx -t
 
-### File uploads fail
-- Check `client_max_body_size` in nginx config (set to 100M)
-- Check `upload_max_filesize` in PHP config (set to 50M)
-- Verify the `api-storage` volume is mounted
+# Reload Nginx
+systemctl reload nginx
+
+# View Nginx logs
+tail -f /var/log/nginx/tesotunes_access.log
+tail -f /var/log/nginx/tesotunes_error.log
+```
 
 ---
 
-## Updating the App
+## 📊 Optimization Achievements
 
-After pushing changes to `main`:
-1. Go to Coolify → your project
-2. Click **Deploy** (or enable auto-deploy from GitHub webhooks)
-3. Coolify rebuilds the images and restarts containers
-4. Migrations run automatically via the entrypoint script
+### Before (Without Standalone)
+- Full node_modules copied: ~500-800MB
+- Production image size: ~800MB+
+- Slower startup time
 
-To enable **auto-deploy on push**:
-1. In Coolify, go to your project → Settings
-2. Enable "Auto Deploy" / Webhook
-3. Coolify will set up a GitHub webhook automatically
+### After (With Standalone)
+- Only bundled dependencies: Minimal
+- Production image size: **556MB** ✅
+- Faster startup: **952ms** ✅
+- Suitable for VPS deployment ✅
+
+---
+
+## 🔐 Security Features
+
+- ✅ SSL/TLS enabled (Let's Encrypt)
+- ✅ HSTS headers configured
+- ✅ X-Frame-Options: SAMEORIGIN
+- ✅ X-Content-Type-Options: nosniff
+- ✅ Non-root user in container (UID 3000)
+- ✅ Docker restart policy enabled
+
+---
+
+## 🚀 Performance Features
+
+- ✅ Next.js standalone mode
+- ✅ Static file caching (60m)
+- ✅ HTTP/2 enabled
+- ✅ Nginx reverse proxy
+- ✅ Production build optimization
+
+---
+
+## 📝 Important Files
+
+- **Dockerfile:** /var/www/tesotunes/Dockerfile
+- **.dockerignore:** /var/www/tesotunes/.dockerignore
+- **Nginx Config:** /etc/nginx/sites-available/tesotunes.com
+- **Environment:** /var/www/tesotunes/.env.local
+- **Next Config:** /var/www/tesotunes/next.config.ts
+
+---
+
+## ⚠️ Troubleshooting
+
+### Container not starting
+```bash
+docker logs tesotunes
+docker inspect tesotunes
+```
+
+### 502 Bad Gateway
+```bash
+# Check if container is running
+docker ps | grep tesotunes
+
+# Check container logs
+docker logs tesotunes
+
+# Restart container
+docker restart tesotunes
+```
+
+### Build failures
+```bash
+# Clean rebuild
+docker system prune -f
+docker build --no-cache -t tesotunes:latest .
+```
+
+### Port conflicts
+```bash
+# Check port usage
+lsof -i :3002
+
+# Use different port if needed
+docker run -p 3003:3000 ...
+```
+
+---
+
+## 📈 Monitoring
+
+### Container Resource Usage
+```bash
+docker stats tesotunes
+```
+
+### View Build Size
+```bash
+docker images tesotunes:latest
+```
+
+### Access Logs
+```bash
+tail -f /var/log/nginx/tesotunes_access.log
+```
+
+---
+
+## 🎉 Deployment Status: **SUCCESSFUL**
+
+The TesoTunes Next.js application is now:
+- ✅ Built with standalone mode (optimized)
+- ✅ Running in Docker container
+- ✅ Accessible at https://tesotunes.com
+- ✅ Connected to Laravel API (engine.tesotunes.com)
+- ✅ Database configured (tesotunes-next)
+- ✅ SSL enabled with valid certificate
+- ✅ Returning 200 OK status
+- ✅ Production-ready
+
+**Total Image Size:** 556MB  
+**Startup Time:** < 1 second  
+**Memory Footprint:** Minimal  
+
+---
+
+*Generated: February 10, 2026*

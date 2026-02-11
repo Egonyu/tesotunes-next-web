@@ -2,6 +2,25 @@ import NextAuth from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
+
+/**
+ * Safely parse JSON from a fetch response.
+ * Returns null if the body is empty or not valid JSON.
+ */
+async function safeJsonParse(response: Response): Promise<Record<string, unknown> | null> {
+  const text = await response.text();
+  if (!text || text.trim().length === 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("[Auth] Failed to parse JSON response:", text.substring(0, 200));
+    return null;
+  }
+}
+
 export const authConfig: NextAuthOptions = {
   pages: {
     signIn: "/login",
@@ -9,34 +28,6 @@ export const authConfig: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
-      const isOnAdmin = nextUrl.pathname.startsWith("/admin");
-      const isOnArtist = nextUrl.pathname.startsWith("/artist");
-      
-      // Normalize role for comparison
-      const userRole = auth?.user?.role?.toLowerCase().replace(/\s+/g, '_') || '';
-
-      if (isOnAdmin) {
-        if (isLoggedIn && ['admin', 'super_admin'].includes(userRole)) return true;
-        return false;
-      }
-
-      if (isOnArtist) {
-        if (isLoggedIn && ["artist", "label", "admin", "super_admin"].includes(userRole)) {
-          return true;
-        }
-        return false;
-      }
-
-      if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false;
-      }
-
-      return true;
-    },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -69,15 +60,9 @@ export const authConfig: NextAuthOptions = {
         }
 
         try {
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://beta.test/api";
-
           console.log("[Auth] Attempting login for:", credentials.email);
           console.log("[Auth] API_URL:", API_URL);
 
-          // Skip CSRF for API token auth - not needed for Sanctum token-based auth
-          // CSRF is only required for SPA cookie-based auth
-
-          // Login via API
           const response = await fetch(`${API_URL}/auth/login`, {
             method: "POST",
             headers: {
@@ -90,24 +75,45 @@ export const authConfig: NextAuthOptions = {
             }),
           });
 
-          const data = await response.json();
-
           console.log("[Auth] Response status:", response.status);
-          console.log("[Auth] Response data:", JSON.stringify(data).substring(0, 500));
 
-          if (!response.ok) {
-            console.error("[Auth] Login failed:", data.message || "Unknown error");
+          const data = await safeJsonParse(response);
+
+          if (!data) {
+            console.error("[Auth] Empty or non-JSON response from API");
             return null;
           }
 
-          if (data.user && data.token) {
-            console.log("[Auth] Login successful for user:", data.user.email);
+          console.log("[Auth] Response data:", JSON.stringify(data).substring(0, 500));
+
+          if (!response.ok) {
+            const message = (data.message as string) || "Unknown error";
+            console.error("[Auth] Login failed:", message);
+            // Surface 2FA requirement to the frontend
+            if (response.status === 423 || message.toLowerCase().includes("two factor")) {
+              throw new Error("2FA_REQUIRED");
+            }
+            throw new Error(message);
+          }
+
+          // Support multiple Laravel response shapes:
+          // Shape 1: { user: {...}, token: "..." }
+          // Shape 2: { data: { user: {...}, token: "..." } }
+          // Shape 3: { success: true, data: { user: {...} }, token: "..." }
+          const user = (data.user as Record<string, unknown>) ??
+            ((data.data as Record<string, unknown>)?.user as Record<string, unknown>);
+          const token = (data.token as string) ??
+            ((data.data as Record<string, unknown>)?.token as string) ??
+            (data.access_token as string);
+
+          if (user && token) {
+            console.log("[Auth] Login successful for user:", user.email);
             return {
-              id: data.user.id.toString(),
-              email: data.user.email,
-              name: data.user.name,
-              role: data.user.role || "user",
-              accessToken: data.token,
+              id: String(user.id),
+              email: user.email as string,
+              name: user.name as string,
+              role: (user.role as string) || "user",
+              accessToken: token,
             };
           }
 
@@ -115,6 +121,13 @@ export const authConfig: NextAuthOptions = {
           return null;
         } catch (error) {
           console.error("[Auth] Exception during login:", error);
+          // Re-throw known error messages so NextAuth surfaces them
+          if (error instanceof Error && error.message === "2FA_REQUIRED") {
+            throw error;
+          }
+          if (error instanceof Error && error.message !== "Unknown error") {
+            throw error;
+          }
           return null;
         }
       },

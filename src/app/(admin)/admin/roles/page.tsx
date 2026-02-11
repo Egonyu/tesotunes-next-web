@@ -58,18 +58,18 @@ export default function RolesPage() {
   // ── Queries ──────────────────────────────────────────────────────
   const { data: rolesData, isLoading: loadingRoles } = useQuery({
     queryKey: ['admin-roles'],
-    queryFn: () => apiGet<RolesResponse>('/admin/roles'),
+    queryFn: () => apiGet<RolesResponse>('/api/admin/roles'),
   });
 
   const { data: permissionsData, isLoading: loadingPermissions } = useQuery({
     queryKey: ['admin-permissions'],
-    queryFn: () => apiGet<PermissionsResponse>('/admin/permissions'),
+    queryFn: () => apiGet<PermissionsResponse>('/api/admin/permissions'),
   });
 
   // ── Mutations ────────────────────────────────────────────────────
   const createRole = useMutation({
     mutationFn: (data: { name: string; description: string; permissions: string[] }) =>
-      apiPost('/admin/roles', data),
+      apiPost('/api/admin/roles', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role created successfully');

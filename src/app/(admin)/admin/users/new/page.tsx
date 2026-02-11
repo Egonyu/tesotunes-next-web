@@ -57,18 +57,18 @@ export default function CreateUserPage() {
 
   const { data: roles } = useQuery({
     queryKey: ['admin', 'roles'],
-    queryFn: () => apiGet<{ data: Role[] }>('/admin/roles'),
+    queryFn: () => apiGet<{ data: Role[] }>('/api/admin/roles'),
   });
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: { id: string; name: string }[] }>('/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: { id: string; name: string }[] }>('/api/admin/artists?per_page=1000'),
     enabled: formData.is_artist,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/users', data, {
+      return apiPost('/api/admin/users', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

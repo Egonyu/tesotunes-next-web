@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
 
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ['admin-analytics', timeRange],
-    queryFn: () => apiGet<AnalyticsResponse>('/admin/analytics', { params: { range: timeRange } }),
+    queryFn: () => apiGet<AnalyticsResponse>('/api/admin/analytics', { params: { range: timeRange } }),
   });
 
   const analytics = analyticsData?.data;

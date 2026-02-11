@@ -8,9 +8,10 @@ import type { Artist, PaginatedResponse } from "@/types";
 async function getArtists(page = 1, limit = 24) {
   try {
     return await serverFetch<PaginatedResponse<Artist>>(
-      `/artists?page=${page}&limit=${limit}`
+      `/api/artists?page=${page}&limit=${limit}`
     );
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch artists:', error);
     return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };
   }
 }

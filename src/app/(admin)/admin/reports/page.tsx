@@ -75,7 +75,7 @@ export default function AdminReportsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'reports', 'stats'],
-    queryFn: () => apiGet<{ data: ReportStats }>('/admin/reports/stats').then(r => r.data),
+    queryFn: () => apiGet<{ data: ReportStats }>('/api/admin/reports/stats').then(r => r.data),
   });
 
   const { data: reports, isLoading } = useQuery({

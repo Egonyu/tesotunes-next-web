@@ -68,27 +68,30 @@ interface RecentActivity {
   users: Array<{ id: number; name: string; email: string; created_at: string }>;
 }
 
-function formatNumber(num: number): string {
+function formatNumber(num: number | null | undefined): string {
+  if (num == null || isNaN(num)) return '0';
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
   return num.toLocaleString();
 }
 
-function formatCurrency(amount: number, currency = 'UGX'): string {
+function formatCurrency(amount: number | null | undefined, currency = 'UGX'): string {
   return `${currency} ${formatNumber(amount)}`;
 }
 
 export default function AdminDashboardPage() {
   const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
-    queryFn: () => apiGet<{ success: boolean; data: DashboardStats }>('/admin/dashboard/stats'),
-    refetchInterval: 60000,
+    queryFn: () => apiGet<{ success: boolean; data: DashboardStats }>('/api/admin/dashboard/stats'),
+    refetchInterval: 5 * 60 * 1000, // 5 minutes instead of 1 minute
+    refetchOnWindowFocus: false,
   });
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'dashboard', 'activity'],
-    queryFn: () => apiGet<{ success: boolean; data: RecentActivity }>('/admin/dashboard/recent-activity'),
-    refetchInterval: 30000,
+    queryFn: () => apiGet<{ success: boolean; data: RecentActivity }>('/api/admin/dashboard/recent-activity'),
+    refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 30 seconds
+    refetchOnWindowFocus: false,
   });
 
   const stats = statsData?.data;
@@ -97,52 +100,52 @@ export default function AdminDashboardPage() {
   const statCards = stats ? [
     { 
       label: 'Total Users', 
-      value: formatNumber(stats.users.total), 
-      change: stats.users.change_percentage, 
+      value: formatNumber(stats.users?.total), 
+      change: stats.users?.change_percentage ?? 0, 
       icon: Users, 
       color: 'bg-blue-500',
-      subtext: `${stats.users.new_today} new today`
+      subtext: `${stats.users?.new_today ?? 0} new today`
     },
     { 
       label: 'Total Songs', 
-      value: formatNumber(stats.songs.total), 
-      change: stats.songs.change_percentage, 
+      value: formatNumber(stats.songs?.total), 
+      change: stats.songs?.change_percentage ?? 0, 
       icon: Music, 
       color: 'bg-purple-500',
-      subtext: `${stats.songs.pending_review} pending review`
+      subtext: `${stats.songs?.pending_review ?? 0} pending review`
     },
     { 
       label: 'Revenue (MTD)', 
-      value: formatCurrency(stats.revenue.this_month, stats.revenue.currency), 
-      change: stats.revenue.change_percentage, 
+      value: formatCurrency(stats.revenue?.this_month, stats.revenue?.currency), 
+      change: stats.revenue?.change_percentage ?? 0, 
       icon: DollarSign, 
       color: 'bg-green-500',
       subtext: 'vs last month'
     },
     { 
       label: 'Active Streams', 
-      value: formatNumber(stats.activity.plays_today), 
+      value: formatNumber(stats.activity?.plays_today), 
       change: 0, 
       icon: Play, 
       color: 'bg-orange-500',
-      subtext: `${formatNumber(stats.activity.plays_this_week)} this week`
+      subtext: `${formatNumber(stats.activity?.plays_this_week)} this week`
     },
   ] : [];
 
   const recentActivityItems = activity ? [
-    ...activity.users.map(u => ({
+    ...(activity.users || []).map(u => ({
       id: `user-${u.id}`,
       type: 'user' as const,
       message: `New user registered: ${u.name}`,
       time: formatDate(u.created_at),
     })),
-    ...activity.songs.map(s => ({
+    ...(activity.songs || []).map(s => ({
       id: `song-${s.id}`,
       type: 'song' as const,
       message: `New song: "${s.title}" by ${s.artist?.name || 'Unknown'}`,
       time: formatDate(s.created_at),
     })),
-    ...activity.albums.map(a => ({
+    ...(activity.albums || []).map(a => ({
       id: `album-${a.id}`,
       type: 'album' as const,
       message: `New album: "${a.title}" by ${a.artist?.name || 'Unknown'}`,
@@ -218,34 +221,34 @@ export default function AdminDashboardPage() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{stats?.songs.published || 0}</p>
+              <p className="text-2xl font-bold">{stats?.songs?.published ?? 0}</p>
               <p className="text-sm text-muted-foreground">Published Songs</p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{stats?.songs.pending_review || 0}</p>
+              <p className="text-2xl font-bold">{stats?.songs?.pending_review ?? 0}</p>
               <p className="text-sm text-muted-foreground">Pending Review</p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{stats?.artists.verified || 0}</p>
+              <p className="text-2xl font-bold">{stats?.artists?.verified ?? 0}</p>
               <p className="text-sm text-muted-foreground">Verified Artists</p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{stats?.albums.total || 0}</p>
+              <p className="text-2xl font-bold">{stats?.albums?.total ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Albums</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
             <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-              <p className="text-xl font-bold text-blue-600">{stats?.users.active_users || 0}</p>
+              <p className="text-xl font-bold text-blue-600">{stats?.users?.active_users ?? 0}</p>
               <p className="text-sm text-muted-foreground">Active Users</p>
             </div>
             <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-              <p className="text-xl font-bold text-purple-600">{stats?.users.premium_users || 0}</p>
+              <p className="text-xl font-bold text-purple-600">{stats?.users?.premium_users ?? 0}</p>
               <p className="text-sm text-muted-foreground">Premium Users</p>
             </div>
             <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30">
-              <p className="text-xl font-bold text-green-600">{formatNumber(stats?.activity.total_downloads || 0)}</p>
+              <p className="text-xl font-bold text-green-600">{formatNumber(stats?.activity?.total_downloads ?? 0)}</p>
               <p className="text-sm text-muted-foreground">Total Downloads</p>
             </div>
           </div>
@@ -263,7 +266,7 @@ export default function AdminDashboardPage() {
                   <Music className="h-5 w-5 text-purple-500" />
                   <span>Songs pending review</span>
                 </div>
-                <span className="text-lg font-bold">{stats?.songs.pending_review || 0}</span>
+                <span className="text-lg font-bold">{stats?.songs?.pending_review ?? 0}</span>
               </div>
             </Link>
             <Link href="/admin/artists?status=pending" className="block p-3 rounded-lg hover:bg-muted transition-colors">
@@ -272,7 +275,7 @@ export default function AdminDashboardPage() {
                   <Users className="h-5 w-5 text-blue-500" />
                   <span>Artist verifications</span>
                 </div>
-                <span className="text-lg font-bold">{stats?.artists.pending_verification || 0}</span>
+                <span className="text-lg font-bold">{stats?.artists?.pending_verification ?? 0}</span>
               </div>
             </Link>
             <Link href="/admin/albums" className="block p-3 rounded-lg hover:bg-muted transition-colors">
@@ -281,7 +284,7 @@ export default function AdminDashboardPage() {
                   <Disc3 className="h-5 w-5 text-green-500" />
                   <span>Upcoming releases</span>
                 </div>
-                <span className="text-lg font-bold">{stats?.albums.upcoming || 0}</span>
+                <span className="text-lg font-bold">{stats?.albums?.upcoming ?? 0}</span>
               </div>
             </Link>
           </div>

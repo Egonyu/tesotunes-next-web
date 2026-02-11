@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  // Use default output for Vercel deployment (remove "standalone" for Vercel)
-  // output: "standalone",
+  // Standalone mode for optimized Docker deployment
+  output: "standalone",
 
   // Image optimization configuration
   images: {
@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
         // Proxy other API routes to Laravel backend
         {
           source: "/api/:path((?!auth).*)",
-          destination: `${process.env.NEXT_PUBLIC_API_URL || "http://beta.test/api"}/:path*`,
+          destination: `${process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com"}/:path*`,
         },
       ],
       fallback: [],

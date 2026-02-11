@@ -72,7 +72,7 @@ export default function AlbumsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'albums', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: AlbumsStats }>('/admin/albums/statistics'),
+    queryFn: () => apiGet<{ success: boolean; data: AlbumsStats }>('/api/admin/albums/statistics'),
   });
 
   const deleteMutation = useMutation({

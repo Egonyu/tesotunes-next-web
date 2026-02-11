@@ -65,7 +65,7 @@ export default function FeatureFlagsPage() {
   // ── Queries ──────────────────────────────────────────────────────
   const { data: flagsData, isLoading } = useQuery({
     queryKey: ['admin-feature-flags'],
-    queryFn: () => apiGet<FeatureFlagsResponse>('/admin/feature-flags'),
+    queryFn: () => apiGet<FeatureFlagsResponse>('/api/admin/feature-flags'),
   });
 
   // ── Mutations ────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ export default function FeatureFlagsPage() {
 
   const createFlag = useMutation({
     mutationFn: (data: typeof formData) =>
-      apiPost('/admin/feature-flags', data),
+      apiPost('/api/admin/feature-flags', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag created');

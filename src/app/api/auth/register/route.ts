@@ -1,5 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
+
+/**
+ * Safely parse JSON from a fetch response.
+ * Returns null if the body is empty or not valid JSON.
+ */
+async function safeJsonParse(response: Response): Promise<Record<string, unknown> | null> {
+  try {
+    const text = await response.text();
+    if (!text || text.trim().length === 0) {
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("[Register] Non-JSON response from backend:", text.substring(0, 200));
+      return null;
+    }
+  } catch (textError) {
+    console.error("[Register] Failed to read response body:", textError);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
@@ -7,29 +31,25 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!data.name || !data.email || !data.password) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: "Missing required fields",
           errors: {
-            name: !data.name ? ["Name is required"] : [],
-            email: !data.email ? ["Email is required"] : [],
-            password: !data.password ? ["Password is required"] : [],
-          }
+            ...(data.name ? {} : { name: ["Name is required"] }),
+            ...(data.email ? {} : { email: ["Email is required"] }),
+            ...(data.password ? {} : { password: ["Password is required"] }),
+          },
         },
         { status: 422 }
       );
     }
 
-    // Call Laravel backend
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://beta.test/api";
-
-    console.log("Calling backend registration:", {
-      url: `${backendUrl}/auth/register`,
+    console.log("[Register] Calling backend:", {
+      url: `${API_URL}/api/register`,
       data: { name: data.name, email: data.email },
     });
 
-    const response = await fetch(`${backendUrl}/auth/register`, {
+    const response = await fetch(`${API_URL}/api/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -43,27 +63,47 @@ export async function POST(request: NextRequest) {
         phone: data.phone,
         country: data.country,
         date_of_birth: data.date_of_birth,
+        genres: data.genres, // optional genre selection from registration flow
       }),
     });
 
-    const responseData = await response.json();
+    const responseData = await safeJsonParse(response);
 
-    if (!response.ok) {
-      return NextResponse.json(responseData, { status: response.status });
+    if (!responseData) {
+      console.error("[Register] Empty or non-JSON response from backend, status:", response.status, "content-type:", response.headers.get("content-type"));
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The registration service is currently unavailable. Please try again later.",
+          errors: null,
+        },
+        { status: 502 }
+      );
     }
 
-    return NextResponse.json(responseData, { status: 201 });
+    if (!response.ok) {
+      // Normalize Laravel validation errors into a consistent shape
+      const errors = (responseData.errors as Record<string, string[]>) ?? null;
+      const message = (responseData.message as string) || "Registration failed";
+      return NextResponse.json(
+        { success: false, message, errors, data: null },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, message: "Registration successful", data: responseData.data ?? responseData, errors: null },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Registration API error:", error);
+    console.error("[Register] Unexpected error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Registration failed",
-        error:
-          error instanceof Error
-            ? error.message
-            : "An error occurred during registration",
+        message: "An unexpected error occurred during registration. Please try again.",
+        errors: null,
+        data: null,
       },
       { status: 500 }
     );

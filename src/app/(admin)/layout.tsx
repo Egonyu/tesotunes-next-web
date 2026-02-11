@@ -26,7 +26,8 @@ import {
   Shield,
   Megaphone,
   ScrollText,
-  Flag
+  Flag,
+  Percent
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ const navItems = [
   { href: '/admin/artists', label: 'Artists', icon: Mic2 },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },
   { href: '/admin/store', label: 'Store', icon: ShoppingBag },
+  { href: '/admin/promotions', label: 'Promotions', icon: Percent },
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/admin/sacco', label: 'SACCO', icon: CreditCard },

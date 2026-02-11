@@ -86,12 +86,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const { data: categories } = useQuery({
     queryKey: ['store', 'categories'],
-    queryFn: () => apiGet<{ data: Category[] }>('/admin/store/categories'),
+    queryFn: () => apiGet<{ data: Category[] }>('/api/admin/store/categories'),
   });
 
   const { data: stores } = useQuery({
     queryKey: ['admin', 'stores'],
-    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/api/shops'),
+    queryFn: () => apiGet<{ data: Store[] }>('/api/admin/store/api/shops'),
   });
 
   // Initialize form data when product loads

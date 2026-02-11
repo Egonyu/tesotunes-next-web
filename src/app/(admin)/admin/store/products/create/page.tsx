@@ -73,17 +73,17 @@ export default function CreateProductPage() {
 
   const { data: categories } = useQuery({
     queryKey: ['store', 'categories'],
-    queryFn: () => apiGet<{ data: Category[] }>('/admin/store/categories'),
+    queryFn: () => apiGet<{ data: Category[] }>('/api/admin/store/categories'),
   });
 
   const { data: stores } = useQuery({
     queryKey: ['admin', 'stores'],
-    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/api/shops'),
+    queryFn: () => apiGet<{ data: Store[] }>('/api/admin/store/api/shops'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/store/products', data, {
+      return apiPost('/api/admin/store/products', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

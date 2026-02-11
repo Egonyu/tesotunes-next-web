@@ -66,12 +66,12 @@ export default function AdminForumsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'forums', 'stats'],
-    queryFn: () => apiGet<{ data: ForumStats }>('/admin/forums/stats').then(r => r.data),
+    queryFn: () => apiGet<{ data: ForumStats }>('/api/admin/forums/stats').then(r => r.data),
   });
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['admin', 'forums', 'categories'],
-    queryFn: () => apiGet<{ data: ForumCategory[] }>('/admin/forums/categories').then(r => r.data),
+    queryFn: () => apiGet<{ data: ForumCategory[] }>('/api/admin/forums/categories').then(r => r.data),
   });
 
   const { data: topics, isLoading: topicsLoading } = useQuery({

@@ -56,12 +56,12 @@ export default function StoreProductsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'store', 'stats'],
-    queryFn: () => apiGet<StatsResponse>('/admin/store/api/stats'),
+    queryFn: () => apiGet<StatsResponse>('/api/admin/store/api/stats'),
   });
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'products', { page, search, category, status }],
-    queryFn: () => apiGet<ProductsResponse>('/admin/store/api/products', { 
+    queryFn: () => apiGet<ProductsResponse>('/api/admin/store/api/products', { 
       params: { page, search, category, status, per_page: 15 }
     }),
   });

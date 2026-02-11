@@ -36,7 +36,7 @@ export default function AdminStorePromotionsPage() {
 
   const { data: promotions, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'promotions'],
-    queryFn: () => apiGet<{ data: Promotion[] }>('/admin/store/promotions').then(r => r.data),
+    queryFn: () => apiGet<{ data: Promotion[] }>('/api/admin/store/promotions').then(r => r.data),
   });
 
   const deletePromo = useMutation({

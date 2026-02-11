@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://beta.test/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
 
 // Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
@@ -134,8 +134,17 @@ export async function serverFetch<T>(
   });
 
   if (!response.ok) {
+    const text = await response.text();
+    console.error(`API Error: ${response.status} - ${url}`, text.slice(0, 200));
     throw new Error(`API Error: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  
+  // If response has success wrapper, extract data
+  if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+    return data as T;
+  }
+  
+  return data;
 }

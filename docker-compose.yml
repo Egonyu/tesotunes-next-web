@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_VERSION: 22
+    container_name: tesotunes-beta-frontend
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - API_URL=https://api.tesotunes.com
+      - NEXT_PUBLIC_API_URL=https://api.tesotunes.com
+      - NEXTAUTH_URL=https://tesotunes.com
+      - NEXTAUTH_SECRET=your-generated-secret-key-here-change-this-in-production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tesotunes
+    labels:
+      - "com.example.description=TesoTunes Frontend (Vite)"
+      - "coolify.managed=true"
+
+networks:
+  tesotunes:
+    driver: bridge

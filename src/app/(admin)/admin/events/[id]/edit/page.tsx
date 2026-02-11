@@ -96,7 +96,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
   });
 
   useEffect(() => {

@@ -9,14 +9,15 @@ import type { Song, Artist, Album, Genre, Playlist, PaginatedResponse } from "@/
 export function useSongs(params?: { page?: number; limit?: number; genre?: string }) {
   return useQuery({
     queryKey: ["songs", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>("/music/songs", { params }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>("/api/songs", { params }),
+    retry: 1,
   });
 }
 
 export function useSong(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["song", idOrSlug],
-    queryFn: () => apiGet<Song>(`/music/songs/${idOrSlug}`),
+    queryFn: () => apiGet<Song>(`/api/songs/${idOrSlug}`),
     enabled: !!idOrSlug,
   });
 }
@@ -50,7 +51,8 @@ export function useRecordPlay() {
 export function useArtists(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["artists", params],
-    queryFn: () => apiGet<PaginatedResponse<Artist>>("/music/artists", { params }),
+    queryFn: () => apiGet<PaginatedResponse<Artist>>("/api/artists", { params }),
+    retry: 1,
   });
 }
 
@@ -107,7 +109,8 @@ export function useUnfollowArtist() {
 export function useAlbums(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["albums", params],
-    queryFn: () => apiGet<PaginatedResponse<Album>>("/music/albums", { params }),
+    queryFn: () => apiGet<PaginatedResponse<Album>>("/api/albums", { params }),
+    retry: 1,
   });
 }
 
@@ -126,7 +129,7 @@ export function useAlbum(idOrSlug: string | number) {
 export function useGenres() {
   return useQuery({
     queryKey: ["genres"],
-    queryFn: () => apiGet<Genre[]>("/music/genres"),
+    queryFn: () => apiGet<Genre[]>("/api/genres"),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }

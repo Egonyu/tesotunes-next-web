@@ -64,17 +64,17 @@ export default function CreateAlbumPage() {
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?per_page=1000'),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/albums', data, {
+      return apiPost('/api/admin/albums', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

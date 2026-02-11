@@ -31,7 +31,7 @@ interface Event {
   ticketsSold: number;
   tickets_sold?: number;
   capacity: number;
-  revenue: number;
+  revenue: number | null;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 }
 
@@ -60,14 +60,14 @@ export default function EventsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'events', 'stats'],
-    queryFn: () => apiGet<EventStats | { data: EventStats }>('/admin/events/stats')
+    queryFn: () => apiGet<EventStats | { data: EventStats }>('/api/admin/events/stats')
       .then(res => ('data' in res && res.data) ? res.data as EventStats : res as EventStats),
     staleTime: 60 * 1000,
   });
 
   const { data: eventsRes, isLoading } = useQuery({
     queryKey: ['admin', 'events', { search: searchQuery, status: statusFilter, month: monthFilter, page }],
-    queryFn: () => apiGet<PaginatedEvents | Event[]>('/admin/events', {
+    queryFn: () => apiGet<PaginatedEvents | Event[]>('/api/admin/events', {
       params: {
         search: searchQuery || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -91,8 +91,8 @@ export default function EventsPage() {
     cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   };
 
-  const formatRevenue = (val: number | undefined) => {
-    if (val === undefined) return '—';
+  const formatRevenue = (val: number | undefined | null) => {
+    if (val == null || isNaN(val)) return '—';
     if (val >= 1000000000) return `UGX ${(val / 1000000000).toFixed(1)}B`;
     if (val >= 1000000) return `UGX ${(val / 1000000).toFixed(0)}M`;
     return `UGX ${val.toLocaleString()}`;

@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Header() {
   const { sidebarCollapsed, setSearchOpen } = useUIStore();
@@ -15,17 +16,15 @@ export function Header() {
     <header
       className={cn(
         "fixed top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all",
-        sidebarCollapsed ? "left-16" : "left-64",
-        "right-0"
+        // On mobile: full width (left-0 right-0)
+        // On desktop: adjust for sidebar
+        "left-0 right-0",
+        "lg:left-16 lg:right-0", // collapsed sidebar on desktop
+        !sidebarCollapsed && "lg:left-64" // expanded sidebar on desktop
       )}
     >
       {/* Left Section */}
       <div className="flex items-center gap-4">
-        {/* Mobile menu button - hidden on desktop */}
-        <button className="lg:hidden">
-          <Menu className="h-6 w-6" />
-        </button>
-
         {/* Search */}
         <button
           onClick={() => setSearchOpen(true)}
@@ -37,7 +36,10 @@ export function Header() {
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {session?.user ? (
           <>
             {/* Notifications */}

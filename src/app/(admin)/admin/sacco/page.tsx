@@ -81,13 +81,13 @@ export default function SACCOPage() {
   // Fetch dashboard stats
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['sacco-dashboard'],
-    queryFn: () => apiGet<{ data: DashboardStats }>('/admin/sacco/dashboard'),
+    queryFn: () => apiGet<{ data: DashboardStats }>('/api/admin/sacco/dashboard'),
   });
 
   // Fetch members
   const { data: membersData, isLoading: loadingMembers } = useQuery({
     queryKey: ['sacco-members', statusFilter, searchTerm],
-    queryFn: () => apiGet<{ data: { data: SaccoMember[] } }>('/admin/sacco/members', {
+    queryFn: () => apiGet<{ data: { data: SaccoMember[] } }>('/api/admin/sacco/members', {
       params: {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
@@ -98,7 +98,7 @@ export default function SACCOPage() {
   // Fetch loans
   const { data: loansData, isLoading: loadingLoans } = useQuery({
     queryKey: ['sacco-loans', statusFilter, searchTerm],
-    queryFn: () => apiGet<{ data: { data: SaccoLoan[] } }>('/admin/sacco/loans', {
+    queryFn: () => apiGet<{ data: { data: SaccoLoan[] } }>('/api/admin/sacco/loans', {
       params: {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,

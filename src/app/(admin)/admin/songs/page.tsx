@@ -78,11 +78,11 @@ export default function SongsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'songs', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: SongsStats }>('/admin/songs/statistics'),
+    queryFn: () => apiGet<{ success: boolean; data: SongsStats }>('/api/admin/songs/statistics'),
   });
 
   const bulkApproveMutation = useMutation({
-    mutationFn: (songIds: number[]) => apiPost('/admin/songs/bulk-approve', { song_ids: songIds }),
+    mutationFn: (songIds: number[]) => apiPost('/api/admin/songs/bulk-approve', { song_ids: songIds }),
     onSuccess: () => {
       toast.success('Songs approved successfully');
       setSelectedSongs([]);
@@ -92,7 +92,7 @@ export default function SongsPage() {
   });
 
   const bulkRejectMutation = useMutation({
-    mutationFn: (songIds: number[]) => apiPost('/admin/songs/bulk-reject', { song_ids: songIds }),
+    mutationFn: (songIds: number[]) => apiPost('/api/admin/songs/bulk-reject', { song_ids: songIds }),
     onSuccess: () => {
       toast.success('Songs rejected');
       setSelectedSongs([]);

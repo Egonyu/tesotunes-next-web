@@ -1,88 +1,37 @@
-# =============================================================================
-# .dockerignore - TesoTunes
-# =============================================================================
+# Environment files
+.env*
+!.env.local
 
-# Git
-.git
-.gitattributes
-.gitignore
-
-# Development
-.env
-.env.local
-.env.*.local
-.env.testing
-.env.backup
-.env.credentials.txt
-
-# Node development
+# Dependencies
 node_modules
+
+# Next.js build
 .next
-.swc
-coverage
-test-results
-playwright-report
-
-# IDE
-.vscode
-.idea
-.cursor
-.fleet
-.nova
-.zed
-.phpactor.json
-
-# Laravel dev
-.phpunit.cache
-.phpunit.result.cache
-storage/logs/*
-storage/framework/sessions/*
-storage/framework/cache/data/*
-vendor
+out
 
 # Testing
-tests
-e2e
-__tests__
+src/test
 *.test.ts
-*.test.js
+*.test.tsx
 *.spec.ts
-jest.config.ts
+*.spec.tsx
+e2e
 playwright.config.ts
+test-results
+playwright-report
+blob-report
+coverage
 
-# Documentation
-*.md
-!README.md
-docs
-
-# Misc
+# Development
+.git
+.gitignore
+.vscode
+.idea
 *.log
-debug.log
-server.log
-nul
-*.key
-*.pem
-*.crt
-credentials.json
-secrets.json
+README.md
+*.md
 
-# Build scripts
-scripts
-test-*.sh
-test-*.js
-create-admin.php
-reset-admin-password.php
-reset_test.php
-
-# Archives
-archive
-migrations
-
-# Claude/AI temp files
-cUsersegony*
-
-# Playwright
-.playwright-mcp
-
-# Frontend directory (used locally, not needed in Laravel image)
-frontend
+# Build artifacts
+build.log
+docker-compose.yml
+Dockerfile.dev

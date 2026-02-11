@@ -34,7 +34,6 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      // Call local NextAuth API endpoint (not directly to Laravel)
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -43,17 +42,34 @@ export default function RegisterPage() {
         body: JSON.stringify(formData),
       });
 
-      const result = await response.json();
+      // Safely parse response — guard against empty/non-JSON body
+      let result: Record<string, unknown> | null = null;
+      const text = await response.text();
+      if (text && text.trim().length > 0) {
+        try {
+          result = JSON.parse(text);
+        } catch (parseError) {
+          console.error("[Register] Failed to parse response:", {
+            status: response.status,
+            text: text.substring(0, 200),
+            error: parseError
+          });
+        }
+      }
 
       console.log("Registration response:", { status: response.status, result });
 
       if (!response.ok) {
+        if (!result) {
+          setErrors({ general: ["Registration service unavailable. Please try again later."] });
+          return;
+        }
         if (response.status === 422 && result.errors) {
-          setErrors(result.errors);
+          setErrors(result.errors as Record<string, string[]>);
         } else {
           const message =
-            result.error ||
-            result.message ||
+            (result.message as string) ||
+            (result.error as string) ||
             "An error occurred during registration";
           setErrors({ general: [message] });
         }
@@ -63,7 +79,7 @@ export default function RegisterPage() {
       // Success - redirect to login
       router.push("/login?registered=true");
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("[Register] Error:", error);
 
       const message =
         error instanceof Error ? error.message : "An error occurred";

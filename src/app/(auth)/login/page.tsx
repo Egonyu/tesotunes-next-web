@@ -30,8 +30,9 @@ export default function LoginPage() {
 
   const handleSendOtp = async () => {
     setIsLoading(true);
+    setError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://beta.test/api'}/auth/phone/send-otp`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com'}/auth/phone/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber }),
@@ -83,10 +84,13 @@ export default function LoginPage() {
       });
 
       if (result?.error === "2FA_REQUIRED") {
-        // Backend signals 2FA is needed
         setRequires2FA(true);
       } else if (result?.error) {
-        setError("Invalid email or password");
+        // Surface the actual error message from the backend when available
+        const msg = result.error === "CredentialsSignin"
+          ? "Invalid email or password"
+          : result.error;
+        setError(msg);
       } else {
         // Sync the auth token to localStorage for API calls
         try {
@@ -102,6 +106,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err) {
+      console.error("[Login] Error:", err);
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);

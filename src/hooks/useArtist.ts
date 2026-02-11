@@ -746,13 +746,21 @@ export function useSubmitArtistApplication() {
         });
       }
 
-      // File uploads
-      if (data.avatar) formData.append('avatar', data.avatar);
-      if (data.national_id_front) formData.append('national_id_front', data.national_id_front);
-      if (data.national_id_back) formData.append('national_id_back', data.national_id_back);
-      if (data.selfie_with_id) formData.append('selfie_with_id', data.selfie_with_id);
+      // File uploads - only append if file exists
+      if (data.avatar && data.avatar instanceof File) {
+        formData.append('avatar', data.avatar);
+      }
+      if (data.national_id_front && data.national_id_front instanceof File) {
+        formData.append('national_id_front', data.national_id_front);
+      }
+      if (data.national_id_back && data.national_id_back instanceof File) {
+        formData.append('national_id_back', data.national_id_back);
+      }
+      if (data.selfie_with_id && data.selfie_with_id instanceof File) {
+        formData.append('selfie_with_id', data.selfie_with_id);
+      }
 
-      return apiPostForm<ArtistApplicationResponse>("/artist/apply", formData);
+      return apiPostForm<ArtistApplicationResponse>("/api/artist/apply", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "application-status"] });
@@ -767,7 +775,7 @@ export function useSubmitArtistApplication() {
 export function useArtistApplicationStatus() {
   return useQuery({
     queryKey: ["artist", "application-status"],
-    queryFn: () => apiGet<ApplicationStatusResponse>("/artist/application-status"),
+    queryFn: () => apiGet<ApplicationStatusResponse>("/api/artist/application-status"),
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -778,7 +786,7 @@ export function useArtistApplicationStatus() {
 export function useAvailableGenres() {
   return useQuery({
     queryKey: ["artist", "available-genres"],
-    queryFn: () => apiGet<{ success: boolean; data: GenreOption[] }>("/artist/available-genres"),
+    queryFn: () => apiGet<{ success: boolean; data: GenreOption[] }>("/api/genres"),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours - genres rarely change
   });
 }

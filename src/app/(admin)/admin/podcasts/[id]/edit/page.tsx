@@ -70,7 +70,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
 
   const { data: categoriesData } = useQuery({
     queryKey: ['admin', 'podcast-categories'],
-    queryFn: () => apiGet<{ data: Category[] }>('/admin/podcast-categories'),
+    queryFn: () => apiGet<{ data: Category[] }>('/api/admin/podcast-categories'),
   });
 
   useEffect(() => {

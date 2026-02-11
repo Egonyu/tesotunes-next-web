@@ -96,9 +96,11 @@ export default function AdminSettingsPage() {
   ];
 
   // ── Queries ──────────────────────────────────────────────────────
-  const { data: settingsData, isLoading } = useQuery({
+  const { data: settingsData, isLoading, error } = useQuery({
     queryKey: ['admin-settings'],
-    queryFn: () => apiGet<SettingsResponse>('/admin/settings'),
+    queryFn: () => apiGet<SettingsResponse>('/api/admin/settings'),
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -110,13 +112,15 @@ export default function AdminSettingsPage() {
   // ── Mutations ────────────────────────────────────────────────────
   const saveSettings = useMutation({
     mutationFn: (data: Partial<PlatformSettings>) =>
-      apiPut('/admin/settings', data),
+      apiPut('/api/admin/settings', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
       toast.success('Settings saved successfully');
       setIsDirty(false);
     },
-    onError: () => toast.error('Failed to save settings'),
+    onError: () => {
+      toast.error('Failed to save settings');
+    },
   });
 
   // ── Helpers ──────────────────────────────────────────────────────
@@ -170,6 +174,25 @@ export default function AdminSettingsPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+          <p className="text-red-600 dark:text-red-400 font-medium">Failed to load settings</p>
+          <p className="text-sm text-red-500 dark:text-red-500 mt-1">
+            The settings endpoint may not be available. Please contact your administrator.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -376,11 +399,11 @@ export default function AdminSettingsPage() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Email Configuration</h2>
               <div className="grid gap-4">
-                <div><label className="block text-sm font-medium mb-2">SMTP Host</label><input type="text" value={settings.email.smtp_host} onChange={(e) => updateField('email', 'smtp_host', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" placeholder="smtp.example.com" /></div>
-                <div><label className="block text-sm font-medium mb-2">SMTP Port</label><input type="number" value={settings.email.smtp_port} onChange={(e) => updateField('email', 'smtp_port', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
-                <div><label className="block text-sm font-medium mb-2">SMTP Username</label><input type="text" value={settings.email.smtp_username} onChange={(e) => updateField('email', 'smtp_username', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
-                <div><label className="block text-sm font-medium mb-2">From Name</label><input type="text" value={settings.email.smtp_from_name} onChange={(e) => updateField('email', 'smtp_from_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
-                <div><label className="block text-sm font-medium mb-2">From Email</label><input type="email" value={settings.email.smtp_from_email} onChange={(e) => updateField('email', 'smtp_from_email', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">SMTP Host</label><input type="text" value={settings.email.smtp_host || ''} onChange={(e) => updateField('email', 'smtp_host', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" placeholder="smtp.example.com" /></div>
+                <div><label className="block text-sm font-medium mb-2">SMTP Port</label><input type="number" value={settings.email.smtp_port || ''} onChange={(e) => updateField('email', 'smtp_port', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">SMTP Username</label><input type="text" value={settings.email.smtp_username || ''} onChange={(e) => updateField('email', 'smtp_username', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">From Name</label><input type="text" value={settings.email.smtp_from_name || ''} onChange={(e) => updateField('email', 'smtp_from_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">From Email</label><input type="email" value={settings.email.smtp_from_email || ''} onChange={(e) => updateField('email', 'smtp_from_email', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
               </div>
             </div>
           )}

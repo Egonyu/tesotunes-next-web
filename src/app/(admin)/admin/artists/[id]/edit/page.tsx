@@ -100,12 +100,12 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const { data: artist, isLoading: artistLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
-    queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
+    queryFn: () => apiGet<{ data: Artist }>(`/api/admin/artists/${id}`),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
   });
 
   // Populate form when artist data loads
@@ -143,7 +143,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/artists/${id}`, data, {
+      return apiPost(`/api/admin/artists/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
@@ -260,10 +260,10 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Artists', href: '/admin/artists' },
-          { label: artist.data.name, href: `/admin/artists/${id}` },
+          { label: artist.data.name, href: `/api/admin/artists/${id}` },
           { label: 'Edit' },
         ]}
-        backHref={`/admin/artists/${id}`}
+        backHref={`/api/admin/artists/${id}`}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -603,7 +603,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <FormActions
-          cancelHref={`/admin/artists/${id}`}
+          cancelHref={`/api/admin/artists/${id}`}
           isSubmitting={updateMutation.isPending}
           submitLabel="Save Changes"
         />

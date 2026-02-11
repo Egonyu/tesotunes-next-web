@@ -62,14 +62,14 @@ export default function StorePage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'store', 'stats'],
-    queryFn: () => apiGet<StoreStats | { data: StoreStats }>('/admin/store/api/stats')
+    queryFn: () => apiGet<StoreStats | { data: StoreStats }>('/api/admin/store/stats')
       .then(res => ('data' in res && res.data) ? res.data as StoreStats : res as StoreStats),
     staleTime: 60 * 1000,
   });
 
   const { data: productsRes, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'products', { search: searchQuery, category: categoryFilter, status: statusFilter, page }],
-    queryFn: () => apiGet<PaginatedProducts | Product[]>('/admin/store/api/products', {
+    queryFn: () => apiGet<PaginatedProducts | Product[]>('/api/admin/store/products', {
       params: {
         search: searchQuery || undefined,
         category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -87,7 +87,7 @@ export default function StorePage() {
   const meta = productsRes?.meta;
 
   const deleteProduct = useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/store/api/products/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/admin/store/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store'] });
       toast.success('Product deleted');

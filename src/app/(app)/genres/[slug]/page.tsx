@@ -11,9 +11,13 @@ interface GenrePageProps {
   params: Promise<{ slug: string }>;
 }
 
-async function getGenre(slug: string) {
+async function getGenre(slug: string): Promise<Genre | null> {
   try {
-    return await serverFetch<Genre>(`/genres/${slug}`);
+    const res = await serverFetch<Genre | { data?: Genre; success?: boolean }>(`/genres/${slug}`);
+    if (res && typeof res === 'object' && 'success' in res && 'data' in res) {
+      return (res as { data: Genre }).data;
+    }
+    return res as Genre;
   } catch {
     return null;
   }

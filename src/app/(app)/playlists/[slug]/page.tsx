@@ -24,9 +24,13 @@ interface PlaylistPageProps {
   params: Promise<{ slug: string }>;
 }
 
-async function getPlaylist(slug: string) {
+async function getPlaylist(slug: string): Promise<Playlist | null> {
   try {
-    return await serverFetch<Playlist>(`/playlists/${slug}`);
+    const res = await serverFetch<Playlist | { data?: Playlist; success?: boolean }>(`/playlists/${slug}`);
+    if (res && typeof res === 'object' && 'success' in res && 'data' in res) {
+      return (res as { data: Playlist }).data;
+    }
+    return res as Playlist;
   } catch {
     return null;
   }

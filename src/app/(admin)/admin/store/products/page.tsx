@@ -121,7 +121,7 @@ export default function StoreProductsPage() {
       key: 'price',
       header: 'Price',
       render: (product) => (
-        <span className="font-medium">UGX {product.price.toLocaleString()}</span>
+        <span className="font-medium">UGX {(product.price ?? 0).toLocaleString()}</span>
       ),
     },
     {
@@ -174,7 +174,14 @@ export default function StoreProductsPage() {
     },
   ];
 
-  const stats = statsData || { total_products: 0, total_orders: 0, revenue: 0, growth: 0 };
+  // Safely extract stats — API may return { data: {...} } wrapper or flat object
+  const rawStats = (statsData as { data?: StatsResponse })?.data ?? statsData;
+  const stats: StatsResponse = {
+    total_products: rawStats?.total_products ?? 0,
+    total_orders: rawStats?.total_orders ?? 0,
+    revenue: rawStats?.revenue ?? 0,
+    growth: rawStats?.growth ?? 0,
+  };
 
   return (
     <div className="space-y-6">

@@ -21,11 +21,7 @@ interface AlbumPageProps {
 
 async function getAlbum(slug: string): Promise<Album | null> {
   try {
-    const res = await serverFetch<Album | { data?: Album; success?: boolean }>(`/albums/${slug}`);
-    if (res && typeof res === 'object' && 'success' in res && 'data' in res) {
-      return (res as { data: Album }).data;
-    }
-    return res as Album;
+    return await serverFetch<Album>(`/albums/${slug}`);
   } catch {
     return null;
   }

@@ -13,11 +13,7 @@ interface GenrePageProps {
 
 async function getGenre(slug: string): Promise<Genre | null> {
   try {
-    const res = await serverFetch<Genre | { data?: Genre; success?: boolean }>(`/genres/${slug}`);
-    if (res && typeof res === 'object' && 'success' in res && 'data' in res) {
-      return (res as { data: Genre }).data;
-    }
-    return res as Genre;
+    return await serverFetch<Genre>(`/genres/${slug}`);
   } catch {
     return null;
   }

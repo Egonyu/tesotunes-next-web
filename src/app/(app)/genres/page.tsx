@@ -22,11 +22,8 @@ const gradientColors = [
 
 async function getGenres(): Promise<Genre[]> {
   try {
-    const res = await serverFetch<Genre[] | { data?: Genre[]; success?: boolean }>("/genres");
-    // API may return raw array or { success, data } wrapper
-    if (Array.isArray(res)) return res;
-    if (res && typeof res === 'object' && Array.isArray(res.data)) return res.data;
-    return [];
+    const res = await serverFetch<Genre[]>("/genres");
+    return Array.isArray(res) ? res : [];
   } catch {
     return [];
   }

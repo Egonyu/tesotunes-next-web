@@ -3,15 +3,26 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
-import { Upload, X, User } from 'lucide-react';
+import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { Upload, X, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Genre {
   id: string;
   name: string;
+}
+
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  username: string;
+  phone: string;
+  role: string;
+  status: string;
 }
 
 interface Artist {
@@ -38,6 +49,8 @@ interface Artist {
   genres: { id: string; name: string }[];
   meta_title: string;
   meta_description: string;
+  user_id?: number;
+  user?: UserProfile;
 }
 
 interface ArtistFormData {
@@ -63,6 +76,15 @@ interface ArtistFormData {
   cover_image: File | null;
   meta_title: string;
   meta_description: string;
+}
+
+interface UserFormData {
+  email: string;
+  username: string;
+  phone: string;
+  name: string;
+  new_password: string;
+  new_password_confirmation: string;
 }
 
 export default function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
@@ -97,6 +119,16 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [userFormData, setUserFormData] = useState<UserFormData>({
+    email: '',
+    username: '',
+    phone: '',
+    name: '',
+    new_password: '',
+    new_password_confirmation: '',
+  });
+  const [userErrors, setUserErrors] = useState<Record<string, string>>({});
 
   const { data: artist, isLoading: artistLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
@@ -138,6 +170,18 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       });
       if (a.profile_url) setProfilePreview(a.profile_url);
       if (a.cover_url) setCoverPreview(a.cover_url);
+
+      // Populate user profile data if available
+      if (a.user) {
+        setUserFormData({
+          email: a.user.email || '',
+          username: a.user.username || '',
+          phone: a.user.phone || '',
+          name: a.user.name || '',
+          new_password: '',
+          new_password_confirmation: '',
+        });
+      }
     }
   }, [artist]);
 
@@ -162,6 +206,69 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       }
     },
   });
+
+  const userUpdateMutation = useMutation({
+    mutationFn: async (data: Partial<UserFormData>) => {
+      const userId = artist?.data?.user_id || artist?.data?.user?.id;
+      if (!userId) throw new Error('No linked user account found');
+      
+      // Build payload — only include password fields if a new password was entered
+      const payload: Record<string, string> = {
+        name: data.name || '',
+        email: data.email || '',
+        username: data.username || '',
+        phone: data.phone || '',
+      };
+      if (data.new_password) {
+        payload.password = data.new_password;
+        payload.password_confirmation = data.new_password_confirmation || '';
+      }
+      return apiPut(`/api/admin/users/${userId}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      toast.success('User account updated successfully');
+      setUserFormData(prev => ({ ...prev, new_password: '', new_password_confirmation: '' }));
+      setUserErrors({});
+    },
+    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
+      if (error.response?.data?.errors) {
+        const newErrors: Record<string, string> = {};
+        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
+          newErrors[key] = messages[0];
+        });
+        setUserErrors(newErrors);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update user account');
+      }
+    },
+  });
+
+  const handleUserProfileSave = () => {
+    // Client-side validation
+    const errs: Record<string, string> = {};
+    if (!userFormData.email) errs.email = 'Email is required';
+    if (userFormData.new_password && userFormData.new_password.length < 8) {
+      errs.new_password = 'Password must be at least 8 characters';
+    }
+    if (userFormData.new_password && userFormData.new_password !== userFormData.new_password_confirmation) {
+      errs.new_password_confirmation = 'Passwords do not match';
+    }
+    if (Object.keys(errs).length > 0) {
+      setUserErrors(errs);
+      return;
+    }
+    userUpdateMutation.mutate(userFormData);
+  };
+
+  const updateUserField = (field: keyof UserFormData, value: string) => {
+    setUserFormData(prev => ({ ...prev, [field]: value }));
+    setUserErrors(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const updateField = (field: keyof ArtistFormData, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -260,10 +367,10 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Artists', href: '/admin/artists' },
-          { label: artist.data.name, href: `/api/admin/artists/${id}` },
+          { label: artist.data.name, href: `/admin/artists/${id}` },
           { label: 'Edit' },
         ]}
-        backHref={`/api/admin/artists/${id}`}
+        backHref={`/admin/artists/${id}`}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -441,6 +548,124 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                 />
               </FormField>
             </FormSection>
+
+            {/* User Account Section */}
+            <FormSection title="User Account">
+              {(artist?.data?.user || artist?.data?.user_id) ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Edit the linked user account details. Password fields are optional — leave blank to keep the current password.
+                  </p>
+
+                  <FormField label="Display Name" error={userErrors.name}>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={userFormData.name}
+                        onChange={(e) => updateUserField('name', e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        placeholder="User display name"
+                      />
+                    </div>
+                  </FormField>
+
+                  <FormField label="Email Address" error={userErrors.email}>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="email"
+                        value={userFormData.email}
+                        onChange={(e) => updateUserField('email', e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                  </FormField>
+
+                  <FormField label="Username" error={userErrors.username}>
+                    <input
+                      type="text"
+                      value={userFormData.username}
+                      onChange={(e) => updateUserField('username', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                      placeholder="username"
+                    />
+                  </FormField>
+
+                  <FormField label="Phone" error={userErrors.phone}>
+                    <input
+                      type="tel"
+                      value={userFormData.phone}
+                      onChange={(e) => updateUserField('phone', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                      placeholder="+256..."
+                    />
+                  </FormField>
+
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm font-medium mb-3">Change Password</p>
+                    <div className="space-y-3">
+                      <FormField label="New Password" error={userErrors.new_password}>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={userFormData.new_password}
+                            onChange={(e) => updateUserField('new_password', e.target.value)}
+                            className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                            placeholder="Leave blank to keep current"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormField>
+
+                      <FormField label="Confirm Password" error={userErrors.new_password_confirmation}>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={userFormData.new_password_confirmation}
+                            onChange={(e) => updateUserField('new_password_confirmation', e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                      </FormField>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleUserProfileSave}
+                    disabled={userUpdateMutation.isPending}
+                    className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {userUpdateMutation.isPending ? (
+                      <>
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save User Account'
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No linked user account found for this artist.
+                  </p>
+                </div>
+              )}
+            </FormSection>
           </div>
 
           {/* Sidebar */}
@@ -603,7 +828,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <FormActions
-          cancelHref={`/api/admin/artists/${id}`}
+          cancelHref={`/admin/artists/${id}`}
           isSubmitting={updateMutation.isPending}
           submitLabel="Save Changes"
         />

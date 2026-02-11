@@ -80,11 +80,12 @@ function formatCurrency(amount: number | null | undefined, currency = 'UGX'): st
 }
 
 export default function AdminDashboardPage() {
-  const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery({
+  const { data: statsData, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
     queryFn: () => apiGet<{ success: boolean; data: DashboardStats }>('/api/admin/dashboard/stats'),
     refetchInterval: 5 * 60 * 1000, // 5 minutes instead of 1 minute
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
@@ -162,10 +163,19 @@ export default function AdminDashboardPage() {
   }
 
   if (statsError) {
+    const errMsg = (statsError as { response?: { status?: number } })?.response?.status === 401
+      ? 'You need to be logged in as an admin to view the dashboard.'
+      : 'Failed to load dashboard data';
     return (
       <div className="p-6 text-center">
-        <p className="text-red-500">Failed to load dashboard data</p>
+        <p className="text-red-500">{errMsg}</p>
         <p className="text-muted-foreground text-sm mt-2">Please check your connection and try again</p>
+        <button
+          onClick={() => refetchStats()}
+          className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+        >
+          Retry
+        </button>
       </div>
     );
   }

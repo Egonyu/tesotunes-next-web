@@ -29,8 +29,8 @@ interface User {
   name: string;
   email: string;
   username: string;
-  role: 'user' | 'artist' | 'admin' | 'super_admin';
-  status: 'active' | 'inactive' | 'suspended' | 'banned';
+  role?: 'user' | 'artist' | 'admin' | 'super_admin' | string;
+  status?: 'active' | 'inactive' | 'suspended' | 'banned' | string;
   created_at: string;
   last_login_at: string | null;
 }
@@ -287,21 +287,21 @@ export default function UsersPage() {
                   <td className="p-4">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium capitalize',
-                      roleStyles[user.role] || roleStyles.user
+                      roleStyles[user.role as keyof typeof roleStyles] || roleStyles.user
                     )}>
-                      {user.role.replace('_', ' ')}
+                      {(user.role || 'user').replace('_', ' ')}
                     </span>
                   </td>
                   <td className="p-4">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium capitalize',
-                      statusStyles[user.status] || statusStyles.active
+                      statusStyles[user.status as keyof typeof statusStyles] || statusStyles.active
                     )}>
-                      {user.status}
+                      {user.status || 'active'}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">
                     {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}

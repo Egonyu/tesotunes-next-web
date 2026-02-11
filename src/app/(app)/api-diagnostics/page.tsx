@@ -153,7 +153,7 @@ export default function ApiDiagnosticsPage() {
                       )}
                     </div>
                     
-                    {result.data && (
+                    {result.data != null ? (
                       <details className="mt-4">
                         <summary className="cursor-pointer text-sm text-gray-400 hover:text-white">
                           View Response Data
@@ -162,7 +162,7 @@ export default function ApiDiagnosticsPage() {
                           {JSON.stringify(result.data, null, 2)}
                         </pre>
                       </details>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>

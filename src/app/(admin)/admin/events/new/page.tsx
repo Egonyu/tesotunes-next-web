@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPostForm } from '@/lib/api';
+import { toast } from 'sonner';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Calendar, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -62,11 +63,11 @@ const initialFormData: EventFormData = {
   start_time: '',
   end_date: '',
   end_time: '',
-  timezone: 'Africa/Dar_es_Salaam',
+  timezone: 'Africa/Nairobi',
   is_online: false,
   online_url: '',
   is_free: false,
-  currency: 'TZS',
+  currency: 'UGX',
   min_age: '',
   max_capacity: '',
   is_featured: false,
@@ -98,10 +99,13 @@ export default function CreateEventPage() {
       return apiPostForm('/api/admin/events', data);
     },
     onSuccess: () => {
+      toast.success('Event created successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       router.push('/admin/events');
     },
     onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Failed to create event';
+      toast.error(msg);
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
@@ -352,8 +356,8 @@ export default function CreateEventPage() {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="Africa/Dar_es_Salaam">East Africa Time (EAT)</option>
-                <option value="Africa/Nairobi">Nairobi</option>
+                <option value="Africa/Nairobi">East Africa Time (EAT)</option>
+                  <option value="Africa/Kampala">Kampala</option>
                 <option value="Africa/Lagos">Lagos</option>
                 <option value="Africa/Johannesburg">Johannesburg</option>
                 <option value="Europe/London">London</option>
@@ -415,7 +419,7 @@ export default function CreateEventPage() {
                   value={formData.city}
                   onChangeEvent={handleChange}
                   error={errors.city}
-                  placeholder="Dar es Salaam"
+                  placeholder="Kampala"
                 />
                 <FormField
                   label="Country"
@@ -423,7 +427,7 @@ export default function CreateEventPage() {
                   value={formData.country}
                   onChangeEvent={handleChange}
                   error={errors.country}
-                  placeholder="Tanzania"
+                  placeholder="Uganda"
                 />
               </div>
             </>
@@ -523,10 +527,10 @@ export default function CreateEventPage() {
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="TZS">TZS (Tanzanian Shilling)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                    <option value="KES">KES (Kenyan Shilling)</option>
                     <option value="UGX">UGX (Ugandan Shilling)</option>
+                      <option value="KES">KES (Kenyan Shilling)</option>
+                      <option value="TZS">TZS (Tanzanian Shilling)</option>
+                      <option value="USD">USD (US Dollar)</option>
                   </select>
                 </div>
                 <FormField

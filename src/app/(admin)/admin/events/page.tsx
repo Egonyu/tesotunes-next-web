@@ -25,14 +25,20 @@ interface Event {
   id: number;
   title: string;
   venue: string;
+  venue_name?: string;
   location: string;
+  city?: string;
+  country?: string;
   image: string;
+  artwork?: string;
   date: string;
+  starts_at?: string;
   ticketsSold: number;
   tickets_sold?: number;
   capacity: number;
+  attendee_limit?: number;
   revenue: number | null;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled' | 'draft' | 'published' | 'postponed';
 }
 
 interface EventStats {
@@ -84,11 +90,14 @@ export default function EventsPage() {
   const events = eventsRes?.data || [];
   const meta = eventsRes?.meta;
   
-  const statusStyles = {
+  const statusStyles: Record<string, string> = {
     upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     ongoing: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     completed: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+    published: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    postponed: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
   };
 
   const formatRevenue = (val: number | undefined | null) => {
@@ -201,7 +210,7 @@ export default function EventsPage() {
               <div key={event.id} className="flex flex-col md:flex-row rounded-xl border bg-card overflow-hidden">
                 <div className="relative w-full md:w-48 h-48 md:h-auto bg-muted shrink-0">
                   <Image
-                    src={event.image || '/images/placeholder.jpg'}
+                    src={event.artwork || event.image || '/images/placeholder.jpg'}
                     alt={event.title}
                     fill
                     className="object-cover"
@@ -213,7 +222,7 @@ export default function EventsPage() {
                     <h3 className="font-semibold">{event.title}</h3>
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium capitalize shrink-0',
-                      statusStyles[event.status]
+                      statusStyles[event.status] || statusStyles.draft
                     )}>
                       {event.status}
                     </span>
@@ -222,11 +231,11 @@ export default function EventsPage() {
                   <div className="space-y-2 mb-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      {new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      {new Date(event.starts_at || event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      {event.venue}, {event.location}
+                      {event.venue_name || event.venue || 'TBD'}{event.city || event.location ? `, ${event.city || event.location}` : ''}
                     </div>
                   </div>
                   
@@ -236,12 +245,12 @@ export default function EventsPage() {
                       <p className="text-xs text-muted-foreground">Sold</p>
                     </div>
                     <div>
-                      <p className="font-semibold">{event.capacity.toLocaleString()}</p>
+                      <p className="font-semibold">{(event.attendee_limit || event.capacity || 0).toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Capacity</p>
                     </div>
                     <div>
                       <p className="font-semibold">
-                        {event.capacity > 0 ? Math.round((sold / event.capacity) * 100) : 0}%
+                        {(event.attendee_limit || event.capacity || 0) > 0 ? Math.round((sold / (event.attendee_limit || event.capacity || 1)) * 100) : 0}%
                       </p>
                       <p className="text-xs text-muted-foreground">Filled</p>
                     </div>

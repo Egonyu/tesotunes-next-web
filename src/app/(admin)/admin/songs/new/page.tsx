@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { Upload, X, Plus, Music } from 'lucide-react';
 import Image from 'next/image';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Artist {
   id: string;
@@ -98,20 +99,22 @@ export default function CreateSongPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/api/admin/songs', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm('/api/admin/songs', data);
     },
     onSuccess: () => {
+      toast.success('Song created successfully!');
       router.push('/admin/songs');
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]> } } }) => {
+    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         Object.entries(error.response.data.errors).forEach(([key, messages]) => {
           newErrors[key] = messages[0];
         });
         setErrors(newErrors);
+        toast.error('Please fix the errors below');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to create song. Please try again.');
       }
     },
   });
@@ -164,29 +167,44 @@ export default function CreateSongPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Client-side validation
+    const validationErrors: Record<string, string> = {};
+    if (!formData.title.trim()) validationErrors.title = 'Title is required';
+    if (!formData.artist_id) validationErrors.artist_id = 'Artist is required';
+    if (!formData.audio_file) validationErrors.audio_file = 'Audio file is required';
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     const data = new FormData();
+    // Required fields
     data.append('title', formData.title);
-    data.append('slug', formData.slug);
     data.append('artist_id', formData.artist_id);
-    data.append('album_id', formData.album_id);
-    data.append('duration', formData.duration);
-    data.append('release_date', formData.release_date);
-    data.append('track_number', formData.track_number);
-    data.append('disc_number', formData.disc_number);
-    data.append('explicit', formData.explicit ? '1' : '0');
-    data.append('lyrics', formData.lyrics);
-    data.append('description', formData.description);
     data.append('status', formData.status);
+    data.append('explicit', formData.explicit ? '1' : '0');
     data.append('is_featured', formData.is_featured ? '1' : '0');
-    data.append('isrc', formData.isrc);
-    data.append('bpm', formData.bpm);
-    data.append('key', formData.key);
-    data.append('meta_title', formData.meta_title);
-    data.append('meta_description', formData.meta_description);
+    
+    // Optional fields - only send when they have values
+    if (formData.slug) data.append('slug', formData.slug);
+    if (formData.album_id) data.append('album_id', formData.album_id);
+    if (formData.duration) data.append('duration', formData.duration);
+    if (formData.release_date) data.append('release_date', formData.release_date);
+    if (formData.track_number) data.append('track_number', formData.track_number);
+    if (formData.disc_number) data.append('disc_number', formData.disc_number);
+    if (formData.lyrics) data.append('lyrics', formData.lyrics);
+    if (formData.description) data.append('description', formData.description);
+    if (formData.isrc) data.append('isrc', formData.isrc);
+    if (formData.bpm) data.append('bpm', formData.bpm);
+    if (formData.key) data.append('key', formData.key);
+    if (formData.meta_title) data.append('meta_title', formData.meta_title);
+    if (formData.meta_description) data.append('meta_description', formData.meta_description);
     
     formData.genre_ids.forEach(id => data.append('genre_ids[]', id));
     formData.featured_artists.forEach(id => data.append('featured_artists[]', id));
-    data.append('credits', JSON.stringify(formData.credits));
+    if (formData.credits.length > 0) data.append('credits', JSON.stringify(formData.credits));
     
     if (formData.audio_file) data.append('audio_file', formData.audio_file);
     if (formData.cover_image) data.append('cover_image', formData.cover_image);

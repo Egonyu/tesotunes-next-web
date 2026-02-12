@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiPostForm } from '@/lib/api';
 import { Upload, X, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -145,8 +145,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     if (artist?.data) {
       const a = artist.data;
       setFormData({
-        name: a.name,
-        slug: a.slug,
+        name: a.name || '',
+        slug: a.slug || '',
         bio: a.bio || '',
         short_bio: a.short_bio || '',
         genre_ids: a.genres?.map(g => g.id) || [],
@@ -160,9 +160,9 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         twitter_url: a.twitter_url || '',
         facebook_url: a.facebook_url || '',
         tiktok_url: a.tiktok_url || '',
-        status: a.status,
-        is_verified: a.is_verified,
-        is_featured: a.is_featured,
+        status: a.status || 'active',
+        is_verified: !!a.is_verified,
+        is_featured: !!a.is_featured,
         profile_image: null,
         cover_image: null,
         meta_title: a.meta_title || '',
@@ -187,9 +187,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/api/admin/artists/${id}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm(`/api/admin/artists/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });

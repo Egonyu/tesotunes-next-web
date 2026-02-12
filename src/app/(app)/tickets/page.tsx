@@ -112,7 +112,7 @@ export default function MyTicketsPage() {
                 {/* Event Image */}
                 <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
                   <Image
-                    src={ticket.event.image || '/images/event-placeholder.jpg'}
+                    src={ticket.event.artwork || ticket.event.image || '/images/event-placeholder.jpg'}
                     alt={ticket.event.title}
                     fill
                     className="object-cover"
@@ -139,7 +139,7 @@ export default function MyTicketsPage() {
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      {new Date(ticket.event.date).toLocaleDateString('en', {
+                      {new Date(ticket.event.starts_at || ticket.event.date).toLocaleDateString('en', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -147,11 +147,11 @@ export default function MyTicketsPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {ticket.event.time}
+                      {ticket.event.time || (ticket.event.starts_at ? new Date(ticket.event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBA')}
                     </span>
                     <span className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      {ticket.event.venue}
+                      {ticket.event.venue_name || ticket.event.venue || ticket.event.city || 'TBA'}
                     </span>
                   </div>
                   

@@ -3,11 +3,12 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { Upload, X, Plus, Music } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Artist {
   id: string;
@@ -136,9 +137,9 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
     if (song?.data) {
       const s = song.data;
       setFormData({
-        title: s.title,
-        slug: s.slug,
-        artist_id: s.artist.id,
+        title: s.title || '',
+        slug: s.slug || '',
+        artist_id: s.artist?.id || '',
         featured_artists: s.featured_artists?.map(a => a.id) || [],
         album_id: s.album?.id || '',
         genre_ids: s.genres?.map(g => g.id) || [],
@@ -146,11 +147,11 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
         release_date: s.release_date?.split('T')[0] || '',
         track_number: s.track_number?.toString() || '1',
         disc_number: s.disc_number?.toString() || '1',
-        explicit: s.explicit,
+        explicit: !!s.explicit,
         lyrics: s.lyrics || '',
         description: s.description || '',
-        status: s.status,
-        is_featured: s.is_featured,
+        status: s.status || 'draft',
+        is_featured: !!s.is_featured,
         audio_file: null,
         cover_image: null,
         credits: s.credits || [],
@@ -168,22 +169,24 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/api/admin/songs/${id}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm(`/api/admin/songs/${id}`, data);
     },
     onSuccess: () => {
+      toast.success('Song updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
       router.push(`/admin/songs/${id}`);
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]> } } }) => {
+    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         Object.entries(error.response.data.errors).forEach(([key, messages]) => {
           newErrors[key] = messages[0];
         });
         setErrors(newErrors);
+        toast.error('Please fix the errors below');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update song. Please try again.');
       }
     },
   });
@@ -230,30 +233,44 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Client-side validation
+    const validationErrors: Record<string, string> = {};
+    if (!formData.title.trim()) validationErrors.title = 'Title is required';
+    if (!formData.artist_id) validationErrors.artist_id = 'Artist is required';
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     const data = new FormData();
     data.append('_method', 'PUT');
+    // Required fields
     data.append('title', formData.title);
-    data.append('slug', formData.slug);
     data.append('artist_id', formData.artist_id);
-    data.append('album_id', formData.album_id);
-    data.append('duration', formData.duration);
-    data.append('release_date', formData.release_date);
-    data.append('track_number', formData.track_number);
-    data.append('disc_number', formData.disc_number);
-    data.append('explicit', formData.explicit ? '1' : '0');
-    data.append('lyrics', formData.lyrics);
-    data.append('description', formData.description);
     data.append('status', formData.status);
+    data.append('explicit', formData.explicit ? '1' : '0');
     data.append('is_featured', formData.is_featured ? '1' : '0');
-    data.append('isrc', formData.isrc);
-    data.append('bpm', formData.bpm);
-    data.append('key', formData.key);
-    data.append('meta_title', formData.meta_title);
-    data.append('meta_description', formData.meta_description);
+    
+    // Optional fields - only send when they have values
+    if (formData.slug) data.append('slug', formData.slug);
+    if (formData.album_id) data.append('album_id', formData.album_id);
+    if (formData.duration) data.append('duration', formData.duration);
+    if (formData.release_date) data.append('release_date', formData.release_date);
+    if (formData.track_number) data.append('track_number', formData.track_number);
+    if (formData.disc_number) data.append('disc_number', formData.disc_number);
+    if (formData.lyrics) data.append('lyrics', formData.lyrics);
+    if (formData.description) data.append('description', formData.description);
+    if (formData.isrc) data.append('isrc', formData.isrc);
+    if (formData.bpm) data.append('bpm', formData.bpm);
+    if (formData.key) data.append('key', formData.key);
+    if (formData.meta_title) data.append('meta_title', formData.meta_title);
+    if (formData.meta_description) data.append('meta_description', formData.meta_description);
     
     formData.genre_ids.forEach(id => data.append('genre_ids[]', id));
     formData.featured_artists.forEach(id => data.append('featured_artists[]', id));
-    data.append('credits', JSON.stringify(formData.credits));
+    if (formData.credits.length > 0) data.append('credits', JSON.stringify(formData.credits));
     
     if (formData.audio_file) data.append('audio_file', formData.audio_file);
     if (formData.cover_image) data.append('cover_image', formData.cover_image);

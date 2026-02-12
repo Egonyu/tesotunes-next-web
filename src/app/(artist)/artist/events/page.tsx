@@ -12,42 +12,60 @@ import {
   Ticket,
   Edit,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Event {
-  id: number;
-  title: string;
-  venue: string;
-  location: string;
-  image: string;
-  date: string;
-  time: string;
-  ticketsSold: number;
-  capacity: number;
-  status: 'upcoming' | 'completed' | 'cancelled';
-}
+import { useArtistEvents, useDeleteEvent } from '@/hooks/useEvents';
+import { toast } from 'sonner';
 
 export default function ArtistEventsPage() {
-  const events: Event[] = [
-    { id: 1, title: 'Live at Serena Hotel', venue: 'Serena Hotel', location: 'Kampala', image: '/images/events/serena.jpg', date: '2026-03-15', time: '20:00', ticketsSold: 450, capacity: 500, status: 'upcoming' },
-    { id: 2, title: 'TesoTunes Festival 2026', venue: 'Lugogo Cricket Oval', location: 'Kampala', image: '/images/events/festival.jpg', date: '2026-04-20', time: '14:00', ticketsSold: 2500, capacity: 5000, status: 'upcoming' },
-    { id: 3, title: 'New Year Concert', venue: 'Speke Resort', location: 'Munyonyo', image: '/images/events/nye.jpg', date: '2025-12-31', time: '22:00', ticketsSold: 1000, capacity: 1000, status: 'completed' },
-  ];
+  const [page, setPage] = useState(1);
+  const { data: eventsData, isLoading, error } = useArtistEvents({ page, per_page: 20 });
+  const deleteEvent = useDeleteEvent();
+
+  const events = eventsData?.data || [];
+  const upcomingEvents = events.filter(e => e.status === 'published' || e.status === 'draft');
+  const pastEvents = events.filter(e => e.status === 'completed' || e.status === 'cancelled');
   
-  const statusStyles = {
+  const statusStyles: Record<string, string> = {
     upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    published: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     completed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   };
+
+  const handleDelete = (eventId: number, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+    deleteEvent.mutate(eventId, {
+      onSuccess: () => toast.success('Event deleted successfully'),
+      onError: () => toast.error('Failed to delete event'),
+    });
+  };
+
+  const totalTicketsSold = events.reduce((acc, e) => acc + (e.tickets_sold || 0), 0);
   
-  const upcomingEvents = events.filter(e => e.status === 'upcoming');
-  const pastEvents = events.filter(e => e.status !== 'upcoming');
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500 mb-2">Failed to load events</p>
+        <p className="text-sm text-muted-foreground">{(error as any)?.message || 'Please try again later'}</p>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">My Events</h1>
@@ -62,19 +80,18 @@ export default function ArtistEventsPage() {
         </Link>
       </div>
       
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold">{upcomingEvents.length}</p>
           <p className="text-sm text-muted-foreground">Upcoming Events</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
-          <p className="text-2xl font-bold">{upcomingEvents.reduce((acc, e) => acc + e.ticketsSold, 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold">{totalTicketsSold.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">Tickets Sold</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
-          <p className="text-2xl font-bold">UGX 45M</p>
-          <p className="text-sm text-muted-foreground">Expected Revenue</p>
+          <p className="text-2xl font-bold">{events.length}</p>
+          <p className="text-sm text-muted-foreground">Total Events</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold">{pastEvents.length}</p>
@@ -82,7 +99,6 @@ export default function ArtistEventsPage() {
         </div>
       </div>
       
-      {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-4">Upcoming Events</h2>
@@ -94,7 +110,7 @@ export default function ArtistEventsPage() {
               >
                 <div className="relative w-full md:w-64 h-48 md:h-auto bg-muted flex-shrink-0">
                   <Image
-                    src={event.image}
+                    src={event.image || '/images/placeholder.jpg'}
                     alt={event.title}
                     fill
                     className="object-cover"
@@ -115,51 +131,53 @@ export default function ArtistEventsPage() {
                             year: 'numeric'
                           })}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {event.time}
-                        </div>
+                        {event.time && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {event.time}
+                          </div>
+                        )}
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
-                          {event.venue}, {event.location}
+                          {event.venue || 'TBD'}{event.city ? `, ${event.city}` : event.location ? `, ${event.location}` : ''}
                         </div>
                       </div>
                     </div>
                     <span className={cn(
                       'px-3 py-1 rounded-full text-sm font-medium capitalize',
-                      statusStyles[event.status]
+                      statusStyles[event.status] || statusStyles.draft
                     )}>
                       {event.status}
                     </span>
                   </div>
                   
-                  {/* Ticket Progress */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <div className="flex items-center gap-1">
-                        <Ticket className="h-4 w-4 text-muted-foreground" />
-                        <span>{event.ticketsSold} / {event.capacity} tickets sold</span>
+                  {event.capacity && event.capacity > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between text-sm mb-2">
+                        <div className="flex items-center gap-1">
+                          <Ticket className="h-4 w-4 text-muted-foreground" />
+                          <span>{event.tickets_sold || 0} / {event.capacity} tickets sold</span>
+                        </div>
+                        <span className="font-medium">
+                          {Math.round(((event.tickets_sold || 0) / event.capacity) * 100)}%
+                        </span>
                       </div>
-                      <span className="font-medium">
-                        {Math.round((event.ticketsSold / event.capacity) * 100)}%
-                      </span>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full"
+                          style={{ width: `${Math.min(((event.tickets_sold || 0) / event.capacity) * 100, 100)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${(event.ticketsSold / event.capacity) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+                  )}
                   
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Link
                       href={`/artist/events/${event.id}`}
                       className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
                     >
                       <Eye className="h-4 w-4" />
-                      View Details
+                      View
                     </Link>
                     <Link
                       href={`/artist/events/${event.id}/edit`}
@@ -175,6 +193,13 @@ export default function ArtistEventsPage() {
                       <ExternalLink className="h-4 w-4" />
                       Public Page
                     </Link>
+                    <button
+                      onClick={() => handleDelete(event.id, event.title)}
+                      className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
+                      disabled={deleteEvent.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -183,7 +208,6 @@ export default function ArtistEventsPage() {
         </div>
       )}
       
-      {/* Past Events */}
       {pastEvents.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-4">Past Events</h2>
@@ -192,14 +216,14 @@ export default function ArtistEventsPage() {
               <div key={event.id} className="rounded-xl border bg-card overflow-hidden">
                 <div className="relative h-40 bg-muted">
                   <Image
-                    src={event.image}
+                    src={event.image || '/images/placeholder.jpg'}
                     alt={event.title}
                     fill
                     className="object-cover opacity-75"
                   />
                   <span className={cn(
                     'absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium capitalize',
-                    statusStyles[event.status]
+                    statusStyles[event.status] || statusStyles.completed
                   )}>
                     {event.status}
                   </span>
@@ -207,11 +231,11 @@ export default function ArtistEventsPage() {
                 <div className="p-4">
                   <h3 className="font-semibold mb-1">{event.title}</h3>
                   <p className="text-sm text-muted-foreground mb-2">
-                    {new Date(event.date).toLocaleDateString()} • {event.venue}
+                    {new Date(event.date).toLocaleDateString()} {event.venue ? `• ${event.venue}` : ''}
                   </p>
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{event.ticketsSold} attendees</span>
+                    <span>{event.tickets_sold || 0} attendees</span>
                   </div>
                 </div>
               </div>
@@ -220,7 +244,6 @@ export default function ArtistEventsPage() {
         </div>
       )}
       
-      {/* Empty State */}
       {events.length === 0 && (
         <div className="text-center py-12">
           <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

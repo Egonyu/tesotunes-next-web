@@ -3,7 +3,8 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
+import { toast } from 'sonner';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Calendar, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -62,11 +63,11 @@ const initialFormData: EventFormData = {
   start_time: '',
   end_date: '',
   end_time: '',
-  timezone: 'Africa/Dar_es_Salaam',
+  timezone: 'Africa/Nairobi',
   is_online: false,
   online_url: '',
   is_free: false,
-  currency: 'TZS',
+  currency: 'UGX',
   min_age: '',
   max_capacity: '',
   is_featured: false,
@@ -114,41 +115,42 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         country: e.country || '',
         latitude: e.latitude?.toString() || '',
         longitude: e.longitude?.toString() || '',
-        start_date: e.start_date || '',
-        start_time: e.start_time || '',
-        end_date: e.end_date || '',
-        end_time: e.end_time || '',
-        timezone: e.timezone || 'Africa/Dar_es_Salaam',
-        is_online: e.is_online || false,
-        online_url: e.online_url || '',
+        start_date: e.starts_at ? e.starts_at.split('T')[0] : (e.start_date || ''),
+        start_time: e.starts_at ? e.starts_at.split('T')[1]?.substring(0, 5) : (e.start_time || ''),
+        end_date: e.ends_at ? e.ends_at.split('T')[0] : (e.end_date || ''),
+        end_time: e.ends_at ? e.ends_at.split('T')[1]?.substring(0, 5) : (e.end_time || ''),
+        timezone: e.timezone || 'Africa/Nairobi',
+        is_online: e.is_virtual || e.is_online || false,
+        online_url: e.virtual_link || e.online_url || '',
         is_free: e.is_free || false,
-        currency: e.currency || 'TZS',
+        currency: e.currency || 'UGX',
         min_age: e.min_age?.toString() || '',
-        max_capacity: e.max_capacity?.toString() || '',
+        max_capacity: (e.attendee_limit || e.max_capacity)?.toString() || '',
         is_featured: e.is_featured || false,
         status: e.status || 'draft',
         artist_ids: e.artists?.map((a: any) => a.id) || [],
         cover_image: null,
         ticket_tiers: e.ticket_tiers || [],
       });
-      if (e.cover_url) {
-        setCoverPreview(e.cover_url);
+      if (e.artwork || e.cover_url) {
+        setCoverPreview(e.artwork || e.cover_url);
       }
     }
   }, [eventData]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/api/admin/events/${id}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm(`/api/admin/events/${id}`, data);
     },
     onSuccess: () => {
+      toast.success('Event updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'event', id] });
       router.push(`/admin/events/${id}`);
     },
     onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Failed to update event';
+      toast.error(msg);
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
@@ -397,8 +399,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="Africa/Dar_es_Salaam">East Africa Time (EAT)</option>
-                <option value="Africa/Nairobi">Nairobi</option>
+                <option value="Africa/Nairobi">East Africa Time (EAT)</option>
+                <option value="Africa/Kampala">Kampala</option>
                 <option value="Africa/Lagos">Lagos</option>
                 <option value="Africa/Johannesburg">Johannesburg</option>
                 <option value="Europe/London">London</option>
@@ -555,10 +557,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   >
+                    <option value="UGX">UGX (Ugandan Shilling)</option>
+                    <option value="KES">KES (Kenyan Shilling)</option>
                     <option value="TZS">TZS (Tanzanian Shilling)</option>
                     <option value="USD">USD (US Dollar)</option>
-                    <option value="KES">KES (Kenyan Shilling)</option>
-                    <option value="UGX">UGX (Ugandan Shilling)</option>
                   </select>
                 </div>
                 <FormField

@@ -42,7 +42,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     preselectedTier ? parseInt(preselectedTier) : null
   );
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'airtel_money' | 'credits'>('mtn_momo');
   const [phoneNumber, setPhoneNumber] = useState('');
   
   const { data: event, isLoading } = useEvent(eventId);
@@ -50,8 +50,10 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
   const validatePhone = useValidatePhone();
   
   const selectedTicket = event?.ticket_tiers?.find(t => t.id === selectedTier);
-  const subtotal = selectedTicket ? selectedTicket.price * quantity : 0;
-  const serviceFee = Math.round(subtotal * 0.05);
+  const isCreditsPayment = paymentMethod === 'credits';
+  const unitPrice = isCreditsPayment ? (selectedTicket?.price_credits || 0) : (selectedTicket?.price_ugx || selectedTicket?.price || 0);
+  const subtotal = selectedTicket ? unitPrice * quantity : 0;
+  const serviceFee = isCreditsPayment ? 0 : Math.round(subtotal * 0.05);
   const total = subtotal + serviceFee;
   
   const handlePurchase = async () => {
@@ -61,13 +63,14 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     }
     
     // Validate phone for mobile money
-    if (paymentMethod !== 'wallet' && !phoneNumber) {
+    const needsPhone = paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money';
+    if (needsPhone && !phoneNumber) {
       toast.error('Please enter your phone number');
       return;
     }
     
     // Validate phone number format
-    if (paymentMethod !== 'wallet') {
+    if (needsPhone) {
       try {
         const validation = await validatePhone.mutateAsync(phoneNumber);
         if (!validation.valid) {
@@ -85,7 +88,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       ticket_tier_id: selectedTicket.id,
       quantity,
       payment_method: paymentMethod,
-      phone: paymentMethod !== 'wallet' ? phoneNumber : undefined,
+      phone: needsPhone ? phoneNumber : undefined,
       holder_name: session.user.name || '',
       holder_email: session.user.email || '',
       holder_phone: phoneNumber || undefined,
@@ -141,7 +144,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       <div className="flex gap-4 p-4 rounded-xl border bg-card mb-8">
         <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
           <Image
-            src={event.image || '/images/event-placeholder.jpg'}
+            src={event.artwork || event.image || '/images/event-placeholder.jpg'}
             alt={event.title}
             fill
             className="object-cover"
@@ -152,15 +155,15 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
           <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              {new Date(event.date).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {new Date(event.starts_at || event.date).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {event.time}
+              {event.time || (event.starts_at ? new Date(event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBA')}
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
-              {event.venue}
+              {event.venue_name || event.venue || event.city || 'TBA'}
             </span>
           </div>
         </div>
@@ -303,10 +306,31 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     </div>
                   </div>
                 </div>
+                
+                {/* Credits */}
+                {selectedTicket && (selectedTicket.price_credits ?? 0) > 0 && (
+                  <div
+                    onClick={() => setPaymentMethod('credits')}
+                    className={cn(
+                      'p-4 rounded-lg border cursor-pointer transition-all',
+                      paymentMethod === 'credits' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                        <Ticket className="h-5 w-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Credits</p>
+                        <p className="text-sm text-muted-foreground">Pay with your TesoTunes credits</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Phone Number Input for Mobile Money */}
-              {paymentMethod !== 'wallet' && (
+              {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium mb-2">
                     {paymentMethod === 'mtn_momo' ? 'MTN' : 'Airtel'} Phone Number
@@ -336,23 +360,25 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <span>{selectedTicket.name} x {quantity}</span>
-                  <span>UGX {subtotal.toLocaleString()}</span>
+                  <span>{isCreditsPayment ? `${subtotal.toLocaleString()} credits` : `UGX ${subtotal.toLocaleString()}`}</span>
                 </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Service Fee</span>
-                  <span>UGX {serviceFee.toLocaleString()}</span>
-                </div>
+                {!isCreditsPayment && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Service Fee (5%)</span>
+                    <span>UGX {serviceFee.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="pt-4 border-t flex justify-between font-bold">
                   <span>Total</span>
-                  <span>UGX {total.toLocaleString()}</span>
+                  <span>{isCreditsPayment ? `${total.toLocaleString()} credits` : `UGX ${total.toLocaleString()}`}</span>
                 </div>
                 
                 <button
                   onClick={handlePurchase}
-                  disabled={purchaseTickets.isPending || (paymentMethod !== 'wallet' && !phoneNumber)}
+                  disabled={purchaseTickets.isPending || ((paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && !phoneNumber)}
                   className={cn(
                     'w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors',
-                    purchaseTickets.isPending || (paymentMethod !== 'wallet' && !phoneNumber)
+                    purchaseTickets.isPending || ((paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && !phoneNumber)
                       ? 'bg-muted text-muted-foreground cursor-not-allowed'
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   )}

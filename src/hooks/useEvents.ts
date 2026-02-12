@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 
 // ============================================================================
 // Types
@@ -11,32 +11,58 @@ export interface EventTicketTier {
   name: string;
   description: string;
   price: number;
+  price_ugx?: number;
+  price_credits?: number;
+  is_free?: boolean;
   quantity: number;
+  quantity_total?: number;
+  quantity_sold?: number;
   available: number;
   max_per_order: number;
   sales_start_date?: string;
   sales_end_date?: string;
+  is_active?: boolean;
+  required_loyalty_tier?: string;
+  tier_early_access_hours?: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface Event {
   id: number;
+  uuid?: string;
   title: string;
   slug: string;
   description: string;
   image: string;
+  artwork?: string;
+  banner?: string;
   banner_image?: string;
   category: string;
+  event_type?: string;
   date: string;
   end_date?: string;
+  starts_at?: string;
+  ends_at?: string;
+  doors_open_at?: string;
   time: string;
+  timezone?: string;
   venue: string;
+  venue_name?: string;
+  venue_address?: string;
   location: string;
   city: string;
   country: string;
   capacity?: number;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  attendee_limit?: number;
+  status: 'draft' | 'published' | 'cancelled' | 'completed' | 'postponed';
+  is_virtual?: boolean;
+  virtual_link?: string;
+  is_free?: boolean;
+  is_featured: boolean;
+  is_published?: boolean;
+  ticket_price?: number;
+  currency?: string;
   artist_id?: number;
   artist?: {
     id: number;
@@ -44,9 +70,19 @@ export interface Event {
     slug: string;
     image?: string;
   };
+  organizer?: {
+    id: number;
+    name: string;
+    avatar?: string;
+  };
   ticket_tiers?: EventTicketTier[];
   tickets_sold?: number;
-  is_featured: boolean;
+  attendee_count?: number;
+  rating_average?: number;
+  review_count?: number;
+  tags?: string[];
+  registration_deadline?: string;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -94,7 +130,7 @@ export interface PurchaseTicketRequest {
   event_id: number;
   ticket_tier_id: number;
   quantity: number;
-  payment_method: 'wallet' | 'mtn_momo' | 'airtel_money' | 'card';
+  payment_method: 'wallet' | 'mtn_momo' | 'airtel_money' | 'card' | 'credits';
   phone?: string;
   holder_name: string;
   holder_email: string;
@@ -285,7 +321,7 @@ export function useCreateEvent() {
           formData.append(key, String(value));
         }
       });
-      return apiPost<Event>("/api/artist/events", formData);
+      return apiPostForm<Event>("/api/artist/events", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
@@ -299,6 +335,7 @@ export function useUpdateEvent() {
   return useMutation({
     mutationFn: ({ id, ...data }: UpdateEventRequest) => {
       const formData = new FormData();
+      formData.append('_method', 'PUT');
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'ticket_tiers') {
           formData.append(key, JSON.stringify(value));
@@ -308,7 +345,7 @@ export function useUpdateEvent() {
           formData.append(key, String(value));
         }
       });
-      return apiPut<Event>(`/api/artist/events/${id}`, formData);
+      return apiPostForm<Event>(`/api/artist/events/${id}`, formData);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });

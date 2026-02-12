@@ -92,19 +92,16 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  // Let axios auto-detect FormData and set the correct multipart Content-Type
-  // with boundary. Explicitly delete Content-Type so it's not overridden by
-  // the axios instance default ("application/json").
-  const mergedConfig: AxiosRequestConfig = {
+  // Explicitly set Content-Type to multipart/form-data to override the axios
+  // instance default ("application/json"). Axios 1.x will auto-append the
+  // boundary parameter when it detects FormData as the request body.
+  const response = await api.post<T>(url, formData, {
     ...config,
     headers: {
       ...config?.headers,
+      "Content-Type": "multipart/form-data",
     },
-  };
-  // Delete Content-Type so axios sets it correctly with boundary for FormData
-  delete (mergedConfig.headers as Record<string, unknown>)["Content-Type"];
-
-  const response = await api.post<T>(url, formData, mergedConfig);
+  });
   return response.data;
 }
 

@@ -82,7 +82,7 @@ function formatCurrency(amount: number | null | undefined, currency = 'UGX'): st
 export default function AdminDashboardPage() {
   const { data: statsData, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
-    queryFn: () => apiGet<{ success: boolean; data: DashboardStats }>('/api/admin/dashboard/stats'),
+    queryFn: () => apiGet<{ data: DashboardStats }>('/api/admin/dashboard/stats'),
     refetchInterval: 5 * 60 * 1000, // 5 minutes instead of 1 minute
     refetchOnWindowFocus: false,
     retry: 2,
@@ -90,7 +90,7 @@ export default function AdminDashboardPage() {
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'dashboard', 'activity'],
-    queryFn: () => apiGet<{ success: boolean; data: RecentActivity }>('/api/admin/dashboard/recent-activity'),
+    queryFn: () => apiGet<{ data: RecentActivity }>('/api/admin/dashboard/recent-activity'),
     refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 30 seconds
     refetchOnWindowFocus: false,
   });

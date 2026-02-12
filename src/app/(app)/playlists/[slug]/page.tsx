@@ -26,7 +26,8 @@ interface PlaylistPageProps {
 
 async function getPlaylist(slug: string): Promise<Playlist | null> {
   try {
-    return await serverFetch<Playlist>(`/playlists/${slug}`);
+    const res = await serverFetch<{ data: Playlist }>(`/api/playlists/${slug}`);
+    return res.data;
   } catch {
     return null;
   }
@@ -35,7 +36,7 @@ async function getPlaylist(slug: string): Promise<Playlist | null> {
 async function getPlaylistTracks(playlistId: number) {
   try {
     return await serverFetch<{ data: Song[] }>(
-      `/playlists/${playlistId}/tracks`
+      `/api/playlists/${playlistId}/tracks`
     );
   } catch {
     return { data: [] };

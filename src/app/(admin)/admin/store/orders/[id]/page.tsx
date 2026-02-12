@@ -90,17 +90,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'order', id],
-    queryFn: () => apiGet<{ data: Order }>(`/admin/store/orders/${id}`),
+    queryFn: () => apiGet<{ data: Order }>(`/api/admin/store/orders/${id}`),
   });
 
   const { data: historyData } = useQuery({
     queryKey: ['admin', 'store', 'order', id, 'history'],
-    queryFn: () => apiGet<{ data: OrderHistory[] }>(`/admin/store/orders/${id}/history`),
+    queryFn: () => apiGet<{ data: OrderHistory[] }>(`/api/admin/store/orders/${id}/history`),
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: (data: { status: string; note?: string; tracking_number?: string }) =>
-      apiPost(`/admin/store/orders/${id}/status`, data),
+      apiPost(`/api/admin/store/orders/${id}/status`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'order', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'orders'] });
@@ -112,7 +112,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   });
 
   const refundMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/store/orders/${id}/refund`),
+    mutationFn: () => apiPost(`/api/admin/store/orders/${id}/refund`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'order', id] });
       setShowRefundDialog(false);

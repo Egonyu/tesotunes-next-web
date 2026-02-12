@@ -72,7 +72,7 @@ export default function StoreOrdersPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, newStatus }: { orderId: string; newStatus: string }) =>
-      apiPost(`/admin/store/api/orders/${orderId}/status`, { status: newStatus }),
+      apiPost(`/api/admin/store/api/orders/${orderId}/status`, { status: newStatus }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'orders'] });
     },

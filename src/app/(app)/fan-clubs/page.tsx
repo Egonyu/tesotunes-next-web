@@ -49,7 +49,7 @@ export default function FanClubsPage() {
   const { data: fanClubs, isLoading } = useQuery({
     queryKey: ["fan-clubs", filter],
     queryFn: () =>
-      apiGet<FanClub[]>(`/fan-clubs${filter !== "all" ? `?tier=${filter}` : ""}`),
+      apiGet<FanClub[]>(`/api/fan-clubs${filter !== "all" ? `?tier=${filter}` : ""}`),
   });
 
   const filteredClubs = fanClubs?.filter(

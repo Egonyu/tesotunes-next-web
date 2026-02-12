@@ -199,39 +199,39 @@ export default function QueuePage() {
   
   const { data: queueData, isLoading } = useQuery({
     queryKey: ["queue"],
-    queryFn: () => apiGet<QueueData>("/music/queue"),
+    queryFn: () => apiGet<QueueData>("/api/music/queue"),
   });
 
   const clearQueueMutation = useMutation({
-    mutationFn: () => apiDelete("/music/queue"),
+    mutationFn: () => apiDelete("/api/music/queue"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["queue"] });
     },
   });
 
   const removeFromQueueMutation = useMutation({
-    mutationFn: (trackId: string) => apiDelete(`/music/queue/${trackId}`),
+    mutationFn: (trackId: string) => apiDelete(`/api/music/queue/${trackId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["queue"] });
     },
   });
 
   const playTrackMutation = useMutation({
-    mutationFn: (trackId: string) => apiPost(`/music/queue/play/${trackId}`),
+    mutationFn: (trackId: string) => apiPost(`/api/music/queue/play/${trackId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["queue"] });
     },
   });
 
   const toggleShuffleMutation = useMutation({
-    mutationFn: () => apiPost("/music/queue/shuffle"),
+    mutationFn: () => apiPost("/api/music/queue/shuffle"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["queue"] });
     },
   });
 
   const cycleRepeatMutation = useMutation({
-    mutationFn: () => apiPost("/music/queue/repeat"),
+    mutationFn: () => apiPost("/api/music/queue/repeat"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["queue"] });
     },

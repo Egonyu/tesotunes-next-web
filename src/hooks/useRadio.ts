@@ -25,7 +25,7 @@ export function useRadioStations() {
     queryKey: ["radio", "stations"],
     queryFn: async () => {
       try {
-        const response = await apiGet<{ data: RadioStation[] }>("/radio/stations");
+        const response = await apiGet<{ data: RadioStation[] }>("/api/radio/stations");
         return response.data;
       } catch {
         // Return default stations as fallback when API is unavailable
@@ -40,7 +40,7 @@ export function useFeaturedStation() {
     queryKey: ["radio", "featured"],
     queryFn: async () => {
       try {
-        const response = await apiGet<{ data: RadioStation }>("/radio/stations/featured");
+        const response = await apiGet<{ data: RadioStation }>("/api/radio/stations/featured");
         return response.data;
       } catch {
         return getDefaultStations()[0];

@@ -44,7 +44,7 @@ export default function OrdersPage() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", filter],
     queryFn: () =>
-      apiGet<Order[]>(`/store/orders${filter !== "all" ? `?status=${filter}` : ""}`),
+      apiGet<Order[]>(`/api/store/orders${filter !== "all" ? `?status=${filter}` : ""}`),
   });
 
   if (isLoading) {

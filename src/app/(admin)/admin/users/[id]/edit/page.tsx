@@ -66,7 +66,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/users/${id}`),
+    queryFn: () => apiGet<{ data: any }>(`/api/admin/users/${id}`),
   });
 
   const { data: rolesData } = useQuery({
@@ -107,7 +107,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/users/${id}`, data, {
+      return apiPost(`/api/admin/users/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

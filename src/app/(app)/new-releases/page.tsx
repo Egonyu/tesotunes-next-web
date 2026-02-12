@@ -33,7 +33,7 @@ export default function NewReleasesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['songs', 'new-releases', timeFilter],
-    queryFn: () => apiGet<{ data: Song[] }>(`/songs?sort=newest&period=${timeFilter}`).then(r => r.data),
+    queryFn: () => apiGet<{ data: Song[] }>(`/api/songs?sort=newest&period=${timeFilter}`).then(r => r.data),
   });
 
   const formatDuration = (seconds: number) => {

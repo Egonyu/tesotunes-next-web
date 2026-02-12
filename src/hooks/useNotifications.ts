@@ -64,8 +64,7 @@ export interface NotificationPreferences {
 }
 
 export interface NotificationPreferencesResponse {
-  success: boolean;
-  data: NotificationPreferences;
+    data: NotificationPreferences;
 }
 
 // Real-time notification event from WebSocket
@@ -87,7 +86,7 @@ export function useNotifications(options?: { filter?: 'all' | 'unread'; page?: n
       const params = new URLSearchParams();
       if (filter === 'unread') params.append('unread', 'true');
       params.append('page', String(page));
-      return apiGet<NotificationsResponse>(`/notifications?${params.toString()}`);
+      return apiGet<NotificationsResponse>(`/api/notifications?${params.toString()}`);
     },
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -119,7 +118,7 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: number) => apiPost(`/notifications/${id}/mark-read`, {}),
+    mutationFn: (id: number) => apiPost(`/api/notifications/${id}/mark-read`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications-unread'] });
@@ -145,7 +144,7 @@ export function useDeleteNotification() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: number) => apiDelete(`/notifications/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/notifications/${id}`),
     onSuccess: () => {
       toast.success('Notification deleted');
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

@@ -65,7 +65,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
 
   const { data: podcastData, isLoading } = useQuery({
     queryKey: ['admin', 'podcast', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/podcasts/${id}`),
+    queryFn: () => apiGet<{ data: any }>(`/api/admin/podcasts/${id}`),
   });
 
   const { data: categoriesData } = useQuery({
@@ -104,7 +104,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/podcasts/${id}`, data, {
+      return apiPost(`/api/admin/podcasts/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

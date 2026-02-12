@@ -25,7 +25,10 @@ export function FeaturedSection() {
 
   const { data: featured, isLoading } = useQuery({
     queryKey: ["featured"],
-    queryFn: () => apiGet<FeaturedItem[]>("/featured"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: FeaturedItem[] }>("/api/featured");
+      return res.data;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

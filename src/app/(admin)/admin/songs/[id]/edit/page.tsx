@@ -113,7 +113,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const { data: song, isLoading: songLoading } = useQuery({
     queryKey: ['admin', 'song', id],
-    queryFn: () => apiGet<{ data: Song }>(`/admin/songs/${id}`),
+    queryFn: () => apiGet<{ data: Song }>(`/api/admin/songs/${id}`),
   });
 
   const { data: artists } = useQuery({
@@ -168,7 +168,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/songs/${id}`, data, {
+      return apiPost(`/api/admin/songs/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

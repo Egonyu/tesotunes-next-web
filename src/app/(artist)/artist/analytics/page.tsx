@@ -79,7 +79,7 @@ export default function ArtistAnalyticsPage() {
   const exportPDF = async () => {
     setExporting(true);
     try {
-      const res = await apiGet<Blob>(`/artist/analytics/export?format=pdf&period=${periodDays}`, {
+      const res = await apiGet<Blob>(`/api/artist/analytics/export?format=pdf&period=${periodDays}`, {
         responseType: 'blob',
       } as unknown as undefined);
       const url = URL.createObjectURL(res as unknown as Blob);

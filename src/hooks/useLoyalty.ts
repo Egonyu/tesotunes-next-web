@@ -90,14 +90,13 @@ export function useLoyaltyMembership() {
   return useQuery({
     queryKey: ["loyalty", "membership"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: {
+            data: {
         member_id: number;
         total_clubs: number;
         total_points: number;
         tier: string;
       } | null;
-    }>("/loyalty/memberships/summary").then(res => res.data),
+    }>("/api/loyalty/memberships/summary").then(res => res.data),
     staleTime: 60 * 1000,
   });
 }
@@ -107,9 +106,8 @@ export function useMyLoyaltyCards() {
   return useQuery({
     queryKey: ["loyalty", "my-cards"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyCard[];
-    }>("/loyalty/memberships").then(res => res.data),
+            data: LoyaltyCard[];
+    }>("/api/loyalty/memberships").then(res => res.data),
     staleTime: 30 * 1000,
   });
 }
@@ -119,9 +117,8 @@ export function useLoyaltyCard(membershipId: number) {
   return useQuery({
     queryKey: ["loyalty", "memberships", membershipId],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyCard;
-    }>(`/loyalty/memberships/${membershipId}`).then(res => res.data),
+            data: LoyaltyCard;
+    }>(`/api/loyalty/memberships/${membershipId}`).then(res => res.data),
     enabled: !!membershipId,
   });
 }
@@ -135,9 +132,8 @@ export function useLoyaltyPoints() {
   return useQuery({
     queryKey: ["loyalty", "points"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: { balance: number; lifetime_earned: number; lifetime_spent: number };
-    }>("/loyalty/points").then(res => res.data),
+            data: { balance: number; lifetime_earned: number; lifetime_spent: number };
+    }>("/api/loyalty/points").then(res => res.data),
     staleTime: 30 * 1000,
   });
 }
@@ -147,10 +143,9 @@ export function useLoyaltyPointsHistory(params?: { page?: number; limit?: number
   return useQuery({
     queryKey: ["loyalty", "points-history", params],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyTransaction[];
+            data: LoyaltyTransaction[];
       pagination: { current_page: number; last_page: number; total: number };
-    }>("/loyalty/points/history", { params }),
+    }>("/api/loyalty/points/history", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -160,9 +155,8 @@ export function useLoyaltyEarningActivities() {
   return useQuery({
     queryKey: ["loyalty", "earning-activities"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: EarningActivity[];
-    }>("/loyalty/points/earning-activities").then(res => res.data),
+            data: EarningActivity[];
+    }>("/api/loyalty/points/earning-activities").then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -179,10 +173,9 @@ export function useLoyaltyClubs(params?: {
   return useQuery({
     queryKey: ["loyalty", "fan-clubs", params],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyClub[];
+            data: LoyaltyClub[];
       pagination: { current_page: number; last_page: number; total: number };
-    }>("/loyalty/fan-clubs", { params }),
+    }>("/api/loyalty/fan-clubs", { params }),
     staleTime: 60 * 1000,
   });
 }
@@ -192,9 +185,8 @@ export function useLoyaltyClubBySlug(slug: string) {
   return useQuery({
     queryKey: ["loyalty", "fan-clubs", "slug", slug],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyClub;
-    }>(`/loyalty/fan-clubs/slug/${slug}`).then(res => res.data),
+            data: LoyaltyClub;
+    }>(`/api/loyalty/fan-clubs/slug/${slug}`).then(res => res.data),
     enabled: !!slug,
   });
 }
@@ -204,9 +196,8 @@ export function useLoyaltyClub(id: number) {
   return useQuery({
     queryKey: ["loyalty", "fan-clubs", id],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyClub;
-    }>(`/loyalty/fan-clubs/${id}`).then(res => res.data),
+            data: LoyaltyClub;
+    }>(`/api/loyalty/fan-clubs/${id}`).then(res => res.data),
     enabled: !!id,
   });
 }
@@ -216,9 +207,8 @@ export function useLoyaltyClubTiers(clubId: number) {
   return useQuery({
     queryKey: ["loyalty", "fan-clubs", clubId, "tiers"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyTier[];
-    }>(`/loyalty/fan-clubs/${clubId}/tiers`).then(res => res.data),
+            data: LoyaltyTier[];
+    }>(`/api/loyalty/fan-clubs/${clubId}/tiers`).then(res => res.data),
     enabled: !!clubId,
   });
 }
@@ -227,9 +217,8 @@ export function useFeaturedLoyaltyClubs() {
   return useQuery({
     queryKey: ["loyalty", "featured-clubs"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyClub[];
-    }>("/loyalty/fan-clubs/featured").then(res => res.data),
+            data: LoyaltyClub[];
+    }>("/api/loyalty/fan-clubs/featured").then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -242,9 +231,8 @@ export function useLoyaltyRewards(clubId?: number) {
   return useQuery({
     queryKey: ["loyalty", "rewards", clubId],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyReward[];
-    }>(`/loyalty/fan-clubs/${clubId}/rewards`).then(res => res.data),
+            data: LoyaltyReward[];
+    }>(`/api/loyalty/fan-clubs/${clubId}/rewards`).then(res => res.data),
     enabled: !!clubId,
     staleTime: 60 * 1000,
   });
@@ -255,9 +243,8 @@ export function useAllLoyaltyRewards() {
   return useQuery({
     queryKey: ["loyalty", "rewards"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyReward[];
-    }>("/loyalty/rewards").then(res => res.data),
+            data: LoyaltyReward[];
+    }>("/api/loyalty/rewards").then(res => res.data),
     staleTime: 60 * 1000,
   });
 }
@@ -267,9 +254,8 @@ export function useRedeemedRewards() {
   return useQuery({
     queryKey: ["loyalty", "rewards", "redeemed"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyReward[];
-    }>("/loyalty/rewards/redeemed").then(res => res.data),
+            data: LoyaltyReward[];
+    }>("/api/loyalty/rewards/redeemed").then(res => res.data),
   });
 }
 
@@ -279,10 +265,9 @@ export function useRedeemReward() {
   return useMutation({
     mutationFn: (data: { reward_id: number }) =>
       apiPost<{
-        success: boolean;
-        message: string;
+                message: string;
         data: { redemption_code: string };
-      }>(`/loyalty/rewards/${data.reward_id}/redeem`),
+      }>(`/api/loyalty/rewards/${data.reward_id}/redeem`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     },
@@ -299,10 +284,9 @@ export function useJoinLoyaltyClub() {
   return useMutation({
     mutationFn: (clubId: number) =>
       apiPost<{
-        success: boolean;
-        message: string;
+                message: string;
         data: LoyaltyCard;
-      }>(`/loyalty/fan-clubs/${clubId}/join`),
+      }>(`/api/loyalty/fan-clubs/${clubId}/join`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     },
@@ -314,7 +298,7 @@ export function useLeaveLoyaltyClub() {
 
   return useMutation({
     mutationFn: (clubId: number) =>
-      apiDelete<{ success: boolean; message: string }>(`/loyalty/fan-clubs/${clubId}/leave`),
+      apiDelete<{ message: string }>(`/api/loyalty/fan-clubs/${clubId}/leave`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     },
@@ -329,9 +313,8 @@ export function useLoyaltyBadges() {
   return useQuery({
     queryKey: ["loyalty", "badges"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyBadge[];
-    }>("/loyalty/badges").then(res => res.data),
+            data: LoyaltyBadge[];
+    }>("/api/loyalty/badges").then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -340,9 +323,8 @@ export function useEarnedBadges() {
   return useQuery({
     queryKey: ["loyalty", "badges", "earned"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyBadge[];
-    }>("/loyalty/badges/earned").then(res => res.data),
+            data: LoyaltyBadge[];
+    }>("/api/loyalty/badges/earned").then(res => res.data),
   });
 }
 
@@ -354,8 +336,7 @@ export function useLoyaltyLeaderboard(clubId?: number) {
   return useQuery({
     queryKey: ["loyalty", "leaderboard", clubId],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: Array<{
+            data: Array<{
         rank: number;
         user: { id: number; name: string; avatar: string | null };
         points: number;
@@ -374,9 +355,8 @@ export function useArtistLoyaltyClub() {
   return useQuery({
     queryKey: ["loyalty", "artist-club"],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: LoyaltyClub | null;
-    }>("/artist/fan-clubs").then(res => res.data),
+            data: LoyaltyClub | null;
+    }>("/api/artist/fan-clubs").then(res => res.data),
     staleTime: 60 * 1000,
   });
 }
@@ -396,10 +376,9 @@ export function useCreateArtistLoyaltyClub() {
       if (data.logo) formData.append('logo', data.logo);
 
       return apiPost<{
-        success: boolean;
-        message: string;
+                message: string;
         data: LoyaltyClub;
-      }>("/artist/fan-clubs", formData);
+      }>("/api/artist/fan-clubs", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
@@ -411,8 +390,7 @@ export function useArtistLoyaltyMembers(clubId: number, params?: { page?: number
   return useQuery({
     queryKey: ["loyalty", "artist-members", clubId, params],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: Array<{
+            data: Array<{
         id: number;
         user: { id: number; name: string; avatar: string | null };
         points_balance: number;
@@ -420,7 +398,7 @@ export function useArtistLoyaltyMembers(clubId: number, params?: { page?: number
         joined_at: string;
       }>;
       pagination: { current_page: number; last_page: number; total: number };
-    }>(`/artist/fan-clubs/${clubId}/members`, { params }),
+    }>(`/api/artist/fan-clubs/${clubId}/members`, { params }),
     enabled: !!clubId,
     staleTime: 30 * 1000,
   });
@@ -439,10 +417,9 @@ export function useCreateLoyaltyReward() {
       reward_type: 'digital' | 'physical' | 'experience' | 'discount';
       expires_at?: string;
     }) => apiPost<{
-      success: boolean;
-      message: string;
+            message: string;
       data: LoyaltyReward;
-    }>(`/artist/fan-clubs/${data.club_id}/rewards`, data),
+    }>(`/api/artist/fan-clubs/${data.club_id}/rewards`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
     },
@@ -459,14 +436,13 @@ export function useScanLoyaltyQR() {
   return useMutation({
     mutationFn: (data: { qr_code: string }) =>
       apiPost<{
-        success: boolean;
-        message: string;
+                message: string;
         data: {
           points_earned: number;
           new_balance: number;
           event?: string;
         };
-      }>("/loyalty/points/scan-qr", data),
+      }>("/api/loyalty/points/scan-qr", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     },

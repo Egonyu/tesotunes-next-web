@@ -35,17 +35,17 @@ export default function CartPage() {
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart"],
-    queryFn: () => apiGet<Cart>("/store/cart"),
+    queryFn: () => apiGet<Cart>("/api/store/cart"),
   });
 
   const updateQuantity = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
-      apiPost(`/store/cart/items/${itemId}`, { quantity }),
+      apiPost(`/api/store/cart/items/${itemId}`, { quantity }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
   });
 
   const removeItem = useMutation({
-    mutationFn: (itemId: number) => apiDelete(`/store/cart/items/${itemId}`),
+    mutationFn: (itemId: number) => apiDelete(`/api/store/cart/items/${itemId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
   });
 

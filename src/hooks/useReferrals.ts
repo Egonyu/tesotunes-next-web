@@ -158,7 +158,7 @@ export interface CodeValidation {
 export function useReferralDashboard() {
   return useQuery({
     queryKey: ["referrals", "dashboard"],
-    queryFn: () => apiGet<{ success: boolean; data: ReferralDashboard }>("/referrals/dashboard")
+    queryFn: () => apiGet<{ data: ReferralDashboard }>("/api/referrals/dashboard")
       .then(res => res.data),
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -171,7 +171,7 @@ export function useReferralDashboard() {
 export function useReferralCode() {
   return useQuery({
     queryKey: ["referrals", "code"],
-    queryFn: () => apiGet<{ success: boolean; data: ReferralCodeData }>("/referrals/code")
+    queryFn: () => apiGet<{ data: ReferralCodeData }>("/api/referrals/code")
       .then(res => res.data),
   });
 }
@@ -210,7 +210,7 @@ export function useReferralHistory(
 
   return useQuery({
     queryKey: ["referrals", "history", status, page, perPage, search],
-    queryFn: () => apiGet<{ success: boolean } & ReferralHistoryResponse>("/referrals/history", { params }),
+    queryFn: () => apiGet<ReferralHistoryResponse>("/api/referrals/history", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -222,7 +222,7 @@ export function useReferralHistory(
 export function useReferralRewards() {
   return useQuery({
     queryKey: ["referrals", "rewards"],
-    queryFn: () => apiGet<{ success: boolean; data: RewardsData }>("/referrals/rewards")
+    queryFn: () => apiGet<{ data: RewardsData }>("/api/referrals/rewards")
       .then(res => res.data),
   });
 }
@@ -236,7 +236,7 @@ export function useClaimReward() {
 
   return useMutation({
     mutationFn: (milestoneId: number) => 
-      apiPost<{ success: boolean; message: string }>(`/referrals/rewards/${milestoneId}/claim`),
+      apiPost<{ message: string }>(`/api/referrals/rewards/${milestoneId}/claim`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["referrals", "rewards"] });
       queryClient.invalidateQueries({ queryKey: ["referrals", "dashboard"] });
@@ -254,7 +254,7 @@ export function useReferralLeaderboard(period: 'week' | 'weekly' | 'month' | 'mo
   
   return useQuery({
     queryKey: ["referrals", "leaderboard", normalizedPeriod, limit],
-    queryFn: () => apiGet<{ success: boolean; data: LeaderboardData }>("/referrals/leaderboard", {
+    queryFn: () => apiGet<{ data: LeaderboardData }>("/api/referrals/leaderboard", {
       params: { period: normalizedPeriod, limit },
     }).then(res => res.data),
     staleTime: 60 * 1000, // 1 minute
@@ -268,7 +268,7 @@ export function useReferralLeaderboard(period: 'week' | 'weekly' | 'month' | 'mo
 export function useValidateReferralCode(code: string) {
   return useQuery({
     queryKey: ["referrals", "validate", code],
-    queryFn: () => apiGet<{ success: boolean; data: CodeValidation }>(`/referrals/validate/${code}`)
+    queryFn: () => apiGet<{ data: CodeValidation }>(`/api/referrals/validate/${code}`)
       .then(res => res.data),
     enabled: !!code,
     retry: false,
@@ -282,7 +282,7 @@ export function useValidateReferralCode(code: string) {
 export function useTrackShare() {
   return useMutation({
     mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr') =>
-      apiPost<{ success: boolean }>("/referrals/share", { platform }),
+      apiPost<void>("/api/referrals/share", { platform }),
   });
 }
 
@@ -407,15 +407,14 @@ export function useEventReferrals(params?: { status?: string; page?: number }) {
   return useQuery({
     queryKey: ["referrals", "events", params],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: EventReferral[];
+            data: EventReferral[];
       pagination: {
         current_page: number;
         last_page: number;
         per_page: number;
         total: number;
       };
-    }>("/referrals/events", { params }),
+    }>("/api/referrals/events", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -423,7 +422,7 @@ export function useEventReferrals(params?: { status?: string; page?: number }) {
 export function useEventReferralLink(eventId: number) {
   return useQuery({
     queryKey: ["referrals", "events", eventId, "link"],
-    queryFn: () => apiGet<{ success: boolean; data: EventReferral }>(`/referrals/events/${eventId}/link`)
+    queryFn: () => apiGet<{ data: EventReferral }>(`/api/referrals/events/${eventId}/link`)
       .then(res => res.data),
     enabled: !!eventId,
   });
@@ -434,7 +433,7 @@ export function useCreateEventReferral() {
 
   return useMutation({
     mutationFn: (eventId: number) =>
-      apiPost<{ success: boolean; data: EventReferral }>(`/referrals/events/${eventId}/create`),
+      apiPost<{ data: EventReferral }>(`/api/referrals/events/${eventId}/create`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["referrals", "events"] });
     },
@@ -448,7 +447,7 @@ export function useCreateEventReferral() {
 export function useCampaignReferralStats() {
   return useQuery({
     queryKey: ["admin", "campaigns", "referral-stats"],
-    queryFn: () => apiGet<{ success: boolean; data: CampaignReferralStats }>("/admin/referrals/campaigns/stats")
+    queryFn: () => apiGet<{ data: CampaignReferralStats }>("/api/admin/referrals/campaigns/stats")
       .then(res => res.data),
     staleTime: 60 * 1000,
   });
@@ -464,15 +463,14 @@ export function useReferralCampaigns(params?: {
   return useQuery({
     queryKey: ["admin", "campaigns", params],
     queryFn: () => apiGet<{
-      success: boolean;
-      data: ReferralCampaign[];
+            data: ReferralCampaign[];
       pagination: {
         current_page: number;
         last_page: number;
         per_page: number;
         total: number;
       };
-    }>("/admin/referrals/campaigns", { params }),
+    }>("/api/admin/referrals/campaigns", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -480,7 +478,7 @@ export function useReferralCampaigns(params?: {
 export function useCampaignDetail(id: number) {
   return useQuery({
     queryKey: ["admin", "campaigns", id],
-    queryFn: () => apiGet<{ success: boolean; data: ReferralCampaignDetail }>(`/admin/referrals/campaigns/${id}`)
+    queryFn: () => apiGet<{ data: ReferralCampaignDetail }>(`/api/admin/referrals/campaigns/${id}`)
       .then(res => res.data),
     enabled: !!id,
   });
@@ -500,7 +498,7 @@ export function useCreateReferralCampaign() {
       reward_value: number;
       reward_description: string;
       referral_required: number;
-    }) => apiPost<{ success: boolean; data: ReferralCampaign }>("/admin/referrals/campaigns", data),
+    }) => apiPost<{ data: ReferralCampaign }>("/api/admin/referrals/campaigns", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
     },
@@ -512,7 +510,7 @@ export function useUpdateCampaignStatus() {
 
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: 'active' | 'paused' | 'completed' }) =>
-      apiPost<{ success: boolean }>(`/admin/referrals/campaigns/${id}/status`, { status }),
+      apiPost<void>(`/api/admin/referrals/campaigns/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
     },
@@ -526,7 +524,7 @@ export function useUpdateCampaignStatus() {
 export function useConversionAnalytics(period?: string) {
   return useQuery({
     queryKey: ["admin", "referrals", "analytics", period],
-    queryFn: () => apiGet<{ success: boolean; data: ConversionAnalytics }>("/admin/referrals/analytics", {
+    queryFn: () => apiGet<{ data: ConversionAnalytics }>("/api/admin/referrals/analytics", {
       params: period ? { period } : undefined,
     }).then(res => res.data),
     staleTime: 5 * 60 * 1000,
@@ -558,7 +556,7 @@ export interface SpecialCampaign {
 export function useActiveSpecialCampaigns() {
   return useQuery({
     queryKey: ["referrals", "special-campaigns"],
-    queryFn: () => apiGet<SpecialCampaign[]>("/referrals/special-campaigns"),
+    queryFn: () => apiGet<{ data: SpecialCampaign[] }>("/api/referrals/special-campaigns").then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -568,7 +566,7 @@ export function useJoinSpecialCampaign() {
 
   return useMutation({
     mutationFn: (campaignId: number) =>
-      apiPost(`/referrals/special-campaigns/${campaignId}/join`, {}),
+      apiPost(`/api/referrals/special-campaigns/${campaignId}/join`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["referrals", "special-campaigns"] });
     },

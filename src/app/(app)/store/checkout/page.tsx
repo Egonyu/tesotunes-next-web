@@ -102,12 +102,12 @@ export default function CheckoutPage() {
   // Data queries
   const { data: cart, isLoading: cartLoading } = useQuery({
     queryKey: ["cart"],
-    queryFn: () => apiGet<Cart>("/store/cart"),
+    queryFn: () => apiGet<Cart>("/api/store/cart"),
   });
 
   const { data: addresses, isLoading: addressesLoading } = useQuery({
     queryKey: ["addresses"],
-    queryFn: () => apiGet<Address[]>("/store/addresses"),
+    queryFn: () => apiGet<Address[]>("/api/store/addresses"),
   });
 
   // Payment initiation
@@ -127,7 +127,7 @@ export default function CheckoutPage() {
       phone?: string;
       notes?: string;
       payment_reference?: string;
-    }) => apiPost<{ order_number: string }>("/store/checkout", data),
+    }) => apiPost<{ order_number: string }>("/api/store/checkout", data),
     onSuccess: (data) => {
       setOrderNumber(data.order_number);
       queryClient.invalidateQueries({ queryKey: ["cart"] });

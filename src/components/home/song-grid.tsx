@@ -17,17 +17,17 @@ interface SongGridProps {
 export function SongGrid({ type, limit = 10 }: SongGridProps) {
   const { play, currentSong, isPlaying, pause, resume } = usePlayerStore();
 
-  const endpoints: Record<string, string> = {
-    trending: "/songs/trending",
-    new: "/songs/new",
-    recent: "/songs/recent",
-    top: "/songs/top",
+  const sortMap: Record<string, string> = {
+    trending: "-play_count",
+    new: "-created_at",
+    recent: "-updated_at",
+    top: "-play_count",
   };
 
   const { data, isLoading } = useQuery({
     queryKey: ["songs", type, limit],
     queryFn: () =>
-      apiGet<PaginatedResponse<Song>>(endpoints[type], { params: { limit } }),
+      apiGet<PaginatedResponse<Song>>("/api/songs", { params: { limit, sort: sortMap[type] } }),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 

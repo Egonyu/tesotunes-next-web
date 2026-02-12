@@ -42,28 +42,9 @@ export function setAuthToken(token: string | null) {
 // Protected paths that should redirect to login on 401
 const PROTECTED_PATHS = ["/library", "/profile", "/settings", "/wallet", "/sacco", "/artist-dashboard", "/admin", "/artist", "/become-artist"];
 
-// Response interceptor — unwrap Laravel's { success, data } envelope + error handling
+// Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    const body = response.data;
-    if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
-      const keys = Object.keys(body);
-      if (keys.length > 2) {
-        // Paginated/complex response — strip 'success', keep data + meta/pagination/links
-        // Normalize 'pagination' → 'meta' for consistent PaginatedResponse<T> typing
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { success, pagination, ...rest } = body;
-        if (pagination && !rest.meta) {
-          rest.meta = pagination;
-        }
-        response.data = rest;
-      } else {
-        // Simple { success, data } wrapper — extract the payload
-        response.data = body.data;
-      }
-    }
-    return response;
-  },
+  (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Only redirect to login if on a protected page
@@ -149,7 +130,7 @@ export async function serverFetch<T>(
       Accept: "application/json",
       ...options?.headers,
     },
-    next: { revalidate: 60 }, // Cache for 60 seconds by default
+    next: { revalidate: 60 },
   });
 
   if (!response.ok) {
@@ -158,31 +139,11 @@ export async function serverFetch<T>(
     throw new Error(`API Error: ${response.status}`);
   }
 
-  // Guard against non-JSON responses (Laravel sometimes returns HTML)
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     console.error(`API returned non-JSON (${contentType}) for ${url}`);
     throw new Error(`API returned non-JSON response for ${endpoint}`);
   }
 
-  const data = await response.json();
-
-  // Unwrap Laravel's { success, data, meta?, pagination? } envelope
-  if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-    const keys = Object.keys(data);
-    if (keys.length > 2) {
-      // Paginated/complex response — strip 'success', keep data + meta/pagination/links
-      // Normalize 'pagination' → 'meta' for consistent PaginatedResponse<T> typing
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { success, pagination, ...rest } = data;
-      if (pagination && !rest.meta) {
-        rest.meta = pagination;
-      }
-      return rest as T;
-    }
-    // Simple { success, data } wrapper — extract the payload
-    return data.data as T;
-  }
-
-  return data as T;
+  return response.json();
 }

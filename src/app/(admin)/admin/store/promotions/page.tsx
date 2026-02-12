@@ -40,7 +40,7 @@ export default function AdminStorePromotionsPage() {
   });
 
   const deletePromo = useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/store/promotions/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/admin/store/promotions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'promotions'] });
       toast.success('Promotion deleted');

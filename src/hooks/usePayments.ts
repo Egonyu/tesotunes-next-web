@@ -86,7 +86,7 @@ export interface WalletTransactionsResponse {
 export function useValidatePhone() {
   return useMutation({
     mutationFn: (phone: string) =>
-      apiPost<{ success: boolean; data: PhoneValidation }>("/payments/mobile-money/validate-phone", { phone })
+      apiPost<{ data: PhoneValidation }>("/api/payments/mobile-money/validate-phone", { phone })
         .then(res => res.data),
   });
 }
@@ -98,7 +98,7 @@ export function useValidatePhone() {
 export function usePaymentMethods() {
   return useQuery({
     queryKey: ["payment", "methods"],
-    queryFn: () => apiGet<{ success: boolean; data: PaymentMethodsResponse }>("/payments/methods")
+    queryFn: () => apiGet<{ data: PaymentMethodsResponse }>("/api/payments/methods")
       .then(res => res.data),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -113,7 +113,7 @@ export function useInitiatePayment() {
 
   return useMutation({
     mutationFn: (data: InitiatePaymentRequest) =>
-      apiPost<{ success: boolean; data: InitiatePaymentResponse }>("/payments/mobile-money/initiate", data)
+      apiPost<{ data: InitiatePaymentResponse }>("/api/payments/mobile-money/initiate", data)
         .then(res => res.data),
     onSuccess: () => {
       // Invalidate wallet after payment initiated (will be updated on completion)
@@ -129,7 +129,7 @@ export function useInitiatePayment() {
 export function usePaymentStatus(reference: string, options?: { enabled?: boolean; refetchInterval?: number }) {
   return useQuery({
     queryKey: ["payment", "status", reference],
-    queryFn: () => apiGet<{ success: boolean; data: PaymentStatus }>(`/payments/mobile-money/status/${reference}`)
+    queryFn: () => apiGet<{ data: PaymentStatus }>(`/api/payments/mobile-money/status/${reference}`)
       .then(res => res.data),
     enabled: !!reference && (options?.enabled !== false),
     refetchInterval: options?.refetchInterval ?? 5000, // Poll every 5 seconds by default
@@ -144,7 +144,7 @@ export function usePaymentStatus(reference: string, options?: { enabled?: boolea
 export function useWallet() {
   return useQuery({
     queryKey: ["wallet"],
-    queryFn: () => apiGet<{ success: boolean; data: WalletInfo }>("/payments/wallet")
+    queryFn: () => apiGet<{ data: WalletInfo }>("/api/payments/wallet")
       .then(res => res.data),
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -153,7 +153,7 @@ export function useWallet() {
 export function useWalletTransactions(page: number = 1, perPage: number = 20) {
   return useQuery({
     queryKey: ["wallet", "transactions", page, perPage],
-    queryFn: () => apiGet<{ success: boolean } & WalletTransactionsResponse>("/payments/wallet/transactions", {
+    queryFn: () => apiGet<WalletTransactionsResponse>("/api/payments/wallet/transactions", {
       params: { page, per_page: perPage },
     }),
     staleTime: 30 * 1000,
@@ -169,7 +169,7 @@ export function useDeposit() {
 
   return useMutation({
     mutationFn: async (data: { phone?: string; amount: number; provider?: string }) => {
-      const response = await apiPost<{ success: boolean; data: InitiatePaymentResponse & { transaction_ref?: string } }>("/payments/mobile-money/initiate", {
+      const response = await apiPost<{ data: InitiatePaymentResponse & { transaction_ref?: string } }>("/api/payments/mobile-money/initiate", {
         phone: data.phone,
         amount: data.amount,
         purpose: 'wallet_topup',
@@ -206,7 +206,7 @@ export function useWithdraw() {
 
   return useMutation({
     mutationFn: async (data: WithdrawRequest) => {
-      const response = await apiPost<{ success: boolean; data: WithdrawResponse }>("/payments/wallet/withdraw", data);
+      const response = await apiPost<{ data: WithdrawResponse }>("/api/payments/wallet/withdraw", data);
       return response.data;
     },
     onSuccess: () => {

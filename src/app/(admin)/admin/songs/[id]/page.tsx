@@ -71,16 +71,16 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
 
   const { data: song, isLoading } = useQuery({
     queryKey: ['admin', 'song', id],
-    queryFn: () => apiGet<{ data: Song }>(`/admin/songs/${id}`),
+    queryFn: () => apiGet<{ data: Song }>(`/api/admin/songs/${id}`),
   });
 
   const { data: playHistory } = useQuery({
     queryKey: ['admin', 'song', id, 'play-history'],
-    queryFn: () => apiGet<{ data: PlayHistory[] }>(`/admin/songs/${id}/play-history`),
+    queryFn: () => apiGet<{ data: PlayHistory[] }>(`/api/admin/songs/${id}/play-history`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/admin/songs/${id}`),
+    mutationFn: () => apiDelete(`/api/admin/songs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
       router.push('/admin/songs');
@@ -88,14 +88,14 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/songs/${id}/toggle-status`),
+    mutationFn: () => apiPost(`/api/admin/songs/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
     },
   });
 
   const toggleFeatureMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/songs/${id}/toggle-featured`),
+    mutationFn: () => apiPost(`/api/admin/songs/${id}/toggle-featured`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
     },

@@ -13,7 +13,8 @@ interface GenrePageProps {
 
 async function getGenre(slug: string): Promise<Genre | null> {
   try {
-    return await serverFetch<Genre>(`/genres/${slug}`);
+    const res = await serverFetch<{ data: Genre }>(`/api/genres/${slug}`);
+    return res.data;
   } catch {
     return null;
   }
@@ -22,7 +23,7 @@ async function getGenre(slug: string): Promise<Genre | null> {
 async function getGenreSongs(genreId: number, limit = 20) {
   try {
     return await serverFetch<PaginatedResponse<Song>>(
-      `/genres/${genreId}/songs?limit=${limit}`
+      `/api/genres/${genreId}/songs?limit=${limit}`
     );
   } catch {
     return { data: [] };
@@ -32,7 +33,7 @@ async function getGenreSongs(genreId: number, limit = 20) {
 async function getGenreArtists(genreId: number, limit = 10) {
   try {
     return await serverFetch<PaginatedResponse<Artist>>(
-      `/genres/${genreId}/artists?limit=${limit}`
+      `/api/genres/${genreId}/artists?limit=${limit}`
     );
   } catch {
     return { data: [] };
@@ -42,7 +43,7 @@ async function getGenreArtists(genreId: number, limit = 10) {
 async function getGenreAlbums(genreId: number, limit = 10) {
   try {
     return await serverFetch<PaginatedResponse<Album>>(
-      `/genres/${genreId}/albums?limit=${limit}`
+      `/api/genres/${genreId}/albums?limit=${limit}`
     );
   } catch {
     return { data: [] };

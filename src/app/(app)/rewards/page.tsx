@@ -92,11 +92,11 @@ export default function RewardsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["loyalty"],
-    queryFn: () => apiGet<LoyaltyData>("/loyalty"),
+    queryFn: () => apiGet<LoyaltyData>("/api/loyalty"),
   });
 
   const redeemReward = useMutation({
-    mutationFn: (rewardId: number) => apiPost(`/loyalty/redeem`, { reward_id: rewardId }),
+    mutationFn: (rewardId: number) => apiPost(`/api/loyalty/redeem`, { reward_id: rewardId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty"] });
       toast.success("Reward redeemed successfully!");

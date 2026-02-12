@@ -47,12 +47,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
-    queryFn: () => apiGet<Product>(`/store/products/${slug}`),
+    queryFn: () => apiGet<Product>(`/api/store/products/${slug}`),
   });
 
   const addToCart = useMutation({
     mutationFn: () =>
-      apiPost("/store/cart/items", { product_id: product?.id, quantity }),
+      apiPost("/api/store/cart/items", { product_id: product?.id, quantity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       setAddedToCart(true);
@@ -61,7 +61,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   });
 
   const addToWishlist = useMutation({
-    mutationFn: () => apiPost("/store/wishlist", { product_id: product?.id }),
+    mutationFn: () => apiPost("/api/store/wishlist", { product_id: product?.id }),
   });
 
   if (isLoading) {

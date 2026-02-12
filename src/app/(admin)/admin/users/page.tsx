@@ -36,8 +36,7 @@ interface User {
 }
 
 interface UsersResponse {
-  success: boolean;
-  data: User[];
+    data: User[];
   meta: {
     total: number;
     per_page: number;
@@ -77,7 +76,7 @@ export default function UsersPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'users', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: UsersStats }>('/api/admin/users/statistics'),
+    queryFn: () => apiGet<{ data: UsersStats }>('/api/admin/users/statistics'),
   });
 
   const banMutation = useMutation({
@@ -91,7 +90,7 @@ export default function UsersPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (userId: number) => apiDelete(`/admin/users/${userId}`),
+    mutationFn: (userId: number) => apiDelete(`/api/admin/users/${userId}`),
     onSuccess: () => {
       toast.success('User deleted');
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });

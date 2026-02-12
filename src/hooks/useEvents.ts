@@ -102,8 +102,7 @@ export interface PurchaseTicketRequest {
 }
 
 export interface PurchaseTicketResponse {
-  success: boolean;
-  order_id: number;
+    order_id: number;
   tickets: Ticket[];
   total_amount: number;
   payment_reference?: string;
@@ -115,8 +114,7 @@ export interface CheckInRequest {
 }
 
 export interface CheckInResponse {
-  success: boolean;
-  ticket: Ticket;
+    ticket: Ticket;
   message: string;
 }
 
@@ -164,14 +162,14 @@ export function useEvents(params?: {
 }) {
   return useQuery({
     queryKey: ["events", params],
-    queryFn: () => apiGet<EventsResponse>("/events", { params }),
+    queryFn: () => apiGet<EventsResponse>("/api/events", { params }),
   });
 }
 
 export function useEvent(eventId: number | string, options?: UseQueryOptions<Event>) {
   return useQuery({
     queryKey: ["event", eventId],
-    queryFn: () => apiGet<Event>(`/events/${eventId}`),
+    queryFn: () => apiGet<{ data: Event }>(`/api/events/${eventId}`).then(res => res.data),
     enabled: !!eventId,
     ...options,
   });
@@ -180,14 +178,20 @@ export function useEvent(eventId: number | string, options?: UseQueryOptions<Eve
 export function useFeaturedEvents() {
   return useQuery({
     queryKey: ["events", "featured"],
-    queryFn: () => apiGet<Event[]>("/events/featured"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Event[] }>("/api/events/featured");
+      return res.data;
+    },
   });
 }
 
 export function useUpcomingEvents(limit = 10) {
   return useQuery({
     queryKey: ["events", "upcoming", limit],
-    queryFn: () => apiGet<Event[]>("/events/upcoming", { params: { limit } }),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Event[] }>("/api/events/upcoming", { params: { limit } });
+      return res.data;
+    },
   });
 }
 
@@ -200,7 +204,7 @@ export function usePurchaseTickets() {
 
   return useMutation({
     mutationFn: (data: PurchaseTicketRequest) =>
-      apiPost<PurchaseTicketResponse>("/tickets/purchase", data),
+      apiPost<PurchaseTicketResponse>("/api/tickets/purchase", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
@@ -215,14 +219,14 @@ export function useMyTickets(params?: {
 }): UseQueryResult<TicketsResponse> {
   return useQuery({
     queryKey: ["tickets", "my", params],
-    queryFn: () => apiGet<TicketsResponse>("/tickets/my", { params }),
+    queryFn: () => apiGet<TicketsResponse>("/api/tickets/my", { params }),
   });
 }
 
 export function useTicket(ticketId: number | string) {
   return useQuery({
     queryKey: ["ticket", ticketId],
-    queryFn: () => apiGet<Ticket>(`/tickets/${ticketId}`),
+    queryFn: () => apiGet<{ data: Ticket }>(`/api/tickets/${ticketId}`).then(res => res.data),
     enabled: !!ticketId,
   });
 }
@@ -236,7 +240,7 @@ export function useCheckInTicket() {
 
   return useMutation({
     mutationFn: (data: CheckInRequest) =>
-      apiPost<CheckInResponse>("/tickets/check-in", data),
+      apiPost<CheckInResponse>("/api/tickets/check-in", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
@@ -246,7 +250,7 @@ export function useCheckInTicket() {
 export function useValidateTicket(ticketNumber: string) {
   return useQuery({
     queryKey: ["ticket", "validate", ticketNumber],
-    queryFn: () => apiGet<{ valid: boolean; ticket?: Ticket; message: string }>(`/tickets/validate/${ticketNumber}`),
+    queryFn: () => apiGet<{ valid: boolean; ticket?: Ticket; message: string }>(`/api/tickets/validate/${ticketNumber}`),
     enabled: !!ticketNumber && ticketNumber.length > 5,
   });
 }
@@ -262,7 +266,7 @@ export function useArtistEvents(params?: {
 }) {
   return useQuery({
     queryKey: ["artist", "events", params],
-    queryFn: () => apiGet<EventsResponse>("/artist/events", { params }),
+    queryFn: () => apiGet<EventsResponse>("/api/artist/events", { params }),
   });
 }
 
@@ -281,7 +285,7 @@ export function useCreateEvent() {
           formData.append(key, String(value));
         }
       });
-      return apiPost<Event>("/artist/events", formData);
+      return apiPost<Event>("/api/artist/events", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
@@ -304,7 +308,7 @@ export function useUpdateEvent() {
           formData.append(key, String(value));
         }
       });
-      return apiPut<Event>(`/artist/events/${id}`, formData);
+      return apiPut<Event>(`/api/artist/events/${id}`, formData);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
@@ -318,7 +322,7 @@ export function useDeleteEvent() {
 
   return useMutation({
     mutationFn: (eventId: number) =>
-      apiDelete(`/artist/events/${eventId}`),
+      apiDelete(`/api/artist/events/${eventId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
     },
@@ -334,7 +338,7 @@ export function useEventAnalytics(eventId: number | string) {
       check_ins: number;
       by_tier: Array<{ tier_name: string; sold: number; revenue: number }>;
       by_date: Array<{ date: string; sold: number }>;
-    }>(`/artist/events/${eventId}/analytics`),
+    }>(`/api/artist/events/${eventId}/analytics`),
     enabled: !!eventId,
   });
 }
@@ -346,6 +350,9 @@ export function useEventAnalytics(eventId: number | string) {
 export function useEventCategories() {
   return useQuery({
     queryKey: ["event", "categories"],
-    queryFn: () => apiGet<string[]>("/events/categories"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: string[] }>("/api/events/categories");
+      return res.data;
+    },
   });
 }

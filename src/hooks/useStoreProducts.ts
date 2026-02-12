@@ -129,10 +129,10 @@ export function useStoreProducts(filters?: ProductsFilters) {
         }
         const queryString = params.toString();
         const endpoint = queryString
-          ? `/store/products?${queryString}`
-          : "/store/products";
-        const data = await apiGet<Product[]>(endpoint);
-        return data;
+          ? `/api/store/products?${queryString}`
+          : "/api/store/products";
+        const res = await apiGet<{ data: Product[] }>(endpoint);
+        return res.data;
       } catch {
         // Fallback to default products when API unavailable
         let products = getDefaultProducts();

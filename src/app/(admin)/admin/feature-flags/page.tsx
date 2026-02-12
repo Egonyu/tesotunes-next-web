@@ -71,7 +71,7 @@ export default function FeatureFlagsPage() {
   // ── Mutations ────────────────────────────────────────────────────
   const toggleFlag = useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
-      apiPut(`/admin/feature-flags/${id}`, { enabled }),
+      apiPut(`/api/admin/feature-flags/${id}`, { enabled }),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success(`Feature ${vars.enabled ? 'enabled' : 'disabled'}`);
@@ -93,7 +93,7 @@ export default function FeatureFlagsPage() {
 
   const updateFlag = useMutation({
     mutationFn: ({ id, ...data }: typeof formData & { id: number }) =>
-      apiPut(`/admin/feature-flags/${id}`, data),
+      apiPut(`/api/admin/feature-flags/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag updated');
@@ -104,7 +104,7 @@ export default function FeatureFlagsPage() {
   });
 
   const deleteFlag = useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/feature-flags/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/admin/feature-flags/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag deleted');

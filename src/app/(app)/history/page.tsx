@@ -56,11 +56,11 @@ export default function HistoryPage() {
   const { data: historyData, isLoading } = useQuery({
     queryKey: ["listening-history", filter],
     queryFn: () =>
-      apiGet<HistoryEntry[]>(`/music/history${filter !== "all" ? `?period=${filter}` : ""}`),
+      apiGet<HistoryEntry[]>(`/api/music/history${filter !== "all" ? `?period=${filter}` : ""}`),
   });
 
   const clearHistory = useMutation({
-    mutationFn: () => apiDelete("/music/history"),
+    mutationFn: () => apiDelete("/api/music/history"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listening-history"] });
       toast.success("History cleared");
@@ -68,7 +68,7 @@ export default function HistoryPage() {
   });
 
   const removeEntry = useMutation({
-    mutationFn: (id: number) => apiDelete(`/music/history/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/music/history/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listening-history"] });
       toast.success("Removed from history");

@@ -81,7 +81,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const { data: product, isLoading: productLoading } = useQuery({
     queryKey: ['admin', 'store', 'product', id],
-    queryFn: () => apiGet<{ data: Product }>(`/admin/store/products/${id}`),
+    queryFn: () => apiGet<{ data: Product }>(`/api/admin/store/products/${id}`),
   });
 
   const { data: categories } = useQuery({
@@ -132,7 +132,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPut(`/admin/store/products/${id}`, data, {
+      return apiPut(`/api/admin/store/products/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

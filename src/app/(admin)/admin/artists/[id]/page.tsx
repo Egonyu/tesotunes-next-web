@@ -83,7 +83,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/admin/artists/${id}`),
+    mutationFn: () => apiDelete(`/api/admin/artists/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
       router.push('/admin/artists');
@@ -91,14 +91,14 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   });
 
   const toggleVerifyMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/artists/${id}/toggle-verify`),
+    mutationFn: () => apiPost(`/api/admin/artists/${id}/toggle-verify`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
     },
   });
 
   const toggleFeatureMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/artists/${id}/toggle-featured`),
+    mutationFn: () => apiPost(`/api/admin/artists/${id}/toggle-featured`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
     },

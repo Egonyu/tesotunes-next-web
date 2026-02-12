@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Play, Heart, Share2, MoreHorizontal, Clock, User } from "lucide-react";
 import { serverFetch } from "@/lib/api";
-import type { Artist, Song, Album } from "@/types";
+import type { Artist, Song, Album, PaginatedResponse } from "@/types";
 import { formatNumber } from "@/lib/utils";
 
 interface ArtistPageProps {
@@ -11,7 +11,8 @@ interface ArtistPageProps {
 
 async function getArtist(slug: string) {
   try {
-    return await serverFetch<Artist>(`/artists/${slug}`);
+    const res = await serverFetch<{ data: Artist }>(`/api/artists/${slug}`);
+    return res.data;
   } catch {
     return null;
   }
@@ -19,7 +20,7 @@ async function getArtist(slug: string) {
 
 async function getArtistSongs(artistId: number) {
   try {
-    return await serverFetch<{ data: Song[]; meta?: Record<string, unknown> }>(`/artists/${artistId}/songs?limit=10`);
+    return await serverFetch<PaginatedResponse<Song>>(`/api/artists/${artistId}/songs?limit=10`);
   } catch {
     return { data: [] };
   }
@@ -27,7 +28,7 @@ async function getArtistSongs(artistId: number) {
 
 async function getArtistAlbums(artistId: number) {
   try {
-    return await serverFetch<{ data: Album[]; meta?: Record<string, unknown> }>(`/artists/${artistId}/albums`);
+    return await serverFetch<PaginatedResponse<Album>>(`/api/artists/${artistId}/albums`);
   } catch {
     return { data: [] };
   }

@@ -8,7 +8,7 @@ import type { Playlist, PaginatedResponse } from "@/types";
 async function getPlaylists(page = 1, limit = 20) {
   try {
     return await serverFetch<PaginatedResponse<Playlist>>(
-      `/playlists?page=${page}&limit=${limit}`
+      `/api/playlists?page=${page}&limit=${limit}`
     );
   } catch {
     return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };
@@ -17,8 +17,8 @@ async function getPlaylists(page = 1, limit = 20) {
 
 async function getFeaturedPlaylists(): Promise<Playlist[]> {
   try {
-    const res = await serverFetch<Playlist[]>("/playlists/featured");
-    return Array.isArray(res) ? res : [];
+    const res = await serverFetch<{ data: Playlist[] }>("/api/playlists/featured");
+    return res.data || [];
   } catch {
     return [];
   }

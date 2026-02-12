@@ -9,7 +9,7 @@ import { formatDuration } from "@/lib/utils";
 async function getSongs(page = 1, limit = 30) {
   try {
     return await serverFetch<PaginatedResponse<Song>>(
-      `/songs?page=${page}&limit=${limit}`
+      `/api/songs?page=${page}&limit=${limit}`
     );
   } catch {
     return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };

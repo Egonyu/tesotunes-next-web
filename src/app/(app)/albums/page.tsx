@@ -8,7 +8,7 @@ import type { Album, PaginatedResponse } from "@/types";
 async function getAlbums(page = 1, limit = 20) {
   try {
     return await serverFetch<PaginatedResponse<Album>>(
-      `/albums?page=${page}&limit=${limit}`
+      `/api/albums?page=${page}&limit=${limit}`
     );
   } catch {
     return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };

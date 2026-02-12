@@ -115,7 +115,7 @@ export function useCampaigns(category?: string) {
       const params = new URLSearchParams();
       if (category && category !== 'All') params.append('category', category);
       
-      const response = await apiGet<{ data: unknown } | unknown[]>(`/ojokotau/campaigns?${params.toString()}`);
+      const response = await apiGet<{ data: unknown } | unknown[]>(`/api/ojokotau/campaigns?${params.toString()}`);
       return (response as { data?: unknown }).data || response;
     },
   });
@@ -137,7 +137,7 @@ export function useCampaign(campaignId: string) {
   return useQuery({
     queryKey: ['campaign', campaignId],
     queryFn: async () => {
-      const response = await apiGet<{ data: unknown } | unknown>(`/ojokotau/campaigns/${campaignId}`);
+      const response = await apiGet<{ data: unknown } | unknown>(`/api/ojokotau/campaigns/${campaignId}`);
       return (response as { data?: unknown }).data || response;
     },
     enabled: !!campaignId,
@@ -168,7 +168,7 @@ export function useDonate() {
       isAnonymous?: boolean;
       message?: string;
     }) => {
-      const response = await apiPost<{ data?: unknown }>(`/ojokotau/campaigns/${data.campaignId}/donate`, {
+      const response = await apiPost<{ data?: unknown }>(`/api/ojokotau/campaigns/${data.campaignId}/donate`, {
         amount: data.amount,
         payment_method: data.paymentMethod,
         reward_id: data.rewardId,
@@ -225,7 +225,7 @@ export function useFollowCampaign() {
   
   return useMutation({
     mutationFn: async (campaignId: string) => {
-      const response = await apiPost<{ data?: unknown }>(`/ojokotau/campaigns/${campaignId}/follow`, {});
+      const response = await apiPost<{ data?: unknown }>(`/api/ojokotau/campaigns/${campaignId}/follow`, {});
       return response.data || response;
     },
     onSuccess: (_, campaignId) => {
@@ -238,7 +238,7 @@ export function useFollowCampaign() {
 export function useShareCampaign() {
   return useMutation({
     mutationFn: async (campaignId: string) => {
-      const response = await apiPost<{ data?: unknown }>(`/ojokotau/campaigns/${campaignId}/share`, {});
+      const response = await apiPost<{ data?: unknown }>(`/api/ojokotau/campaigns/${campaignId}/share`, {});
       return response.data || response;
     },
   });

@@ -73,7 +73,7 @@ export default function EventDetailPage({
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
     queryFn: async () => {
-      const res = await api.get(`/events/${id}`);
+      const res = await api.get(`/api/events/${id}`);
       return res.data as EventDetails;
     },
   });

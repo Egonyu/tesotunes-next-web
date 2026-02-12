@@ -35,12 +35,12 @@ export default function ApiTestPage() {
       
       // CSRF cookie requires different handling
       if (test.endpoint === "/sanctum/csrf-cookie") {
-        url = API_URL.replace("/api", "") + test.endpoint;
+        url = API_URL.replace("/api/api", "") + test.endpoint;
       }
       
       // Health check - try root first
       if (test.endpoint === "/health") {
-        url = API_URL.replace("/api", "") + "/api" + test.endpoint;
+        url = API_URL.replace("/api/api", "") + "/api" + test.endpoint;
       }
 
       const response = await fetch(url, {

@@ -17,7 +17,10 @@ export function useSongs(params?: { page?: number; limit?: number; genre?: strin
 export function useSong(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["song", idOrSlug],
-    queryFn: () => apiGet<Song>(`/api/songs/${idOrSlug}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Song }>(`/api/songs/${idOrSlug}`);
+      return res.data;
+    },
     enabled: !!idOrSlug,
   });
 }
@@ -25,7 +28,7 @@ export function useSong(idOrSlug: string | number) {
 export function useTrendingSongs(limit = 10) {
   return useQuery({
     queryKey: ["songs", "trending", limit],
-    queryFn: () => apiGet<PaginatedResponse<Song>>("/music/trending", { params: { limit } }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>("/api/songs", { params: { limit, sort: '-play_count' } }),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
@@ -33,14 +36,14 @@ export function useTrendingSongs(limit = 10) {
 export function useNewReleases(limit = 10) {
   return useQuery({
     queryKey: ["songs", "new", limit],
-    queryFn: () => apiGet<PaginatedResponse<Song>>("/music/songs", { params: { limit, sort: '-created_at' } }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>("/api/songs", { params: { limit, sort: '-created_at' } }),
     staleTime: 2 * 60 * 1000,
   });
 }
 
 export function useRecordPlay() {
   return useMutation({
-    mutationFn: (songId: number) => apiPost(`/player/record-play`, { song_id: songId }),
+    mutationFn: (songId: number) => apiPost(`/api/player/record-play`, { song_id: songId }),
   });
 }
 
@@ -59,7 +62,10 @@ export function useArtists(params?: { page?: number; limit?: number }) {
 export function useArtist(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["artist", idOrSlug],
-    queryFn: () => apiGet<Artist>(`/music/artists/${idOrSlug}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Artist }>(`/api/artists/${idOrSlug}`);
+      return res.data;
+    },
     enabled: !!idOrSlug,
   });
 }
@@ -67,7 +73,7 @@ export function useArtist(idOrSlug: string | number) {
 export function useArtistSongs(artistId: number, params?: { limit?: number }) {
   return useQuery({
     queryKey: ["artist", artistId, "songs", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>(`/music/artists/${artistId}/songs`, { params }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>(`/api/artists/${artistId}/songs`, { params }),
     enabled: !!artistId,
   });
 }
@@ -75,7 +81,7 @@ export function useArtistSongs(artistId: number, params?: { limit?: number }) {
 export function usePopularArtists(limit = 12) {
   return useQuery({
     queryKey: ["artists", "popular", limit],
-    queryFn: () => apiGet<PaginatedResponse<Artist>>("/music/artists", { params: { limit, sort: '-followers_count' } }),
+    queryFn: () => apiGet<PaginatedResponse<Artist>>("/api/artists", { params: { limit, sort: '-followers_count' } }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -84,7 +90,7 @@ export function useFollowArtist() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (artistId: number) => apiPost(`/like/artist/${artistId}`),
+    mutationFn: (artistId: number) => apiPost(`/api/artists/${artistId}/follow`),
     onSuccess: (_, artistId) => {
       queryClient.invalidateQueries({ queryKey: ["artist", artistId] });
     },
@@ -95,7 +101,7 @@ export function useUnfollowArtist() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (artistId: number) => apiPost(`/like/artist/${artistId}`), // Toggle endpoint
+    mutationFn: (artistId: number) => apiPost(`/api/artists/${artistId}/follow`), // Toggle endpoint
     onSuccess: (_, artistId) => {
       queryClient.invalidateQueries({ queryKey: ["artist", artistId] });
     },
@@ -117,7 +123,10 @@ export function useAlbums(params?: { page?: number; limit?: number }) {
 export function useAlbum(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["album", idOrSlug],
-    queryFn: () => apiGet<Album>(`/music/albums/${idOrSlug}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Album }>(`/api/albums/${idOrSlug}`);
+      return res.data;
+    },
     enabled: !!idOrSlug,
   });
 }
@@ -129,7 +138,10 @@ export function useAlbum(idOrSlug: string | number) {
 export function useGenres() {
   return useQuery({
     queryKey: ["genres"],
-    queryFn: () => apiGet<Genre[]>("/api/genres"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Genre[] }>("/api/genres");
+      return res.data;
+    },
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -137,7 +149,10 @@ export function useGenres() {
 export function useGenre(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["genre", idOrSlug],
-    queryFn: () => apiGet<Genre>(`/music/genres/${idOrSlug}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Genre }>(`/api/genres/${idOrSlug}`);
+      return res.data;
+    },
     enabled: !!idOrSlug,
   });
 }
@@ -145,7 +160,7 @@ export function useGenre(idOrSlug: string | number) {
 export function useGenreSongs(genreId: number, params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["genre", genreId, "songs", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>(`/music/genres/${genreId}/songs`, { params }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>(`/api/genres/${genreId}/songs`, { params }),
     enabled: !!genreId,
   });
 }
@@ -157,14 +172,17 @@ export function useGenreSongs(genreId: number, params?: { page?: number; limit?:
 export function usePlaylists(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["playlists", params],
-    queryFn: () => apiGet<PaginatedResponse<Playlist>>("/music/playlists", { params }),
+    queryFn: () => apiGet<PaginatedResponse<Playlist>>("/api/playlists", { params }),
   });
 }
 
 export function usePlaylist(idOrSlug: string | number) {
   return useQuery({
     queryKey: ["playlist", idOrSlug],
-    queryFn: () => apiGet<Playlist>(`/music/playlists/${idOrSlug}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Playlist }>(`/api/playlists/${idOrSlug}`);
+      return res.data;
+    },
     enabled: !!idOrSlug,
   });
 }
@@ -172,7 +190,10 @@ export function usePlaylist(idOrSlug: string | number) {
 export function useUserPlaylists() {
   return useQuery({
     queryKey: ["playlists", "user"],
-    queryFn: () => apiGet<Playlist[]>("/music/playlists"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Playlist[] }>("/api/playlists");
+      return res.data;
+    },
   });
 }
 
@@ -180,8 +201,10 @@ export function useCreatePlaylist() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; is_public?: boolean }) =>
-      apiPost<Playlist>("/music/playlists", data),
+    mutationFn: async (data: { name: string; description?: string; is_public?: boolean }) => {
+      const res = await apiPost<{ data: Playlist }>("/api/playlists", data);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
     },
@@ -193,7 +216,7 @@ export function useAddToPlaylist() {
   
   return useMutation({
     mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
-      apiPost(`/music/playlists/${playlistId}/songs`, { song_id: songId }),
+      apiPost(`/api/playlists/${playlistId}/songs`, { song_id: songId }),
     onSuccess: (_, { playlistId }) => {
       queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
     },
@@ -205,7 +228,7 @@ export function useRemoveFromPlaylist() {
   
   return useMutation({
     mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
-      apiDelete(`/music/playlists/${playlistId}/songs/${songId}`),
+      apiDelete(`/api/playlists/${playlistId}/songs/${songId}`),
     onSuccess: (_, { playlistId }) => {
       queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
     },
@@ -219,13 +242,17 @@ export function useRemoveFromPlaylist() {
 export function useSearch(query: string, type?: "songs" | "artists" | "albums" | "playlists") {
   return useQuery({
     queryKey: ["search", query, type],
-    queryFn: () =>
-      apiGet<{
-        songs?: Song[];
-        artists?: Artist[];
-        albums?: Album[];
-        playlists?: Playlist[];
-      }>("/music/search", { params: { q: query, type } }),
+    queryFn: async () => {
+      const res = await apiGet<{
+        data: {
+          songs?: Song[];
+          artists?: Artist[];
+          albums?: Album[];
+          playlists?: Playlist[];
+        };
+      }>("/api/search", { params: { q: query, type } });
+      return res.data;
+    },
     enabled: query.length >= 2,
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -238,7 +265,7 @@ export function useSearch(query: string, type?: "songs" | "artists" | "albums" |
 export function useLikedSongs(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["library", "liked", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>("/music/library", { params }),
+    queryFn: () => apiGet<PaginatedResponse<Song>>("/api/library/songs", { params }),
   });
 }
 
@@ -246,7 +273,7 @@ export function useLikeSong() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (songId: number) => apiPost(`/like/song/${songId}`),
+    mutationFn: (songId: number) => apiPost(`/api/songs/${songId}/like`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["library", "liked"] });
     },
@@ -257,7 +284,7 @@ export function useUnlikeSong() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (songId: number) => apiPost(`/like/song/${songId}`), // Toggle endpoint
+    mutationFn: (songId: number) => apiDelete(`/api/songs/${songId}/like`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["library", "liked"] });
     },
@@ -267,14 +294,20 @@ export function useUnlikeSong() {
 export function useRecentlyPlayed(limit = 10) {
   return useQuery({
     queryKey: ["library", "recent", limit],
-    queryFn: () => apiGet<Song[]>("/music/history", { params: { limit } }),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Song[] }>("/api/history", { params: { limit } });
+      return res.data;
+    },
   });
 }
 
 export function useFollowedArtists() {
   return useQuery({
     queryKey: ["library", "artists"],
-    queryFn: () => apiGet<Artist[]>("/music/library"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Artist[] }>("/api/library/artists");
+      return res.data;
+    },
   });
 }
 
@@ -282,22 +315,34 @@ export function useFollowedArtists() {
 export function useLibrary() {
   const playlistsQuery = useQuery({
     queryKey: ["library", "playlists"],
-    queryFn: () => apiGet<Playlist[]>("/music/playlists"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Playlist[] }>("/api/playlists");
+      return res.data;
+    },
   });
 
   const likedSongsQuery = useQuery({
     queryKey: ["library", "liked-songs"],
-    queryFn: () => apiGet<Song[]>("/music/library"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Song[] }>("/api/library/songs");
+      return res.data;
+    },
   });
 
   const savedAlbumsQuery = useQuery({
     queryKey: ["library", "saved-albums"],
-    queryFn: () => apiGet<Album[]>("/music/albums"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Album[] }>("/api/library/albums");
+      return res.data;
+    },
   });
 
   const followedArtistsQuery = useQuery({
     queryKey: ["library", "followed-artists"],
-    queryFn: () => apiGet<Artist[]>("/music/artists"),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Artist[] }>("/api/library/artists");
+      return res.data;
+    },
   });
 
   return {

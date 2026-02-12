@@ -91,7 +91,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const { data: eventData, isLoading } = useQuery({
     queryKey: ['admin', 'event', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/events/${id}`),
+    queryFn: () => apiGet<{ data: any }>(`/api/admin/events/${id}`),
   });
 
   const { data: artistsData } = useQuery({
@@ -139,7 +139,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/events/${id}`, data, {
+      return apiPost(`/api/admin/events/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

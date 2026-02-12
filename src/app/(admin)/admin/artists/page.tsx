@@ -36,8 +36,7 @@ interface Artist {
 }
 
 interface ArtistsResponse {
-  success: boolean;
-  data: Artist[];
+    data: Artist[];
   meta: {
     total: number;
     per_page: number;
@@ -73,7 +72,7 @@ export default function ArtistsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'artists', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: ArtistsStats }>('/api/admin/artists/statistics'),
+    queryFn: () => apiGet<{ data: ArtistsStats }>('/api/admin/artists/statistics'),
   });
 
   const verifyMutation = useMutation({

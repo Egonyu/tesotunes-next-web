@@ -82,21 +82,21 @@ export default function MessagesPage() {
 
   const { data: conversations, isLoading: loadingConversations } = useQuery({
     queryKey: ["conversations"],
-    queryFn: () => apiGet<Conversation[]>("/social/conversations"),
+    queryFn: () => apiGet<Conversation[]>("/api/social/conversations"),
   });
 
   const { data: messages, isLoading: loadingMessages } = useQuery({
     queryKey: ["messages", selectedConversation],
     queryFn: () =>
       selectedConversation
-        ? apiGet<Message[]>(`/social/conversations/${selectedConversation}`)
+        ? apiGet<Message[]>(`/api/social/conversations/${selectedConversation}`)
         : Promise.resolve([]),
     enabled: !!selectedConversation,
   });
 
   const sendMessage = useMutation({
     mutationFn: (content: string) =>
-      apiPost(`/social/conversations/${selectedConversation}/messages`, { content }),
+      apiPost(`/api/social/conversations/${selectedConversation}/messages`, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages", selectedConversation] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -111,7 +111,7 @@ export default function MessagesPage() {
       formData.append("file", data.file);
       formData.append("type", data.type);
       if (data.caption) formData.append("content", data.caption);
-      return apiPostForm(`/social/conversations/${selectedConversation}/messages/media`, formData);
+      return apiPostForm(`/api/social/conversations/${selectedConversation}/messages/media`, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages", selectedConversation] });
@@ -124,7 +124,7 @@ export default function MessagesPage() {
   // Mark messages as read
   const markAsRead = useMutation({
     mutationFn: (conversationId: number) =>
-      apiPost(`/social/conversations/${conversationId}/read`, {}),
+      apiPost(`/api/social/conversations/${conversationId}/read`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.invalidateQueries({ queryKey: ["messages", selectedConversation] });

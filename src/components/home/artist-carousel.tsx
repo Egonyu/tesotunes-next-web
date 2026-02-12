@@ -15,8 +15,8 @@ export function ArtistCarousel() {
   const { data, isLoading } = useQuery({
     queryKey: ["artists", "popular"],
     queryFn: () =>
-      apiGet<PaginatedResponse<Artist>>("/artists/popular", {
-        params: { limit: 12 },
+      apiGet<PaginatedResponse<Artist>>("/api/artists", {
+        params: { limit: 12, sort: "-followers_count" },
       }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

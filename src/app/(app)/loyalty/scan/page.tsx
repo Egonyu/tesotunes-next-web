@@ -17,7 +17,7 @@ export default function LoyaltyScanPage() {
   const [qrCode, setQrCode] = useState('');
   const [manualMode, setManualMode] = useState(true); // Start with manual for now
   const [scanResult, setScanResult] = useState<{
-    success: boolean;
+    success?: boolean;
     points?: number;
     message: string;
   } | null>(null);

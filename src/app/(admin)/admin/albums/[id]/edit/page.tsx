@@ -89,7 +89,7 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const { data: album, isLoading: albumLoading } = useQuery({
     queryKey: ['admin', 'album', id],
-    queryFn: () => apiGet<{ data: Album }>(`/admin/albums/${id}`),
+    queryFn: () => apiGet<{ data: Album }>(`/api/admin/albums/${id}`),
   });
 
   const { data: artists } = useQuery({
@@ -133,7 +133,7 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/admin/albums/${id}`, data, {
+      return apiPost(`/api/admin/albums/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

@@ -81,7 +81,7 @@ export default function RolesPage() {
 
   const updateRole = useMutation({
     mutationFn: ({ id, ...data }: { id: number; name: string; description: string; permissions: string[] }) =>
-      apiPut(`/admin/roles/${id}`, data),
+      apiPut(`/api/admin/roles/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role updated successfully');
@@ -92,7 +92,7 @@ export default function RolesPage() {
   });
 
   const deleteRole = useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/roles/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/admin/roles/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role deleted');
@@ -103,7 +103,7 @@ export default function RolesPage() {
 
   const updateRolePermissions = useMutation({
     mutationFn: ({ roleId, permissions }: { roleId: number; permissions: string[] }) =>
-      apiPut(`/admin/roles/${roleId}/permissions`, { permissions }),
+      apiPut(`/api/admin/roles/${roleId}/permissions`, { permissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Permissions updated');

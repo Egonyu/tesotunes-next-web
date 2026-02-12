@@ -62,7 +62,7 @@ export default function PlaylistCollaboration({
 
   const { data: collaborators, isLoading } = useQuery({
     queryKey: ['playlist-collaborators', playlistId],
-    queryFn: () => apiGet<Collaborator[]>(`/playlists/${playlistId}/collaborators`),
+    queryFn: () => apiGet<Collaborator[]>(`/api/playlists/${playlistId}/collaborators`),
     enabled: showPanel,
   });
 
@@ -74,7 +74,7 @@ export default function PlaylistCollaboration({
 
   const inviteCollaborator = useMutation({
     mutationFn: (data: { userId: number; role: 'editor' | 'viewer' }) =>
-      apiPost(`/playlists/${playlistId}/collaborators`, { user_id: data.userId, role: data.role }),
+      apiPost(`/api/playlists/${playlistId}/collaborators`, { user_id: data.userId, role: data.role }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlist-collaborators', playlistId] });
       toast.success('Collaborator invited!');
@@ -86,7 +86,7 @@ export default function PlaylistCollaboration({
 
   const removeCollaborator = useMutation({
     mutationFn: (collaboratorId: number) =>
-      apiDelete(`/playlists/${playlistId}/collaborators/${collaboratorId}`),
+      apiDelete(`/api/playlists/${playlistId}/collaborators/${collaboratorId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlist-collaborators', playlistId] });
       toast.success('Collaborator removed');
@@ -97,7 +97,7 @@ export default function PlaylistCollaboration({
 
   const updateRole = useMutation({
     mutationFn: (data: { collaboratorId: number; role: 'editor' | 'viewer' }) =>
-      apiPost(`/playlists/${playlistId}/collaborators/${data.collaboratorId}/role`, { role: data.role }),
+      apiPost(`/api/playlists/${playlistId}/collaborators/${data.collaboratorId}/role`, { role: data.role }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlist-collaborators', playlistId] });
       toast.success('Role updated');
@@ -107,7 +107,7 @@ export default function PlaylistCollaboration({
 
   const toggleCollaborative = useMutation({
     mutationFn: () =>
-      apiPost(`/playlists/${playlistId}/collaborative`, { is_collaborative: !isCollaborative }),
+      apiPost(`/api/playlists/${playlistId}/collaborative`, { is_collaborative: !isCollaborative }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
       toast.success(isCollaborative ? 'Collaboration disabled' : 'Collaboration enabled');

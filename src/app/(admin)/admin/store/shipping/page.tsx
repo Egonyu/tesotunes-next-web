@@ -34,7 +34,7 @@ export default function AdminStoreShippingPage() {
   });
 
   const deleteZone = useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/store/shipping/${id}`),
+    mutationFn: (id: number) => apiDelete(`/api/admin/store/shipping/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'shipping'] });
       toast.success('Shipping zone deleted');

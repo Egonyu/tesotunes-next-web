@@ -39,8 +39,7 @@ interface Song {
 }
 
 interface SongsResponse {
-  success: boolean;
-  data: Song[];
+    data: Song[];
   meta: {
     total: number;
     per_page: number;
@@ -72,13 +71,13 @@ export default function SongsPage() {
       params.set('per_page', '20');
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<SongsResponse>(`/admin/songs?${params.toString()}`);
+      return apiGet<SongsResponse>(`/api/admin/songs?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'songs', 'statistics'],
-    queryFn: () => apiGet<{ success: boolean; data: SongsStats }>('/api/admin/songs/statistics'),
+    queryFn: () => apiGet<{ data: SongsStats }>('/api/admin/songs/statistics'),
   });
 
   const bulkApproveMutation = useMutation({
@@ -102,7 +101,7 @@ export default function SongsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (songId: number) => apiDelete(`/admin/songs/${songId}`),
+    mutationFn: (songId: number) => apiDelete(`/api/admin/songs/${songId}`),
     onSuccess: () => {
       toast.success('Song deleted');
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });

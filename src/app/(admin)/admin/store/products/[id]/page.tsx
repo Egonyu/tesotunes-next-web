@@ -62,16 +62,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'product', id],
-    queryFn: () => apiGet<{ data: Product }>(`/admin/store/products/${id}`),
+    queryFn: () => apiGet<{ data: Product }>(`/api/admin/store/products/${id}`),
   });
 
   const { data: recentOrders } = useQuery({
     queryKey: ['admin', 'store', 'product', id, 'orders'],
-    queryFn: () => apiGet<{ data: OrderItem[] }>(`/admin/store/products/${id}/orders`),
+    queryFn: () => apiGet<{ data: OrderItem[] }>(`/api/admin/store/products/${id}/orders`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/admin/store/products/${id}`),
+    mutationFn: () => apiDelete(`/api/admin/store/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'products'] });
       router.push('/admin/store/products');
@@ -79,7 +79,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/store/api/products/${id}/toggle-status`),
+    mutationFn: () => apiPost(`/api/admin/store/api/products/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'product', id] });
     },

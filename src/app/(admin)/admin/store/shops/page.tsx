@@ -35,7 +35,7 @@ export default function AdminStoreShopsPage() {
 
   const { data: shops, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'shops', searchQuery],
-    queryFn: () => apiGet<{ data: Shop[] }>(`/admin/store/shops?search=${searchQuery}`).then(r => r.data),
+    queryFn: () => apiGet<{ data: Shop[] }>(`/api/admin/store/shops?search=${searchQuery}`).then(r => r.data),
   });
 
   return (

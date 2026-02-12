@@ -75,11 +75,11 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data: album, isLoading } = useQuery({
     queryKey: ['admin', 'album', id],
-    queryFn: () => apiGet<{ data: Album }>(`/admin/albums/${id}`),
+    queryFn: () => apiGet<{ data: Album }>(`/api/admin/albums/${id}`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/admin/albums/${id}`),
+    mutationFn: () => apiDelete(`/api/admin/albums/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'albums'] });
       router.push('/admin/albums');
@@ -87,7 +87,7 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/albums/${id}/toggle-status`),
+    mutationFn: () => apiPost(`/api/admin/albums/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'album', id] });
     },

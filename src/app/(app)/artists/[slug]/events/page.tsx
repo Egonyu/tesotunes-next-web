@@ -179,7 +179,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
 
   const { data: eventsData, isLoading } = useQuery({
     queryKey: ["artist-events", slug],
-    queryFn: () => apiGet<ArtistEvents>(`/artists/${slug}/events`),
+    queryFn: () => apiGet<ArtistEvents>(`/api/artists/${slug}/events`),
   });
 
   if (isLoading) {

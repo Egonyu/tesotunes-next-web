@@ -82,18 +82,18 @@ export default function PodcastDetailPage({
   // Fetch podcast details
   const { data: podcastData, isLoading } = useQuery({
     queryKey: ['podcast', id],
-    queryFn: () => apiGet<PodcastResponse>(`/podcasts/${id}`),
+    queryFn: () => apiGet<PodcastResponse>(`/api/podcasts/${id}`),
   });
   
   // Fetch episodes
   const { data: episodesData, isLoading: episodesLoading } = useQuery({
     queryKey: ['podcast-episodes', id],
-    queryFn: () => apiGet<EpisodesResponse>(`/podcasts/${id}/episodes`),
+    queryFn: () => apiGet<EpisodesResponse>(`/api/podcasts/${id}/episodes`),
   });
   
   // Subscribe mutation
   const subscribeMutation = useMutation({
-    mutationFn: () => apiPost(`/podcasts/${id}/subscribe`, {}),
+    mutationFn: () => apiPost(`/api/podcasts/${id}/subscribe`, {}),
     onSuccess: () => {
       toast.success('Subscribed to podcast');
       queryClient.invalidateQueries({ queryKey: ['podcast', id] });
@@ -103,7 +103,7 @@ export default function PodcastDetailPage({
   
   // Unsubscribe mutation
   const unsubscribeMutation = useMutation({
-    mutationFn: () => apiDelete(`/podcasts/${id}/unsubscribe`),
+    mutationFn: () => apiDelete(`/api/podcasts/${id}/unsubscribe`),
     onSuccess: () => {
       toast.success('Unsubscribed from podcast');
       queryClient.invalidateQueries({ queryKey: ['podcast', id] });

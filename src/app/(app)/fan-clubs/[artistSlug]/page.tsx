@@ -130,17 +130,17 @@ export default function FanClubDetailPage({ params }: { params: Promise<{ artist
 
   const { data: fanClub, isLoading } = useQuery({
     queryKey: ["fan-club", artistSlug],
-    queryFn: () => apiGet<FanClubDetail>(`/fan-clubs/${artistSlug}`),
+    queryFn: () => apiGet<FanClubDetail>(`/api/fan-clubs/${artistSlug}`),
   });
 
   const { data: feedPosts } = useQuery({
     queryKey: ["fan-club-feed", artistSlug],
-    queryFn: () => apiGet<FeedPost[]>(`/fan-clubs/${artistSlug}/feed`),
+    queryFn: () => apiGet<FeedPost[]>(`/api/fan-clubs/${artistSlug}/feed`),
     enabled: activeTab === 'feed',
   });
 
   const postToFeed = useMutation({
-    mutationFn: (content: string) => apiPost(`/fan-clubs/${artistSlug}/feed`, { content }),
+    mutationFn: (content: string) => apiPost(`/api/fan-clubs/${artistSlug}/feed`, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fan-club-feed", artistSlug] });
       setFeedPostInput('');
@@ -150,12 +150,12 @@ export default function FanClubDetailPage({ params }: { params: Promise<{ artist
   });
 
   const likeFeedPost = useMutation({
-    mutationFn: (postId: number) => apiPost(`/fan-clubs/${artistSlug}/feed/${postId}/like`, {}),
+    mutationFn: (postId: number) => apiPost(`/api/fan-clubs/${artistSlug}/feed/${postId}/like`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fan-club-feed", artistSlug] }),
   });
 
   const sendChatMessage = useMutation({
-    mutationFn: (content: string) => apiPost(`/fan-clubs/${artistSlug}/chat`, { content }),
+    mutationFn: (content: string) => apiPost(`/api/fan-clubs/${artistSlug}/chat`, { content }),
     onSuccess: () => setChatInput(''),
     onError: () => toast.error('Failed to send message'),
   });
@@ -163,7 +163,7 @@ export default function FanClubDetailPage({ params }: { params: Promise<{ artist
   // Load initial chat messages
   useEffect(() => {
     if (activeTab !== 'chat' || !fanClub) return;
-    apiGet<ChatMessage[]>(`/fan-clubs/${artistSlug}/chat`).then(setChatMessages).catch(() => {});
+    apiGet<ChatMessage[]>(`/api/fan-clubs/${artistSlug}/chat`).then(setChatMessages).catch(() => {});
   }, [activeTab, artistSlug, fanClub]);
 
   // Scroll chat to bottom on new messages
@@ -190,7 +190,7 @@ export default function FanClubDetailPage({ params }: { params: Promise<{ artist
 
   const joinClub = useMutation({
     mutationFn: (tierId: number) =>
-      apiPost(`/fan-clubs/${artistSlug}/join`, { tier_id: tierId }),
+      apiPost(`/api/fan-clubs/${artistSlug}/join`, { tier_id: tierId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fan-club", artistSlug] });
       toast.success("Welcome to the fan club!");

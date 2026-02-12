@@ -14,6 +14,51 @@ import {
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 
+interface ApiUser {
+  id: number;
+  uuid?: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  stage_name?: string;
+  phone?: string;
+  country?: string;
+  city?: string;
+  bio?: string;
+  avatar_url?: string;
+  avatar?: string;
+  role?: string;
+  status?: string;
+  is_active?: boolean;
+  is_artist?: boolean;
+  is_verified?: boolean;
+  email_verified_at?: string | null;
+  artist?: { id: string; name: string; slug: string };
+  subscription_plan_id?: number;
+  subscription_expires_at?: string;
+  is_premium?: boolean;
+  referral_count?: number;
+  created_at: string;
+  updated_at: string;
+  last_login_at?: string;
+  stats?: {
+    playlists: number;
+    followers: number;
+    following: number;
+    total_plays: number;
+    listening_time: number;
+    liked_songs: number;
+  };
+  recent_activity?: {
+    type: string;
+    description: string;
+    created_at: string;
+  }[];
+}
+
 interface UserDetail {
   id: string;
   name: string;
@@ -52,6 +97,35 @@ interface UserDetail {
   last_login_at: string;
 }
 
+function mapApiUser(raw: ApiUser): UserDetail {
+  return {
+    id: String(raw.id),
+    name: raw.full_name || raw.display_name || raw.stage_name || [raw.first_name, raw.last_name].filter(Boolean).join(' ') || raw.username || '',
+    email: raw.email || '',
+    username: raw.username || '',
+    phone: raw.phone || '',
+    country: raw.country || '',
+    city: raw.city || '',
+    bio: raw.bio || '',
+    avatar_url: raw.avatar_url || raw.avatar || '',
+    role: raw.role || (raw.is_artist ? 'artist' : 'user'),
+    status: raw.status || (raw.is_active ? 'active' : 'inactive'),
+    email_verified_at: raw.email_verified_at || null,
+    is_artist: !!raw.is_artist,
+    artist: raw.artist,
+    subscription: raw.subscription_plan_id ? {
+      plan: raw.is_premium ? 'Premium' : 'Basic',
+      status: raw.subscription_expires_at && new Date(raw.subscription_expires_at) > new Date() ? 'active' : 'expired',
+      ends_at: raw.subscription_expires_at || '',
+    } : undefined,
+    stats: raw.stats || { playlists: 0, followers: 0, following: 0, total_plays: 0, listening_time: 0, liked_songs: 0 },
+    recent_activity: raw.recent_activity || [],
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+    last_login_at: raw.last_login_at || '',
+  };
+}
+
 function formatNumber(num: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -81,9 +155,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
 
-  const { data: user, isLoading } = useQuery({
+  const { data: userData, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
-    queryFn: () => apiGet<{ data: UserDetail }>(`/api/admin/users/${id}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: ApiUser }>(`/api/admin/users/${id}`);
+      return mapApiUser(res.data);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -135,7 +212,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  if (!user?.data) {
+  if (!userData) {
     return (
       <div className="text-center py-12">
         <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -147,7 +224,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const u = user.data;
+  const u = userData;
 
   return (
     <div className="space-y-6">
@@ -203,8 +280,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-2xl font-bold">{u.name}</h2>
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${roleColors[u.role] || roleColors.user}`}>
-                    {u.role.toUpperCase()}
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${roleColors[u.role || 'user'] || roleColors.user}`}>
+                    {(u.role || 'user').toUpperCase()}
                   </span>
                   <StatusBadge status={u.status} />
                 </div>

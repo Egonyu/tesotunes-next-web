@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Eye, EyeOff, Upload, X } from 'lucide-react';
 import Image from 'next/image';
@@ -83,7 +83,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     if (userData?.data) {
       const u = userData.data;
       setFormData({
-        name: u.name || '',
+        name: u.full_name || u.display_name || u.name || '',
         email: u.email || '',
         username: u.username || '',
         password: '',
@@ -95,7 +95,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         role: u.role || 'user',
         status: u.status || 'active',
         email_verified: !!u.email_verified_at,
-        is_artist: u.is_artist || false,
+        is_artist: !!u.is_artist,
         artist_id: u.artist_id || '',
         avatar: null,
       });
@@ -107,9 +107,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/api/admin/users/${id}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return apiPostForm(`/api/admin/users/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -118,7 +116,14 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
+        const serverErrors = error.response.data.errors;
+        const mapped: Record<string, string> = {};
+        for (const [key, val] of Object.entries(serverErrors)) {
+          mapped[key] = Array.isArray(val) ? val[0] : String(val);
+        }
+        setErrors(mapped);
+      } else {
+        setErrors({ _form: error.response?.data?.message || 'Failed to update user. Please try again.' });
       }
     },
   });
@@ -154,6 +159,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     
     const data = new FormData();
     data.append('_method', 'PUT');
+    data.append('full_name', formData.name);
     data.append('name', formData.name);
     data.append('email', formData.email);
     data.append('username', formData.username);
@@ -203,6 +209,11 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {errors._form && (
+          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+            {errors._form}
+          </div>
+        )}
         <FormSection title="Account Information" description="Basic user account details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField

@@ -82,16 +82,57 @@ function formatCurrency(amount: number | null | undefined, currency = 'UGX'): st
 export default function AdminDashboardPage() {
   const { data: statsData, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
-    queryFn: () => apiGet<{ data: DashboardStats }>('/api/admin/dashboard/stats'),
-    refetchInterval: 5 * 60 * 1000, // 5 minutes instead of 1 minute
+    queryFn: async () => {
+      try {
+        const res = await apiGet<{ data: DashboardStats }>('/api/admin/dashboard/stats');
+        return res;
+      } catch {
+        // Fallback: build partial stats from available endpoints
+        const [usersRes, songsRes, artistsRes, albumsRes] = await Promise.allSettled([
+          apiGet<{ data: any[]; meta?: any }>('/api/admin/users?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/api/admin/songs?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/api/admin/artists?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/api/admin/albums?per_page=1'),
+        ]);
+        const total = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.meta?.total ?? r.value?.data?.length ?? 0) : 0;
+        return {
+          data: {
+            users: { total: total(usersRes), new_today: 0, new_this_week: 0, change_percentage: 0, active_users: 0, premium_users: 0 },
+            songs: { total: total(songsRes), published: 0, pending_review: 0, draft: 0, total_plays: 0, plays_today: 0, change_percentage: 0 },
+            albums: { total: total(albumsRes), released: 0, upcoming: 0 },
+            artists: { total: total(artistsRes), verified: 0, pending_verification: 0 },
+            revenue: { total: 0, this_month: 0, last_month: 0, change_percentage: 0, currency: 'UGX' },
+            activity: { total_plays: 0, plays_today: 0, plays_this_week: 0, total_downloads: 0, downloads_today: 0, downloads_this_week: 0 },
+          } as DashboardStats,
+        };
+      }
+    },
+    refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    retry: 1,
   });
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'dashboard', 'activity'],
-    queryFn: () => apiGet<{ data: RecentActivity }>('/api/admin/dashboard/recent-activity'),
-    refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 30 seconds
+    queryFn: async () => {
+      try {
+        return await apiGet<{ data: RecentActivity }>('/api/admin/dashboard/recent-activity');
+      } catch {
+        // Fallback: get recent users/songs from list endpoints
+        const [usersRes, songsRes] = await Promise.allSettled([
+          apiGet<{ data: any[] }>('/api/admin/users?per_page=5&sort=-created_at'),
+          apiGet<{ data: any[] }>('/api/admin/songs?per_page=5&sort=-created_at'),
+        ]);
+        return {
+          data: {
+            users: usersRes.status === 'fulfilled' ? (usersRes.value?.data ?? []).map((u: any) => ({ id: u.id, name: u.full_name || u.display_name || u.username, email: u.email, created_at: u.created_at })) : [],
+            songs: songsRes.status === 'fulfilled' ? (songsRes.value?.data ?? []).map((s: any) => ({ id: s.id, title: s.title, artist: s.artist, created_at: s.created_at })) : [],
+            albums: [],
+          } as RecentActivity,
+        };
+      }
+    },
+    refetchInterval: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 

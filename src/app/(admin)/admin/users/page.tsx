@@ -274,11 +274,11 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                         <span className="text-sm font-medium">
-                          {user.name ? user.name.split(' ').map(n => n[0]).join('') : user.username?.charAt(0) || '?'}
+                          {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('') : user.name ? user.name.split(' ').map((n: string) => n[0]).join('') : user.username?.charAt(0) || '?'}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{user.name || user.username}</p>
+                        <p className="font-medium">{user.full_name || user.name || user.username}</p>
                         <p className="text-sm text-muted-foreground">@{user.username}</p>
                       </div>
                     </div>
@@ -294,9 +294,9 @@ export default function UsersPage() {
                   <td className="p-4">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium capitalize',
-                      statusStyles[user.status as keyof typeof statusStyles] || statusStyles.active
+                      statusStyles[(user.status || (user.is_active ? 'active' : 'inactive')) as keyof typeof statusStyles] || statusStyles.active
                     )}>
-                      {user.status || 'active'}
+                      {user.status || (user.is_active ? 'active' : 'inactive')}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">

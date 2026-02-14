@@ -75,7 +75,7 @@ export default function AdminReportsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'reports', 'stats'],
-    queryFn: () => apiGet<{ data: ReportStats }>('/api/admin/reports/stats').then(r => r.data),
+    queryFn: () => apiGet<{ data: ReportStats }>('/admin/reports/stats').then(r => r.data),
   });
 
   const { data: reports, isLoading } = useQuery({
@@ -88,7 +88,7 @@ export default function AdminReportsPage() {
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
-      apiPost(`/api/admin/reports/${id}/status`, { status }),
+      apiPost(`/admin/reports/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
       toast.success('Report status updated');

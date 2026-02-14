@@ -92,12 +92,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const { data: eventData, isLoading } = useQuery({
     queryKey: ['admin', 'event', id],
-    queryFn: () => apiGet<{ data: any }>(`/api/admin/events/${id}`),
+    queryFn: () => apiGet<{ data: any }>(`/admin/events/${id}`),
   });
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
   });
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPostForm(`/api/admin/events/${id}`, data);
+      return apiPostForm(`/admin/events/${id}`, data);
     },
     onSuccess: () => {
       toast.success('Event updated successfully!');

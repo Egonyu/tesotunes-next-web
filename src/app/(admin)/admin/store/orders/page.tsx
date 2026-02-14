@@ -60,19 +60,19 @@ export default function StoreOrdersPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'store', 'orders', 'stats'],
-    queryFn: () => apiGet<StatsResponse>('/api/admin/store/orders/stats'),
+    queryFn: () => apiGet<StatsResponse>('/admin/store/orders/stats'),
   });
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'orders', { page, search, status, paymentStatus, dateRange }],
-    queryFn: () => apiGet<OrdersResponse>('/api/admin/store/api/orders', {
+    queryFn: () => apiGet<OrdersResponse>('/admin/store/api/orders', {
       params: { page, search, status, payment_status: paymentStatus, date_range: dateRange, per_page: 20 }
     }),
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, newStatus }: { orderId: string; newStatus: string }) =>
-      apiPost(`/api/admin/store/api/orders/${orderId}/status`, { status: newStatus }),
+      apiPost(`/admin/store/api/orders/${orderId}/status`, { status: newStatus }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'orders'] });
     },

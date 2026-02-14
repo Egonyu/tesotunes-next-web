@@ -70,14 +70,14 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
   // Fetch loan details
   const { data: loanData, isLoading, error } = useQuery({
     queryKey: ['sacco-loan', loanId],
-    queryFn: () => apiGet<{ data: LoanDetail }>(`/api/admin/sacco/loans/${loanId}`),
+    queryFn: () => apiGet<{ data: LoanDetail }>(`/admin/sacco/loans/${loanId}`),
   });
 
   const loan = loanData?.data;
 
   // Approve loan mutation
   const approveMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/sacco/loans/${loanId}/approve`, {}),
+    mutationFn: () => apiPost(`/admin/sacco/loans/${loanId}/approve`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loan', loanId] });
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
@@ -87,7 +87,7 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
 
   // Reject loan mutation
   const rejectMutation = useMutation({
-    mutationFn: (reason: string) => apiPost(`/api/admin/sacco/loans/${loanId}/reject`, { reason }),
+    mutationFn: (reason: string) => apiPost(`/admin/sacco/loans/${loanId}/reject`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loan', loanId] });
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });

@@ -66,12 +66,12 @@ export default function AdminForumsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'forums', 'stats'],
-    queryFn: () => apiGet<{ data: ForumStats }>('/api/admin/forums/stats').then(r => r.data),
+    queryFn: () => apiGet<{ data: ForumStats }>('/admin/forums/stats').then(r => r.data),
   });
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['admin', 'forums', 'categories'],
-    queryFn: () => apiGet<{ data: ForumCategory[] }>('/api/admin/forums/categories').then(r => r.data),
+    queryFn: () => apiGet<{ data: ForumCategory[] }>('/admin/forums/categories').then(r => r.data),
   });
 
   const { data: topics, isLoading: topicsLoading } = useQuery({
@@ -82,7 +82,7 @@ export default function AdminForumsPage() {
   });
 
   const deleteTopic = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/forums/topics/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/forums/topics/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'forums'] });
       toast.success('Topic deleted');
@@ -90,7 +90,7 @@ export default function AdminForumsPage() {
   });
 
   const togglePinTopic = useMutation({
-    mutationFn: (id: number) => apiPost(`/api/admin/forums/topics/${id}/pin`, {}),
+    mutationFn: (id: number) => apiPost(`/admin/forums/topics/${id}/pin`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'forums'] });
       toast.success('Topic pin toggled');
@@ -98,7 +98,7 @@ export default function AdminForumsPage() {
   });
 
   const toggleLockTopic = useMutation({
-    mutationFn: (id: number) => apiPost(`/api/admin/forums/topics/${id}/lock`, {}),
+    mutationFn: (id: number) => apiPost(`/admin/forums/topics/${id}/lock`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'forums'] });
       toast.success('Topic lock toggled');

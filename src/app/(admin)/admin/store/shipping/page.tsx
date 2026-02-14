@@ -30,11 +30,11 @@ export default function AdminStoreShippingPage() {
 
   const { data: zones, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'shipping'],
-    queryFn: () => apiGet<{ data: ShippingZone[] }>('/api/admin/store/shipping').then(r => r.data),
+    queryFn: () => apiGet<{ data: ShippingZone[] }>('/admin/store/shipping').then(r => r.data),
   });
 
   const deleteZone = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/store/shipping/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/store/shipping/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'shipping'] });
       toast.success('Shipping zone deleted');

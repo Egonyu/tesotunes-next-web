@@ -89,17 +89,17 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const { data: album, isLoading: albumLoading } = useQuery({
     queryKey: ['admin', 'album', id],
-    queryFn: () => apiGet<{ data: Album }>(`/api/admin/albums/${id}`),
+    queryFn: () => apiGet<{ data: Album }>(`/admin/albums/${id}`),
   });
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
   });
 
   // Populate form when album data loads
@@ -133,7 +133,7 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost(`/api/admin/albums/${id}`, data, {
+      return apiPost(`/admin/albums/${id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

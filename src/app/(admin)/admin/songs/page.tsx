@@ -71,17 +71,17 @@ export default function SongsPage() {
       params.set('per_page', '20');
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<SongsResponse>(`/api/admin/songs?${params.toString()}`);
+      return apiGet<SongsResponse>(`/admin/songs?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'songs', 'statistics'],
-    queryFn: () => apiGet<{ data: SongsStats }>('/api/admin/songs/statistics'),
+    queryFn: () => apiGet<{ data: SongsStats }>('/admin/songs/statistics'),
   });
 
   const bulkApproveMutation = useMutation({
-    mutationFn: (songIds: number[]) => apiPost('/api/admin/songs/bulk-approve', { song_ids: songIds }),
+    mutationFn: (songIds: number[]) => apiPost('/admin/songs/bulk-approve', { song_ids: songIds }),
     onSuccess: () => {
       toast.success('Songs approved successfully');
       setSelectedSongs([]);
@@ -91,7 +91,7 @@ export default function SongsPage() {
   });
 
   const bulkRejectMutation = useMutation({
-    mutationFn: (songIds: number[]) => apiPost('/api/admin/songs/bulk-reject', { song_ids: songIds }),
+    mutationFn: (songIds: number[]) => apiPost('/admin/songs/bulk-reject', { song_ids: songIds }),
     onSuccess: () => {
       toast.success('Songs rejected');
       setSelectedSongs([]);
@@ -101,7 +101,7 @@ export default function SongsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (songId: number) => apiDelete(`/api/admin/songs/${songId}`),
+    mutationFn: (songId: number) => apiDelete(`/admin/songs/${songId}`),
     onSuccess: () => {
       toast.success('Song deleted');
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });

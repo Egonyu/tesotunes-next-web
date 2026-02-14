@@ -91,12 +91,12 @@ export default function CreateEventPage() {
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPostForm('/api/admin/events', data);
+      return apiPostForm('/admin/events', data);
     },
     onSuccess: () => {
       toast.success('Event created successfully!');

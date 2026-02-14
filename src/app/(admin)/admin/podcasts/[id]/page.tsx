@@ -78,11 +78,11 @@ export default function PodcastDetailPage({ params }: { params: Promise<{ id: st
 
   const { data: podcast, isLoading } = useQuery({
     queryKey: ['admin', 'podcast', id],
-    queryFn: () => apiGet<{ data: PodcastDetail }>(`/api/admin/podcasts/${id}`),
+    queryFn: () => apiGet<{ data: PodcastDetail }>(`/admin/podcasts/${id}`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/api/admin/podcasts/${id}`),
+    mutationFn: () => apiDelete(`/admin/podcasts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'podcasts'] });
       router.push('/admin/podcasts');
@@ -90,14 +90,14 @@ export default function PodcastDetailPage({ params }: { params: Promise<{ id: st
   });
 
   const toggleFeatureMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/podcasts/${id}/toggle-featured`),
+    mutationFn: () => apiPost(`/admin/podcasts/${id}/toggle-featured`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'podcast', id] });
     },
   });
 
   const publishMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/podcasts/${id}/publish`),
+    mutationFn: () => apiPost(`/admin/podcasts/${id}/publish`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'podcast', id] });
     },

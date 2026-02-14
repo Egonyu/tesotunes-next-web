@@ -158,13 +158,13 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { data: userData, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
     queryFn: async () => {
-      const res = await apiGet<{ data: ApiUser }>(`/api/admin/users/${id}`);
+      const res = await apiGet<{ data: ApiUser }>(`/admin/users/${id}`);
       return mapApiUser(res.data);
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/api/admin/users/${id}`),
+    mutationFn: () => apiDelete(`/admin/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       router.push('/admin/users');
@@ -172,7 +172,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const suspendMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/users/${id}/suspend`),
+    mutationFn: () => apiPost(`/admin/users/${id}/suspend`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
       setShowSuspendDialog(false);
@@ -180,21 +180,21 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const activateMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/users/${id}/activate`),
+    mutationFn: () => apiPost(`/admin/users/${id}/activate`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
     },
   });
 
   const verifyEmailMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/users/${id}/verify-email`),
+    mutationFn: () => apiPost(`/admin/users/${id}/verify-email`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
     },
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/users/${id}/reset-password`),
+    mutationFn: () => apiPost(`/admin/users/${id}/reset-password`),
     onSuccess: () => {
       alert('Password reset email sent to user');
     },

@@ -36,11 +36,11 @@ export default function AdminStoreDiscountsPage() {
 
   const { data: discounts, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'discounts'],
-    queryFn: () => apiGet<{ data: Discount[] }>('/api/admin/store/discounts').then(r => r.data),
+    queryFn: () => apiGet<{ data: Discount[] }>('/admin/store/discounts').then(r => r.data),
   });
 
   const deleteDiscount = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/store/discounts/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/store/discounts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'discounts'] });
       toast.success('Discount deleted');

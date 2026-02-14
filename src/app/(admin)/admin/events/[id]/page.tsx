@@ -120,11 +120,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['admin', 'event', id],
-    queryFn: () => apiGet<{ data: EventDetail }>(`/api/admin/events/${id}`),
+    queryFn: () => apiGet<{ data: EventDetail }>(`/admin/events/${id}`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/api/admin/events/${id}`),
+    mutationFn: () => apiDelete(`/admin/events/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       router.push('/admin/events');
@@ -132,14 +132,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   });
 
   const toggleFeatureMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/events/${id}/toggle-featured`),
+    mutationFn: () => apiPost(`/admin/events/${id}/toggle-featured`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'event', id] });
     },
   });
 
   const publishMutation = useMutation({
-    mutationFn: () => apiPost(`/api/admin/events/${id}/publish`),
+    mutationFn: () => apiPost(`/admin/events/${id}/publish`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'event', id] });
     },

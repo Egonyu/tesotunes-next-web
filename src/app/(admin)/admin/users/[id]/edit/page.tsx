@@ -66,17 +66,17 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
-    queryFn: () => apiGet<{ data: any }>(`/api/admin/users/${id}`),
+    queryFn: () => apiGet<{ data: any }>(`/admin/users/${id}`),
   });
 
   const { data: rolesData } = useQuery({
     queryKey: ['admin', 'roles'],
-    queryFn: () => apiGet<{ data: Role[] }>('/api/admin/roles'),
+    queryFn: () => apiGet<{ data: Role[] }>('/admin/roles'),
   });
 
   const { data: artistsData } = useQuery({
     queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?select=true'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
   });
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPostForm(`/api/admin/users/${id}`, data);
+      return apiPostForm(`/admin/users/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });

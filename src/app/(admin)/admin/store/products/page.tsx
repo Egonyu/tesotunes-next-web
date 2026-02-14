@@ -56,18 +56,18 @@ export default function StoreProductsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'store', 'stats'],
-    queryFn: () => apiGet<StatsResponse>('/api/admin/store/api/stats'),
+    queryFn: () => apiGet<StatsResponse>('/admin/store/api/stats'),
   });
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'products', { page, search, category, status }],
-    queryFn: () => apiGet<ProductsResponse>('/api/admin/store/api/products', { 
+    queryFn: () => apiGet<ProductsResponse>('/admin/store/api/products', { 
       params: { page, search, category, status, per_page: 15 }
     }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(`/api/admin/store/api/products/${id}`),
+    mutationFn: (id: string) => apiDelete(`/admin/store/api/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'products'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'stats'] });
@@ -76,7 +76,7 @@ export default function StoreProductsPage() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (ids: string[]) => Promise.all(ids.map(id => apiDelete(`/api/admin/store/api/products/${id}`))),
+    mutationFn: (ids: string[]) => Promise.all(ids.map(id => apiDelete(`/admin/store/api/products/${id}`))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'products'] });
       setSelectedProducts([]);

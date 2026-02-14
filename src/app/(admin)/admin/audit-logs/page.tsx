@@ -85,7 +85,7 @@ export default function AuditLogsPage() {
   const { data: logsData, isLoading } = useQuery({
     queryKey: ['admin-audit-logs', page, searchTerm, actionFilter, resourceFilter],
     queryFn: () =>
-      apiGet<AuditLogsResponse>('/api/admin/audit-logs', {
+      apiGet<AuditLogsResponse>('/admin/audit-logs', {
         params: {
           page,
           search: searchTerm || undefined,

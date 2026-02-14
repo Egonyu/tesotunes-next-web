@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { 
   LayoutDashboard,
   Users,
@@ -27,9 +28,13 @@ import {
   Megaphone,
   ScrollText,
   Flag,
-  Percent
+  Percent,
+  BarChart3,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const ADMIN_ROLES = ['Super Admin', 'Admin', 'admin', 'super_admin'];
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -39,11 +44,12 @@ const navItems = [
   { href: '/admin/artists', label: 'Artists', icon: Mic2 },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },
   { href: '/admin/store', label: 'Store', icon: ShoppingBag },
-  { href: '/admin/promotions', label: 'Promotions', icon: Percent },
+  { href: '/admin/store/promotions', label: 'Promotions', icon: Percent },
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/admin/sacco', label: 'SACCO', icon: CreditCard },
   { href: '/admin/forums', label: 'Forums', icon: MessageSquare },
+  { href: '/admin/polls', label: 'Polls', icon: BarChart3 },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/analytics', label: 'Analytics', icon: PieChart },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
@@ -58,8 +64,34 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+    } else if (status === 'authenticated' && session?.user?.role && !ADMIN_ROLES.includes(session.user.role)) {
+      router.replace('/');
+    }
+  }, [status, session, router]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated' || (session?.user?.role && !ADMIN_ROLES.includes(session.user.role))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-muted/30">

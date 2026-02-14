@@ -114,22 +114,22 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const { data: song, isLoading: songLoading } = useQuery({
     queryKey: ['admin', 'song', id],
-    queryFn: () => apiGet<{ data: Song }>(`/api/admin/songs/${id}`),
+    queryFn: () => apiGet<{ data: Song }>(`/admin/songs/${id}`),
   });
 
   const { data: artists } = useQuery({
     queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/api/admin/artists?per_page=1000'),
+    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
   });
 
   const { data: albums } = useQuery({
     queryKey: ['admin', 'albums', 'list'],
-    queryFn: () => apiGet<{ data: Album[] }>('/api/admin/albums?per_page=1000'),
+    queryFn: () => apiGet<{ data: Album[] }>('/admin/albums?per_page=1000'),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
   });
 
   // Populate form when song data loads
@@ -169,7 +169,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPostForm(`/api/admin/songs/${id}`, data);
+      return apiPostForm(`/admin/songs/${id}`, data);
     },
     onSuccess: () => {
       toast.success('Song updated successfully!');

@@ -81,13 +81,13 @@ export default function SACCOPage() {
   // Fetch dashboard stats
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['sacco-dashboard'],
-    queryFn: () => apiGet<{ data: DashboardStats }>('/api/admin/sacco/dashboard'),
+    queryFn: () => apiGet<{ data: DashboardStats }>('/admin/sacco/dashboard'),
   });
 
   // Fetch members
   const { data: membersData, isLoading: loadingMembers } = useQuery({
     queryKey: ['sacco-members', statusFilter, searchTerm],
-    queryFn: () => apiGet<{ data: { data: SaccoMember[] } }>('/api/admin/sacco/members', {
+    queryFn: () => apiGet<{ data: { data: SaccoMember[] } }>('/admin/sacco/members', {
       params: {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
@@ -98,7 +98,7 @@ export default function SACCOPage() {
   // Fetch loans
   const { data: loansData, isLoading: loadingLoans } = useQuery({
     queryKey: ['sacco-loans', statusFilter, searchTerm],
-    queryFn: () => apiGet<{ data: { data: SaccoLoan[] } }>('/api/admin/sacco/loans', {
+    queryFn: () => apiGet<{ data: { data: SaccoLoan[] } }>('/admin/sacco/loans', {
       params: {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
@@ -108,7 +108,7 @@ export default function SACCOPage() {
 
   // Approve member mutation
   const approveMemberMutation = useMutation({
-    mutationFn: (memberId: number) => apiPost(`/api/admin/sacco/members/${memberId}/approve`, {}),
+    mutationFn: (memberId: number) => apiPost(`/admin/sacco/members/${memberId}/approve`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-members'] });
       queryClient.invalidateQueries({ queryKey: ['sacco-dashboard'] });
@@ -117,7 +117,7 @@ export default function SACCOPage() {
 
   // Approve loan mutation
   const approveLoanMutation = useMutation({
-    mutationFn: (loanId: number) => apiPost(`/api/admin/sacco/loans/${loanId}/approve`, {}),
+    mutationFn: (loanId: number) => apiPost(`/admin/sacco/loans/${loanId}/approve`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
       queryClient.invalidateQueries({ queryKey: ['sacco-dashboard'] });
@@ -127,7 +127,7 @@ export default function SACCOPage() {
   // Reject loan mutation
   const rejectLoanMutation = useMutation({
     mutationFn: ({ loanId, reason }: { loanId: number; reason: string }) => 
-      apiPost(`/api/admin/sacco/loans/${loanId}/reject`, { reason }),
+      apiPost(`/admin/sacco/loans/${loanId}/reject`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
       queryClient.invalidateQueries({ queryKey: ['sacco-dashboard'] });

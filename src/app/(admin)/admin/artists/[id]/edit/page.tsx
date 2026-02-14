@@ -132,12 +132,12 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const { data: artist, isLoading: artistLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
-    queryFn: () => apiGet<{ data: Artist }>(`/api/admin/artists/${id}`),
+    queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
   });
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
   });
 
   // Populate form when artist data loads
@@ -187,7 +187,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPostForm(`/api/admin/artists/${id}`, data);
+      return apiPostForm(`/admin/artists/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
@@ -221,7 +221,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         payload.password = data.new_password;
         payload.password_confirmation = data.new_password_confirmation || '';
       }
-      return apiPut(`/api/admin/users/${userId}`, payload);
+      return apiPut(`/admin/users/${userId}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });

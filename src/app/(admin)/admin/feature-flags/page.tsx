@@ -65,13 +65,13 @@ export default function FeatureFlagsPage() {
   // ── Queries ──────────────────────────────────────────────────────
   const { data: flagsData, isLoading } = useQuery({
     queryKey: ['admin-feature-flags'],
-    queryFn: () => apiGet<FeatureFlagsResponse>('/api/admin/feature-flags'),
+    queryFn: () => apiGet<FeatureFlagsResponse>('/admin/feature-flags'),
   });
 
   // ── Mutations ────────────────────────────────────────────────────
   const toggleFlag = useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
-      apiPut(`/api/admin/feature-flags/${id}`, { enabled }),
+      apiPut(`/admin/feature-flags/${id}`, { enabled }),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success(`Feature ${vars.enabled ? 'enabled' : 'disabled'}`);
@@ -81,7 +81,7 @@ export default function FeatureFlagsPage() {
 
   const createFlag = useMutation({
     mutationFn: (data: typeof formData) =>
-      apiPost('/api/admin/feature-flags', data),
+      apiPost('/admin/feature-flags', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag created');
@@ -93,7 +93,7 @@ export default function FeatureFlagsPage() {
 
   const updateFlag = useMutation({
     mutationFn: ({ id, ...data }: typeof formData & { id: number }) =>
-      apiPut(`/api/admin/feature-flags/${id}`, data),
+      apiPut(`/admin/feature-flags/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag updated');
@@ -104,7 +104,7 @@ export default function FeatureFlagsPage() {
   });
 
   const deleteFlag = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/feature-flags/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/feature-flags/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
       toast.success('Feature flag deleted');

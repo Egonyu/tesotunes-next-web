@@ -65,17 +65,17 @@ export default function AlbumsPage() {
       params.set('per_page', '20');
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<AlbumsResponse>(`/api/admin/albums?${params.toString()}`);
+      return apiGet<AlbumsResponse>(`/admin/albums?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'albums', 'statistics'],
-    queryFn: () => apiGet<{ data: AlbumsStats }>('/api/admin/albums/statistics'),
+    queryFn: () => apiGet<{ data: AlbumsStats }>('/admin/albums/statistics'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (albumId: number) => apiDelete(`/api/admin/albums/${albumId}`),
+    mutationFn: (albumId: number) => apiDelete(`/admin/albums/${albumId}`),
     onSuccess: () => {
       toast.success('Album deleted');
       queryClient.invalidateQueries({ queryKey: ['admin', 'albums'] });

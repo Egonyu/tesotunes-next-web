@@ -58,18 +58,18 @@ export default function RolesPage() {
   // ── Queries ──────────────────────────────────────────────────────
   const { data: rolesData, isLoading: loadingRoles } = useQuery({
     queryKey: ['admin-roles'],
-    queryFn: () => apiGet<RolesResponse>('/api/admin/roles'),
+    queryFn: () => apiGet<RolesResponse>('/admin/roles'),
   });
 
   const { data: permissionsData, isLoading: loadingPermissions } = useQuery({
     queryKey: ['admin-permissions'],
-    queryFn: () => apiGet<PermissionsResponse>('/api/admin/permissions'),
+    queryFn: () => apiGet<PermissionsResponse>('/admin/permissions'),
   });
 
   // ── Mutations ────────────────────────────────────────────────────
   const createRole = useMutation({
     mutationFn: (data: { name: string; description: string; permissions: string[] }) =>
-      apiPost('/api/admin/roles', data),
+      apiPost('/admin/roles', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role created successfully');
@@ -81,7 +81,7 @@ export default function RolesPage() {
 
   const updateRole = useMutation({
     mutationFn: ({ id, ...data }: { id: number; name: string; description: string; permissions: string[] }) =>
-      apiPut(`/api/admin/roles/${id}`, data),
+      apiPut(`/admin/roles/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role updated successfully');
@@ -92,7 +92,7 @@ export default function RolesPage() {
   });
 
   const deleteRole = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/roles/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/roles/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Role deleted');
@@ -103,7 +103,7 @@ export default function RolesPage() {
 
   const updateRolePermissions = useMutation({
     mutationFn: ({ roleId, permissions }: { roleId: number; permissions: string[] }) =>
-      apiPut(`/api/admin/roles/${roleId}/permissions`, { permissions }),
+      apiPut(`/admin/roles/${roleId}/permissions`, { permissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       toast.success('Permissions updated');

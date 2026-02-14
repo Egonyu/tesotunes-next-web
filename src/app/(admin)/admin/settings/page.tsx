@@ -98,7 +98,7 @@ export default function AdminSettingsPage() {
   // ── Queries ──────────────────────────────────────────────────────
   const { data: settingsData, isLoading, error } = useQuery({
     queryKey: ['admin-settings'],
-    queryFn: () => apiGet<SettingsResponse>('/api/admin/settings'),
+    queryFn: () => apiGet<SettingsResponse>('/admin/settings'),
     retry: 1,
     staleTime: 5 * 60 * 1000,
   });
@@ -112,7 +112,7 @@ export default function AdminSettingsPage() {
   // ── Mutations ────────────────────────────────────────────────────
   const saveSettings = useMutation({
     mutationFn: (data: Partial<PlatformSettings>) =>
-      apiPut('/api/admin/settings', data),
+      apiPut('/admin/settings', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
       toast.success('Settings saved successfully');

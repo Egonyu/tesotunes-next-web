@@ -66,14 +66,14 @@ export default function EventsPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'events', 'stats'],
-    queryFn: () => apiGet<EventStats | { data: EventStats }>('/api/admin/events/stats')
+    queryFn: () => apiGet<EventStats | { data: EventStats }>('/admin/events/stats')
       .then(res => ('data' in res && res.data) ? res.data as EventStats : res as EventStats),
     staleTime: 60 * 1000,
   });
 
   const { data: eventsRes, isLoading } = useQuery({
     queryKey: ['admin', 'events', { search: searchQuery, status: statusFilter, month: monthFilter, page }],
-    queryFn: () => apiGet<PaginatedEvents | Event[]>('/api/admin/events', {
+    queryFn: () => apiGet<PaginatedEvents | Event[]>('/admin/events', {
       params: {
         search: searchQuery || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,

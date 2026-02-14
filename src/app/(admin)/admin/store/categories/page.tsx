@@ -34,11 +34,11 @@ export default function AdminStoreCategoriesPage() {
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'categories', searchQuery],
-    queryFn: () => apiGet<{ data: Category[] }>(`/api/admin/store/categories?search=${searchQuery}`).then(r => r.data),
+    queryFn: () => apiGet<{ data: Category[] }>(`/admin/store/categories?search=${searchQuery}`).then(r => r.data),
   });
 
   const deleteCategory = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/admin/store/categories/${id}`),
+    mutationFn: (id: number) => apiDelete(`/admin/store/categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'categories'] });
       toast.success('Category deleted');

@@ -102,21 +102,27 @@ export default function BecomeArtistPage() {
 
   const genres = genresData?.data ?? [];
 
-  // Auth guard - these can cause early returns, so all hooks MUST be above
+  // Auth guard - redirect via useEffect to avoid hooks reconciliation error
+  const shouldRedirectToLogin = status !== "loading" && !statusLoading && !session?.user;
+  const shouldRedirectToStatus = appStatus?.data?.status === "pending";
+  const shouldRedirectToArtist = appStatus?.data?.status === "approved" || appStatus?.data?.is_artist;
+
+  useEffect(() => {
+    if (shouldRedirectToLogin) {
+      router.replace("/login?callbackUrl=/become-artist");
+    } else if (shouldRedirectToStatus) {
+      router.replace("/become-artist/status");
+    } else if (shouldRedirectToArtist) {
+      router.replace("/artist/dashboard");
+    }
+  }, [shouldRedirectToLogin, shouldRedirectToStatus, shouldRedirectToArtist, router]);
+
   if (status === "loading" || statusLoading) {
     return <LoadingScreen />;
   }
 
-  if (!session?.user) {
-    redirect("/login?callbackUrl=/become-artist");
-  }
-
-  // Already has an application
-  if (appStatus?.data?.status === "pending") {
-    redirect("/become-artist/status");
-  }
-  if (appStatus?.data?.status === "approved" || appStatus?.data?.is_artist) {
-    redirect("/artist/dashboard");
+  if (shouldRedirectToLogin || shouldRedirectToStatus || shouldRedirectToArtist) {
+    return <LoadingScreen />;
   }
 
   const updateForm = (updates: Partial<ArtistApplicationData>) => {
@@ -188,7 +194,7 @@ export default function BecomeArtistPage() {
     } else {
       toast.error("Session expired. Please log in again.");
       setIsSubmitting(false);
-      redirect("/login?callbackUrl=/become-artist");
+      router.replace("/login?callbackUrl=/become-artist");
       return;
     }
 

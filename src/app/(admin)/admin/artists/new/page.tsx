@@ -70,12 +70,12 @@ export default function CreateArtistPage() {
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/api/admin/genres'),
+    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/api/admin/artists', data, {
+      return apiPost('/admin/artists', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

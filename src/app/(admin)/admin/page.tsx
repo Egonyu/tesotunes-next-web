@@ -84,15 +84,15 @@ export default function AdminDashboardPage() {
     queryKey: ['admin', 'dashboard', 'stats'],
     queryFn: async () => {
       try {
-        const res = await apiGet<{ data: DashboardStats }>('/api/admin/dashboard/stats');
+        const res = await apiGet<{ data: DashboardStats }>('/admin/dashboard/stats');
         return res;
       } catch {
         // Fallback: build partial stats from available endpoints
         const [usersRes, songsRes, artistsRes, albumsRes] = await Promise.allSettled([
-          apiGet<{ data: any[]; meta?: any }>('/api/admin/users?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/api/admin/songs?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/api/admin/artists?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/api/admin/albums?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/admin/users?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/admin/songs?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/admin/artists?per_page=1'),
+          apiGet<{ data: any[]; meta?: any }>('/admin/albums?per_page=1'),
         ]);
         const total = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.meta?.total ?? r.value?.data?.length ?? 0) : 0;
         return {
@@ -116,12 +116,12 @@ export default function AdminDashboardPage() {
     queryKey: ['admin', 'dashboard', 'activity'],
     queryFn: async () => {
       try {
-        return await apiGet<{ data: RecentActivity }>('/api/admin/dashboard/recent-activity');
+        return await apiGet<{ data: RecentActivity }>('/admin/dashboard/recent-activity');
       } catch {
         // Fallback: get recent users/songs from list endpoints
         const [usersRes, songsRes] = await Promise.allSettled([
-          apiGet<{ data: any[] }>('/api/admin/users?per_page=5&sort=-created_at'),
-          apiGet<{ data: any[] }>('/api/admin/songs?per_page=5&sort=-created_at'),
+          apiGet<{ data: any[] }>('/admin/users?per_page=5&sort=-created_at'),
+          apiGet<{ data: any[] }>('/admin/songs?per_page=5&sort=-created_at'),
         ]);
         return {
           data: {

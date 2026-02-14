@@ -64,12 +64,12 @@ export default function CreatePodcastPage() {
 
   const { data: categoriesData } = useQuery({
     queryKey: ['admin', 'podcast-categories'],
-    queryFn: () => apiGet<{ data: Category[] }>('/api/admin/podcast-categories'),
+    queryFn: () => apiGet<{ data: Category[] }>('/admin/podcast-categories'),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/api/admin/podcasts', data, {
+      return apiPost('/admin/podcasts', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },

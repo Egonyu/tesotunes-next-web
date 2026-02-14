@@ -70,17 +70,17 @@ export default function UsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery) params.set('search', searchQuery);
-      return apiGet<UsersResponse>(`/api/admin/users?${params.toString()}`);
+      return apiGet<UsersResponse>(`/admin/users?${params.toString()}`);
     },
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'users', 'statistics'],
-    queryFn: () => apiGet<{ data: UsersStats }>('/api/admin/users/statistics'),
+    queryFn: () => apiGet<{ data: UsersStats }>('/admin/users/statistics'),
   });
 
   const banMutation = useMutation({
-    mutationFn: (userId: number) => apiPost(`/api/admin/users/${userId}/ban`, {}),
+    mutationFn: (userId: number) => apiPost(`/admin/users/${userId}/ban`, {}),
     onSuccess: () => {
       toast.success('User banned');
       setSelectedUsers([]);
@@ -90,7 +90,7 @@ export default function UsersPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (userId: number) => apiDelete(`/api/admin/users/${userId}`),
+    mutationFn: (userId: number) => apiDelete(`/admin/users/${userId}`),
     onSuccess: () => {
       toast.success('User deleted');
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });

@@ -103,7 +103,7 @@ export default function ChartsPage() {
 
   const { data: chart, isLoading } = useQuery({
     queryKey: ["chart", activeChart],
-    queryFn: () => apiGet<ChartData>(`/api/music/charts/${activeChart}`),
+    queryFn: () => apiGet<ChartData>(`/music/charts/${activeChart}`),
   });
 
   return (

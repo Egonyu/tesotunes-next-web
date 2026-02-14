@@ -84,7 +84,7 @@ export function usePodcasts(filters?: { category_id?: number; search?: string; p
 export function useTrendingPodcasts(limit: number = 4) {
   return useQuery({
     queryKey: ['podcasts', 'trending', limit],
-    queryFn: () => apiGet<Podcast[] | { data: Podcast[] }>(`/api/podcasts-trending`, { params: { limit } })
+    queryFn: () => apiGet<Podcast[] | { data: Podcast[] }>(`/podcasts-trending`, { params: { limit } })
       .then(res => Array.isArray(res) ? res : res.data),
     staleTime: 5 * 60 * 1000,
   });
@@ -97,7 +97,7 @@ export function useTrendingPodcasts(limit: number = 4) {
 export function usePodcast(id: string | number) {
   return useQuery({
     queryKey: ['podcast', String(id)],
-    queryFn: () => apiGet<Podcast | { data: Podcast }>(`/api/podcasts/${id}`)
+    queryFn: () => apiGet<Podcast | { data: Podcast }>(`/podcasts/${id}`)
       .then(res => 'data' in res && res.data ? res.data as Podcast : res as Podcast),
     enabled: !!id,
   });
@@ -106,7 +106,7 @@ export function usePodcast(id: string | number) {
 export function usePodcastEpisodes(podcastId: string | number, page: number = 1) {
   return useQuery({
     queryKey: ['podcast', String(podcastId), 'episodes', page],
-    queryFn: () => apiGet<Episode[] | { data: Episode[] }>(`/api/podcasts/${podcastId}/episodes`, { params: { page } })
+    queryFn: () => apiGet<Episode[] | { data: Episode[] }>(`/podcasts/${podcastId}/episodes`, { params: { page } })
       .then(res => Array.isArray(res) ? res : res.data),
     enabled: !!podcastId,
   });
@@ -129,7 +129,7 @@ export function useSubscribeToPodcast() {
 
   return useMutation({
     mutationFn: (podcastId: number | string) =>
-      apiPost(`/api/podcasts/${podcastId}/subscribe`, {}),
+      apiPost(`/podcasts/${podcastId}/subscribe`, {}),
     onSuccess: (_, podcastId) => {
       queryClient.invalidateQueries({ queryKey: ['podcast', String(podcastId)] });
       queryClient.invalidateQueries({ queryKey: ['podcasts', 'subscribed'] });
@@ -143,7 +143,7 @@ export function useUnsubscribeFromPodcast() {
 
   return useMutation({
     mutationFn: (podcastId: number | string) =>
-      apiDelete(`/api/podcasts/${podcastId}/unsubscribe`),
+      apiDelete(`/podcasts/${podcastId}/unsubscribe`),
     onSuccess: (_, podcastId) => {
       queryClient.invalidateQueries({ queryKey: ['podcast', String(podcastId)] });
       queryClient.invalidateQueries({ queryKey: ['podcasts', 'subscribed'] });

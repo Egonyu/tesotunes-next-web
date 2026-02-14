@@ -30,11 +30,11 @@ export default function WishlistPage() {
 
   const { data: wishlist, isLoading } = useQuery({
     queryKey: ["wishlist"],
-    queryFn: () => apiGet<WishlistItem[]>("/api/store/wishlist"),
+    queryFn: () => apiGet<WishlistItem[]>("/store/wishlist"),
   });
 
   const removeFromWishlist = useMutation({
-    mutationFn: (itemId: number) => apiDelete(`/api/store/wishlist/${itemId}`),
+    mutationFn: (itemId: number) => apiDelete(`/store/wishlist/${itemId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
       toast.success("Removed from wishlist");
@@ -44,7 +44,7 @@ export default function WishlistPage() {
 
   const addToCart = useMutation({
     mutationFn: (productId: number) =>
-      apiPost("/api/store/cart/items", { product_id: productId, quantity: 1 }),
+      apiPost("/store/cart/items", { product_id: productId, quantity: 1 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       toast.success("Added to cart");
@@ -53,7 +53,7 @@ export default function WishlistPage() {
   });
 
   const moveAllToCart = useMutation({
-    mutationFn: () => apiPost("/api/store/wishlist/move-to-cart", {}),
+    mutationFn: () => apiPost("/store/wishlist/move-to-cart", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist", "cart"] });
       toast.success("All items moved to cart");

@@ -94,13 +94,13 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
   const { data: song, isLoading } = useQuery({
     queryKey: ["song", slug],
     queryFn: async () => {
-      const res = await apiGet<{ data: SongDetail }>(`/api/songs/${slug}`);
+      const res = await apiGet<{ data: SongDetail }>(`/songs/${slug}`);
       return res.data;
     },
   });
 
   const toggleLike = useMutation({
-    mutationFn: () => apiPost(`/api/songs/${song?.id}/like`, {}),
+    mutationFn: () => apiPost(`/songs/${song?.id}/like`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["song", slug] });
       toast.success(song?.is_liked ? "Removed from liked songs" : "Added to liked songs");

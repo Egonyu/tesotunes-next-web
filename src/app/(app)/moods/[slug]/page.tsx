@@ -84,7 +84,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
 
   const { data: mood, isLoading } = useQuery({
     queryKey: ["mood", slug],
-    queryFn: () => apiGet<MoodDetail>(`/api/content/moods/${slug}`),
+    queryFn: () => apiGet<MoodDetail>(`/content/moods/${slug}`),
   });
 
   if (isLoading) {

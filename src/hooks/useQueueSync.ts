@@ -28,7 +28,7 @@ export function useSaveQueue() {
       current_song_id: number | null;
       repeat_mode: string;
       is_shuffled: boolean;
-    }) => apiPut("/api/player/queue", data),
+    }) => apiPut("/player/queue", data),
   });
 }
 
@@ -40,7 +40,7 @@ export function useRestoreQueue() {
   return useQuery({
     queryKey: ["player-queue"],
     queryFn: () =>
-      apiGet<{ data: ServerQueue }>("/api/player/queue").then((res) => res.data),
+      apiGet<{ data: ServerQueue }>("/player/queue").then((res) => res.data),
     staleTime: Infinity, // Only fetch once per session
     retry: 1,
   });

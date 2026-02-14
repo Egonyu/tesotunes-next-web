@@ -79,7 +79,7 @@ export function usePolls(category?: string, status?: 'active' | 'ended') {
       if (category && category !== 'All') params.append('category', category);
       if (status) params.append('status', status);
       
-      const response = await apiGet<{ data?: unknown }>(`/api/polls?${params.toString()}`);
+      const response = await apiGet<{ data?: unknown }>(`/polls?${params.toString()}`);
       return response.data || response;
     },
   });
@@ -90,7 +90,7 @@ export function usePoll(pollId: string) {
   return useQuery({
     queryKey: ['poll', pollId],
     queryFn: async () => {
-      const response = await apiGet<{ data?: unknown }>(`/api/polls/${pollId}`);
+      const response = await apiGet<{ data?: unknown }>(`/polls/${pollId}`);
       return response.data || response;
     },
     enabled: !!pollId,
@@ -135,7 +135,7 @@ export function useVotePoll() {
   
   return useMutation({
     mutationFn: async ({ pollId, optionId }: { pollId: string; optionId: number }) => {
-      const response = await apiPost<{ data?: unknown }>(`/api/polls/${pollId}/vote`, { option_id: optionId });
+      const response = await apiPost<{ data?: unknown }>(`/polls/${pollId}/vote`, { option_id: optionId });
       return response.data || response;
     },
     onSuccess: (_, { pollId }) => {
@@ -149,7 +149,7 @@ export function useVotePoll() {
 export function useSharePoll() {
   return useMutation({
     mutationFn: async (pollId: string) => {
-      const response = await apiPost<{ data?: unknown }>(`/api/polls/${pollId}/share`, {});
+      const response = await apiPost<{ data?: unknown }>(`/polls/${pollId}/share`, {});
       return response.data || response;
     },
   });
@@ -161,7 +161,7 @@ export function useDeletePoll() {
   
   return useMutation({
     mutationFn: async (pollId: string) => {
-      const response = await apiDelete<{ data?: unknown }>(`/api/polls/${pollId}`);
+      const response = await apiDelete<{ data?: unknown }>(`/polls/${pollId}`);
       return response.data || response;
     },
     onSuccess: () => {

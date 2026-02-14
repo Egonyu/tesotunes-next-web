@@ -72,7 +72,7 @@ export function useAwardSeasons(status?: string) {
     queryKey: ['awards', 'seasons', status],
     queryFn: () => {
       const params = status ? `?status=${status}` : '';
-      return apiGet<{ data: AwardSeason[] }>(`/api/awards/seasons${params}`).then(res => res.data);
+      return apiGet<{ data: AwardSeason[] }>(`/awards/seasons${params}`).then(res => res.data);
     },
     staleTime: 60 * 1000,
   });
@@ -81,7 +81,7 @@ export function useAwardSeasons(status?: string) {
 export function useAwardSeason(slug: string) {
   return useQuery({
     queryKey: ['awards', 'season', slug],
-    queryFn: () => apiGet<{ data: AwardSeason & { categories: AwardCategory[] } }>(`/api/awards/seasons/${slug}`).then(res => res.data),
+    queryFn: () => apiGet<{ data: AwardSeason & { categories: AwardCategory[] } }>(`/awards/seasons/${slug}`).then(res => res.data),
     enabled: !!slug,
   });
 }
@@ -93,7 +93,7 @@ export function useAwardLeaderboard(seasonSlug?: string, limit = 20) {
       const params = new URLSearchParams();
       if (seasonSlug) params.append('season', seasonSlug);
       params.append('limit', String(limit));
-      return apiGet<{ data: LeaderboardVoter[] }>(`/api/awards/leaderboard?${params.toString()}`).then(res => res.data);
+      return apiGet<{ data: LeaderboardVoter[] }>(`/awards/leaderboard?${params.toString()}`).then(res => res.data);
     },
     staleTime: 30 * 1000,
   });
@@ -102,7 +102,7 @@ export function useAwardLeaderboard(seasonSlug?: string, limit = 20) {
 export function useAwardStats(seasonSlug?: string) {
   return useQuery({
     queryKey: ['awards', 'stats', seasonSlug],
-    queryFn: () => apiGet<{ data: AwardStats }>(`/api/awards/stats${seasonSlug ? `?season=${seasonSlug}` : ''}`).then(res => res.data),
+    queryFn: () => apiGet<{ data: AwardStats }>(`/awards/stats${seasonSlug ? `?season=${seasonSlug}` : ''}`).then(res => res.data),
     staleTime: 30 * 1000,
   });
 }
@@ -116,7 +116,7 @@ export function useVoteForNomination() {
 
   return useMutation({
     mutationFn: ({ seasonSlug, nominationId }: { seasonSlug: string; nominationId: number }) =>
-      apiPost(`/api/awards/seasons/${seasonSlug}/vote`, { nomination_id: nominationId }),
+      apiPost(`/awards/seasons/${seasonSlug}/vote`, { nomination_id: nominationId }),
     onSuccess: (_, variables) => {
       toast.success('Vote cast successfully!');
       queryClient.invalidateQueries({ queryKey: ['awards', 'season', variables.seasonSlug] });

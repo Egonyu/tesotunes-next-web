@@ -155,7 +155,7 @@ export interface ArtistProfile {
 export function useArtistDashboard() {
   return useQuery({
     queryKey: ["artist", "dashboard"],
-    queryFn: () => apiGet<{ data: ArtistDashboard }>("/api/artist/dashboard")
+    queryFn: () => apiGet<{ data: ArtistDashboard }>("/artist/dashboard")
       .then(res => res.data),
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -175,7 +175,7 @@ export function useMyArtistSongs(params?: {
 }) {
   return useQuery({
     queryKey: ["artist", "songs", params],
-    queryFn: () => apiGet<SongsResponse>("/api/artist/songs", { params }),
+    queryFn: () => apiGet<SongsResponse>("/artist/songs", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -183,7 +183,7 @@ export function useMyArtistSongs(params?: {
 export function useArtistSong(id: number) {
   return useQuery({
     queryKey: ["artist", "songs", id],
-    queryFn: () => apiGet<{ data: ArtistSong }>(`/api/artist/songs/${id}`)
+    queryFn: () => apiGet<{ data: ArtistSong }>(`/artist/songs/${id}`)
       .then(res => res.data),
     enabled: !!id,
   });
@@ -194,7 +194,7 @@ export function useUpdateSong() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<ArtistSong> }) =>
-      apiPut<{ message: string }>(`/api/artist/songs/${id}`, data),
+      apiPut<{ message: string }>(`/artist/songs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });
     },
@@ -206,7 +206,7 @@ export function useDeleteSong() {
 
   return useMutation({
     mutationFn: (id: number) =>
-      apiDelete<{ message: string }>(`/api/artist/songs/${id}`),
+      apiDelete<{ message: string }>(`/artist/songs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });
     },
@@ -220,7 +220,7 @@ export function useDeleteSong() {
 export function useArtistEarnings() {
   return useQuery({
     queryKey: ["artist", "earnings"],
-    queryFn: () => apiGet<{ data: EarningsData }>("/api/artist/earnings")
+    queryFn: () => apiGet<{ data: EarningsData }>("/artist/earnings")
       .then(res => res.data),
     staleTime: 60 * 1000, // 1 minute
   });
@@ -234,7 +234,7 @@ export function useRequestWithdrawal() {
       amount: number; 
       payment_method: 'mtn_momo' | 'airtel_money' | 'bank_transfer';
       phone_number?: string;
-    }) => apiPost<{ message: string }>("/api/artist/earnings/withdraw", data),
+    }) => apiPost<{ message: string }>("/artist/earnings/withdraw", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "earnings"] });
     },
@@ -248,7 +248,7 @@ export function useRequestWithdrawal() {
 export function useArtistAnalytics(period: number = 30) {
   return useQuery({
     queryKey: ["artist", "analytics", period],
-    queryFn: () => apiGet<{ data: AnalyticsData }>("/api/artist/analytics", {
+    queryFn: () => apiGet<{ data: AnalyticsData }>("/artist/analytics", {
       params: { period },
     }).then(res => res.data),
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -265,7 +265,7 @@ export function useArtistAlbums(params?: { page?: number; per_page?: number }) {
     queryFn: () => apiGet<{ 
       data: Array<{ id: number; title: string; artwork: string | null; songs_count: number }>;
       pagination: { current_page: number; last_page: number; per_page: number; total: number };
-    }>("/api/artist/albums", { params }),
+    }>("/artist/albums", { params }),
     staleTime: 60 * 1000,
   });
 }
@@ -277,7 +277,7 @@ export function useArtistAlbums(params?: { page?: number; per_page?: number }) {
 export function useArtistProfile() {
   return useQuery({
     queryKey: ["artist", "profile"],
-    queryFn: () => apiGet<{ data: ArtistProfile }>("/api/artist/profile")
+    queryFn: () => apiGet<{ data: ArtistProfile }>("/artist/profile")
       .then(res => res.data),
   });
 }
@@ -287,7 +287,7 @@ export function useUpdateArtistProfile() {
 
   return useMutation({
     mutationFn: (data: Partial<ArtistProfile>) =>
-      apiPut<{ message: string }>("/api/artist/profile", data),
+      apiPut<{ message: string }>("/artist/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "profile"] });
     },
@@ -353,7 +353,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       if (data.price !== undefined) formData.append('price', String(data.price));
       if (data.is_explicit !== undefined) formData.append('is_explicit', data.is_explicit ? '1' : '0');
       
-      return apiPostForm<UploadSongResponse>('/api/artist/songs', formData, {
+      return apiPostForm<UploadSongResponse>('/artist/songs', formData, {
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
             onProgress({
@@ -394,7 +394,7 @@ export function useCreateAlbum() {
       if (data.description) formData.append('description', data.description);
       if (data.release_date) formData.append('release_date', data.release_date);
       
-      return apiPostForm<{ message: string; data: { id: number; title: string } }>('/api/artist/albums', formData);
+      return apiPostForm<{ message: string; data: { id: number; title: string } }>('/artist/albums', formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "albums"] });
@@ -481,7 +481,7 @@ export interface ArtistEarningsShare {
 export function useArtistReferralDashboard() {
   return useQuery({
     queryKey: ["artist", "referrals", "dashboard"],
-    queryFn: () => apiGet<{ data: ArtistReferralDashboard }>("/api/artist/referrals/dashboard")
+    queryFn: () => apiGet<{ data: ArtistReferralDashboard }>("/artist/referrals/dashboard")
       .then(res => res.data),
     staleTime: 30 * 1000,
   });
@@ -494,7 +494,7 @@ export function useArtistReferralDashboard() {
 export function useArtistReferralLink() {
   return useQuery({
     queryKey: ["artist", "referrals", "link"],
-    queryFn: () => apiGet<{ data: ArtistReferralLink }>("/api/artist/referrals/link")
+    queryFn: () => apiGet<{ data: ArtistReferralLink }>("/artist/referrals/link")
       .then(res => res.data),
   });
 }
@@ -527,7 +527,7 @@ export function useArtistFanSignups(params?: {
         pending: number;
         inactive: number;
       };
-    }>("/api/artist/referrals/fans", { params }),
+    }>("/artist/referrals/fans", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -539,7 +539,7 @@ export function useArtistFanSignups(params?: {
 export function useArtistEarningsShare(period?: string) {
   return useQuery({
     queryKey: ["artist", "referrals", "earnings", period],
-    queryFn: () => apiGet<{ data: ArtistEarningsShare }>("/api/artist/referrals/earnings", {
+    queryFn: () => apiGet<{ data: ArtistEarningsShare }>("/artist/referrals/earnings", {
       params: period ? { period } : undefined,
     }).then(res => res.data),
     staleTime: 60 * 1000,
@@ -553,7 +553,7 @@ export function useArtistEarningsShare(period?: string) {
 export function useArtistPromoMaterials() {
   return useQuery({
     queryKey: ["artist", "referrals", "promo"],
-    queryFn: () => apiGet<{ data: PromoMaterial[] }>("/api/artist/referrals/promo-materials")
+    queryFn: () => apiGet<{ data: PromoMaterial[] }>("/artist/referrals/promo-materials")
       .then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
@@ -568,7 +568,7 @@ export function useGeneratePromoMaterial() {
 
   return useMutation({
     mutationFn: (data: { type: 'banner' | 'story' | 'post' | 'flyer'; platform: string }) =>
-      apiPost<{ data: PromoMaterial }>("/api/artist/referrals/promo-materials/generate", data),
+      apiPost<{ data: PromoMaterial }>("/artist/referrals/promo-materials/generate", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "referrals", "promo"] });
     },
@@ -582,7 +582,7 @@ export function useGeneratePromoMaterial() {
 export function useTrackArtistShare() {
   return useMutation({
     mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr') =>
-      apiPost("/api/artist/referrals/share", { platform }),
+      apiPost("/artist/referrals/share", { platform }),
   });
 }
 
@@ -595,7 +595,7 @@ export function useBulkDeleteSongs() {
 
   return useMutation({
     mutationFn: (songIds: number[]) =>
-      apiPost("/api/artist/songs/bulk-delete", { song_ids: songIds }),
+      apiPost("/artist/songs/bulk-delete", { song_ids: songIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });
     },
@@ -607,7 +607,7 @@ export function useBulkUpdateSongStatus() {
 
   return useMutation({
     mutationFn: (data: { song_ids: number[]; status: string }) =>
-      apiPost("/api/artist/songs/bulk-status", data),
+      apiPost("/artist/songs/bulk-status", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });
     },
@@ -755,7 +755,7 @@ export function useSubmitArtistApplication() {
         formData.append('selfie_with_id', data.selfie_with_id);
       }
 
-      return apiPostForm<ArtistApplicationResponse>("/api/artist/apply", formData);
+      return apiPostForm<ArtistApplicationResponse>("/artist/apply", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "application-status"] });
@@ -770,7 +770,7 @@ export function useSubmitArtistApplication() {
 export function useArtistApplicationStatus() {
   return useQuery({
     queryKey: ["artist", "application-status"],
-    queryFn: () => apiGet<ApplicationStatusResponse>("/api/artist/application-status"),
+    queryFn: () => apiGet<ApplicationStatusResponse>("/artist/application-status"),
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -781,7 +781,7 @@ export function useArtistApplicationStatus() {
 export function useAvailableGenres() {
   return useQuery({
     queryKey: ["artist", "available-genres"],
-    queryFn: () => apiGet<{ data: GenreOption[] }>("/api/genres"),
+    queryFn: () => apiGet<{ data: GenreOption[] }>("/genres"),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours - genres rarely change
   });
 }

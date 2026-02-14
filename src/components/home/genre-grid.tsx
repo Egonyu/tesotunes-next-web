@@ -22,7 +22,7 @@ export function GenreGrid() {
   const { data: genres, isLoading } = useQuery({
     queryKey: ["genres"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Genre[] }>("/api/genres");
+      const res = await apiGet<{ data: Genre[] }>("/genres");
       return res.data;
     },
     staleTime: 10 * 60 * 1000, // 10 minutes

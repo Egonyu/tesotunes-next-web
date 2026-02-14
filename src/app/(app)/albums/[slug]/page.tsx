@@ -21,7 +21,7 @@ interface AlbumPageProps {
 
 async function getAlbum(slug: string): Promise<Album | null> {
   try {
-    const res = await serverFetch<{ data: Album }>(`/api/albums/${slug}`);
+    const res = await serverFetch<{ data: Album }>(`/albums/${slug}`);
     return res.data;
   } catch {
     return null;
@@ -30,7 +30,7 @@ async function getAlbum(slug: string): Promise<Album | null> {
 
 async function getAlbumTracks(albumId: number) {
   try {
-    return await serverFetch<{ data: Song[] }>(`/api/albums/${albumId}/tracks`);
+    return await serverFetch<{ data: Song[] }>(`/albums/${albumId}/tracks`);
   } catch {
     return { data: [] };
   }

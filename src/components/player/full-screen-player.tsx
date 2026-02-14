@@ -68,7 +68,7 @@ export function FullScreenPlayer() {
   const { data: songDetail } = useQuery({
     queryKey: ["song-lyrics", currentSong?.id],
     queryFn: () =>
-      apiGet<{ data: { lyrics?: string } }>(`/api/songs/${currentSong?.slug || currentSong?.id}`).then(
+      apiGet<{ data: { lyrics?: string } }>(`/songs/${currentSong?.slug || currentSong?.id}`).then(
         (res) => res.data
       ),
     enabled: !!currentSong && activePanel === "lyrics",

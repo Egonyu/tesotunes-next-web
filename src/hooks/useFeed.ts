@@ -85,7 +85,7 @@ export function useFeed(type: 'for-you' | 'following' = 'for-you') {
   return useInfiniteQuery({
     queryKey: ['feed', type],
     queryFn: ({ pageParam = 1 }) => 
-      apiGet<FeedResponse>(`/api/feed/${type}`, { params: { page: pageParam } }),
+      apiGet<FeedResponse>(`/feed/${type}`, { params: { page: pageParam } }),
     getNextPageParam: (lastPage) => 
       lastPage.meta.current_page < lastPage.meta.last_page 
         ? lastPage.meta.current_page + 1 
@@ -126,7 +126,7 @@ export function useAnnouncements() {
 export function usePost(postId: number) {
   return useQuery({
     queryKey: ['post', postId],
-    queryFn: () => apiGet<{ data: Post }>(`/api/posts/${postId}`),
+    queryFn: () => apiGet<{ data: Post }>(`/posts/${postId}`),
     enabled: !!postId,
   });
 }
@@ -168,7 +168,7 @@ export function useLikePost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiPost(`/api/posts/${postId}/like`, {}),
+    mutationFn: (postId: number) => apiPost(`/posts/${postId}/like`, {}),
     onMutate: async (postId) => {
       // Optimistic update
       await queryClient.cancelQueries({ queryKey: ['feed'] });
@@ -199,7 +199,7 @@ export function useUnlikePost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiDelete(`/api/posts/${postId}/like`),
+    mutationFn: (postId: number) => apiDelete(`/posts/${postId}/like`),
     onMutate: async (postId) => {
       await queryClient.cancelQueries({ queryKey: ['feed'] });
       
@@ -229,7 +229,7 @@ export function useBookmarkPost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiPost(`/api/posts/${postId}/bookmark`, {}),
+    mutationFn: (postId: number) => apiPost(`/posts/${postId}/bookmark`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
@@ -241,7 +241,7 @@ export function useUnbookmarkPost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiDelete(`/api/posts/${postId}/bookmark`),
+    mutationFn: (postId: number) => apiDelete(`/posts/${postId}/bookmark`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
@@ -254,7 +254,7 @@ export function useRepost() {
   
   return useMutation({
     mutationFn: (data: { postId: number; comment?: string }) => 
-      apiPost(`/api/posts/${data.postId}/repost`, { comment: data.comment }),
+      apiPost(`/posts/${data.postId}/repost`, { comment: data.comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
@@ -265,7 +265,7 @@ export function useDeletePost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiDelete(`/api/posts/${postId}`),
+    mutationFn: (postId: number) => apiDelete(`/posts/${postId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
@@ -281,7 +281,7 @@ export function useCreateComment() {
   
   return useMutation({
     mutationFn: (data: { postId: number; content: string; parentId?: number }) =>
-      apiPost<{ data: Comment }>(`/api/posts/${data.postId}/comments`, {
+      apiPost<{ data: Comment }>(`/posts/${data.postId}/comments`, {
         content: data.content,
         parent_id: data.parentId,
       }),
@@ -296,7 +296,7 @@ export function useLikeComment() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (commentId: number) => apiPost(`/api/comments/${commentId}/like`, {}),
+    mutationFn: (commentId: number) => apiPost(`/comments/${commentId}/like`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post'] });
     },
@@ -308,7 +308,7 @@ export function useDeleteComment() {
   
   return useMutation({
     mutationFn: (data: { postId: number; commentId: number }) => 
-      apiDelete(`/api/posts/${data.postId}/comments/${data.commentId}`),
+      apiDelete(`/posts/${data.postId}/comments/${data.commentId}`),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['post', variables.postId, 'comments'] });
     },
@@ -373,7 +373,7 @@ export function useFollowUser() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (userId: number) => apiPost(`/api/users/${userId}/follow`, {}),
+    mutationFn: (userId: number) => apiPost(`/users/${userId}/follow`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suggested-users'] });
       queryClient.invalidateQueries({ queryKey: ['feed', 'following'] });
@@ -385,7 +385,7 @@ export function useUnfollowUser() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (userId: number) => apiDelete(`/api/users/${userId}/follow`),
+    mutationFn: (userId: number) => apiDelete(`/users/${userId}/follow`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suggested-users'] });
       queryClient.invalidateQueries({ queryKey: ['feed', 'following'] });

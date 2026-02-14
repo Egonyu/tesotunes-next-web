@@ -113,7 +113,7 @@ export interface SaccoDividend {
 export function useSaccoMembership() {
   return useQuery({
     queryKey: ["sacco", "membership"],
-    queryFn: () => apiGet<{ data: SaccoMember | null }>("/api/sacco/membership")
+    queryFn: () => apiGet<{ data: SaccoMember | null }>("/sacco/membership")
       .then(res => res.data),
     staleTime: 60 * 1000,
   });
@@ -128,7 +128,7 @@ export function useJoinSacco() {
       initial_shares?: number;
       phone_number: string;
       payment_method?: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ message: string; data: SaccoMember }>("/api/sacco/join", data),
+    }) => apiPost<{ message: string; data: SaccoMember }>("/sacco/join", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -142,7 +142,7 @@ export function useJoinSacco() {
 export function useSaccoDashboard() {
   return useQuery({
     queryKey: ["sacco", "dashboard"],
-    queryFn: () => apiGet<{ data: SaccoMemberDashboard }>("/api/sacco/me")
+    queryFn: () => apiGet<{ data: SaccoMemberDashboard }>("/sacco/me")
       .then(res => res.data),
     staleTime: 30 * 1000,
   });
@@ -170,7 +170,7 @@ export function useSaccoSavings() {
           deadline: string;
         }>;
       } 
-    }>("/api/sacco/savings").then(res => res.data),
+    }>("/sacco/savings").then(res => res.data),
     staleTime: 60 * 1000,
   });
 }
@@ -186,7 +186,7 @@ export function useSaccoDeposit() {
     }) => apiPost<{ 
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
-    }>("/api/sacco/deposit", data),
+    }>("/sacco/deposit", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -204,7 +204,7 @@ export function useSaccoWithdraw() {
     }) => apiPost<{ 
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
-    }>("/api/sacco/withdraw", data),
+    }>("/sacco/withdraw", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -225,7 +225,7 @@ export function useSaccoTransactions(params?: {
     queryFn: () => apiGet<{ 
             data: SaccoTransaction[];
       pagination: { current_page: number; last_page: number; total: number };
-    }>("/api/sacco/transactions", { params }),
+    }>("/sacco/transactions", { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -237,7 +237,7 @@ export function useSaccoTransactions(params?: {
 export function useSaccoLoanProducts() {
   return useQuery({
     queryKey: ["sacco", "loan-products"],
-    queryFn: () => apiGet<{ data: SaccoLoanProduct[] }>("/api/sacco/loan-products")
+    queryFn: () => apiGet<{ data: SaccoLoanProduct[] }>("/sacco/loan-products")
       .then(res => res.data),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -248,7 +248,7 @@ export function useSaccoLoans(params?: { status?: string }) {
     queryKey: ["sacco", "loans", params],
     queryFn: () => apiGet<{ 
             data: SaccoLoan[];
-    }>("/api/sacco/loans", { params }).then(res => res.data),
+    }>("/sacco/loans", { params }).then(res => res.data),
     staleTime: 60 * 1000,
   });
 }
@@ -256,7 +256,7 @@ export function useSaccoLoans(params?: { status?: string }) {
 export function useSaccoLoan(id: number) {
   return useQuery({
     queryKey: ["sacco", "loans", id],
-    queryFn: () => apiGet<{ data: SaccoLoan }>(`/api/sacco/loans/${id}`)
+    queryFn: () => apiGet<{ data: SaccoLoan }>(`/sacco/loans/${id}`)
       .then(res => res.data),
     enabled: !!id,
   });
@@ -265,7 +265,7 @@ export function useSaccoLoan(id: number) {
 export function useSaccoActiveLoan() {
   return useQuery({
     queryKey: ["sacco", "loans", "active"],
-    queryFn: () => apiGet<{ data: SaccoLoan | null }>("/api/sacco/loans/active")
+    queryFn: () => apiGet<{ data: SaccoLoan | null }>("/sacco/loans/active")
       .then(res => res.data),
     staleTime: 60 * 1000,
   });
@@ -285,7 +285,7 @@ export function useApplyForLoan() {
     }) => apiPost<{ 
             message: string; 
       data: { loan_id: number; status: 'pending' };
-    }>("/api/sacco/loans/apply", data),
+    }>("/sacco/loans/apply", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco", "loans"] });
       queryClient.invalidateQueries({ queryKey: ["sacco", "dashboard"] });
@@ -305,7 +305,7 @@ export function useMakeLoanPayment() {
     }) => apiPost<{ 
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
-    }>(`/api/sacco/loans/${data.loan_id}/pay`, data),
+    }>(`/sacco/loans/${data.loan_id}/pay`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -319,7 +319,7 @@ export function useMakeLoanPayment() {
 export function useSaccoShares() {
   return useQuery({
     queryKey: ["sacco", "shares"],
-    queryFn: () => apiGet<{ data: SaccoShare }>("/api/sacco/shares")
+    queryFn: () => apiGet<{ data: SaccoShare }>("/sacco/shares")
       .then(res => res.data),
     staleTime: 60 * 1000,
   });
@@ -336,7 +336,7 @@ export function useBuyShares() {
     }) => apiPost<{ 
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
-    }>("/api/sacco/shares/buy", data),
+    }>("/sacco/shares/buy", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -350,7 +350,7 @@ export function useBuyShares() {
 export function useSaccoDividends() {
   return useQuery({
     queryKey: ["sacco", "dividends"],
-    queryFn: () => apiGet<{ data: SaccoDividend[] }>("/api/sacco/dividends")
+    queryFn: () => apiGet<{ data: SaccoDividend[] }>("/sacco/dividends")
       .then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });

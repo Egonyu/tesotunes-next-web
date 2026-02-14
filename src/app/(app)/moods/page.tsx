@@ -40,7 +40,7 @@ const moodEmojis: Record<string, string> = {
 export default function MoodsPage() {
   const { data: moods, isLoading } = useQuery({
     queryKey: ["moods"],
-    queryFn: () => apiGet<Mood[]>("/api/content/moods"),
+    queryFn: () => apiGet<Mood[]>("/content/moods"),
   });
 
   if (isLoading) {

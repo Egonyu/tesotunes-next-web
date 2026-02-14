@@ -118,7 +118,7 @@ export default function SellerDashboardPage() {
 
   const toggleProduct = useMutation({
     mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
-      apiPut(`/api/artist/store/products/${id}`, { is_active }),
+      apiPut(`/artist/store/products/${id}`, { is_active }),
     onSuccess: () => {
       toast.success('Product updated');
       queryClient.invalidateQueries({ queryKey: ['artist', 'store', 'products'] });
@@ -126,7 +126,7 @@ export default function SellerDashboardPage() {
   });
 
   const deleteProduct = useMutation({
-    mutationFn: (id: number) => apiDelete(`/api/artist/store/products/${id}`),
+    mutationFn: (id: number) => apiDelete(`/artist/store/products/${id}`),
     onSuccess: () => {
       toast.success('Product deleted');
       queryClient.invalidateQueries({ queryKey: ['artist', 'store'] });
@@ -136,7 +136,7 @@ export default function SellerDashboardPage() {
 
   const updateOrderStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: Order['status'] }) =>
-      apiPut(`/api/artist/store/orders/${id}`, { status }),
+      apiPut(`/artist/store/orders/${id}`, { status }),
     onSuccess: () => {
       toast.success('Order status updated');
       queryClient.invalidateQueries({ queryKey: ['artist', 'store', 'orders'] });

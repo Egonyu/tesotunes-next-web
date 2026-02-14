@@ -82,7 +82,7 @@ export default function ArtistDiscographyPage({ params }: { params: Promise<{ sl
 
   const { data: discography, isLoading } = useQuery({
     queryKey: ["artist-discography", slug],
-    queryFn: () => apiGet<ArtistDiscography>(`/api/artists/${slug}/discography`),
+    queryFn: () => apiGet<ArtistDiscography>(`/artists/${slug}/discography`),
   });
 
   if (isLoading) {

@@ -129,8 +129,8 @@ export function useStoreProducts(filters?: ProductsFilters) {
         }
         const queryString = params.toString();
         const endpoint = queryString
-          ? `/api/store/products?${queryString}`
-          : "/api/store/products";
+          ? `/store/products?${queryString}`
+          : "/store/products";
         const res = await apiGet<{ data: Product[] }>(endpoint);
         return res.data;
       } catch {

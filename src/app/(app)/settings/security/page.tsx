@@ -44,7 +44,7 @@ export default function SecuritySettingsPage() {
   const { data: twoFAStatus, isLoading } = useQuery({
     queryKey: ["2fa-status"],
     queryFn: () =>
-      apiGet<{ data: TwoFactorStatus }>("/api/settings/2fa").then((res) => res.data),
+      apiGet<{ data: TwoFactorStatus }>("/settings/2fa").then((res) => res.data),
   });
 
   // Setup state
@@ -60,7 +60,7 @@ export default function SecuritySettingsPage() {
   // Enable 2FA - Step 1: Get QR code
   const enableMutation = useMutation({
     mutationFn: () =>
-      apiPost<{ data: TwoFactorSetup }>("/api/settings/2fa/enable", {}),
+      apiPost<{ data: TwoFactorSetup }>("/settings/2fa/enable", {}),
     onSuccess: (res) => {
       setSetupData(res.data);
       setSetupStep("qr");
@@ -73,7 +73,7 @@ export default function SecuritySettingsPage() {
   // Verify TOTP code - Step 2
   const verifyMutation = useMutation({
     mutationFn: (code: string) =>
-      apiPost<{ data: { recovery_codes: string[] } }>("/api/settings/2fa/verify", {
+      apiPost<{ data: { recovery_codes: string[] } }>("/settings/2fa/verify", {
         code,
       }),
     onSuccess: (res) => {
@@ -94,7 +94,7 @@ export default function SecuritySettingsPage() {
   // Disable 2FA
   const disableMutation = useMutation({
     mutationFn: (password: string) =>
-      apiPost("/api/settings/2fa/disable", { password }),
+      apiPost("/settings/2fa/disable", { password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["2fa-status"] });
       setShowDisable(false);
@@ -477,7 +477,7 @@ function PasswordChangeSection() {
       current_password: string;
       password: string;
       password_confirmation: string;
-    }) => apiPost("/api/settings/password", data),
+    }) => apiPost("/settings/password", data),
     onSuccess: () => {
       toast.success("Password updated successfully");
       setCurrent("");
@@ -578,11 +578,11 @@ function ActiveSessionsSection() {
           last_active: string;
           is_current: boolean;
         }>;
-      }>("/api/settings/sessions").then((res) => res.data),
+      }>("/settings/sessions").then((res) => res.data),
   });
 
   const revokeAll = useMutation({
-    mutationFn: () => apiPost("/api/settings/sessions/revoke-all", {}),
+    mutationFn: () => apiPost("/settings/sessions/revoke-all", {}),
     onSuccess: () => {
       toast.success("All other sessions revoked");
     },

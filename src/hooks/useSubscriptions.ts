@@ -119,7 +119,7 @@ export interface InvoicesResponse {
 export function useSubscriptionPlans(options?: UseQueryOptions<SubscriptionPlan[]>) {
   return useQuery({
     queryKey: ["subscription", "plans"],
-    queryFn: () => apiGet<SubscriptionPlan[]>("/api/subscriptions/plans"),
+    queryFn: () => apiGet<SubscriptionPlan[]>("/subscriptions/plans"),
     ...options,
   });
 }
@@ -127,7 +127,7 @@ export function useSubscriptionPlans(options?: UseQueryOptions<SubscriptionPlan[
 export function useSubscriptionPlan(planId: number | string) {
   return useQuery({
     queryKey: ["subscription", "plan", planId],
-    queryFn: () => apiGet<{ data: SubscriptionPlan }>(`/api/subscriptions/plans/${planId}`).then(res => res.data),
+    queryFn: () => apiGet<{ data: SubscriptionPlan }>(`/subscriptions/plans/${planId}`).then(res => res.data),
     enabled: !!planId,
   });
 }
@@ -139,7 +139,7 @@ export function useSubscriptionPlan(planId: number | string) {
 export function useMySubscription(options?: UseQueryOptions<Subscription | null>) {
   return useQuery({
     queryKey: ["subscription", "my"],
-    queryFn: () => apiGet<{ data: Subscription | null }>("/api/subscriptions/my").then(res => res.data),
+    queryFn: () => apiGet<{ data: Subscription | null }>("/subscriptions/my").then(res => res.data),
     ...options,
   });
 }
@@ -147,7 +147,7 @@ export function useMySubscription(options?: UseQueryOptions<Subscription | null>
 export function useSubscriptionUsage() {
   return useQuery({
     queryKey: ["subscription", "usage"],
-    queryFn: () => apiGet<{ data: SubscriptionUsage }>("/api/subscriptions/usage").then(res => res.data),
+    queryFn: () => apiGet<{ data: SubscriptionUsage }>("/subscriptions/usage").then(res => res.data),
   });
 }
 
@@ -156,7 +156,7 @@ export function useSubscribe() {
 
   return useMutation({
     mutationFn: (data: SubscribeRequest) =>
-      apiPost<SubscribeResponse>("/api/subscriptions/subscribe", data),
+      apiPost<SubscribeResponse>("/subscriptions/subscribe", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription", "my"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
@@ -170,7 +170,7 @@ export function useUpdateSubscription() {
 
   return useMutation({
     mutationFn: (data: UpdateSubscriptionRequest) =>
-      apiPut<Subscription>("/api/subscriptions/my", data),
+      apiPut<Subscription>("/subscriptions/my", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription", "my"] });
     },
@@ -182,7 +182,7 @@ export function useCancelSubscription() {
 
   return useMutation({
     mutationFn: (data: CancelSubscriptionRequest) =>
-      apiPost<{ subscription: Subscription; message: string }>("/api/subscriptions/my/cancel", data),
+      apiPost<{ subscription: Subscription; message: string }>("/subscriptions/my/cancel", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription", "my"] });
     },
@@ -194,7 +194,7 @@ export function useReactivateSubscription() {
 
   return useMutation({
     mutationFn: () =>
-      apiPost<Subscription>("/api/subscriptions/my/reactivate"),
+      apiPost<Subscription>("/subscriptions/my/reactivate"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription", "my"] });
     },
@@ -206,7 +206,7 @@ export function useRenewSubscription() {
 
   return useMutation({
     mutationFn: (data: { payment_method: string; phone?: string }) =>
-      apiPost<SubscribeResponse>("/api/subscriptions/my/renew", data),
+      apiPost<SubscribeResponse>("/subscriptions/my/renew", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription", "my"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
@@ -225,14 +225,14 @@ export function useInvoices(params?: {
 }) {
   return useQuery({
     queryKey: ["subscription", "invoices", params],
-    queryFn: () => apiGet<InvoicesResponse>("/api/subscriptions/invoices", { params }),
+    queryFn: () => apiGet<InvoicesResponse>("/subscriptions/invoices", { params }),
   });
 }
 
 export function useInvoice(invoiceId: number | string) {
   return useQuery({
     queryKey: ["subscription", "invoice", invoiceId],
-    queryFn: () => apiGet<{ data: Invoice }>(`/api/subscriptions/invoices/${invoiceId}`).then(res => res.data),
+    queryFn: () => apiGet<{ data: Invoice }>(`/subscriptions/invoices/${invoiceId}`).then(res => res.data),
     enabled: !!invoiceId,
   });
 }
@@ -240,7 +240,7 @@ export function useInvoice(invoiceId: number | string) {
 export function useDownloadInvoice() {
   return useMutation({
     mutationFn: async (invoiceId: number) => {
-      const response = await apiGet(`/api/subscriptions/invoices/${invoiceId}/download`, {
+      const response = await apiGet(`/subscriptions/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
       

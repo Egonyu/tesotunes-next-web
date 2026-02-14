@@ -74,7 +74,7 @@ export interface AllSettings {
 export function useSettings() {
   return useQuery({
     queryKey: ["settings"],
-    queryFn: () => apiGet<{ data: AllSettings }>("/api/settings")
+    queryFn: () => apiGet<{ data: AllSettings }>("/settings")
       .then(res => res.data),
   });
 }
@@ -88,7 +88,7 @@ export function useUpdateAllSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<AllSettings>) =>
-      apiPut<{ message: string }>("/api/settings", data),
+      apiPut<{ message: string }>("/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -104,7 +104,7 @@ export function useUpdateProfileSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<Omit<ProfileSettings, 'display_name'>>) =>
-      apiPut<{ message: string }>("/api/settings/profile", data),
+      apiPut<{ message: string }>("/settings/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -116,7 +116,7 @@ export function useUpdateNotificationSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<NotificationSettings>) =>
-      apiPut<{ message: string }>("/api/settings/notifications", data),
+      apiPut<{ message: string }>("/settings/notifications", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -128,7 +128,7 @@ export function useUpdateAudioSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<AudioSettings>) =>
-      apiPut<{ message: string }>("/api/settings/audio", data),
+      apiPut<{ message: string }>("/settings/audio", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -140,7 +140,7 @@ export function useUpdateDownloadSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<DownloadSettings>) =>
-      apiPut<{ message: string }>("/api/settings/downloads", data),
+      apiPut<{ message: string }>("/settings/downloads", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -152,7 +152,7 @@ export function useUpdatePrivacySettings() {
 
   return useMutation({
     mutationFn: (data: Partial<PrivacySettings>) =>
-      apiPut<{ message: string }>("/api/settings/privacy", data),
+      apiPut<{ message: string }>("/settings/privacy", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -164,7 +164,7 @@ export function useUpdateAppearanceSettings() {
 
   return useMutation({
     mutationFn: (data: Partial<AppearanceSettings & LanguageSettings>) =>
-      apiPut<{ message: string }>("/api/settings/appearance", data),
+      apiPut<{ message: string }>("/settings/appearance", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       // Also invalidate theme if theme was changed

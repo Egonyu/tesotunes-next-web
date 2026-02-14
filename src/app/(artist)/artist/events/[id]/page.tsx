@@ -28,7 +28,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['artist', 'events', id],
-    queryFn: () => apiGet<{ data: Event }>(`/api/artist/events/${id}`).then(r => r.data),
+    queryFn: () => apiGet<{ data: Event }>(`/artist/events/${id}`).then(r => r.data),
     enabled: !!id,
   });
 

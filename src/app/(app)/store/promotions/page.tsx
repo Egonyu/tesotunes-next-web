@@ -178,7 +178,7 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
 export default function PromotionsPage() {
   const { data: promotions, isLoading } = useQuery({
     queryKey: ["promotions"],
-    queryFn: () => apiGet<Promotion[]>("/api/store/promotions"),
+    queryFn: () => apiGet<Promotion[]>("/store/promotions"),
   });
 
   if (isLoading) {

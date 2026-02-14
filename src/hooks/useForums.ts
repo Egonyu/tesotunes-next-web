@@ -119,7 +119,7 @@ export function useForumCategories() {
 export function useForumCategory(slug: string) {
   return useQuery({
     queryKey: ['forum', 'category', slug],
-    queryFn: () => apiGet<{ data: ForumCategory }>(`/api/forums/categories/${slug}`),
+    queryFn: () => apiGet<{ data: ForumCategory }>(`/forums/categories/${slug}`),
     enabled: !!slug,
   });
 }
@@ -134,7 +134,7 @@ export function useForumTopics(categorySlug?: string, sort: 'latest' | 'popular'
     queryFn: ({ pageParam = 1 }) => {
       const params = new URLSearchParams({ page: pageParam.toString(), sort });
       if (categorySlug) params.append('category', categorySlug);
-      return apiGet<TopicsResponse>(`/api/forums/topics?${params}`);
+      return apiGet<TopicsResponse>(`/forums/topics?${params}`);
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.meta.current_page < lastPage.meta.last_page) {
@@ -149,14 +149,14 @@ export function useForumTopics(categorySlug?: string, sort: 'latest' | 'popular'
 export function useTrendingTopics(limit: number = 5) {
   return useQuery({
     queryKey: ['forum', 'trending'],
-    queryFn: () => apiGet<{ data: ForumTopic[] }>(`/api/forums/topics/trending?limit=${limit}`),
+    queryFn: () => apiGet<{ data: ForumTopic[] }>(`/forums/topics/trending?limit=${limit}`),
   });
 }
 
 export function useForumTopic(categorySlug: string, topicSlug: string) {
   return useQuery({
     queryKey: ['forum', 'topic', categorySlug, topicSlug],
-    queryFn: () => apiGet<TopicDetailResponse>(`/api/forums/categories/${categorySlug}/topics/${topicSlug}`),
+    queryFn: () => apiGet<TopicDetailResponse>(`/forums/categories/${categorySlug}/topics/${topicSlug}`),
     enabled: !!categorySlug && !!topicSlug,
   });
 }
@@ -182,7 +182,7 @@ export function useLikeTopic() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (topicId: number) => apiPost(`/api/forums/topics/${topicId}/like`, {}),
+    mutationFn: (topicId: number) => apiPost(`/forums/topics/${topicId}/like`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum'] });
     },
@@ -193,7 +193,7 @@ export function useUnlikeTopic() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (topicId: number) => apiDelete(`/api/forums/topics/${topicId}/like`),
+    mutationFn: (topicId: number) => apiDelete(`/forums/topics/${topicId}/like`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum'] });
     },
@@ -208,7 +208,7 @@ export function useTopicPosts(topicId: number) {
   return useInfiniteQuery({
     queryKey: ['forum', 'posts', topicId],
     queryFn: ({ pageParam = 1 }) => 
-      apiGet<PostsResponse>(`/api/forums/topics/${topicId}/posts?page=${pageParam}`),
+      apiGet<PostsResponse>(`/forums/topics/${topicId}/posts?page=${pageParam}`),
     getNextPageParam: (lastPage) => {
       if (lastPage.meta.current_page < lastPage.meta.last_page) {
         return lastPage.meta.current_page + 1;
@@ -225,7 +225,7 @@ export function useCreateForumPost() {
   
   return useMutation({
     mutationFn: (data: { topicId: number; content: string; quotedPostId?: number }) =>
-      apiPost<{ data: ForumPost }>(`/api/forums/topics/${data.topicId}/posts`, {
+      apiPost<{ data: ForumPost }>(`/forums/topics/${data.topicId}/posts`, {
         content: data.content,
         quoted_post_id: data.quotedPostId,
       }),
@@ -240,7 +240,7 @@ export function useLikeForumPost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiPost(`/api/forums/posts/${postId}/like`, {}),
+    mutationFn: (postId: number) => apiPost(`/forums/posts/${postId}/like`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum', 'posts'] });
     },
@@ -251,7 +251,7 @@ export function useUnlikeForumPost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiDelete(`/api/forums/posts/${postId}/like`),
+    mutationFn: (postId: number) => apiDelete(`/forums/posts/${postId}/like`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum', 'posts'] });
     },
@@ -263,7 +263,7 @@ export function useMarkAsSolution() {
   
   return useMutation({
     mutationFn: (data: { topicId: number; postId: number }) =>
-      apiPost(`/api/forums/topics/${data.topicId}/solution`, { post_id: data.postId }),
+      apiPost(`/forums/topics/${data.topicId}/solution`, { post_id: data.postId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum'] });
     },
@@ -274,7 +274,7 @@ export function useDeleteForumPost() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (postId: number) => apiDelete(`/api/forums/posts/${postId}`),
+    mutationFn: (postId: number) => apiDelete(`/forums/posts/${postId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forum', 'posts'] });
     },

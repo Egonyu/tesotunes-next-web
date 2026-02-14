@@ -78,7 +78,7 @@ export default function ConnectedAccountsPage() {
 
   const connectAccount = useMutation({
     mutationFn: (provider: string) =>
-      apiPost<{ redirect_url: string }>(`/api/auth/connect/${provider}`, {}),
+      apiPost<{ redirect_url: string }>(`/auth/connect/${provider}`, {}),
     onSuccess: (data) => {
       if (data?.redirect_url) {
         window.location.href = data.redirect_url;
@@ -89,7 +89,7 @@ export default function ConnectedAccountsPage() {
 
   const disconnectAccount = useMutation({
     mutationFn: (id: number) =>
-      apiDelete(`/api/settings/connected-accounts/${id}`),
+      apiDelete(`/settings/connected-accounts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connected-accounts'] });
       toast.success('Account disconnected');

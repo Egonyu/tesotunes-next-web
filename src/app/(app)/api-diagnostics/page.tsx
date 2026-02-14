@@ -16,12 +16,12 @@ export default function ApiDiagnosticsPage() {
   const [testing, setTesting] = useState(false);
 
   const endpoints = [
-    { path: "/api/health", method: "GET", label: "Health Check" },
-    { path: "/api/genres", method: "GET", label: "Genres List" },
-    { path: "/api/songs", method: "GET", label: "Songs List" },
-    { path: "/api/artists", method: "GET", label: "Artists List" },
-    { path: "/api/albums", method: "GET", label: "Albums List" },
-    { path: "/api/trending", method: "GET", label: "Trending Songs" },
+    { path: "/health", method: "GET", label: "Health Check" },
+    { path: "/genres", method: "GET", label: "Genres List" },
+    { path: "/songs", method: "GET", label: "Songs List" },
+    { path: "/artists", method: "GET", label: "Artists List" },
+    { path: "/albums", method: "GET", label: "Albums List" },
+    { path: "/trending", method: "GET", label: "Trending Songs" },
   ];
 
   const testEndpoint = async (endpoint: string, method: string): Promise<TestResult> => {

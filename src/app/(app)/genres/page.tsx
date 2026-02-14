@@ -22,7 +22,7 @@ const gradientColors = [
 
 async function getGenres(): Promise<Genre[]> {
   try {
-    const res = await serverFetch<{ data: Genre[] }>("/api/genres");
+    const res = await serverFetch<{ data: Genre[] }>("/genres");
     return res.data || [];
   } catch {
     return [];

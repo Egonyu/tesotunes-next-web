@@ -86,11 +86,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["user-profile", username],
-    queryFn: () => apiGet<UserProfile>(`/api/social/profiles/${username}`),
+    queryFn: () => apiGet<UserProfile>(`/social/profiles/${username}`),
   });
 
   const toggleFollow = useMutation({
-    mutationFn: () => apiPost(`/api/social/follow/${profile?.id}`, {}),
+    mutationFn: () => apiPost(`/social/follow/${profile?.id}`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-profile", username] });
       toast.success(profile?.is_following ? "Unfollowed" : "Following");

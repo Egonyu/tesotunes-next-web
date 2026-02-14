@@ -99,10 +99,13 @@ export const authConfig: NextAuthOptions = {
           // Shape 1: { user: {...}, token: "..." }
           // Shape 2: { data: { user: {...}, token: "..." } }
           // Shape 3: { success: true, data: { user: {...} }, token: "..." }
+          // Shape 4: { data: {...user fields...}, token: "..." } (UserResource)
+          const dataObj = data.data as Record<string, unknown> | undefined;
           const user = (data.user as Record<string, unknown>) ??
-            ((data.data as Record<string, unknown>)?.user as Record<string, unknown>);
+            (dataObj?.user as Record<string, unknown>) ??
+            (dataObj?.id ? dataObj : undefined);
           const token = (data.token as string) ??
-            ((data.data as Record<string, unknown>)?.token as string) ??
+            (dataObj?.token as string) ??
             (data.access_token as string);
 
           if (user && token) {

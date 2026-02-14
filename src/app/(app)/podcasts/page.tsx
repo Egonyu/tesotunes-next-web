@@ -81,7 +81,7 @@ export default function PodcastsPage() {
       if (selectedCategory) params.append('category_id', String(selectedCategory));
       if (searchQuery) params.append('search', searchQuery);
       params.append('per_page', '20');
-      return apiGet<PodcastsResponse>(`/api/podcasts?${params.toString()}`);
+      return apiGet<PodcastsResponse>(`/podcasts?${params.toString()}`);
     },
   });
   

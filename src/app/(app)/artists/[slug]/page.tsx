@@ -11,7 +11,7 @@ interface ArtistPageProps {
 
 async function getArtist(slug: string) {
   try {
-    const res = await serverFetch<{ data: Artist }>(`/api/artists/${slug}`);
+    const res = await serverFetch<{ data: Artist }>(`/artists/${slug}`);
     return res.data;
   } catch {
     return null;
@@ -20,7 +20,7 @@ async function getArtist(slug: string) {
 
 async function getArtistSongs(artistId: number) {
   try {
-    return await serverFetch<PaginatedResponse<Song>>(`/api/artists/${artistId}/songs?limit=10`);
+    return await serverFetch<PaginatedResponse<Song>>(`/artists/${artistId}/songs?limit=10`);
   } catch {
     return { data: [] };
   }
@@ -28,7 +28,7 @@ async function getArtistSongs(artistId: number) {
 
 async function getArtistAlbums(artistId: number) {
   try {
-    return await serverFetch<PaginatedResponse<Album>>(`/api/artists/${artistId}/albums`);
+    return await serverFetch<PaginatedResponse<Album>>(`/artists/${artistId}/albums`);
   } catch {
     return { data: [] };
   }

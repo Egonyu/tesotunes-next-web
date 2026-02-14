@@ -79,7 +79,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderNumber],
-    queryFn: () => apiGet<OrderDetail>(`/api/store/orders/${orderNumber}`),
+    queryFn: () => apiGet<OrderDetail>(`/store/orders/${orderNumber}`),
   });
 
   if (isLoading) {

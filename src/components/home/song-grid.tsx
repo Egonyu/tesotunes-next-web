@@ -27,7 +27,7 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["songs", type, limit],
     queryFn: () =>
-      apiGet<PaginatedResponse<Song>>("/api/songs", { params: { limit, sort: sortMap[type] } }),
+      apiGet<PaginatedResponse<Song>>("/songs", { params: { limit, sort: sortMap[type] } }),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 

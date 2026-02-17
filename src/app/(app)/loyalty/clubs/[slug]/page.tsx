@@ -86,7 +86,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
       },
     });
   };
-  
+
   if (loadingClub) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -94,7 +94,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
       </div>
     );
   }
-  
+
   if (error || !club) {
     return (
       <div className="container max-w-4xl py-8">
@@ -109,11 +109,11 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
       </div>
     );
   }
-  
+
   const rewardsList: LoyaltyReward[] = rewards || [];
   const tiersList: LoyaltyTier[] = tiers || [];
   const activities: EarningActivity[] = earningActivities || [];
-  
+
   return (
     <div className="container max-w-4xl py-8 space-y-8">
       {/* Header */}
@@ -123,13 +123,13 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
         </Link>
         <span className="text-muted-foreground">Loyalty Program</span>
       </div>
-      
+
       {/* Hero */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <div className="shrink-0">
           {club.logo_url ? (
-            <Image 
-              src={club.logo_url} 
+            <Image
+              src={club.logo_url}
               alt={club.name}
               width={128}
               height={128}
@@ -141,7 +141,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
             </div>
           )}
         </div>
-        
+
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">{club.name}</h1>
           {club.artist && (
@@ -152,7 +152,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
           <p className="text-muted-foreground mb-4">
             {club.description || 'Join this exclusive loyalty program to earn points and unlock amazing rewards.'}
           </p>
-          
+
           <div className="flex items-center gap-6 text-sm mb-4">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -169,7 +169,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-3">
             {!isMember ? (
               <button
@@ -202,7 +202,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
           </div>
         </div>
       </div>
-      
+
       {/* How to Earn — dynamic from API */}
       {activities.length > 0 && (
         <div className="p-6 rounded-xl border bg-card">
@@ -224,7 +224,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
           </div>
         </div>
       )}
-      
+
       {/* Tier Info — dynamic from API */}
       <div className="p-6 rounded-xl border bg-card">
         <h2 className="text-xl font-semibold mb-4">Membership Tiers</h2>
@@ -244,9 +244,9 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
                 <p className="text-xs text-muted-foreground mb-2">
                   {tier.min_points.toLocaleString()}+ pts
                 </p>
-                {tier.benefits?.length > 0 && (
+                {(tier.benefits?.length ?? 0) > 0 && (
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    {tier.benefits.slice(0, 3).map((b: string, i: number) => (
+                    {tier.benefits!.slice(0, 3).map((b: string, i: number) => (
                       <li key={i} className="flex items-center gap-1">
                         <Check className="h-3 w-3 text-green-500 shrink-0" />
                         <span className="text-left">{b}</span>
@@ -280,7 +280,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
           </div>
         )}
       </div>
-      
+
       {/* Available Rewards */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Available Rewards</h2>
@@ -304,7 +304,7 @@ export default function LoyaltyClubPage({ params }: ClubPageProps) {
                 <div key={reward.id} className="p-4 rounded-xl border bg-card">
                   <div className="flex items-start gap-4">
                     {reward.image_url ? (
-                      <Image 
+                      <Image
                         src={reward.image_url}
                         alt={reward.title}
                         width={80}

@@ -7,7 +7,7 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
+import {
   Edit, Trash2, Calendar, MapPin, Clock, Users, Ticket,
   ExternalLink, Star, Music, DollarSign, Eye
 } from 'lucide-react';
@@ -309,13 +309,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Ticket Tiers */}
-          {e.ticket_tiers?.length > 0 && (
+          {(e.ticket_tiers?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card">
               <div className="p-4 border-b">
                 <h3 className="font-semibold">Ticket Tiers</h3>
               </div>
               <div className="divide-y">
-                {e.ticket_tiers.map((tier) => (
+                {e.ticket_tiers!.map((tier) => (
                   <div key={tier.id} className="p-4 flex justify-between items-center">
                     <div>
                       <p className="font-medium">{tier.name}</p>
@@ -336,13 +336,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Performing Artists */}
-          {e.artists?.length > 0 && (
+          {(e.artists?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card">
               <div className="p-4 border-b">
                 <h3 className="font-semibold">Performing Artists</h3>
               </div>
               <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                {e.artists.map((artist) => (
+                {e.artists!.map((artist) => (
                   <Link
                     key={artist.id}
                     href={`/admin/artists/${artist.id}`}

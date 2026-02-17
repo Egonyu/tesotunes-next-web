@@ -7,7 +7,7 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
+import {
   Edit, Trash2, Mic, Play, Plus, ExternalLink, Rss,
   Clock, Headphones, Calendar, Eye, Star, AlertTriangle
 } from 'lucide-react';
@@ -183,7 +183,7 @@ export default function PodcastDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
-          
+
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-2xl font-bold">{p.title}</h2>
@@ -199,14 +199,14 @@ export default function PodcastDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               )}
             </div>
-            
+
             <p className="text-muted-foreground mb-4">
               Hosted by <span className="text-foreground font-medium">{p.host_name}</span>
               {p.category && ` • ${p.category.name}`}
             </p>
-            
+
             <p className="text-sm text-muted-foreground mb-4">{p.description}</p>
-            
+
             {/* External Links */}
             <div className="flex flex-wrap gap-2">
               {p.spotify_url && (
@@ -294,9 +294,9 @@ export default function PodcastDetailPage({ params }: { params: Promise<{ id: st
                 Add Episode
               </Link>
             </div>
-            {p.episodes?.length > 0 ? (
+            {(p.episodes?.length ?? 0) > 0 ? (
               <div className="divide-y">
-                {p.episodes.map((episode) => (
+                {p.episodes!.map((episode) => (
                   <Link
                     key={episode.id}
                     href={`/admin/podcasts/${id}/episodes/${episode.id}`}

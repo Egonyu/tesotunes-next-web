@@ -285,7 +285,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Top Songs */}
-          {a.top_songs?.length > 0 && (
+          {(a.top_songs?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card">
               <div className="flex items-center justify-between p-4 border-b">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -297,7 +297,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                 </Link>
               </div>
               <div className="divide-y">
-                {a.top_songs.map((song, index) => (
+                {a.top_songs!.map((song, index) => (
                   <div key={song.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 group">
                     <span className="w-6 text-sm text-muted-foreground text-center font-medium">
                       {index + 1}
@@ -332,7 +332,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           )}
 
           {/* Recent Albums */}
-          {a.recent_albums?.length > 0 && (
+          {(a.recent_albums?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card">
               <div className="flex items-center justify-between p-4 border-b">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -344,7 +344,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                 </Link>
               </div>
               <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {a.recent_albums.map(album => (
+                {a.recent_albums!.map(album => (
                   <Link key={album.id} href={`/admin/albums/${album.id}`} className="group">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
                       {album.cover_url ? (
@@ -413,14 +413,14 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Genres */}
-          {a.genres?.length > 0 && (
+          {(a.genres?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Tag className="h-4 w-4" />
                 Genres
               </h3>
               <div className="flex flex-wrap gap-2">
-                {a.genres.map(genre => (
+                {a.genres!.map(genre => (
                   <span
                     key={genre.id}
                     className="px-3 py-1 bg-muted rounded-full text-sm"

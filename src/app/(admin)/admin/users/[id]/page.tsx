@@ -7,7 +7,7 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
+import {
   Edit, Trash2, User, Mail, Phone, MapPin, Calendar,
   Shield, CheckCircle, XCircle, Ban, Music, Heart,
   Headphones, Clock, CreditCard, AlertTriangle
@@ -276,7 +276,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 )}
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-2xl font-bold">{u.name}</h2>
@@ -285,9 +285,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   </span>
                   <StatusBadge status={u.status} />
                 </div>
-                
+
                 <p className="text-muted-foreground mb-4">@{u.username}</p>
-                
+
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div className="flex items-center gap-1.5">
                     <Mail className="h-4 w-4 text-muted-foreground" />
@@ -368,13 +368,13 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Recent Activity */}
-          {u.recent_activity?.length > 0 && (
+          {(u.recent_activity?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card">
               <div className="p-4 border-b">
                 <h3 className="font-semibold">Recent Activity</h3>
               </div>
               <div className="divide-y">
-                {u.recent_activity.map((activity, index) => (
+                {u.recent_activity!.map((activity, index) => (
                   <div key={index} className="px-4 py-3 flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-primary" />
                     <div className="flex-1">
@@ -414,7 +414,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   Suspend Account
                 </button>
               )}
-              
+
               {!u.email_verified_at && (
                 <button
                   onClick={() => verifyEmailMutation.mutate()}
@@ -425,7 +425,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   Verify Email
                 </button>
               )}
-              
+
               <button
                 onClick={() => resetPasswordMutation.mutate()}
                 className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2"

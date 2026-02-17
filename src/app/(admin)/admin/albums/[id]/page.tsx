@@ -7,8 +7,8 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
-  Edit, Trash2, Disc, Play, Eye, ArrowUpRight, 
+import {
+  Edit, Trash2, Disc, Play, Eye, ArrowUpRight,
   Calendar, Clock, Music, User, Tag, Heart,
   Headphones, Plus, MoreHorizontal, GripVertical
 } from 'lucide-react';
@@ -178,7 +178,7 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 )}
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 rounded uppercase">
@@ -196,28 +196,28 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                     </span>
                   )}
                 </div>
-                
+
                 <h2 className="text-2xl font-bold mb-1">{a.title}</h2>
-                
+
                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                   <Link href={`/admin/artists/${a.artist.id}`} className="hover:text-primary hover:underline">
                     {a.artist.name}
                   </Link>
-                  {a.featured_artists?.length > 0 && (
+                  {(a.featured_artists?.length ?? 0) > 0 && (
                     <>
                       <span>feat.</span>
-                      {a.featured_artists.map((fa, i) => (
+                      {a.featured_artists!.map((fa, i) => (
                         <span key={fa.id}>
                           <Link href={`/admin/artists/${fa.id}`} className="hover:text-primary hover:underline">
                             {fa.name}
                           </Link>
-                          {i < a.featured_artists.length - 1 && ', '}
+                          {i < a.featured_artists!.length - 1 && ', '}
                         </span>
                       ))}
                     </>
                   )}
                 </div>
-                
+
                 <div className="flex items-center gap-6 text-sm">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -283,10 +283,10 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                 Add Track
               </Link>
             </div>
-            
-            {a.songs?.length > 0 ? (
+
+            {(a.songs?.length ?? 0) > 0 ? (
               <div className="divide-y">
-                {a.songs.map((song) => (
+                {a.songs!.map((song) => (
                   <div key={song.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 group">
                     <button className="opacity-0 group-hover:opacity-100 cursor-grab text-muted-foreground">
                       <GripVertical className="h-4 w-4" />
@@ -298,7 +298,7 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                       <Play className="h-3 w-3" fill="currentColor" />
                     </button>
                     <div className="flex-1 min-w-0">
-                      <Link 
+                      <Link
                         href={`/admin/songs/${song.id}`}
                         className="font-medium hover:text-primary hover:underline truncate block"
                       >
@@ -395,14 +395,14 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Genres */}
-          {a.genres?.length > 0 && (
+          {(a.genres?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Tag className="h-4 w-4" />
                 Genres
               </h3>
               <div className="flex flex-wrap gap-2">
-                {a.genres.map(genre => (
+                {a.genres!.map(genre => (
                   <span
                     key={genre.id}
                     className="px-3 py-1 bg-muted rounded-full text-sm"

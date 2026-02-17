@@ -55,6 +55,7 @@ export interface ArtistSong {
   id: number;
   title: string;
   cover: string;
+  artwork_url?: string;
   album: string | null;
   plays: number;
   downloads: number;

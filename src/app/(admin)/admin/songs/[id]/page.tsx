@@ -496,14 +496,14 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Genres */}
-          {s.genres?.length > 0 && (
+          {(s.genres?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Tag className="h-4 w-4" />
                 Genres
               </h3>
               <div className="flex flex-wrap gap-2">
-                {s.genres.map(genre => (
+                {s.genres!.map(genre => (
                   <span
                     key={genre.id}
                     className="px-3 py-1 bg-muted rounded-full text-sm"
@@ -516,14 +516,14 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
           )}
 
           {/* Credits */}
-          {s.credits?.length > 0 && (
+          {(s.credits?.length ?? 0) > 0 && (
             <div className="rounded-xl border bg-card p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Credits
               </h3>
               <dl className="space-y-2 text-sm">
-                {s.credits.map((credit, i) => (
+                {s.credits!.map((credit, i) => (
                   <div key={i} className="flex justify-between">
                     <dt className="text-muted-foreground">{credit.role}</dt>
                     <dd>{credit.name}</dd>

@@ -113,7 +113,7 @@ export default function BecomeArtistPage() {
     } else if (shouldRedirectToStatus) {
       router.replace("/become-artist/status");
     } else if (shouldRedirectToArtist) {
-      router.replace("/artist/dashboard");
+      router.replace("/artist");
     }
   }, [shouldRedirectToLogin, shouldRedirectToStatus, shouldRedirectToArtist, router]);
 

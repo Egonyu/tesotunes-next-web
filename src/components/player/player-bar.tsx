@@ -15,10 +15,13 @@ import {
   Heart,
   MoreHorizontal,
   Maximize2,
+  Minimize2,
+  ChevronUp,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, cn } from "@/lib/utils";
 
 export function PlayerBar() {
   const {
@@ -39,9 +42,10 @@ export function PlayerBar() {
     toggleMute,
     toggleRepeat,
     toggleShuffle,
+    clearQueue,
   } = usePlayerStore();
 
-  const { togglePlayerExpanded } = useUIStore();
+  const { togglePlayerExpanded, playerMinimized, setPlayerMinimized } = useUIStore();
 
   if (!currentSong) {
     return null;
@@ -59,13 +63,68 @@ export function PlayerBar() {
     setVolume(parseFloat(e.target.value));
   };
 
+  const handleDismiss = () => {
+    pause();
+    setPlayerMinimized(true);
+  };
+
+  // Minimized: small floating pill in bottom-right
+  if (playerMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+          {currentSong.artwork_url ? (
+            <Image
+              src={currentSong.artwork_url}
+              alt={currentSong.title}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ListMusic className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <span className="text-sm font-medium max-w-[120px] truncate hidden sm:block">
+          {currentSong.title}
+        </span>
+        <button
+          onClick={isPlaying ? pause : resume}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background hover:scale-105 transition-transform"
+        >
+          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+        </button>
+        <button
+          onClick={() => setPlayerMinimized(false)}
+          className="text-muted-foreground hover:text-foreground"
+          title="Expand player"
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  // Full player bar
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-full items-center justify-between px-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Thin progress bar at top of player */}
+      <div
+        className="h-0.5 bg-muted cursor-pointer lg:hidden"
+        onClick={handleProgressClick}
+      >
+        <div
+          className="h-full bg-primary transition-all"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="flex h-[72px] items-center justify-between px-3 lg:px-4">
         {/* Song Info */}
-        <div className="flex w-[30%] min-w-0 items-center gap-3">
+        <div className="flex flex-1 lg:w-[30%] min-w-0 items-center gap-3">
           <div
-            className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted cursor-pointer group"
+            className="relative h-12 w-12 lg:h-14 lg:w-14 shrink-0 overflow-hidden rounded-md bg-muted cursor-pointer group"
             onClick={togglePlayerExpanded}
           >
             {currentSong.artwork_url ? (
@@ -87,32 +146,33 @@ export function PlayerBar() {
           <div className="min-w-0">
             <Link
               href={`/songs/${currentSong.slug || currentSong.id}`}
-              className="block truncate font-medium hover:underline"
+              className="block truncate text-sm font-medium hover:underline"
             >
               {currentSong.title}
             </Link>
             {currentSong.artist && (
               <Link
                 href={`/artists/${currentSong.artist.slug || currentSong.artist.id}`}
-                className="block truncate text-sm text-muted-foreground hover:underline"
+                className="block truncate text-xs text-muted-foreground hover:underline"
               >
                 {currentSong.artist.name}
               </Link>
             )}
           </div>
-          <button className="ml-2 shrink-0 text-muted-foreground hover:text-foreground">
-            <Heart className="h-5 w-5" />
+          <button className="ml-1 shrink-0 text-muted-foreground hover:text-foreground hidden sm:block">
+            <Heart className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Player Controls */}
-        <div className="flex w-[40%] flex-col items-center justify-center gap-1">
+        {/* Player Controls - Desktop */}
+        <div className="hidden lg:flex w-[40%] flex-col items-center justify-center gap-1">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleShuffle}
-              className={`text-muted-foreground hover:text-foreground ${
-                isShuffled ? "text-primary" : ""
-              }`}
+              className={cn(
+                "text-muted-foreground hover:text-foreground",
+                isShuffled && "text-primary"
+              )}
             >
               <Shuffle className="h-4 w-4" />
             </button>
@@ -140,9 +200,10 @@ export function PlayerBar() {
             </button>
             <button
               onClick={toggleRepeat}
-              className={`text-muted-foreground hover:text-foreground ${
-                repeatMode !== "off" ? "text-primary" : ""
-              }`}
+              className={cn(
+                "text-muted-foreground hover:text-foreground",
+                repeatMode !== "off" && "text-primary"
+              )}
             >
               {repeatMode === "one" ? (
                 <Repeat1 className="h-4 w-4" />
@@ -158,7 +219,7 @@ export function PlayerBar() {
               {formatDuration(currentTime)}
             </span>
             <div
-              className="relative h-1 flex-1 cursor-pointer rounded-full bg-muted"
+              className="relative h-1 flex-1 cursor-pointer rounded-full bg-muted group"
               onClick={handleProgressClick}
             >
               <div
@@ -166,7 +227,7 @@ export function PlayerBar() {
                 style={{ width: `${progress}%` }}
               />
               <div
-                className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-foreground opacity-0 hover:opacity-100 transition-opacity"
+                className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ left: `calc(${progress}% - 6px)` }}
               />
             </div>
@@ -176,8 +237,30 @@ export function PlayerBar() {
           </div>
         </div>
 
+        {/* Mobile Controls */}
+        <div className="flex lg:hidden items-center gap-2">
+          <button
+            onClick={previous}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <SkipBack className="h-5 w-5" />
+          </button>
+          <button
+            onClick={isPlaying ? pause : resume}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background"
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+          </button>
+          <button
+            onClick={next}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <SkipForward className="h-5 w-5" />
+          </button>
+        </div>
+
         {/* Volume & Additional Controls */}
-        <div className="flex w-[30%] items-center justify-end gap-3">
+        <div className="hidden lg:flex w-[30%] items-center justify-end gap-3">
           <button className="text-muted-foreground hover:text-foreground">
             <ListMusic className="h-5 w-5" />
           </button>
@@ -202,10 +285,30 @@ export function PlayerBar() {
               className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-muted [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground"
             />
           </div>
-          <button className="text-muted-foreground hover:text-foreground">
-            <MoreHorizontal className="h-5 w-5" />
+          <button
+            onClick={handleDismiss}
+            className="text-muted-foreground hover:text-foreground"
+            title="Minimize player"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => { clearQueue(); }}
+            className="text-muted-foreground hover:text-red-500"
+            title="Close player"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Mobile minimize/close */}
+        <button
+          onClick={handleDismiss}
+          className="lg:hidden ml-2 text-muted-foreground hover:text-foreground"
+          title="Minimize player"
+        >
+          <Minimize2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

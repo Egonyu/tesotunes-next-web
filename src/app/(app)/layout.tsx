@@ -3,7 +3,7 @@
 import { Sidebar, Header } from "@/components/layout";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from "@/components/player";
-import { useUIStore } from "@/stores";
+import { useUIStore, usePlayerStore } from "@/stores";
 import { useQueueSync } from "@/hooks/useQueueSync";
 import { cn } from "@/lib/utils";
 
@@ -12,10 +12,13 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { sidebarCollapsed } = useUIStore();
+  const { sidebarCollapsed, playerMinimized } = useUIStore();
+  const { currentSong } = usePlayerStore();
 
   // Sync queue changes to server (debounced)
   useQueueSync();
+
+  const hasActivePlayer = !!currentSong && !playerMinimized;
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +32,9 @@ export default function AppLayout({
       <div
         className={cn(
           "min-h-screen transition-all duration-300",
-          "pb-32 lg:pb-24", // Extra padding on mobile for bottom nav + player
+          hasActivePlayer
+            ? "pb-32 lg:pb-24" // Extra padding for bottom nav + player
+            : "pb-16 lg:pb-4", // Just bottom nav padding (mobile) or minimal (desktop)
           "lg:pl-16", // Desktop: collapsed sidebar
           !sidebarCollapsed && "lg:pl-64" // Desktop: expanded sidebar
         )}

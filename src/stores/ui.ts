@@ -17,6 +17,7 @@ interface UIState {
 
   // Player
   playerExpanded: boolean;
+  playerMinimized: boolean;
   queueVisible: boolean;
 
   // Search
@@ -42,6 +43,8 @@ interface UIState {
 
   togglePlayerExpanded: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
+  togglePlayerMinimized: () => void;
+  setPlayerMinimized: (minimized: boolean) => void;
   toggleQueue: () => void;
   setQueueVisible: (visible: boolean) => void;
 
@@ -64,6 +67,7 @@ export const useUIStore = create<UIState>((set) => ({
   activeModal: null,
   modalData: null,
   playerExpanded: false,
+  playerMinimized: false,
   queueVisible: false,
   searchOpen: false,
   searchQuery: "",
@@ -81,6 +85,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   togglePlayerExpanded: () => set((state) => ({ playerExpanded: !state.playerExpanded })),
   setPlayerExpanded: (expanded) => set({ playerExpanded: expanded }),
+  togglePlayerMinimized: () => set((state) => ({ playerMinimized: !state.playerMinimized })),
+  setPlayerMinimized: (minimized) => set({ playerMinimized: minimized }),
   toggleQueue: () => set((state) => ({ queueVisible: !state.queueVisible })),
   setQueueVisible: (visible) => set({ queueVisible: visible }),
 

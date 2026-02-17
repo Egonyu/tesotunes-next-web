@@ -106,7 +106,7 @@ export default function ApplicationStatusPage() {
 
   // Already approved — redirect to dashboard
   if (appStatus === "approved" || appData?.data?.is_artist) {
-    redirect("/artist/dashboard");
+    redirect("/artist");
   }
 
   const timelineSteps = getTimelineSteps(appStatus);

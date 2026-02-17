@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { User, CreditCard, Bell, Shield, Palette, LogOut, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +52,10 @@ export default function SettingsLayout({
               );
             })}
             
-            <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors w-full mt-4">
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors w-full mt-4"
+            >
               <LogOut className="h-5 w-5" />
               Sign Out
             </button>

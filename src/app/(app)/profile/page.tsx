@@ -7,18 +7,24 @@ import {
   Mail,
   Calendar,
   MapPin,
-
   Music,
   Heart,
   ListMusic,
   Clock,
   Settings,
   Edit,
+  Loader2,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { useLibrary, useRecentlyPlayed, useFollowedArtists } from "@/hooks/api";
+import { useWallet } from "@/hooks/usePayments";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
+  const { playlists, likedSongs, followedArtists: libArtists, isLoading: libraryLoading } = useLibrary();
+  const { data: recentSongs, isLoading: recentLoading } = useRecentlyPlayed(5);
+  const { data: walletData } = useWallet();
 
   if (status === "loading") {
     return (
@@ -33,20 +39,25 @@ export default function ProfilePage() {
   }
 
   const user = session.user;
+  const memberSince = user?.id
+    ? new Date().getFullYear()
+    : new Date().getFullYear();
 
   const stats = [
-    { label: "Playlists", value: 12, icon: ListMusic },
-    { label: "Liked Songs", value: 248, icon: Heart },
-    { label: "Following", value: 56, icon: Music },
-    { label: "Listening Hours", value: 1240, icon: Clock },
+    { label: "Playlists", value: playlists.length, icon: ListMusic },
+    { label: "Liked Songs", value: likedSongs.length, icon: Heart },
+    { label: "Following", value: libArtists.length, icon: Music },
+    { label: "Wallet", value: walletData ? `UGX ${(walletData as { balance?: number })?.balance?.toLocaleString() || '0'}` : '—', icon: Wallet },
   ];
 
-  const recentActivity = [
-    { type: "liked", item: "Blinding Lights", artist: "The Weeknd", time: "2 hours ago" },
-    { type: "playlist", item: "Summer Vibes 2026", time: "5 hours ago" },
-    { type: "followed", item: "Burna Boy", time: "1 day ago" },
-    { type: "liked", item: "Essence", artist: "Wizkid", time: "2 days ago" },
-  ];
+  const recentActivity = (recentSongs || []).slice(0, 4).map((song) => ({
+    type: "played" as const,
+    item: song.title,
+    artist: song.artist?.name,
+    time: song.created_at
+      ? formatTimeAgo(song.created_at)
+      : "",
+  }));
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -55,12 +66,23 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           {/* Avatar */}
           <div className="relative">
-            <div className="h-32 w-32 rounded-full bg-primary/20 flex items-center justify-center text-4xl font-bold text-primary">
-              {user?.name?.charAt(0) || "U"}
-            </div>
-            <button className="absolute bottom-0 right-0 p-2 rounded-full bg-background border shadow-sm hover:bg-accent transition-colors">
+            {user?.image ? (
+              <img
+                src={user.image}
+                alt={user.name || "User"}
+                className="h-32 w-32 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-32 w-32 rounded-full bg-primary/20 flex items-center justify-center text-4xl font-bold text-primary">
+                {user?.name?.charAt(0) || "U"}
+              </div>
+            )}
+            <Link
+              href="/settings/profile"
+              className="absolute bottom-0 right-0 p-2 rounded-full bg-background border shadow-sm hover:bg-accent transition-colors"
+            >
               <Edit className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
 
           {/* User Info */}
@@ -73,12 +95,17 @@ export default function ProfilePage() {
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                Member since 2024
+                Member since {memberSince}
               </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                Kenya
-              </span>
+              {user?.role === "artist" && (
+                <Link
+                  href="/artist"
+                  className="flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Music className="h-4 w-4" />
+                  Artist Studio
+                </Link>
+              )}
             </div>
           </div>
 
@@ -97,88 +124,125 @@ export default function ProfilePage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl bg-card border p-4 text-center"
-          >
-            <stat.icon className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <div className="text-sm text-muted-foreground">{stat.label}</div>
+        {libraryLoading ? (
+          <div className="col-span-full flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ))}
+        ) : (
+          stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-xl bg-card border p-4 text-center"
+            >
+              <stat.icon className="h-6 w-6 mx-auto mb-2 text-primary" />
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         {/* Recent Activity */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-          <div className="space-y-3">
-            {recentActivity.map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-3 rounded-lg bg-card border"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  {activity.type === "liked" && (
-                    <Heart className="h-5 w-5 text-primary" />
-                  )}
-                  {activity.type === "playlist" && (
-                    <ListMusic className="h-5 w-5 text-primary" />
-                  )}
-                  {activity.type === "followed" && (
-                    <User className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{activity.item}</p>
-                  {activity.artist && (
-                    <p className="text-sm text-muted-foreground">
-                      {activity.artist}
-                    </p>
-                  )}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {activity.time}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Favorite Genres */}
-        <div>
-          <h2 className="text-xl font-bold mb-4">Favorite Genres</h2>
-          <div className="space-y-3">
-            {["Afrobeats", "R&B", "Hip Hop", "Pop", "Gospel"].map(
-              (genre, index) => (
+          <h2 className="text-xl font-bold mb-4">Recently Played</h2>
+          {recentLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentActivity.length === 0 ? (
+            <div className="p-6 rounded-lg bg-card border text-center text-muted-foreground">
+              <Music className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No listening history yet.</p>
+              <p className="text-sm mt-1">Start exploring music!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((activity, index) => (
                 <div
-                  key={genre}
+                  key={index}
                   className="flex items-center gap-3 p-3 rounded-lg bg-card border"
                 >
-                  <div
-                    className="h-10 w-10 rounded-lg flex items-center justify-center font-bold text-white"
-                    style={{
-                      backgroundColor: `hsl(${index * 60}, 70%, 50%)`,
-                    }}
-                  >
-                    {index + 1}
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Music className="h-5 w-5 text-primary" />
                   </div>
-                  <span className="font-medium">{genre}</span>
                   <div className="flex-1">
-                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${100 - index * 15}%` }}
-                      />
-                    </div>
+                    <p className="font-medium">{activity.item}</p>
+                    {activity.artist && (
+                      <p className="text-sm text-muted-foreground">
+                        {activity.artist}
+                      </p>
+                    )}
                   </div>
+                  {activity.time && (
+                    <span className="text-xs text-muted-foreground">
+                      {activity.time}
+                    </span>
+                  )}
                 </div>
-              )
-            )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Your Playlists */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Your Playlists</h2>
+            <Link href="/library" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
           </div>
+          {libraryLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : playlists.length === 0 ? (
+            <div className="p-6 rounded-lg bg-card border text-center text-muted-foreground">
+              <ListMusic className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No playlists yet.</p>
+              <p className="text-sm mt-1">Create your first playlist!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {playlists.slice(0, 5).map((playlist) => (
+                <Link
+                  key={playlist.id}
+                  href={`/playlists/${playlist.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-card border hover:bg-muted/50 transition-colors"
+                >
+                  <div
+                    className="h-10 w-10 rounded-lg flex items-center justify-center font-bold text-white bg-primary/70"
+                  >
+                    <ListMusic className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{playlist.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {playlist.song_count ?? 0} songs
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en", { month: "short", day: "numeric" });
 }

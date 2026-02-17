@@ -54,16 +54,22 @@ export interface Artist {
   slug: string;
   bio?: string;
   avatar_url?: string;
+  banner_url?: string;
   cover_url?: string;
   cover_image_url?: string;
   profile_image_url?: string;
   follower_count: number;
   song_count?: number;
+  total_songs?: number;
   album_count?: number;
+  total_albums?: number;
   monthly_listeners: number;
+  total_plays?: number;
   is_verified: boolean;
+  verification_badge?: string;
   status: ArtistStatus;
   genres: Genre[];
+  genre?: Genre;
   social_links?: SocialLinks;
 }
 

@@ -21,6 +21,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  LayoutDashboard,
+  Upload,
+  Music,
+  DollarSign,
+  TrendingUp,
+  Store,
+  Megaphone,
+  Heart,
+  Share2,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -47,6 +56,59 @@ const moduleItems = [
   { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
+];
+
+/** Artist sidebar navigation — grouped by business section */
+const artistSections = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/artist", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/artist/profile", label: "Artist Profile", icon: User },
+    ],
+  },
+  {
+    title: "Music Management",
+    items: [
+      { href: "/artist/songs", label: "My Songs", icon: Music },
+      { href: "/artist/albums", label: "Albums", icon: Disc3 },
+      { href: "/artist/upload", label: "Upload Music", icon: Upload },
+      { href: "/artist/analytics", label: "Streams & Stats", icon: TrendingUp },
+    ],
+  },
+  {
+    title: "Sacco & Wallet",
+    items: [
+      { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
+      { href: "/artist/wallet", label: "Wallet / Top-Up", icon: Wallet },
+    ],
+  },
+  {
+    title: "Store",
+    items: [
+      { href: "/artist/store", label: "My Store", icon: Store },
+    ],
+  },
+  {
+    title: "Events",
+    items: [
+      { href: "/artist/events", label: "Manage Events", icon: Calendar },
+    ],
+  },
+  {
+    title: "Promotions",
+    items: [
+      { href: "/artist/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/artist/referrals", label: "Referrals", icon: Share2 },
+      { href: "/artist/fan-club", label: "Fan Club", icon: Heart },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      { href: "/artist/settings", label: "Artist Settings", icon: Settings },
+    ],
+  },
 ];
 
 interface NavItemProps {
@@ -81,6 +143,13 @@ function NavItem({ href, label, icon: Icon, collapsed }: NavItemProps) {
 export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const { data: session } = useSession();
+
+  const userRole = (session?.user as { role?: string } | undefined)?.role || "";
+  // Case-insensitive check for artist role
+  const isArtist = userRole.toLowerCase().includes("artist");
+  const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) =>
+    userRole.toLowerCase().includes(r.toLowerCase())
+  );
 
   return (
     <aside
@@ -125,6 +194,28 @@ export function Sidebar() {
           ))}
         </div>
 
+        {/* Artist Section — comprehensive sidebar for artists */}
+        {isArtist && (
+          <>
+            {artistSections.map((section) => (
+              <div key={section.title} className="space-y-1">
+                {!sidebarCollapsed && (
+                  <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">
+                    {section.title}
+                  </h3>
+                )}
+                {section.items.map((item) => (
+                  <NavItem
+                    key={item.href}
+                    {...item}
+                    collapsed={sidebarCollapsed}
+                  />
+                ))}
+              </div>
+            ))}
+          </>
+        )}
+
         {/* Browse */}
         <div className="space-y-1">
           {!sidebarCollapsed && (
@@ -162,8 +253,8 @@ export function Sidebar() {
       <div className="border-t p-4">
         {session?.user ? (
           <div className={cn("space-y-1", sidebarCollapsed && "space-y-2")}>
-            {/* Become an Artist CTA - only for non-artist users */}
-            {!(session.user as { role?: string }).role?.includes("artist") && (
+            {/* Become an Artist CTA — hidden for artists & admins */}
+            {!isArtist && !isAdmin && (
               <Link
                 href="/become-artist"
                 className={cn(
@@ -176,6 +267,22 @@ export function Sidebar() {
                 {!sidebarCollapsed && <span>Become an Artist</span>}
               </Link>
             )}
+
+            {/* Admin panel link — only for admins */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  sidebarCollapsed && "justify-center px-2"
+                )}
+                title={sidebarCollapsed ? "Admin Panel" : undefined}
+              >
+                <Settings className="h-5 w-5 shrink-0" />
+                {!sidebarCollapsed && <span>Admin Panel</span>}
+              </Link>
+            )}
+
             <Link
               href="/profile"
               className={cn(

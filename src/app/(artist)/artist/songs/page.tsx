@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   Search,
   Plus,
   ChevronLeft,
@@ -35,7 +35,7 @@ export default function ArtistSongsPage() {
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchMode, setBatchMode] = useState(false);
-  
+
   const { data: songsData, isLoading, error } = useMyArtistSongs({
     status: statusFilter === 'all' ? undefined : statusFilter,
     search: searchQuery || undefined,
@@ -44,11 +44,11 @@ export default function ArtistSongsPage() {
     sort: sortBy === 'title' ? 'title' : sortBy === 'plays' ? 'plays' : sortBy === 'downloads' ? 'downloads' : 'created_at',
     order: sortBy === 'title' ? 'asc' : 'desc',
   });
-  
+
   const deleteSong = useDeleteSong();
   const bulkDelete = useBulkDeleteSongs();
   const bulkStatus = useBulkUpdateSongStatus();
-  
+
   const songs = songsData?.data || [];
   const pagination = songsData?.pagination || { current_page: 1, last_page: 1, per_page: 10, total: 0 };
   const statusCounts = songsData?.status_counts || { total: 0, published: 0, pending: 0, draft: 0 };
@@ -94,25 +94,25 @@ export default function ArtistSongsPage() {
       onError: () => toast.error('Failed to update status'),
     });
   };
-  
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
-  
+
   const statusStyles: Record<string, string> = {
     published: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   };
-  
+
   const handleDelete = (id: number, title: string) => {
     if (confirm(`Are you sure you want to delete "${title}"?`)) {
       deleteSong.mutate(id);
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -120,14 +120,14 @@ export default function ArtistSongsPage() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-destructive">Failed to load songs</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
           Retry
@@ -135,7 +135,7 @@ export default function ArtistSongsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -190,7 +190,7 @@ export default function ArtistSongsPage() {
           </button>
         </div>
       )}
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -210,7 +210,7 @@ export default function ArtistSongsPage() {
           <p className="text-sm text-muted-foreground">Drafts</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -250,7 +250,7 @@ export default function ArtistSongsPage() {
           <option value="title">Title A-Z</option>
         </select>
       </div>
-      
+
       {/* Songs List */}
       <div className="space-y-2">
         {batchMode && songs.length > 0 && (
@@ -264,8 +264,8 @@ export default function ArtistSongsPage() {
             <p>No songs found</p>
           </div>
         ) : songs.map((song) => (
-          <div 
-            key={song.id} 
+          <div
+            key={song.id}
             className={cn(
               "flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors",
               batchMode && selectedIds.has(song.id) && "ring-2 ring-primary/50 bg-primary/5"
@@ -284,12 +284,19 @@ export default function ArtistSongsPage() {
             {/* Play Button & Cover */}
             <div className="relative group">
               <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-muted">
-                <Image
-                  src={song.cover}
-                  alt={song.title}
-                  fill
-                  className="object-cover"
-                />
+                {(song.artwork_url || song.cover) ? (
+                  <Image
+                    src={song.artwork_url || song.cover || ''}
+                    alt={song.title}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <Play className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setPlayingId(playingId === song.id ? null : song.id)}
@@ -302,7 +309,7 @@ export default function ArtistSongsPage() {
                 )}
               </button>
             </div>
-            
+
             {/* Song Info */}
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{song.title}</p>
@@ -310,7 +317,7 @@ export default function ArtistSongsPage() {
                 {song.album || 'Single'} • {song.duration}
               </p>
             </div>
-            
+
             {/* Stats */}
             <div className="hidden md:flex items-center gap-8 text-sm">
               <div className="text-center">
@@ -322,7 +329,7 @@ export default function ArtistSongsPage() {
                 <p className="text-xs text-muted-foreground">Downloads</p>
               </div>
             </div>
-            
+
             {/* Status */}
             <span className={cn(
               'px-2 py-1 rounded-full text-xs font-medium capitalize hidden sm:block',
@@ -330,7 +337,7 @@ export default function ArtistSongsPage() {
             )}>
               {song.status}
             </span>
-            
+
             {/* Actions */}
             <div className="flex items-center gap-1">
               <button className="p-2 hover:bg-muted rounded-lg hidden md:block" title="Share">
@@ -350,7 +357,7 @@ export default function ArtistSongsPage() {
               >
                 <Edit className="h-4 w-4" />
               </Link>
-              <button 
+              <button
                 className="p-2 hover:bg-muted rounded-lg text-red-600"
                 title="Delete"
                 onClick={() => handleDelete(song.id, song.title)}
@@ -362,15 +369,15 @@ export default function ArtistSongsPage() {
           </div>
         ))}
       </div>
-      
+
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Showing {((pagination.current_page - 1) * pagination.per_page) + 1}-{Math.min(pagination.current_page * pagination.per_page, pagination.total)} of {pagination.total} songs
         </p>
         <div className="flex items-center gap-2">
-          <button 
-            className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50" 
+          <button
+            className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
             disabled={pagination.current_page <= 1}
             onClick={() => setPage(p => p - 1)}
           >
@@ -402,7 +409,7 @@ export default function ArtistSongsPage() {
               </button>
             );
           })}
-          <button 
+          <button
             className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
             disabled={pagination.current_page >= pagination.last_page}
             onClick={() => setPage(p => p + 1)}

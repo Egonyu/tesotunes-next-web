@@ -199,9 +199,9 @@ export interface ReferralHistoryResponse {
 }
 
 export function useReferralHistory(
-  status?: string, 
-  page: number = 1, 
-  perPage: number = 10, 
+  status?: string,
+  page: number = 1,
+  perPage: number = 10,
   search?: string
 ) {
   const params: Record<string, string | number> = { page, per_page: perPage };
@@ -235,7 +235,7 @@ export function useClaimReward() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (milestoneId: number) => 
+    mutationFn: (milestoneId: number) =>
       apiPost<{ message: string }>(`/referrals/rewards/${milestoneId}/claim`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["referrals", "rewards"] });
@@ -251,7 +251,7 @@ export function useClaimReward() {
 export function useReferralLeaderboard(period: 'week' | 'weekly' | 'month' | 'monthly' | 'all_time' = 'all_time', limit = 10) {
   // Normalize period names
   const normalizedPeriod = period === 'weekly' ? 'week' : period === 'monthly' ? 'month' : period;
-  
+
   return useQuery({
     queryKey: ["referrals", "leaderboard", normalizedPeriod, limit],
     queryFn: () => apiGet<{ data: LeaderboardData }>("/referrals/leaderboard", {
@@ -501,6 +501,7 @@ export function useCreateReferralCampaign() {
     }) => apiPost<{ data: ReferralCampaign }>("/admin/referrals/campaigns", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] });
     },
   });
 }
@@ -513,6 +514,7 @@ export function useUpdateCampaignStatus() {
       apiPost<void>(`/admin/referrals/campaigns/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] });
     },
   });
 }

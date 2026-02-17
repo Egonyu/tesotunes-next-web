@@ -21,7 +21,7 @@ import { useArtistEarnings, useRequestWithdrawal } from '@/hooks/useArtist';
 export default function ArtistEarningsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState<'mtn_momo' | 'airtel_money' | 'bank_transfer'>('mtn_momo');
+  const [withdrawMethod, setWithdrawMethod] = useState<'zengapay'>('zengapay');
   const [withdrawPhone, setWithdrawPhone] = useState('');
   
   const { data: earningsData, isLoading, error } = useArtistEarnings();
@@ -295,29 +295,25 @@ export default function ArtistEarningsPage() {
               
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
-                <select 
-                  value={withdrawMethod}
-                  onChange={(e) => setWithdrawMethod(e.target.value as typeof withdrawMethod)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background"
-                >
-                  <option value="mtn_momo">MTN Mobile Money</option>
-                  <option value="airtel_money">Airtel Money</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                </select>
+                <div className="w-full px-4 py-2 border rounded-lg bg-background flex items-center gap-2">
+                  <span className="font-medium">ZengaPay Mobile Money</span>
+                  <span className="text-xs text-muted-foreground ml-auto">MTN & Airtel</span>
+                </div>
               </div>
               
-              {(withdrawMethod === 'mtn_momo' || withdrawMethod === 'airtel_money') && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={withdrawPhone}
-                    onChange={(e) => setWithdrawPhone(e.target.value)}
-                    placeholder="0700 000 000"
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  value={withdrawPhone}
+                  onChange={(e) => setWithdrawPhone(e.target.value)}
+                  placeholder="0700 000 000"
+                  className="w-full px-4 py-2 border rounded-lg bg-background"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter your MTN or Airtel number. ZengaPay will process it automatically.
+                </p>
+              </div>
               
               <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
                 <p className="text-yellow-700 dark:text-yellow-300">

@@ -132,7 +132,7 @@ export default function AwardSeasonPage({ params }: { params: Promise<{ slug: st
               )}
             >
               {category.name}
-              <span className="block text-[10px] mt-0.5 opacity-60">{category.nominations.length} nominees</span>
+              <span className="block text-[10px] mt-0.5 opacity-60">{category.nominations?.length ?? 0} nominees</span>
             </button>
           ))}
         </div>
@@ -145,7 +145,7 @@ export default function AwardSeasonPage({ params }: { params: Promise<{ slug: st
               <p className="text-muted-foreground text-sm mb-6">{activeCategory.description}</p>
 
               <div className="space-y-3">
-                {activeCategory.nominations.map((nomination) => {
+                {(activeCategory.nominations ?? []).map((nomination) => {
                   const Icon = nomineeTypeIcons[nomination.nominee_type] || Music;
                   return (
                     <div
@@ -186,7 +186,7 @@ export default function AwardSeasonPage({ params }: { params: Promise<{ slug: st
                             />
                           </div>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatNumber(nomination.votes_count)} ({nomination.vote_percentage}%)
+                            {formatNumber(nomination.vote_count ?? 0)} ({nomination.vote_percentage}%)
                           </span>
                         </div>
                       </div>

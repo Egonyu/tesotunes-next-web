@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
-import { 
+import {
   Search,
   Plus,
   MoreHorizontal,
@@ -33,8 +33,8 @@ interface Song {
   album: { id: number; title: string } | null;
   artwork_url: string | null;
   duration: number;
-  plays_count: number;
-  status: 'published' | 'pending_review' | 'rejected' | 'draft';
+  plays_count: number | null;
+  status: string;
   created_at: string;
 }
 
@@ -62,7 +62,7 @@ export default function SongsPage() {
   const [playingSong, setPlayingSong] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
-  
+
   const { data: songsData, isLoading } = useQuery({
     queryKey: ['admin', 'songs', { page: currentPage, status: statusFilter, search: searchQuery }],
     queryFn: () => {
@@ -112,26 +112,29 @@ export default function SongsPage() {
   const songs = songsData?.data || [];
   const meta = songsData?.meta;
   const stats = statsData?.data;
-  
-  const statusStyles = {
+
+  const statusStyles: Record<string, string> = {
     published: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     pending_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   };
-  
-  const formatPlays = (plays: number) => {
-    if (plays >= 1000000) return `${(plays / 1000000).toFixed(1)}M`;
-    if (plays >= 1000) return `${(plays / 1000).toFixed(1)}K`;
-    return plays.toString();
+
+  const formatPlays = (plays: number | null | undefined) => {
+    const count = plays ?? 0;
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const formatDuration = (seconds: number | null | undefined) => {
+    const secs = seconds ?? 0;
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return `${mins}:${rem.toString().padStart(2, '0')}`;
   };
-  
+
   const toggleSelectAll = () => {
     if (selectedSongs.length === songs.length) {
       setSelectedSongs([]);
@@ -139,7 +142,7 @@ export default function SongsPage() {
       setSelectedSongs(songs.map(s => s.id));
     }
   };
-  
+
   const toggleSelect = (id: number) => {
     if (selectedSongs.includes(id)) {
       setSelectedSongs(selectedSongs.filter(s => s !== id));
@@ -155,7 +158,7 @@ export default function SongsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,7 +175,7 @@ export default function SongsPage() {
           Add Song
         </Link>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -192,7 +195,7 @@ export default function SongsPage() {
           <p className="text-sm text-muted-foreground">Drafts</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -225,12 +228,12 @@ export default function SongsPage() {
           Export
         </button>
       </div>
-      
+
       {/* Bulk Actions */}
       {selectedSongs.length > 0 && (
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
           <span className="text-sm font-medium">{selectedSongs.length} selected</span>
-          <button 
+          <button
             onClick={() => bulkApproveMutation.mutate(selectedSongs)}
             disabled={bulkApproveMutation.isPending}
             className="flex items-center gap-1 px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
@@ -238,7 +241,7 @@ export default function SongsPage() {
             <CheckCircle className="h-4 w-4" />
             Approve
           </button>
-          <button 
+          <button
             onClick={() => bulkRejectMutation.mutate(selectedSongs)}
             disabled={bulkRejectMutation.isPending}
             className="flex items-center gap-1 px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50"
@@ -252,7 +255,7 @@ export default function SongsPage() {
           </button>
         </div>
       )}
-      
+
       {/* Table */}
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -331,9 +334,9 @@ export default function SongsPage() {
                   <td className="p-4">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium',
-                      statusStyles[song.status]
+                      statusStyles[song.status || 'draft'] || statusStyles.draft
                     )}>
-                      {song.status.replace('_', ' ')}
+                      {(song.status || 'draft').replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">
@@ -370,7 +373,7 @@ export default function SongsPage() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {meta && (
           <div className="flex items-center justify-between p-4 border-t">
@@ -378,7 +381,7 @@ export default function SongsPage() {
               Showing {((meta.current_page - 1) * meta.per_page) + 1}-{Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total.toLocaleString()} songs
             </p>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
@@ -414,7 +417,7 @@ export default function SongsPage() {
                   </button>
                 </>
               )}
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
                 disabled={currentPage === meta.last_page}
                 className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"

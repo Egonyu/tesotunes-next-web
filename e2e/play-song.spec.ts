@@ -4,7 +4,7 @@ test.skip('login and play a song', async ({ page }) => {
   test.setTimeout(60000); // 60 second timeout
 
   // Navigate to user login page
-  await page.goto('/user/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
   // Fill in login credentials
   await page.fill('input#email', 'user@test.com');

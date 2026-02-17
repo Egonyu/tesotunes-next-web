@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
-import { useWithdraw, detectProvider, formatPhoneNumber } from '@/hooks/usePayments';
+import { useWithdraw, formatPhoneNumber } from '@/hooks/usePayments';
 import { toast } from 'sonner';
 
 interface Transaction {
@@ -62,7 +62,6 @@ export default function WalletPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPhone, setWithdrawPhone] = useState('');
-  const [withdrawProvider, setWithdrawProvider] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
   
   // Fetch wallet data
   const { data: walletData, isLoading } = useQuery({
@@ -107,17 +106,11 @@ export default function WalletPage() {
       return;
     }
     
-    const detectedProvider = detectProvider(cleanPhone);
-    if (detectedProvider === 'unknown') {
-      toast.error('Could not detect provider from phone number');
-      return;
-    }
-    
     try {
       await withdrawMutation.mutateAsync({
         amount,
         phone: formatPhoneNumber(withdrawPhone),
-        provider: detectedProvider,
+        provider: 'zengapay',
       });
       
       toast.success('Withdrawal initiated! You will receive your funds shortly.');
@@ -248,14 +241,11 @@ export default function WalletPage() {
             paymentMethods.map((method) => (
               <div key={method.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className={cn(
-                    'h-10 w-10 rounded-lg flex items-center justify-center',
-                    method.provider.toLowerCase().includes('mtn') ? 'bg-yellow-500' : 'bg-red-500'
-                  )}>
+                  <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-green-600">
                     <Smartphone className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium">{method.provider}</p>
+                    <p className="font-medium">ZengaPay • {method.provider}</p>
                     <p className="text-sm text-muted-foreground">{method.masked_number}</p>
                   </div>
                 </div>
@@ -363,7 +353,7 @@ export default function WalletPage() {
               
               {/* Phone Number */}
               <div>
-                <label className="text-sm font-medium mb-2 block">Mobile Money Number</label>
+                <label className="text-sm font-medium mb-2 block">ZengaPay Mobile Money Number</label>
                 <input
                   type="tel"
                   value={withdrawPhone}
@@ -372,7 +362,7 @@ export default function WalletPage() {
                   className="w-full px-4 py-3 rounded-lg border bg-background"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  MTN or Airtel Money number to receive funds
+                  Enter your MTN or Airtel number. ZengaPay will process the withdrawal.
                 </p>
               </div>
             </div>

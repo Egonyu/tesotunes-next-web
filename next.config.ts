@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "http",
+        hostname: "tesotunes-api.test",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "http",
         hostname: "beta.test",
         pathname: "/storage/**",
       },
@@ -30,21 +35,29 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "ui-avatars.com",
+        pathname: "/api/**",
       },
     ],
   },
 
   // API rewrites for Laravel backend (excluding NextAuth routes)
   async rewrites() {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
     return {
       beforeFiles: [
-        // Exclude NextAuth routes from rewrite
+        // Pin /api/auth/* to the filesystem so the NextAuth route always wins,
+        // even if Turbopack hasn't compiled the route yet
+        {
+          source: "/api/auth/:path*",
+          destination: "/api/auth/:path*",
+        },
       ],
       afterFiles: [
-        // Proxy other API routes to Laravel backend
+        // Proxy all other /api/* routes to the Laravel backend
         {
           source: "/api/:path((?!auth).*)",
-          destination: `${process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com"}/:path*`,
+          destination: `${apiUrl}/:path*`,
         },
       ],
       fallback: [],

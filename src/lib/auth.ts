@@ -3,6 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
 
+// Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
+const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
+
 /**
  * Safely parse JSON from a fetch response.
  * Returns null if the body is empty or not valid JSON.
@@ -20,6 +23,42 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
   }
 }
 
+/**
+ * Fetch fresh user data from the API to refresh role.
+ * Returns null if the request fails (keeps existing role).
+ */
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string } | null> {
+  try {
+    const response = await fetch(`${API_URL}/user/profile`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn("[Auth] Failed to refresh user data, status:", response.status);
+      return null;
+    }
+
+    const data = await safeJsonParse(response);
+    if (!data) return null;
+
+    // Support both { data: {...} } and direct {...} response shapes
+    const user = (data.data as Record<string, unknown>) ?? data;
+    const role = user.role as string;
+
+    if (role) {
+      console.log("[Auth] Refreshed user role:", role);
+      return { role };
+    }
+    return null;
+  } catch (error) {
+    console.warn("[Auth] Error refreshing user data:", error);
+    return null;
+  }
+}
+
 export const authConfig: NextAuthOptions = {
   pages: {
     signIn: "/login",
@@ -27,14 +66,30 @@ export const authConfig: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
+      // Initial sign in - set all user data
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
         token.accessToken = user.accessToken;
+        token.roleRefreshedAt = Date.now();
       }
+
+      // Periodically refresh role from API (every 5 minutes)
+      // This ensures role changes made by admin are reflected without re-login
+      const now = Date.now();
+      const lastRefresh = (token.roleRefreshedAt as number) || 0;
+
+      if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
+        const freshData = await fetchFreshUserData(token.accessToken as string);
+        if (freshData?.role) {
+          token.role = freshData.role;
+        }
+        token.roleRefreshedAt = now;
+      }
+
       return token;
     },
     session({ session, token }) {

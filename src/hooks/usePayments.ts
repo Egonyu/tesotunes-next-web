@@ -190,7 +190,7 @@ export function useDeposit() {
 export interface WithdrawRequest {
   amount: number;
   phone: string;
-  provider: 'mtn_momo' | 'airtel_money';
+  provider: 'mtn_momo' | 'airtel_money' | 'zengapay';
 }
 
 export interface WithdrawResponse {

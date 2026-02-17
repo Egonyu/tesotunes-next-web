@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPut } from '@/lib/api';
 import {
   Camera,
   Link as LinkIcon,
@@ -15,81 +13,71 @@ import {
   MapPin,
   Globe,
   Save,
+  CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface ArtistProfile {
-  id: number;
-  name: string;
-  bio: string;
-  avatar: string;
-  cover_image: string;
-  genre: string;
-  location: string;
-  website: string;
-  twitter: string;
-  instagram: string;
-  youtube: string;
-  spotify: string;
-  monthly_listeners: number;
-  total_plays: number;
-  followers: number;
-}
+import { useArtistProfile, useUpdateArtistProfile } from '@/hooks/useArtist';
 
 export default function ArtistProfilePage() {
-  const queryClient = useQueryClient();
-
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['artist', 'profile'],
-    queryFn: () => apiGet<{ data: ArtistProfile }>('/artist/profile').then(r => r.data),
-  });
+  const { data: profile, isLoading } = useArtistProfile();
+  const updateProfile = useUpdateArtistProfile();
 
   const [formData, setFormData] = useState({
-    name: '',
+    stage_name: '',
     bio: '',
-    genre: '',
-    location: '',
-    website: '',
-    twitter: '',
+    country: '',
+    city: '',
+    website_url: '',
     instagram: '',
+    twitter: '',
     youtube: '',
-    spotify: '',
+    tiktok: '',
   });
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const updateProfile = useMutation({
-    mutationFn: (data: Partial<ArtistProfile>) =>
-      apiPut('/artist/profile', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['artist', 'profile'] });
-      toast.success('Profile updated successfully');
-      setIsEditing(false);
-    },
-    onError: () => {
-      toast.error('Failed to update profile');
-    },
-  });
-
-  const handleEdit = () => {
+  // Populate form when profile loads
+  useEffect(() => {
     if (profile) {
+      const socialLinks = (profile.social_links || {}) as Record<string, string>;
       setFormData({
-        name: profile.name || '',
+        stage_name: profile.stage_name || '',
         bio: profile.bio || '',
-        genre: profile.genre || '',
-        location: profile.location || '',
-        website: profile.website || '',
-        twitter: profile.twitter || '',
-        instagram: profile.instagram || '',
-        youtube: profile.youtube || '',
-        spotify: profile.spotify || '',
+        country: profile.country || '',
+        city: profile.city || '',
+        website_url: profile.website_url || '',
+        instagram: socialLinks.instagram || '',
+        twitter: socialLinks.twitter || '',
+        youtube: socialLinks.youtube || '',
+        tiktok: socialLinks.tiktok || '',
       });
     }
+  }, [profile]);
+
+  const handleEdit = () => {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    updateProfile.mutate(formData);
+  const handleSave = async () => {
+    try {
+      await updateProfile.mutateAsync({
+        stage_name: formData.stage_name,
+        bio: formData.bio,
+        country: formData.country,
+        city: formData.city,
+        website_url: formData.website_url,
+        social_links: {
+          instagram: formData.instagram,
+          twitter: formData.twitter,
+          youtube: formData.youtube,
+          tiktok: formData.tiktok,
+        },
+      });
+      toast.success('Profile updated successfully');
+      setIsEditing(false);
+    } catch {
+      toast.error('Failed to update profile');
+    }
   };
 
   if (isLoading) {
@@ -137,15 +125,15 @@ export default function ArtistProfilePage() {
 
       {/* Cover Image */}
       <div className="relative h-48 rounded-xl overflow-hidden bg-linear-to-r from-primary/20 to-primary/5">
-        {profile?.cover_image && (
-          <Image src={profile.cover_image} alt="Cover" fill className="object-cover" />
+        {profile?.banner && (
+          <Image src={profile.banner} alt="Cover" fill className="object-cover" />
         )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
           <Camera className="h-8 w-8 text-white" />
         </div>
       </div>
 
-      {/* Avatar & Stats */}
+      {/* Avatar & Info */}
       <div className="flex items-end gap-6 -mt-12 ml-6 relative z-10">
         <div className="relative">
           <div className="h-24 w-24 rounded-full border-4 border-background overflow-hidden bg-muted">
@@ -153,17 +141,29 @@ export default function ArtistProfilePage() {
               <Image src={profile.avatar} alt="Avatar" width={96} height={96} className="object-cover" />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-2xl font-bold text-muted-foreground">
-                {profile?.name?.[0] || 'A'}
+                {profile?.stage_name?.[0] || 'A'}
               </div>
             )}
           </div>
         </div>
         <div className="flex-1 pb-1">
-          <h2 className="text-xl font-bold">{profile?.name || 'Artist Name'}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold">{profile?.stage_name || 'Artist Name'}</h2>
+            {profile?.is_verified && (
+              <CheckCircle className="h-5 w-5 text-primary" />
+            )}
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-            <span>{(profile?.followers ?? 0).toLocaleString()} followers</span>
-            <span>{(profile?.monthly_listeners ?? 0).toLocaleString()} monthly listeners</span>
-            <span>{(profile?.total_plays ?? 0).toLocaleString()} total plays</span>
+            {profile?.country && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {profile.city ? `${profile.city}, ` : ''}{profile.country}
+              </span>
+            )}
+            <span className="capitalize">{profile?.verification_status || 'pending'}</span>
+            {profile?.can_upload && (
+              <span className="text-green-600">Upload enabled</span>
+            )}
           </div>
         </div>
       </div>
@@ -174,15 +174,15 @@ export default function ArtistProfilePage() {
           <h3 className="font-semibold border-b pb-2">Basic Information</h3>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Artist Name</label>
+            <label className="block text-sm font-medium mb-1.5">Stage Name</label>
             {isEditing ? (
               <input
-                type="text" value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                type="text" value={formData.stage_name}
+                onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
                 className="w-full px-4 py-2 rounded-lg border bg-background"
               />
             ) : (
-              <p className="text-muted-foreground">{profile?.name || '—'}</p>
+              <p className="text-muted-foreground">{profile?.stage_name || '—'}</p>
             )}
           </div>
 
@@ -202,28 +202,28 @@ export default function ArtistProfilePage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Genre</label>
+              <label className="block text-sm font-medium mb-1.5">Country</label>
               {isEditing ? (
                 <input
-                  type="text" value={formData.genre}
-                  onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                  type="text" value={formData.country}
+                  onChange={(e) => setFormData({...formData, country: e.target.value})}
                   className="w-full px-4 py-2 rounded-lg border bg-background"
                 />
               ) : (
-                <p className="text-muted-foreground">{profile?.genre || '—'}</p>
+                <p className="text-muted-foreground">{profile?.country || '—'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">Location</label>
+              <label className="block text-sm font-medium mb-1.5">City</label>
               {isEditing ? (
                 <input
-                  type="text" value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  type="text" value={formData.city}
+                  onChange={(e) => setFormData({...formData, city: e.target.value})}
                   className="w-full px-4 py-2 rounded-lg border bg-background"
                 />
               ) : (
                 <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />{profile?.location || '—'}
+                  <MapPin className="h-4 w-4" />{profile?.city || '—'}
                 </div>
               )}
             </div>
@@ -234,11 +234,11 @@ export default function ArtistProfilePage() {
           <h3 className="font-semibold border-b pb-2">Social Links</h3>
 
           {[
-            { key: 'website', label: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com' },
-            { key: 'twitter', label: 'Twitter', icon: Twitter, placeholder: '@username' },
+            { key: 'website_url', label: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com' },
+            { key: 'twitter', label: 'Twitter / X', icon: Twitter, placeholder: '@username' },
             { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: '@username' },
             { key: 'youtube', label: 'YouTube', icon: Youtube, placeholder: 'Channel URL' },
-            { key: 'spotify', label: 'Spotify', icon: Music2, placeholder: 'Spotify URL' },
+            { key: 'tiktok', label: 'TikTok', icon: Music2, placeholder: '@username' },
           ].map(({ key, label, icon: Icon, placeholder }) => (
             <div key={key}>
               <label className="block text-sm font-medium mb-1.5">{label}</label>
@@ -247,7 +247,7 @@ export default function ArtistProfilePage() {
                   <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
                   <input
                     type="text"
-                    value={formData[key as keyof typeof formData]}
+                    value={formData[key as keyof typeof formData] || ''}
                     onChange={(e) => setFormData({...formData, [key]: e.target.value})}
                     className="w-full px-4 py-2 rounded-lg border bg-background"
                     placeholder={placeholder}
@@ -256,7 +256,12 @@ export default function ArtistProfilePage() {
               ) : (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Icon className="h-5 w-5 shrink-0" />
-                  <span>{(profile as unknown as Record<string, unknown>)?.[key] as string || '—'}</span>
+                  <span>
+                    {key === 'website_url'
+                      ? profile?.website_url || '—'
+                      : ((profile?.social_links as Record<string, string> | null)?.[key]) || '—'
+                    }
+                  </span>
                 </div>
               )}
             </div>

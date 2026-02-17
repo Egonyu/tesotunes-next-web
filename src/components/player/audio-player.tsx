@@ -44,7 +44,7 @@ export function AudioPlayer() {
   // Start crossfade transition
   const startCrossfade = useCallback(() => {
     if (isCrossfadingRef.current) return;
-    
+
     const nextIndex = queueIndex + 1;
     const nextSong = queue[nextIndex];
     if (!nextSong || !crossfadeAudioRef.current || !audioRef.current) return;
@@ -54,7 +54,7 @@ export function AudioPlayer() {
     const mainAudio = audioRef.current;
 
     // Prepare next track on crossfade element
-    fadeAudio.src = nextSong.stream_url || nextSong.file_url || "";
+    fadeAudio.src = nextSong.audio_url || nextSong.stream_url || nextSong.file_url || "";
     fadeAudio.volume = 0;
     fadeAudio.playbackRate = playbackRate;
     fadeAudio.load();
@@ -131,7 +131,7 @@ export function AudioPlayer() {
       crossfadeAudioRef.current.src = "";
     }
 
-    audioRef.current.src = currentSong.stream_url || currentSong.file_url || "";
+    audioRef.current.src = currentSong.audio_url || currentSong.stream_url || currentSong.file_url || "";
     audioRef.current.volume = effectiveVolume;
     audioRef.current.load();
 

@@ -69,7 +69,7 @@ describe('Artist Application Hooks', () => {
 
       expect(result.current.data?.data).toHaveLength(3);
       expect(result.current.data?.data[0].name).toBe('Afrobeat');
-      expect(mockApiGet).toHaveBeenCalledWith('/artist/available-genres');
+      expect(mockApiGet).toHaveBeenCalledWith('/genres');
     });
   });
 

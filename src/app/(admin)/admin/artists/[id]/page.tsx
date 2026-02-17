@@ -7,12 +7,13 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
-  Edit, Trash2, User, Music, Disc, Eye, ArrowUpRight, 
+import {
+  Edit, Trash2, User, Music, Disc, Eye, ArrowUpRight,
   MapPin, Globe, CheckCircle, Heart, Users, Headphones,
   ExternalLink, Play, Tag
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Song {
   id: string;
@@ -85,23 +86,31 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   const deleteMutation = useMutation({
     mutationFn: () => apiDelete(`/admin/artists/${id}`),
     onSuccess: () => {
+      toast.success('Artist deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
       router.push('/admin/artists');
     },
+    onError: () => toast.error('Failed to delete artist'),
   });
 
   const toggleVerifyMutation = useMutation({
     mutationFn: () => apiPost(`/admin/artists/${id}/toggle-verify`),
     onSuccess: () => {
+      toast.success(a?.is_verified ? 'Artist unverified' : 'Artist verified');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
     },
+    onError: () => toast.error('Failed to toggle verification'),
   });
+
+  const a = artist?.data;
 
   const toggleFeatureMutation = useMutation({
     mutationFn: () => apiPost(`/admin/artists/${id}/toggle-featured`),
     onSuccess: () => {
+      toast.success(a?.is_featured ? 'Removed from featured' : 'Added to featured');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
     },
+    onError: () => toast.error('Failed to toggle featured status'),
   });
 
   if (isLoading) {
@@ -117,7 +126,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  if (!artist?.data) {
+  if (!a) {
     return (
       <div className="text-center py-12">
         <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -128,8 +137,6 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
       </div>
     );
   }
-
-  const a = artist.data;
 
   const socialLinks = [
     { name: 'Spotify', url: a.spotify_url, color: 'bg-green-500' },
@@ -194,7 +201,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-linear-to-t from-black/80 to-transparent">
           <div className="flex items-end gap-6">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl flex-shrink-0">
+            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl shrink-0">
               {a.profile_url ? (
                 <Image
                   src={a.profile_url}
@@ -257,23 +264,23 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Headphones className="h-4 w-4" />
-                <span className="text-sm">Monthly Listeners</span>
+                <span className="text-sm">Total Plays</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(a.monthly_listeners)}</p>
+              <p className="text-2xl font-bold">{formatNumber(a.total_plays)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Music className="h-4 w-4" />
                 <span className="text-sm">Songs</span>
               </div>
-              <p className="text-2xl font-bold">{a.total_songs}</p>
+              <p className="text-2xl font-bold">{a.total_songs ?? 0}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Disc className="h-4 w-4" />
                 <span className="text-sm">Albums</span>
               </div>
-              <p className="text-2xl font-bold">{a.total_albums}</p>
+              <p className="text-2xl font-bold">{a.total_albums ?? 0}</p>
             </div>
           </div>
 
@@ -295,7 +302,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                     <span className="w-6 text-sm text-muted-foreground text-center font-medium">
                       {index + 1}
                     </span>
-                    <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
+                    <div className="relative w-10 h-10 rounded overflow-hidden shrink-0">
                       {song.cover_url ? (
                         <Image src={song.cover_url} alt={song.title} fill className="object-cover" />
                       ) : (
@@ -308,7 +315,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                       </button>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Link 
+                      <Link
                         href={`/admin/songs/${song.id}`}
                         className="font-medium hover:text-primary hover:underline truncate block"
                       >
@@ -390,14 +397,14 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
               </button>
               <Link
                 href={`/admin/songs/new?artist_id=${id}`}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2 block"
+                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2"
               >
                 <Music className="h-4 w-4" />
                 Add Song
               </Link>
               <Link
                 href={`/admin/albums/new?artist_id=${id}`}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2 block"
+                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2"
               >
                 <Disc className="h-4 w-4" />
                 Add Album

@@ -70,11 +70,19 @@ export function useArtist(idOrSlug: string | number) {
   });
 }
 
-export function useArtistSongs(artistId: number, params?: { limit?: number }) {
+export function useArtistSongs(artistId: number, params?: { limit?: number; enabled?: boolean }) {
   return useQuery({
     queryKey: ["artist", artistId, "songs", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>(`/artists/${artistId}/songs`, { params }),
-    enabled: !!artistId,
+    queryFn: () => apiGet<PaginatedResponse<Song>>(`/artists/${artistId}/songs`, { params: { limit: params?.limit } }),
+    enabled: params?.enabled !== false && !!artistId,
+  });
+}
+
+export function usePublicArtistAlbums(artistId: number, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["artist", artistId, "albums"],
+    queryFn: () => apiGet<PaginatedResponse<Album>>(`/artists/${artistId}/albums`),
+    enabled: options?.enabled !== false && !!artistId,
   });
 }
 
@@ -88,7 +96,7 @@ export function usePopularArtists(limit = 12) {
 
 export function useFollowArtist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (artistId: number) => apiPost(`/artists/${artistId}/follow`),
     onSuccess: (_, artistId) => {
@@ -99,7 +107,7 @@ export function useFollowArtist() {
 
 export function useUnfollowArtist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (artistId: number) => apiPost(`/artists/${artistId}/follow`), // Toggle endpoint
     onSuccess: (_, artistId) => {
@@ -199,7 +207,7 @@ export function useUserPlaylists() {
 
 export function useCreatePlaylist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: { name: string; description?: string; is_public?: boolean }) => {
       const res = await apiPost<{ data: Playlist }>("/playlists", data);
@@ -213,7 +221,7 @@ export function useCreatePlaylist() {
 
 export function useAddToPlaylist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
       apiPost(`/playlists/${playlistId}/songs`, { song_id: songId }),
@@ -225,7 +233,7 @@ export function useAddToPlaylist() {
 
 export function useRemoveFromPlaylist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
       apiDelete(`/playlists/${playlistId}/songs/${songId}`),
@@ -271,7 +279,7 @@ export function useLikedSongs(params?: { page?: number; limit?: number }) {
 
 export function useLikeSong() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (songId: number) => apiPost(`/songs/${songId}/like`),
     onSuccess: () => {
@@ -282,7 +290,7 @@ export function useLikeSong() {
 
 export function useUnlikeSong() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (songId: number) => apiDelete(`/songs/${songId}/like`),
     onSuccess: () => {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api';
-import { 
+import {
   Search,
   Plus,
   ChevronLeft,
@@ -16,7 +16,11 @@ import {
   CheckCircle,
   Download,
   Star,
-  Loader2
+  Loader2,
+  ShieldCheck,
+  ShieldX,
+  UserCheck,
+  XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -84,16 +88,35 @@ export default function ArtistsPage() {
     onError: () => toast.error('Failed to verify artist'),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (artistId: number) => apiPost(`/admin/artists/${artistId}/approve`, {}),
+    onSuccess: () => {
+      toast.success('Artist approved');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to approve artist'),
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: (artistId: number) => apiPost(`/admin/artists/${artistId}/suspend`, {}),
+    onSuccess: () => {
+      toast.success('Artist suspended');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to suspend artist'),
+  });
+
   const artists = artistsData?.data || [];
   const meta = artistsData?.meta;
   const stats = statsData?.data;
-  
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
+
+  const formatNumber = (num: number | null | undefined) => {
+    const n = num ?? 0;
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return n.toString();
   };
-  
+
   const statusStyles: Record<string, string> = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
@@ -107,7 +130,7 @@ export default function ArtistsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,7 +147,7 @@ export default function ArtistsPage() {
           Add Artist
         </Link>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -144,7 +167,7 @@ export default function ArtistsPage() {
           <p className="text-sm text-muted-foreground">This Month</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -172,7 +195,7 @@ export default function ArtistsPage() {
           Export
         </button>
       </div>
-      
+
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {artists.length === 0 ? (
@@ -214,14 +237,14 @@ export default function ArtistsPage() {
                 {artist.status}
               </span>
             </div>
-            
+
             <div className="grid grid-cols-4 gap-2 mb-4 text-center">
               <div>
-                <p className="font-semibold">{artist.songs_count}</p>
+                <p className="font-semibold">{artist.songs_count ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Songs</p>
               </div>
               <div>
-                <p className="font-semibold">{artist.albums_count}</p>
+                <p className="font-semibold">{artist.albums_count ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Albums</p>
               </div>
               <div>
@@ -233,7 +256,7 @@ export default function ArtistsPage() {
                 <p className="text-xs text-muted-foreground">Plays</p>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between pt-4 border-t">
               <p className="text-xs text-muted-foreground">
                 Joined {new Date(artist.created_at).toLocaleDateString()}
@@ -242,23 +265,59 @@ export default function ArtistsPage() {
                 <Link
                   href={`/admin/artists/${artist.id}`}
                   className="p-2 hover:bg-muted rounded-lg"
+                  title="View"
                 >
                   <Eye className="h-4 w-4" />
                 </Link>
                 <Link
                   href={`/admin/artists/${artist.id}/edit`}
                   className="p-2 hover:bg-muted rounded-lg"
+                  title="Edit"
                 >
                   <Edit className="h-4 w-4" />
                 </Link>
-                {!artist.is_verified && (
+                {artist.status === 'pending' && (
+                  <button
+                    onClick={() => approveMutation.mutate(artist.id)}
+                    disabled={approveMutation.isPending}
+                    className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg text-green-600 disabled:opacity-50"
+                    title="Approve Artist"
+                  >
+                    <UserCheck className="h-4 w-4" />
+                  </button>
+                )}
+                {!artist.is_verified && artist.status === 'active' && (
                   <button
                     onClick={() => verifyMutation.mutate(artist.id)}
                     disabled={verifyMutation.isPending}
-                    className="p-2 hover:bg-muted rounded-lg text-primary disabled:opacity-50"
-                    title="Verify"
+                    className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg text-blue-600 disabled:opacity-50"
+                    title="Verify Artist"
                   >
-                    <Star className="h-4 w-4" />
+                    <ShieldCheck className="h-4 w-4" />
+                  </button>
+                )}
+                {artist.status !== 'suspended' && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to suspend ${artist.name}?`)) {
+                        suspendMutation.mutate(artist.id);
+                      }
+                    }}
+                    disabled={suspendMutation.isPending}
+                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 disabled:opacity-50"
+                    title="Suspend Artist"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+                {artist.status === 'suspended' && (
+                  <button
+                    onClick={() => approveMutation.mutate(artist.id)}
+                    disabled={approveMutation.isPending}
+                    className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg text-green-600 disabled:opacity-50"
+                    title="Reactivate Artist"
+                  >
+                    <UserCheck className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -266,7 +325,7 @@ export default function ArtistsPage() {
           </div>
         ))}
       </div>
-      
+
       {/* Pagination */}
       {meta && (
         <div className="flex items-center justify-between">
@@ -274,7 +333,7 @@ export default function ArtistsPage() {
             Showing {((meta.current_page - 1) * meta.per_page) + 1}-{Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total.toLocaleString()} artists
           </p>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
@@ -310,7 +369,7 @@ export default function ArtistsPage() {
                 </button>
               </>
             )}
-            <button 
+            <button
               onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
               disabled={currentPage === meta.last_page}
               className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"

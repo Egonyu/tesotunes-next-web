@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
-import { 
+import {
   Search,
   Plus,
   MoreHorizontal,
@@ -27,10 +27,12 @@ import { toast } from 'sonner';
 interface User {
   id: number;
   name: string;
+  full_name?: string;
   email: string;
   username: string;
   role?: 'user' | 'artist' | 'admin' | 'super_admin' | string;
   status?: 'active' | 'inactive' | 'suspended' | 'banned' | string;
+  is_active?: boolean;
   created_at: string;
   last_login_at: string | null;
 }
@@ -102,27 +104,27 @@ export default function UsersPage() {
   const rawUsersData = usersData as Record<string, unknown> | undefined;
   const users: User[] = Array.isArray(usersData?.data)
     ? usersData.data
-    : Array.isArray((rawUsersData?.data as Record<string, unknown>)?.data) 
+    : Array.isArray((rawUsersData?.data as Record<string, unknown>)?.data)
       ? ((rawUsersData?.data as Record<string, unknown>).data as User[])
       : [];
-  const meta = usersData?.meta 
+  const meta = usersData?.meta
     || (rawUsersData?.data as Record<string, unknown>)?.meta as UsersResponse['meta'] | undefined;
   const stats = statsData?.data;
-  
+
   const roleStyles: Record<string, string> = {
     user: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     artist: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
     admin: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     super_admin: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   };
-  
+
   const statusStyles: Record<string, string> = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     inactive: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     suspended: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
     banned: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   };
-  
+
   const toggleSelectAll = () => {
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
@@ -130,7 +132,7 @@ export default function UsersPage() {
       setSelectedUsers(users.map(u => u.id));
     }
   };
-  
+
   const toggleSelect = (id: number) => {
     if (selectedUsers.includes(id)) {
       setSelectedUsers(selectedUsers.filter(u => u !== id));
@@ -155,7 +157,7 @@ export default function UsersPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,7 +174,7 @@ export default function UsersPage() {
           Add User
         </Link>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -211,7 +213,7 @@ export default function UsersPage() {
           Export
         </button>
       </div>
-      
+
       {/* Bulk Actions */}
       {selectedUsers.length > 0 && (
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
@@ -230,7 +232,7 @@ export default function UsersPage() {
           </button>
         </div>
       )}
-      
+
       {/* Table */}
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -336,7 +338,7 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {meta && (
           <div className="flex items-center justify-between p-4 border-t">
@@ -344,7 +346,7 @@ export default function UsersPage() {
               Showing {((meta.current_page - 1) * (meta.per_page || 20)) + 1}-{Math.min(meta.current_page * (meta.per_page || 20), meta.total || 0)} of {(meta.total ?? 0).toLocaleString()} users
             </p>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
@@ -380,7 +382,7 @@ export default function UsersPage() {
                   </button>
                 </>
               )}
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
                 disabled={currentPage === meta.last_page}
                 className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"

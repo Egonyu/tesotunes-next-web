@@ -422,9 +422,9 @@ export default function EventDetailPage({
                             ) : (
                               <>
                                 <p className="font-bold">UGX {(tier.price_ugx || tier.price || 0).toLocaleString()}</p>
-                                {tier.price_credits > 0 && (
+                                {(tier.price_credits ?? 0) > 0 && (
                                   <p className="text-xs text-muted-foreground">
-                                    or {tier.price_credits.toLocaleString()} credits
+                                    or {tier.price_credits?.toLocaleString()} credits
                                   </p>
                                 )}
                               </>

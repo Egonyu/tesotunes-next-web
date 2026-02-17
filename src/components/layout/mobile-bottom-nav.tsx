@@ -21,6 +21,12 @@ import {
   Settings,
   X,
   Compass,
+  LayoutDashboard,
+  Upload,
+  BarChart3,
+  Music,
+  DollarSign,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -149,7 +155,21 @@ export function MobileBottomNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: session } = useSession();
 
+  const userRole = (session?.user as { role?: string } | undefined)?.role || "";
+  // Case-insensitive check for artist role
+  const isArtist = userRole.toLowerCase().includes("artist");
+  const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) => userRole.toLowerCase().includes(r.toLowerCase()));
+
   const closeMenu = () => setMenuOpen(false);
+
+  const artistMenuItems = [
+    { href: "/artist", label: "Artist Dashboard", icon: LayoutDashboard },
+    { href: "/artist/songs", label: "My Songs", icon: Music },
+    { href: "/artist/upload", label: "Upload Music", icon: Upload },
+    { href: "/artist/analytics", label: "Analytics", icon: BarChart3 },
+    { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
+    { href: "/artist/wallet", label: "Wallet", icon: Wallet },
+  ];
 
   return (
     <>
@@ -185,6 +205,20 @@ export function MobileBottomNav() {
 
             {/* Menu Content */}
             <div className="max-h-[60vh] overflow-y-auto px-4 pb-4 space-y-4">
+              {/* Artist Section — shown for artists */}
+              {isArtist && (
+                <div>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
+                    Artist Studio
+                  </h3>
+                  <div className="grid grid-cols-1 gap-0.5">
+                    {artistMenuItems.map((item) => (
+                      <MenuItem key={item.href} {...item} onClick={closeMenu} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Browse Section */}
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
@@ -214,6 +248,19 @@ export function MobileBottomNav() {
                 <div className="grid grid-cols-1 gap-0.5">
                   {session ? (
                     <>
+                      {/* Become an Artist CTA — hidden for artists and admins */}
+                      {!isArtist && !isAdmin && (
+                        <Link
+                          href="/become-artist"
+                          onClick={closeMenu}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white font-semibold text-sm mb-1"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <span>Become an Artist</span>
+                        </Link>
+                      )}
                       <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />
                       <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />
                     </>

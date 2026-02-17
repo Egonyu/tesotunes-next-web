@@ -58,7 +58,7 @@ describe('RegisterPage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 201,
-      json: async () => ({
+      text: async () => JSON.stringify({
         success: true,
         message: 'User registered successfully',
         data: { id: 1, name: 'Test User', email: 'test@test.com', is_artist: false },
@@ -103,7 +103,7 @@ describe('RegisterPage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 422,
-      json: async () => ({
+      text: async () => JSON.stringify({
         success: false,
         message: 'Validation failed',
         errors: {

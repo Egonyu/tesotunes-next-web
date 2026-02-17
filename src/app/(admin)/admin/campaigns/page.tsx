@@ -28,6 +28,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -719,11 +720,24 @@ function CreateCampaignTab({ onCreated }: { onCreated: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error('Campaign name is required');
+      return;
+    }
+    if (!form.start_date || !form.end_date) {
+      toast.error('Start and end dates are required');
+      return;
+    }
+    if (!form.reward_description.trim()) {
+      toast.error('Reward description is required');
+      return;
+    }
     try {
       await createCampaign.mutateAsync(form);
+      toast.success('Campaign created successfully!');
       onCreated();
     } catch {
-      // Error handled by mutation
+      toast.error('Failed to create campaign. Please try again.');
     }
   };
 

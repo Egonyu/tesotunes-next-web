@@ -165,9 +165,9 @@ export function useArtistDashboard() {
 // Songs Hooks
 // ============================================================================
 
-export function useMyArtistSongs(params?: { 
-  status?: string; 
-  search?: string; 
+export function useMyArtistSongs(params?: {
+  status?: string;
+  search?: string;
   page?: number;
   per_page?: number;
   sort?: string;
@@ -230,9 +230,9 @@ export function useRequestWithdrawal() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { 
-      amount: number; 
-      payment_method: 'mtn_momo' | 'airtel_money' | 'bank_transfer';
+    mutationFn: (data: {
+      amount: number;
+      payment_method: 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay';
       phone_number?: string;
     }) => apiPost<{ message: string }>("/artist/earnings/withdraw", data),
     onSuccess: () => {
@@ -259,14 +259,17 @@ export function useArtistAnalytics(period: number = 30) {
 // Albums Hook
 // ============================================================================
 
-export function useArtistAlbums(params?: { page?: number; per_page?: number }) {
+export function useArtistAlbums(params?: { page?: number; per_page?: number; enabled?: boolean }) {
+  const enabled = params?.enabled !== false;
   return useQuery({
     queryKey: ["artist", "albums", params],
-    queryFn: () => apiGet<{ 
+    queryFn: () => apiGet<{
       data: Array<{ id: number; title: string; artwork: string | null; songs_count: number }>;
       pagination: { current_page: number; last_page: number; per_page: number; total: number };
-    }>("/artist/albums", { params }),
+    }>("/artist/albums", { params: { page: params?.page, per_page: params?.per_page } }),
     staleTime: 60 * 1000,
+    enabled,
+    retry: false,
   });
 }
 
@@ -274,11 +277,13 @@ export function useArtistAlbums(params?: { page?: number; per_page?: number }) {
 // Profile Hooks
 // ============================================================================
 
-export function useArtistProfile() {
+export function useArtistProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["artist", "profile"],
     queryFn: () => apiGet<{ data: ArtistProfile }>("/artist/profile")
       .then(res => res.data),
+    enabled: options?.enabled !== false,
+    retry: false, // Don't retry on auth failures
   });
 }
 
@@ -338,11 +343,11 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
       const formData = new FormData();
-      
+
       // Required fields - map to backend field names
       formData.append('title', data.title);
       formData.append('audio', data.audio_file); // Backend expects 'audio'
-      
+
       // Optional fields - map to backend field names
       if (data.cover_image) formData.append('cover', data.cover_image); // Backend expects 'cover'
       if (data.album_id) formData.append('album_id', String(data.album_id));
@@ -352,7 +357,12 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       if (data.release_date) formData.append('release_date', data.release_date);
       if (data.price !== undefined) formData.append('price', String(data.price));
       if (data.is_explicit !== undefined) formData.append('is_explicit', data.is_explicit ? '1' : '0');
-      
+      if (data.description) formData.append('description', data.description);
+      if (data.composer) formData.append('composer', data.composer);
+      if (data.producer) formData.append('producer', data.producer);
+      if (data.is_downloadable !== undefined) formData.append('is_downloadable', data.is_downloadable ? '1' : '0');
+      if (data.is_free !== undefined) formData.append('is_free', data.is_free ? '1' : '0');
+
       return apiPostForm<UploadSongResponse>('/artist/songs', formData, {
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
@@ -393,7 +403,7 @@ export function useCreateAlbum() {
       if (data.cover_image) formData.append('cover_image', data.cover_image);
       if (data.description) formData.append('description', data.description);
       if (data.release_date) formData.append('release_date', data.release_date);
-      
+
       return apiPostForm<{ message: string; data: { id: number; title: string } }>('/artist/albums', formData);
     },
     onSuccess: () => {

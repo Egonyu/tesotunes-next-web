@@ -16,16 +16,32 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface Artist {
+  id: number;
+  name: string;
+  slug: string;
+  avatar_url?: string;
+}
+
+interface Album {
+  id: number;
+  title: string;
+  slug: string;
+  artwork_url?: string;
+}
+
 interface Song {
   id: number;
   title: string;
-  artist: string;
+  artist: string | Artist;
   artist_id: number;
-  album: string;
-  cover_image: string;
+  album?: string | Album;
+  artwork_url?: string;
+  cover_image?: string;
   duration: number;
   plays: number;
   released_at: string;
+  created_at?: string;
 }
 
 export default function NewReleasesPage() {
@@ -94,8 +110,8 @@ export default function NewReleasesPage() {
               </button>
 
               <div className="relative h-12 w-12 rounded-md overflow-hidden bg-muted shrink-0">
-                {song.cover_image ? (
-                  <Image src={song.cover_image} alt={song.title} fill className="object-cover" />
+                {(song.artwork_url || song.cover_image) ? (
+                  <Image src={song.artwork_url || song.cover_image || ''} alt={song.title} fill className="object-cover" unoptimized />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
                     <Disc3 className="h-6 w-6 text-muted-foreground" />
@@ -105,10 +121,14 @@ export default function NewReleasesPage() {
 
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{song.title}</p>
-                <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {typeof song.artist === 'object' ? song.artist.name : song.artist}
+                </p>
               </div>
 
-              <span className="text-sm text-muted-foreground hidden md:block">{song.album}</span>
+              <span className="text-sm text-muted-foreground hidden md:block">
+                {song.album ? (typeof song.album === 'object' ? song.album.title : song.album) : '-'}
+              </span>
 
               <span className="text-xs text-muted-foreground hidden lg:block">
                 {new Date(song.released_at).toLocaleDateString()}

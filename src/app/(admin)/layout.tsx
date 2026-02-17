@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { 
+import {
   LayoutDashboard,
   Users,
   Music,
@@ -30,9 +30,11 @@ import {
   Flag,
   Percent,
   BarChart3,
+  Trophy,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 
 const ADMIN_ROLES = ['Super Admin', 'Admin', 'admin', 'super_admin'];
 
@@ -46,6 +48,7 @@ const navItems = [
   { href: '/admin/store', label: 'Store', icon: ShoppingBag },
   { href: '/admin/store/promotions', label: 'Promotions', icon: Percent },
   { href: '/admin/events', label: 'Events', icon: Calendar },
+  { href: '/admin/awards', label: 'Awards', icon: Trophy },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/admin/sacco', label: 'SACCO', icon: CreditCard },
   { href: '/admin/forums', label: 'Forums', icon: MessageSquare },
@@ -92,7 +95,7 @@ export default function AdminLayout({
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Mobile Header */}
@@ -105,15 +108,15 @@ export default function AdminLayout({
           <Bell className="h-5 w-5" />
         </button>
       </header>
-      
+
       {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/50 z-50"
           onClick={() => setMobileOpen(false)}
         />
       )}
-      
+
       {/* Sidebar */}
       <aside className={cn(
         'fixed top-0 left-0 h-full bg-background border-r z-50 transition-all duration-300',
@@ -123,7 +126,7 @@ export default function AdminLayout({
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b">
           {!collapsed && <span className="font-bold text-lg">Admin Panel</span>}
-          <button 
+          <button
             onClick={() => {
               setCollapsed(!collapsed);
               setMobileOpen(false);
@@ -133,14 +136,14 @@ export default function AdminLayout({
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
-        
+
         {/* Navigation */}
         <nav className="p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || 
+            const isActive = pathname === item.href ||
               (item.href !== '/admin' && pathname.startsWith(item.href));
-            
+
             return (
               <Link
                 key={item.href}
@@ -161,7 +164,7 @@ export default function AdminLayout({
             );
           })}
         </nav>
-        
+
         {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-2 border-t bg-background">
           <Link
@@ -176,7 +179,7 @@ export default function AdminLayout({
           </Link>
         </div>
       </aside>
-      
+
       {/* Main Content */}
       <main className={cn(
         'min-h-screen transition-all duration-300 pt-16 lg:pt-0',
@@ -206,12 +209,17 @@ export default function AdminLayout({
             </div>
           </div>
         </header>
-        
+
         {/* Page Content */}
-        <div className="p-6">
+        <div className="p-6 pb-28">
           {children}
         </div>
       </main>
+
+      {/* Audio Player */}
+      <AudioPlayer />
+      <PlayerBar />
+      <FullScreenPlayer />
     </div>
   );
 }

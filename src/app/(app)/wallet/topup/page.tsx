@@ -16,16 +16,13 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useDeposit, usePaymentStatus, detectProvider, formatPhoneNumber } from '@/hooks/usePayments';
+import { useDeposit, usePaymentStatus, formatPhoneNumber } from '@/hooks/usePayments';
 import { toast } from 'sonner';
-
-type PaymentMethod = 'mtn' | 'airtel' | 'card';
 
 export default function TopUpPage() {
   const router = useRouter();
   const [amount, setAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mtn');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'input' | 'processing' | 'success' | 'failed'>('input');
@@ -34,33 +31,12 @@ export default function TopUpPage() {
   const depositMutation = useDeposit();
   
   // Hook for polling payment status
-  const { data: paymentStatus, refetch: refetchStatus } = usePaymentStatus(transactionRef || '', {
+  const { data: paymentStatus } = usePaymentStatus(transactionRef || '', {
     enabled: !!transactionRef && paymentStep === 'processing',
     refetchInterval: transactionRef && paymentStep === 'processing' ? 3000 : undefined,
   });
   
   const presetAmounts = [5000, 10000, 20000, 50000, 100000, 200000];
-  
-  const paymentMethods = [
-    { 
-      id: 'mtn' as PaymentMethod, 
-      name: 'MTN MoMo', 
-      color: 'bg-yellow-500',
-      description: 'Pay with MTN Mobile Money'
-    },
-    { 
-      id: 'airtel' as PaymentMethod, 
-      name: 'Airtel Money', 
-      color: 'bg-red-500',
-      description: 'Pay with Airtel Money'
-    },
-    { 
-      id: 'card' as PaymentMethod, 
-      name: 'Card', 
-      color: 'bg-blue-500',
-      description: 'Visa, Mastercard, etc.'
-    },
-  ];
   
   const handleAmountSelect = (value: number) => {
     setAmount(value);
@@ -73,19 +49,11 @@ export default function TopUpPage() {
     setAmount(numValue || null);
   };
   
-  // Validate phone number for mobile money
+  // Validate phone number
   const validatePhone = () => {
-    if (paymentMethod === 'card') return true;
     const cleaned = phoneNumber.replace(/\D/g, '');
     if (cleaned.length < 9) {
       toast.error('Please enter a valid phone number');
-      return false;
-    }
-    const detected = detectProvider(cleaned);
-    // Map page payment method to detected provider format
-    const expectedProvider = paymentMethod === 'mtn' ? 'mtn_momo' : paymentMethod === 'airtel' ? 'airtel_money' : null;
-    if (detected !== expectedProvider && detected !== 'unknown') {
-      toast.error(`This phone number appears to be ${detected === 'mtn_momo' ? 'MTN' : 'Airtel'}. Please use the correct payment method.`);
       return false;
     }
     return true;
@@ -113,19 +81,18 @@ export default function TopUpPage() {
     setPaymentStep('processing');
     
     try {
-      const formattedPhone = paymentMethod !== 'card' ? formatPhoneNumber(phoneNumber) : undefined;
+      const formattedPhone = formatPhoneNumber(phoneNumber);
       
       const result = await depositMutation.mutateAsync({
         amount,
         phone: formattedPhone,
-        provider: paymentMethod,
+        provider: 'zengapay',
       });
       
       if (result.transaction_ref) {
         setTransactionRef(result.transaction_ref);
         toast.info('Please check your phone to confirm the payment');
       } else {
-        // For card payments or immediate success
         setPaymentStep('success');
         toast.success('Payment initiated successfully!');
       }
@@ -280,60 +247,37 @@ export default function TopUpPage() {
         </p>
       </div>
       
-      {/* Payment Method */}
+      {/* Payment via ZengaPay */}
       <div className="p-6 rounded-xl border bg-card">
         <h2 className="font-semibold mb-4">Payment Method</h2>
-        <div className="space-y-3">
-          {paymentMethods.map((method) => (
-            <button
-              key={method.id}
-              onClick={() => setPaymentMethod(method.id)}
-              className={cn(
-                'w-full flex items-center justify-between p-4 rounded-lg border transition-colors',
-                paymentMethod === method.id
-                  ? 'border-primary bg-primary/5'
-                  : 'hover:bg-muted'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center text-white', method.color)}>
-                  {method.id === 'card' ? (
-                    <CreditCard className="h-5 w-5" />
-                  ) : (
-                    <Smartphone className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium">{method.name}</p>
-                  <p className="text-sm text-muted-foreground">{method.description}</p>
-                </div>
-              </div>
-              {paymentMethod === method.id && (
-                <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <Check className="h-4 w-4" />
-                </div>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-primary bg-primary/5">
+          <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white bg-green-600">
+            <Smartphone className="h-5 w-5" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="font-medium">ZengaPay Mobile Money</p>
+            <p className="text-sm text-muted-foreground">Pay via MTN MoMo or Airtel Money</p>
+          </div>
+          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+            <Check className="h-4 w-4" />
+          </div>
         </div>
       </div>
       
-      {/* Phone Number (for Mobile Money) */}
-      {(paymentMethod === 'mtn' || paymentMethod === 'airtel') && (
-        <div className="p-6 rounded-xl border bg-card">
-          <h2 className="font-semibold mb-4">Phone Number</h2>
-          <input
-            type="tel"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            placeholder="e.g., 0772123456"
-            className="w-full px-4 py-3 rounded-lg border bg-background"
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            You will receive a prompt on this number to confirm payment
-          </p>
-        </div>
-      )}
+      {/* Phone Number */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h2 className="font-semibold mb-4">Phone Number</h2>
+        <input
+          type="tel"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          placeholder="e.g., 0772123456"
+          className="w-full px-4 py-3 rounded-lg border bg-background"
+        />
+        <p className="text-xs text-muted-foreground mt-2">
+          Enter your MTN or Airtel number. You will receive a prompt to confirm payment.
+        </p>
+      </div>
       
       {/* Summary */}
       {selectedAmount > 0 && (

@@ -91,7 +91,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  
+
   const [formData, setFormData] = useState<ArtistFormData>({
     name: '',
     slug: '',
@@ -190,11 +190,12 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       return apiPostForm(`/admin/artists/${id}`, data);
     },
     onSuccess: () => {
+      toast.success('Artist updated successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
       router.push(`/admin/artists/${id}`);
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]> } } }) => {
+    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         Object.entries(error.response.data.errors).forEach(([key, messages]) => {
@@ -202,6 +203,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         });
         setErrors(newErrors);
       }
+      toast.error(error.response?.data?.message || 'Failed to update artist');
     },
   });
 
@@ -209,7 +211,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     mutationFn: async (data: Partial<UserFormData>) => {
       const userId = artist?.data?.user_id || artist?.data?.user?.id;
       if (!userId) throw new Error('No linked user account found');
-      
+
       // Build payload — only include password fields if a new password was entered
       const payload: Record<string, string> = {
         name: data.name || '',
@@ -294,9 +296,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
-    data.append('_method', 'PUT');
     data.append('name', formData.name);
     data.append('slug', formData.slug);
     data.append('bio', formData.bio);
@@ -316,12 +317,12 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     data.append('is_featured', formData.is_featured ? '1' : '0');
     data.append('meta_title', formData.meta_title);
     data.append('meta_description', formData.meta_description);
-    
+
     formData.genre_ids.forEach(gid => data.append('genre_ids[]', gid));
-    
+
     if (formData.profile_image) data.append('profile_image', formData.profile_image);
     if (formData.cover_image) data.append('cover_image', formData.cover_image);
-    
+
     updateMutation.mutate(data);
   };
 

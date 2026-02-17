@@ -1,16 +1,16 @@
 'use client';
 
-import { use } from 'react';
+import { use, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { 
-  Edit, Trash2, Music, Play, Pause, Eye, ArrowUpRight, 
+import {
+  Edit, Trash2, Music, Play, Pause, Eye, ArrowUpRight,
   Calendar, TrendingUp, Clock, Disc, User, Tag, Heart,
-  Download, Share2, BarChart2, Headphones
+  Download, Share2, BarChart2, Headphones, Volume2, VolumeX
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 
@@ -18,29 +18,33 @@ interface Song {
   id: string;
   title: string;
   slug: string;
-  description: string;
-  duration: number;
-  plays: number;
-  downloads: number;
-  likes: number;
-  shares: number;
-  explicit: boolean;
-  lyrics: string;
-  isrc: string;
-  bpm: number;
-  key: string;
-  track_number: number;
-  disc_number: number;
-  release_date: string;
+  description?: string;
+  duration_seconds?: number;
+  duration?: number;
+  play_count?: number;
+  download_count?: number;
+  like_count?: number;
+  share_count?: number;
+  is_explicit?: boolean;
+  explicit?: boolean;
+  lyrics?: string;
+  isrc?: string;
+  bpm?: number;
+  key?: string;
+  track_number?: number;
+  disc_number?: number;
+  release_date?: string;
   status: string;
-  is_featured: boolean;
-  cover_url: string;
-  audio_url: string;
-  artist: { id: string; name: string; slug: string };
-  featured_artists: { id: string; name: string; slug: string }[];
-  album?: { id: string; title: string; slug: string; cover_url: string };
-  genres: { id: string; name: string }[];
-  credits: { role: string; name: string }[];
+  is_featured?: boolean;
+  artwork_url?: string;
+  cover_url?: string;
+  audio_url?: string;
+  artist: { id: string; name: string; slug: string; avatar_url?: string };
+  featured_artists?: { id: string; name: string; slug: string }[];
+  album?: { id: string; title: string; slug: string; artwork_url?: string; cover_url?: string };
+  genre?: { id: string; name: string; slug?: string };
+  genres?: { id: string; name: string }[];
+  credits?: { role: string; name: string }[];
   created_at: string;
   updated_at: string;
 }
@@ -56,7 +60,8 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-function formatNumber(num: number): string {
+function formatNumber(num: number | null | undefined): string {
+  if (num == null) return '0';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
@@ -68,6 +73,11 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const { data: song, isLoading } = useQuery({
     queryKey: ['admin', 'song', id],
@@ -127,8 +137,56 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
 
   const s = song.data;
 
+  const togglePlay = () => {
+    if (!audioRef.current || !s.audio_url) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Hidden Audio Element */}
+      {s.audio_url && (
+        <audio
+          ref={audioRef}
+          src={s.audio_url}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => setIsPlaying(false)}
+          preload="metadata"
+        />
+      )}
       <PageHeader
         title={s.title}
         description={`by ${s.artist.name}`}
@@ -173,34 +231,37 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
           <div className="rounded-xl border bg-card p-6">
             <div className="flex gap-6">
               <div className="relative w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden">
-                {s.cover_url ? (
+                {(s.artwork_url || s.cover_url) ? (
                   <Image
-                    src={s.cover_url}
+                    src={s.artwork_url || s.cover_url || ''}
                     alt={s.title}
                     fill
                     className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
                     <Music className="h-12 w-12 text-muted-foreground" />
                   </div>
                 )}
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                >
-                  {isPlaying ? (
-                    <Pause className="h-12 w-12 text-white" fill="white" />
-                  ) : (
-                    <Play className="h-12 w-12 text-white" fill="white" />
-                  )}
-                </button>
+                {s.audio_url && (
+                  <button
+                    onClick={togglePlay}
+                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-12 w-12 text-white" fill="white" />
+                    ) : (
+                      <Play className="h-12 w-12 text-white" fill="white" />
+                    )}
+                  </button>
+                )}
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <StatusBadge status={s.status} />
-                  {s.explicit && (
+                  {(s.is_explicit || s.explicit) && (
                     <span className="px-2 py-0.5 text-xs font-medium bg-gray-200 dark:bg-gray-800 rounded">
                       EXPLICIT
                     </span>
@@ -211,9 +272,9 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                     </span>
                   )}
                 </div>
-                
+
                 <h2 className="text-2xl font-bold mb-1">{s.title}</h2>
-                
+
                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                   <Link href={`/admin/artists/${s.artist.id}`} className="hover:text-primary hover:underline">
                     {s.artist.name}
@@ -232,11 +293,11 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                     </>
                   )}
                 </div>
-                
+
                 <div className="flex items-center gap-6 text-sm">
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDuration(s.duration)}</span>
+                    <span>{formatDuration(s.duration_seconds || s.duration || 0)}</span>
                   </div>
                   {s.album && (
                     <div className="flex items-center gap-1.5">
@@ -246,14 +307,57 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                       </Link>
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{new Date(s.release_date).toLocaleDateString()}</span>
-                  </div>
+                  {s.release_date && (
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>{new Date(s.release_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Inline Audio Player */}
+          {s.audio_url && (
+            <div className="rounded-xl border bg-card p-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={togglePlay}
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  {isPlaying ? (
+                    <Pause className="h-5 w-5" />
+                  ) : (
+                    <Play className="h-5 w-5 ml-0.5" />
+                  )}
+                </button>
+
+                <div className="flex-1 space-y-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={duration || 100}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{formatDuration(Math.floor(currentTime))}</span>
+                    <span>{formatDuration(Math.floor(duration || s.duration_seconds || s.duration || 0))}</span>
+                  </div>
+                </div>
+
+                <button onClick={toggleMute} className="p-2 hover:bg-muted rounded-lg">
+                  {isMuted ? (
+                    <VolumeX className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <Volume2 className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -262,28 +366,28 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                 <Headphones className="h-4 w-4" />
                 <span className="text-sm">Plays</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(s.plays)}</p>
+              <p className="text-2xl font-bold">{formatNumber(s.play_count)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Heart className="h-4 w-4" />
                 <span className="text-sm">Likes</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(s.likes)}</p>
+              <p className="text-2xl font-bold">{formatNumber(s.like_count)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Download className="h-4 w-4" />
                 <span className="text-sm">Downloads</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(s.downloads)}</p>
+              <p className="text-2xl font-bold">{formatNumber(s.download_count)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Share2 className="h-4 w-4" />
                 <span className="text-sm">Shares</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(s.shares)}</p>
+              <p className="text-2xl font-bold">{formatNumber(s.share_count)}</p>
             </div>
           </div>
 
@@ -302,8 +406,8 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                     <div
                       key={i}
                       className="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors rounded-t"
-                      style={{ 
-                        height: `${Math.max(10, (day.plays / Math.max(...playHistory.data.map(d => d.plays))) * 100)}%` 
+                      style={{
+                        height: `${Math.max(10, (day.plays / Math.max(...playHistory.data.map(d => d.plays))) * 100)}%`
                       }}
                       title={`${day.date}: ${day.plays} plays`}
                     />

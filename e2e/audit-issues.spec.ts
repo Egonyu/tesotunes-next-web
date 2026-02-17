@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Music App Audit - Find Issues', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test
-    await page.goto('/user/login');
+    await page.goto('/login');
     await page.fill('input#email', 'user@test.com');
     await page.fill('input#password', 'password');
     await page.click('button[type="submit"]:has-text("Sign In")');
@@ -241,11 +241,11 @@ test.describe('Music App Audit - Find Issues', () => {
     }
 
     // Test that logged-in users are redirected from login page
-    await page.goto('/user/login');
+    await page.goto('/login');
     await page.waitForTimeout(1000);
 
     const currentUrl = page.url();
-    if (currentUrl.includes('/user/login')) {
+    if (currentUrl.includes('/login')) {
       console.log('🔴 ISSUE: Logged-in user not redirected from login page');
     } else {
       console.log('✅ Logged-in users correctly redirected from login page');
@@ -258,7 +258,7 @@ test.describe('Music App Audit - Find Issues', () => {
       await page.waitForTimeout(1000);
 
       // Now test login validation
-      await page.goto('/user/login');
+      await page.goto('/login');
       await page.click('button[type="submit"]:has-text("Sign In")'); // Try empty login
       await page.waitForTimeout(1000);
 

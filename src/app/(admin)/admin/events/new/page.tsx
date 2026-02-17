@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPostForm } from '@/lib/api';
 import { toast } from 'sonner';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
-import { Upload, X, Calendar, Plus, Trash2 } from 'lucide-react';
+import { Upload, X, Calendar, Plus, Trash2, Search, Loader2, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
 interface TicketTier {
@@ -80,6 +80,7 @@ const initialFormData: EventFormData = {
 interface Artist {
   id: string;
   name: string;
+  avatar_url?: string;
 }
 
 export default function CreateEventPage() {
@@ -88,10 +89,18 @@ export default function CreateEventPage() {
   const [formData, setFormData] = useState<EventFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [artistSearch, setArtistSearch] = useState('');
 
-  const { data: artistsData } = useQuery({
-    queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
+  const { data: artistsData, isLoading: artistsLoading } = useQuery({
+    queryKey: ['admin', 'artists-select', artistSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('per_page', '50');
+      if (artistSearch) params.set('search', artistSearch);
+      const res = await apiGet<{ data: Artist[] } | Artist[]>(`/admin/artists?${params.toString()}`);
+      // Handle both { data: [...] } and direct array responses
+      return Array.isArray(res) ? res : (res.data || []);
+    },
   });
 
   const createMutation = useMutation({
@@ -115,12 +124,12 @@ export default function CreateEventPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     // Auto-generate slug
     if (name === 'title') {
       const slug = value.toLowerCase()
@@ -129,7 +138,7 @@ export default function CreateEventPage() {
         .replace(/-+/g, '-');
       setFormData(prev => ({ ...prev, slug }));
     }
-    
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -184,27 +193,56 @@ export default function CreateEventPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Client-side validation
+    if (!formData.title.trim()) {
+      toast.error('Event title is required');
+      return;
+    }
+    if (!formData.start_date) {
+      toast.error('Start date is required');
+      return;
+    }
+    if (!formData.start_time) {
+      toast.error('Start time is required');
+      return;
+    }
+
     const data = new FormData();
-    
+
+    // Map frontend field names to backend field names
+    const fieldMap: Record<string, string> = {
+      is_online: 'is_virtual',
+      online_url: 'virtual_link',
+      max_capacity: 'attendee_limit',
+    };
+
     Object.entries(formData).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
-      
+
+      const backendKey = fieldMap[key] || key;
+
       if (key === 'artist_ids') {
-        (value as string[]).forEach((id, index) => {
-          data.append(`artist_ids[${index}]`, id);
-        });
+        const ids = value as string[];
+        if (ids.length > 0) {
+          ids.forEach((id, index) => {
+            data.append(`artist_ids[${index}]`, id);
+          });
+        }
       } else if (key === 'ticket_tiers') {
-        data.append('ticket_tiers', JSON.stringify(value));
+        const tiers = value as TicketTier[];
+        if (tiers.length > 0) {
+          data.append('ticket_tiers', JSON.stringify(tiers));
+        }
       } else if (typeof value === 'boolean') {
-        data.append(key, value ? '1' : '0');
+        data.append(backendKey, value ? '1' : '0');
       } else if (value instanceof File) {
-        data.append(key, value);
-      } else {
-        data.append(key, String(value));
+        data.append(backendKey, value);
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        data.append(backendKey, value);
       }
     });
-    
+
     createMutation.mutate(data);
   };
 
@@ -243,7 +281,7 @@ export default function CreateEventPage() {
               placeholder="summer-music-festival-2024"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Event Type</label>
@@ -327,7 +365,7 @@ export default function CreateEventPage() {
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="End Date"
@@ -346,7 +384,7 @@ export default function CreateEventPage() {
               error={errors.end_time}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Timezone</label>
@@ -411,7 +449,7 @@ export default function CreateEventPage() {
                   placeholder="123 Main Street"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   label="City"
@@ -478,27 +516,85 @@ export default function CreateEventPage() {
           </div>
         </FormSection>
 
-        <FormSection title="Performing Artists" description="Artists appearing at this event">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {artistsData?.data?.map((artist) => (
-              <button
-                key={artist.id}
-                type="button"
-                onClick={() => handleArtistToggle(artist.id)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  formData.artist_ids.includes(artist.id)
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background hover:bg-muted'
-                }`}
-              >
-                {artist.name}
-              </button>
-            ))}
+        <FormSection title="Performing Artists" description="Search and select artists appearing at this event">
+          {/* Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              placeholder="Search artists by name..."
+              className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
           </div>
+
+          {/* Selected artists */}
           {formData.artist_ids.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {formData.artist_ids.length} artist(s) selected
-            </p>
+            <div className="mb-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Selected ({formData.artist_ids.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {formData.artist_ids.map((id) => {
+                  const artist = (artistsData || []).find((a) => a.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-primary text-primary-foreground"
+                    >
+                      <CheckCircle className="h-3 w-3" />
+                      {artist?.name || `Artist #${id}`}
+                      <button
+                        type="button"
+                        onClick={() => handleArtistToggle(id)}
+                        className="ml-1 hover:text-primary-foreground/80"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Artist list */}
+          {artistsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (artistsData || []).length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg border p-2">
+              {(artistsData || []).map((artist) => {
+                const isSelected = formData.artist_ids.includes(artist.id);
+                return (
+                  <button
+                    key={artist.id}
+                    type="button"
+                    onClick={() => handleArtistToggle(artist.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      isSelected
+                        ? 'bg-primary/10 border border-primary text-primary font-medium'
+                        : 'hover:bg-muted border border-transparent'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+                    }`}>
+                      {isSelected && <CheckCircle className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    {artist.name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground border rounded-lg">
+              <p className="text-sm">
+                {artistSearch
+                  ? `No artists found for "${artistSearch}"`
+                  : 'No artists available. Add artists first.'}
+              </p>
+            </div>
           )}
         </FormSection>
 

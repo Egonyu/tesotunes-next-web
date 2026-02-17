@@ -13,7 +13,13 @@ import {
   Eye,
   Clock,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  Calendar,
+  BarChart3,
+  Disc3,
+  Megaphone,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistDashboard } from '@/hooks/useArtist';
@@ -24,6 +30,16 @@ const iconMap: Record<string, React.ElementType> = {
   'Followers': Users,
   'Earnings': DollarSign,
 };
+
+/** Quick action cards for artist sidebar */
+const quickActions = [
+  { href: '/artist/upload', label: 'Upload Song', description: 'Release new music', icon: Upload, color: 'from-primary to-purple-600' },
+  { href: '/artist/wallet', label: 'Wallet', description: 'Balance & top-up', icon: Wallet, color: 'from-green-500 to-emerald-600' },
+  { href: '/artist/earnings', label: 'Earnings', description: 'Revenue & withdrawals', icon: DollarSign, color: 'from-amber-500 to-orange-600' },
+  { href: '/artist/events', label: 'Events', description: 'Manage your events', icon: Calendar, color: 'from-blue-500 to-cyan-600' },
+  { href: '/artist/analytics', label: 'Analytics', description: 'Track performance', icon: BarChart3, color: 'from-pink-500 to-rose-600' },
+  { href: '/artist/albums', label: 'Albums', description: 'Create & manage', icon: Disc3, color: 'from-indigo-500 to-violet-600' },
+];
 
 export default function ArtistDashboardPage() {
   const { data: dashboard, isLoading, error } = useArtistDashboard();
@@ -107,6 +123,37 @@ export default function ArtistDashboardPage() {
         })}
       </div>
       
+      {/* Quick Actions */}
+      <div>
+        <h2 className="font-semibold mb-3">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group relative p-4 rounded-xl border bg-card hover:shadow-md transition-all overflow-hidden"
+              >
+                <div className={cn(
+                  'absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-gradient-to-br',
+                  action.color
+                )} />
+                <div className={cn(
+                  'p-2 rounded-lg bg-gradient-to-br w-fit mb-2',
+                  action.color
+                )}>
+                  <Icon className="h-4 w-4 text-white" />
+                </div>
+                <p className="font-medium text-sm">{action.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{action.description}</p>
+                <ArrowRight className="h-3 w-3 absolute top-3 right-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Charts & Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Plays Chart */}

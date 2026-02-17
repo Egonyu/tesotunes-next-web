@@ -22,11 +22,11 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  
+
   return (
     <div className="container max-w-6xl py-8">
       <h1 className="text-3xl font-bold mb-8">Settings</h1>
-      
+
       <div className="flex flex-col md:flex-row gap-8">
         {/* Settings Navigation */}
         <aside className="w-full md:w-64 flex-shrink-0">
@@ -34,7 +34,7 @@ export default function SettingsLayout({
             {settingsNav.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
-              
+
               return (
                 <Link
                   key={item.href}
@@ -51,7 +51,7 @@ export default function SettingsLayout({
                 </Link>
               );
             })}
-            
+
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors w-full mt-4"
@@ -61,7 +61,7 @@ export default function SettingsLayout({
             </button>
           </nav>
         </aside>
-        
+
         {/* Settings Content */}
         <main className="flex-1 min-w-0">
           <div className="bg-card rounded-xl border p-6">

@@ -31,6 +31,7 @@ interface SongDetail {
   title: string;
   slug: string;
   duration: number;
+  duration_seconds?: number;
   play_count: number;
   release_date: string;
   cover_url: string | null;
@@ -73,6 +74,7 @@ interface SongDetail {
     slug: string;
     cover_url: string | null;
     duration: number;
+    duration_seconds?: number;
     artist: {
       name: string;
       slug: string;
@@ -196,7 +198,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 <p className="text-sm text-muted-foreground">Plays</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatDuration(song.duration)}</p>
+                <p className="text-2xl font-bold">{formatDuration(song.duration_seconds || song.duration || 0)}</p>
                 <p className="text-sm text-muted-foreground">Duration</p>
               </div>
             </div>

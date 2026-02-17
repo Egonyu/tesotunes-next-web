@@ -129,7 +129,7 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
               )}
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-muted-foreground">
-                  {formatDuration(song.duration || 0)}
+                  {formatDuration(song.duration_seconds || song.duration || 0)}
                 </span>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button className="p-1 hover:text-primary">

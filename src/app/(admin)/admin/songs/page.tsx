@@ -33,6 +33,7 @@ interface Song {
   album: { id: number; title: string } | null;
   artwork_url: string | null;
   duration: number;
+  duration_seconds?: number;
   plays_count: number | null;
   status: string;
   created_at: string;
@@ -329,7 +330,7 @@ export default function SongsPage() {
                     </div>
                   </td>
                   <td className="p-4 text-sm">{song.artist?.name || 'Unknown'}</td>
-                  <td className="p-4 text-sm text-muted-foreground">{formatDuration(song.duration)}</td>
+                  <td className="p-4 text-sm text-muted-foreground">{formatDuration(song.duration_seconds || song.duration || 0)}</td>
                   <td className="p-4 text-sm">{formatPlays(song.plays_count)}</td>
                   <td className="p-4">
                     <span className={cn(

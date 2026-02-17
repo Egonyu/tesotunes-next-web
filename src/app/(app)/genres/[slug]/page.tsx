@@ -161,7 +161,7 @@ export default async function GenrePage({ params }: GenrePageProps) {
                   {formatNumber(song.play_count || 0)}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {formatDuration(song.duration || 0)}
+                  {formatDuration(song.duration_seconds || song.duration || 0)}
                 </span>
               </div>
             ))}

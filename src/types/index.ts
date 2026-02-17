@@ -27,6 +27,7 @@ export interface Song {
   artist_id: number;
   album_id?: number;
   duration: number;
+  duration_seconds?: number;
   play_count: number;
   download_count: number;
   like_count: number;
@@ -43,6 +44,7 @@ export interface Song {
   featured_artists?: Artist[];
   pivot?: { created_at?: string; position?: number };
   created_at: string;
+  release_date?: string;
   released_at?: string;
 }
 

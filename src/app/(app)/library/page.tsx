@@ -304,7 +304,7 @@ function LikedSongsSection({
             </p>
           </div>
           <span className="text-sm text-muted-foreground">
-            {formatDuration(song.duration || 0)}
+            {formatDuration(song.duration_seconds || song.duration || 0)}
           </span>
         </button>
       ))}

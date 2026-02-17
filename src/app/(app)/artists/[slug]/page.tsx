@@ -390,8 +390,8 @@ export default function ArtistPage() {
 
                   {/* Duration */}
                   <span className="text-sm text-muted-foreground w-12 text-right">
-                    {Math.floor((song.duration || 0) / 60)}:
-                    {String((song.duration || 0) % 60).padStart(2, "0")}
+                    {Math.floor((song.duration_seconds || song.duration || 0) / 60)}:
+                    {String((song.duration_seconds || song.duration || 0) % 60).padStart(2, "0")}
                   </span>
                 </div>
               );

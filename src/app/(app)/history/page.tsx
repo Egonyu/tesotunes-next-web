@@ -29,6 +29,7 @@ interface HistoryEntry {
     title: string;
     slug: string;
     duration: number;
+    duration_seconds?: number;
     cover_url: string | null;
     artist: {
       id: number;
@@ -270,7 +271,7 @@ export default function HistoryPage() {
 
                     {/* Duration */}
                     <div className="w-16 text-sm text-muted-foreground text-right">
-                      {formatDuration(entry.song.duration)}
+                      {formatDuration(entry.song.duration_seconds || entry.song.duration || 0)}
                     </div>
 
                     {/* Actions */}

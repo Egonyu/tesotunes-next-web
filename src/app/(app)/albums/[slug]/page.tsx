@@ -47,7 +47,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   const { data: tracks } = await getAlbumTracks(album.id);
 
   // Calculate total duration
-  const totalDuration = tracks.reduce((acc, track) => acc + (track.duration || 0), 0);
+  const totalDuration = tracks.reduce((acc, track) => acc + (track.duration_seconds || track.duration || 0), 0);
   const totalMinutes = Math.floor(totalDuration / 60);
 
   return (
@@ -173,7 +173,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
 
                 {/* Duration */}
                 <span className="w-12 text-right text-sm text-muted-foreground">
-                  {formatDuration(track.duration || 0)}
+                  {formatDuration(track.duration_seconds || track.duration || 0)}
                 </span>
               </div>
             ))

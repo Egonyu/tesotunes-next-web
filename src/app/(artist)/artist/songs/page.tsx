@@ -314,7 +314,7 @@ export default function ArtistSongsPage() {
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{song.title}</p>
               <p className="text-sm text-muted-foreground truncate">
-                {song.album || 'Single'} • {song.duration}
+                {song.album || 'Single'} • {(() => { const d = song.duration_seconds || Number(song.duration) || 0; return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`; })()}
               </p>
             </div>
 

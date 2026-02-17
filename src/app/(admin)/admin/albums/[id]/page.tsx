@@ -19,6 +19,7 @@ interface Song {
   title: string;
   slug: string;
   duration: number;
+  duration_seconds?: number;
   track_number: number;
   disc_number: number;
   plays: number;
@@ -310,7 +311,7 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                       {formatNumber(song.plays)} plays
                     </span>
                     <span className="text-sm text-muted-foreground w-12 text-right">
-                      {formatDuration(song.duration)}
+                      {formatDuration(song.duration_seconds || song.duration || 0)}
                     </span>
                     <button className="p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100">
                       <MoreHorizontal className="h-4 w-4" />

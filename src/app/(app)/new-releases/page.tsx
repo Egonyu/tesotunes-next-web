@@ -15,42 +15,17 @@ import {
   Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Artist {
-  id: number;
-  name: string;
-  slug: string;
-  avatar_url?: string;
-}
-
-interface Album {
-  id: number;
-  title: string;
-  slug: string;
-  artwork_url?: string;
-}
-
-interface Song {
-  id: number;
-  title: string;
-  artist: string | Artist;
-  artist_id: number;
-  album?: string | Album;
-  artwork_url?: string;
-  cover_image?: string;
-  duration: number;
-  plays: number;
-  released_at: string;
-  created_at?: string;
-}
+import type { Song, PaginatedResponse } from '@/types';
 
 export default function NewReleasesPage() {
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
 
   const { data, isLoading } = useQuery({
     queryKey: ['songs', 'new-releases', timeFilter],
-    queryFn: () => apiGet<{ data: Song[] }>(`/songs?sort=newest&period=${timeFilter}`).then(r => r.data),
+    queryFn: () => apiGet<PaginatedResponse<Song>>(`/songs`, { params: { sort: '-created_at', period: timeFilter } }),
   });
+
+  const songs = data?.data || [];
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -95,9 +70,9 @@ export default function NewReleasesPage() {
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      ) : data && data.length > 0 ? (
+      ) : songs.length > 0 ? (
         <div className="space-y-1">
-          {data.map((song, index) => (
+          {songs.map((song, index) => (
             <div
               key={song.id}
               className="group flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
@@ -110,8 +85,8 @@ export default function NewReleasesPage() {
               </button>
 
               <div className="relative h-12 w-12 rounded-md overflow-hidden bg-muted shrink-0">
-                {(song.artwork_url || song.cover_image) ? (
-                  <Image src={song.artwork_url || song.cover_image || ''} alt={song.title} fill className="object-cover" unoptimized />
+                {song.artwork_url ? (
+                  <Image src={song.artwork_url} alt={song.title} fill className="object-cover" unoptimized />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
                     <Disc3 className="h-6 w-6 text-muted-foreground" />
@@ -122,16 +97,18 @@ export default function NewReleasesPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{song.title}</p>
                 <p className="text-sm text-muted-foreground truncate">
-                  {typeof song.artist === 'object' ? song.artist.name : song.artist}
+                  {song.artist?.name || 'Unknown Artist'}
                 </p>
               </div>
 
               <span className="text-sm text-muted-foreground hidden md:block">
-                {song.album ? (typeof song.album === 'object' ? song.album.title : song.album) : '-'}
+                {song.album?.title || '-'}
               </span>
 
               <span className="text-xs text-muted-foreground hidden lg:block">
-                {new Date(song.released_at).toLocaleDateString()}
+                {song.release_date || song.released_at
+                  ? new Date(song.release_date || song.released_at || song.created_at).toLocaleDateString()
+                  : new Date(song.created_at).toLocaleDateString()}
               </span>
 
               <div className="flex items-center gap-2">
@@ -139,7 +116,7 @@ export default function NewReleasesPage() {
                   <Heart className="h-4 w-4" />
                 </button>
                 <span className="text-sm text-muted-foreground w-12 text-right">
-                  {formatDuration(song.duration)}
+                  {formatDuration(song.duration_seconds || song.duration || 0)}
                 </span>
                 <button className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-accent transition-all">
                   <MoreHorizontal className="h-4 w-4" />

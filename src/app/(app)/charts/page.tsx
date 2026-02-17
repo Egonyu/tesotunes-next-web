@@ -32,6 +32,7 @@ interface ChartSong {
     title: string;
     slug: string;
     duration: number;
+    duration_seconds?: number;
     play_count: number;
     cover_url: string | null;
     artist: {
@@ -247,7 +248,7 @@ export default function ChartsPage() {
                   <Heart className="h-4 w-4" />
                 </button>
                 <span className="text-sm text-muted-foreground">
-                  {formatDuration(entry.song.duration)}
+                  {formatDuration(entry.song.duration_seconds || entry.song.duration || 0)}
                 </span>
                 <button className="opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoreHorizontal className="h-4 w-4" />

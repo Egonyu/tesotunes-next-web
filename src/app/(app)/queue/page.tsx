@@ -23,6 +23,7 @@ interface QueueTrack {
     artwork_url: string;
   };
   duration: number;
+  duration_seconds?: number;
   is_playing?: boolean;
 }
 
@@ -108,7 +109,7 @@ function QueueTrackRow({
       )}
       
       <span className="text-sm text-gray-500 w-12 text-right">
-        {formatDuration(track.duration)}
+        {formatDuration(track.duration_seconds || track.duration || 0)}
       </span>
       
       {onRemove && (

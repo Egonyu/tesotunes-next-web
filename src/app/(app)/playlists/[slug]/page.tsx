@@ -55,7 +55,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
 
   // Calculate total duration
   const totalDuration = tracks.reduce(
-    (acc, track) => acc + (track.duration || 0),
+    (acc, track) => acc + (track.duration_seconds || track.duration || 0),
     0
   );
   const hours = Math.floor(totalDuration / 3600);
@@ -252,7 +252,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
 
                 {/* Duration */}
                 <span className="w-12 text-right text-sm text-muted-foreground">
-                  {formatDuration(track.duration || 0)}
+                  {formatDuration(track.duration_seconds || track.duration || 0)}
                 </span>
               </div>
             ))

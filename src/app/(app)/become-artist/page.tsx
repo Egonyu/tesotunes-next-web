@@ -62,7 +62,7 @@ export default function BecomeArtistPage() {
   // Pre-fill user data from session
   const userEmail = session?.user?.email || "";
   const userName = session?.user?.name || "";
-  
+
   // Form state - simplified and pre-filled
   const [formData, setFormData] = useState<Partial<ArtistApplicationData>>({
     stage_name: userName, // Pre-fill with user's name
@@ -153,9 +153,9 @@ export default function BecomeArtistPage() {
         return true;
       case 1: // Your Music (stage name, genre, bio)
         return !!(
-          formData.stage_name && 
-          formData.primary_genre && 
-          formData.bio && 
+          formData.stage_name &&
+          formData.primary_genre &&
+          formData.bio &&
           formData.bio.length >= 50
         );
       case 2: // Get Paid (phone, payout)
@@ -493,13 +493,13 @@ interface StepMusicProps {
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-function StepMusic({ 
-  formData, 
-  updateForm, 
-  genres, 
+function StepMusic({
+  formData,
+  updateForm,
+  genres,
   genresLoading,
-  avatarPreview, 
-  onAvatarChange 
+  avatarPreview,
+  onAvatarChange
 }: StepMusicProps) {
   const toggleSecondaryGenre = (genreId: string) => {
     const current = formData.secondary_genres ?? [];

@@ -72,7 +72,7 @@ function SongRow({ song, index }: { song: Song; index: number }) {
       {/* Duration */}
       <div className="w-16 text-right text-sm text-muted-foreground flex items-center justify-end gap-1">
         <Clock className="h-3 w-3" />
-        {formatDuration(song.duration || 0)}
+        {formatDuration(song.duration_seconds || song.duration || 0)}
       </div>
     </Link>
   );

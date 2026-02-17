@@ -34,6 +34,7 @@ interface MoodDetail {
     title: string;
     slug: string;
     duration: number;
+    duration_seconds?: number;
     play_count: number;
     cover_url: string | null;
     artist: {
@@ -250,7 +251,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
                       <Heart className="h-4 w-4" />
                     </button>
                     <span className="text-sm text-muted-foreground">
-                      {formatDuration(song.duration)}
+                      {formatDuration(song.duration_seconds || song.duration || 0)}
                     </span>
                   </div>
                 </div>

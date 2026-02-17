@@ -60,6 +60,7 @@ export interface ArtistSong {
   plays: number;
   downloads: number;
   duration: string;
+  duration_seconds?: number;
   status: 'published' | 'pending' | 'draft';
   release_date: string;
 }

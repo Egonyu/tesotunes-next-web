@@ -40,6 +40,7 @@ interface Song {
   plays: number;
   downloads: number;
   duration: string;
+  duration_seconds?: number;
   status: string;
   release_date: string;
   lyrics: string | null;
@@ -243,7 +244,7 @@ export default function SongDetailPage() {
                 <Clock className="h-4 w-4" />
                 <span className="text-sm">Duration</span>
               </div>
-              <p className="text-2xl font-bold">{song.duration}</p>
+              <p className="text-2xl font-bold">{(() => { const d = song.duration_seconds || Number(song.duration) || 0; return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`; })()}</p>
             </div>
             <div className="p-4 rounded-xl bg-card border">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">

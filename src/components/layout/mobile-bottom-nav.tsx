@@ -75,10 +75,10 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
         onClick={onClick}
         className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover:bg-white/10">
-          <Icon className="h-5 w-5 text-white/70 group-hover:text-white transition-colors" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover:bg-foreground/5">
+          <Icon className="h-5 w-5 text-foreground/50 group-hover:text-foreground/80 transition-colors" />
         </div>
-        <span className="mt-0.5 text-[10px] font-medium text-white/70 group-hover:text-white transition-colors">
+        <span className="mt-0.5 text-[10px] font-medium text-foreground/50 group-hover:text-foreground/80 transition-colors">
           {label}
         </span>
       </button>
@@ -93,20 +93,20 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
       <div
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200",
-          isActive ? "bg-primary/20" : "group-hover:bg-white/10"
+          isActive ? "bg-primary/15" : "group-hover:bg-foreground/5"
         )}
       >
         <Icon
           className={cn(
             "h-5 w-5 transition-colors",
-            isActive ? "text-primary" : "text-white/70 group-hover:text-white"
+            isActive ? "text-primary" : "text-foreground/50 group-hover:text-foreground/80"
           )}
         />
       </div>
       <span
         className={cn(
           "mt-0.5 text-[10px] font-medium transition-colors",
-          isActive ? "text-primary" : "text-white/70 group-hover:text-white"
+          isActive ? "text-primary" : "text-foreground/50 group-hover:text-foreground/80"
         )}
       >
         {label}
@@ -292,7 +292,7 @@ export function MobileBottomNav() {
       )}
 
       {/* Right-side Vertical Action Buttons */}
-      <div className="fixed right-4 bottom-24 z-50 lg:hidden flex flex-col items-center gap-3">
+      <div className="fixed right-4 bottom-[5.5rem] z-50 lg:hidden flex flex-col items-center gap-2.5">
         {/* Side action buttons - slide up when FAB expanded */}
         {fabExpanded && sideActions.map((action, i) => (
           <Link
@@ -300,14 +300,17 @@ export function MobileBottomNav() {
             href={action.href}
             onClick={() => setFabExpanded(false)}
             className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-full bg-card border shadow-lg",
-              "hover:bg-muted transition-all duration-200",
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              "bg-background/80 dark:bg-neutral-800/80 backdrop-blur-2xl",
+              "border border-black/[0.08] dark:border-white/[0.08] shadow-lg",
+              "hover:bg-background/90 dark:hover:bg-neutral-700/80",
+              "transition-all duration-200",
               "animate-in slide-in-from-bottom fade-in"
             )}
             style={{ animationDelay: `${(sideActions.length - 1 - i) * 50}ms` }}
             title={action.label}
           >
-            <action.icon className="h-5 w-5 text-foreground" />
+            <action.icon className="h-4 w-4 text-foreground/80" />
           </Link>
         ))}
 
@@ -315,19 +318,27 @@ export function MobileBottomNav() {
         <button
           onClick={() => setFabExpanded(!fabExpanded)}
           className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
-            "bg-primary text-primary-foreground",
-            "hover:brightness-110 active:scale-95 transition-all duration-200",
+            "flex h-12 w-12 items-center justify-center rounded-full",
+            "bg-primary/90 text-primary-foreground shadow-lg",
+            "backdrop-blur-2xl",
+            "hover:bg-primary active:scale-95 transition-all duration-200",
             fabExpanded && "rotate-45"
           )}
         >
-          <Plus className="h-6 w-6 transition-transform duration-200" />
+          <Plus className="h-5 w-5 transition-transform duration-200" />
         </button>
       </div>
 
-      {/* Floating Bottom Navigation Bar */}
-      <nav className="fixed bottom-4 left-4 right-20 z-50 lg:hidden">
-        <div className="flex items-center justify-around rounded-full bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl border border-white/10 px-2 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      {/* Floating Bottom Navigation Bar — centered */}
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 lg:hidden w-[min(92vw,22rem)]">
+        <div className={cn(
+          "flex items-center justify-around rounded-full px-1 py-1",
+          "bg-background/70 dark:bg-neutral-900/70",
+          "backdrop-blur-2xl backdrop-saturate-150",
+          "shadow-[0_2px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.3)]",
+          "border border-black/[0.06] dark:border-white/[0.06]",
+          "pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+        )}>
           {mainTabs.map((tab) => (
             <MobileNavItem
               key={tab.href}

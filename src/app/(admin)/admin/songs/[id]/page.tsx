@@ -279,15 +279,15 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                   <Link href={`/admin/artists/${s.artist.id}`} className="hover:text-primary hover:underline">
                     {s.artist.name}
                   </Link>
-                  {s.featured_artists?.length > 0 && (
+                  {(s.featured_artists?.length ?? 0) > 0 && (
                     <>
                       <span>feat.</span>
-                      {s.featured_artists.map((fa, i) => (
+                      {s.featured_artists!.map((fa, i) => (
                         <span key={fa.id}>
                           <Link href={`/admin/artists/${fa.id}`} className="hover:text-primary hover:underline">
                             {fa.name}
                           </Link>
-                          {i < s.featured_artists.length - 1 && ', '}
+                          {i < s.featured_artists!.length - 1 && ', '}
                         </span>
                       ))}
                     </>

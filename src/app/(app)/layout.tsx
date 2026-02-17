@@ -33,8 +33,8 @@ export default function AppLayout({
         className={cn(
           "min-h-screen transition-all duration-300",
           hasActivePlayer
-            ? "pb-32 lg:pb-24" // Extra padding for bottom nav + player
-            : "pb-16 lg:pb-4", // Just bottom nav padding (mobile) or minimal (desktop)
+            ? "pb-36 lg:pb-24" // Extra padding for floating nav + player
+            : "pb-20 lg:pb-4", // Floating nav padding (mobile) or minimal (desktop)
           "lg:pl-16", // Desktop: collapsed sidebar
           !sidebarCollapsed && "lg:pl-64" // Desktop: expanded sidebar
         )}

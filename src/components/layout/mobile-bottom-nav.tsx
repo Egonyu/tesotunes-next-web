@@ -27,6 +27,9 @@ import {
   Music,
   DollarSign,
   Sparkles,
+  Plus,
+  Headphones,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -70,12 +73,12 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
     return (
       <button
         onClick={onClick}
-        className="relative flex flex-col items-center justify-center flex-1 py-2 group"
+        className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full transition-colors group-hover:bg-muted">
-          <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover:bg-white/10">
+          <Icon className="h-5 w-5 text-white/70 group-hover:text-white transition-colors" />
         </div>
-        <span className="mt-0.5 text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+        <span className="mt-0.5 text-[10px] font-medium text-white/70 group-hover:text-white transition-colors">
           {label}
         </span>
       </button>
@@ -85,29 +88,25 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
   return (
     <Link
       href={href}
-      className="relative flex flex-col items-center justify-center flex-1 py-2 group"
+      className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
     >
-      {/* Active indicator pill */}
-      {isActive && (
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-primary" />
-      )}
       <div
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200",
-          isActive ? "bg-primary/10" : "group-hover:bg-muted"
+          "flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200",
+          isActive ? "bg-primary/20" : "group-hover:bg-white/10"
         )}
       >
         <Icon
           className={cn(
             "h-5 w-5 transition-colors",
-            isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+            isActive ? "text-primary" : "text-white/70 group-hover:text-white"
           )}
         />
       </div>
       <span
         className={cn(
           "mt-0.5 text-[10px] font-medium transition-colors",
-          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          isActive ? "text-primary" : "text-white/70 group-hover:text-white"
         )}
       >
         {label}
@@ -153,10 +152,10 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
 
 export function MobileBottomNav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [fabExpanded, setFabExpanded] = useState(false);
   const { data: session } = useSession();
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
-  // Case-insensitive check for artist role
   const isArtist = userRole.toLowerCase().includes("artist");
   const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) => userRole.toLowerCase().includes(r.toLowerCase()));
 
@@ -171,6 +170,17 @@ export function MobileBottomNav() {
     { href: "/artist/wallet", label: "Wallet", icon: Wallet },
   ];
 
+  // Side action buttons (right-side vertical stack)
+  const sideActions = isArtist
+    ? [
+        { href: "/artist/upload", label: "Upload Song", icon: Upload },
+        { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
+      ]
+    : [
+        { href: "/browse", label: "Browse", icon: Headphones },
+        { href: "/library", label: "Favorites", icon: Heart },
+      ];
+
   return (
     <>
       {/* Expanded Menu Overlay */}
@@ -181,7 +191,7 @@ export function MobileBottomNav() {
         >
           {/* Menu Panel — slides up from bottom */}
           <div
-            className="absolute bottom-16 left-0 right-0 bg-background border-t rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-24 left-4 right-4 bg-background border rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag indicator */}
@@ -205,7 +215,7 @@ export function MobileBottomNav() {
 
             {/* Menu Content */}
             <div className="max-h-[60vh] overflow-y-auto px-4 pb-4 space-y-4">
-              {/* Artist Section — shown for artists */}
+              {/* Artist Section */}
               {isArtist && (
                 <div>
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
@@ -248,7 +258,6 @@ export function MobileBottomNav() {
                 <div className="grid grid-cols-1 gap-0.5">
                   {session ? (
                     <>
-                      {/* Become an Artist CTA — hidden for artists and admins */}
                       {!isArtist && !isAdmin && (
                         <Link
                           href="/become-artist"
@@ -274,9 +283,51 @@ export function MobileBottomNav() {
         </div>
       )}
 
-      {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+      {/* FAB Expanded Overlay */}
+      {fabExpanded && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          onClick={() => setFabExpanded(false)}
+        />
+      )}
+
+      {/* Right-side Vertical Action Buttons */}
+      <div className="fixed right-4 bottom-24 z-50 lg:hidden flex flex-col items-center gap-3">
+        {/* Side action buttons - slide up when FAB expanded */}
+        {fabExpanded && sideActions.map((action, i) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            onClick={() => setFabExpanded(false)}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full bg-card border shadow-lg",
+              "hover:bg-muted transition-all duration-200",
+              "animate-in slide-in-from-bottom fade-in"
+            )}
+            style={{ animationDelay: `${(sideActions.length - 1 - i) * 50}ms` }}
+            title={action.label}
+          >
+            <action.icon className="h-5 w-5 text-foreground" />
+          </Link>
+        ))}
+
+        {/* Main FAB */}
+        <button
+          onClick={() => setFabExpanded(!fabExpanded)}
+          className={cn(
+            "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
+            "bg-primary text-primary-foreground",
+            "hover:brightness-110 active:scale-95 transition-all duration-200",
+            fabExpanded && "rotate-45"
+          )}
+        >
+          <Plus className="h-6 w-6 transition-transform duration-200" />
+        </button>
+      </div>
+
+      {/* Floating Bottom Navigation Bar */}
+      <nav className="fixed bottom-4 left-4 right-20 z-50 lg:hidden">
+        <div className="flex items-center justify-around rounded-full bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl border border-white/10 px-2 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
           {mainTabs.map((tab) => (
             <MobileNavItem
               key={tab.href}

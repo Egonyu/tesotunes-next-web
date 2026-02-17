@@ -4,9 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, 
-  Trash2, GripVertical, Music, Clock, X, ListMusic 
+import {
+  Play, Pause, SkipForward, SkipBack, Shuffle, Repeat,
+  Trash2, GripVertical, Music, Clock, X, ListMusic
 } from "lucide-react";
 import { useState } from "react";
 
@@ -41,14 +41,14 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function QueueTrackRow({ 
-  track, 
-  index, 
-  onRemove, 
+function QueueTrackRow({
+  track,
+  index,
+  onRemove,
   onPlay,
-  showDragHandle = true 
-}: { 
-  track: QueueTrack; 
+  showDragHandle = true
+}: {
+  track: QueueTrack;
   index: number;
   onRemove?: () => void;
   onPlay?: () => void;
@@ -61,11 +61,11 @@ function QueueTrackRow({
           <GripVertical className="w-4 h-4" />
         </button>
       )}
-      
+
       <div className="w-8 text-center text-sm text-gray-500">
         {index + 1}
       </div>
-      
+
       <div className="relative w-12 h-12 flex-shrink-0">
         {track.album?.artwork_url ? (
           <Image
@@ -80,7 +80,7 @@ function QueueTrackRow({
           </div>
         )}
         {onPlay && (
-          <button 
+          <button
             onClick={onPlay}
             className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded"
           >
@@ -88,32 +88,32 @@ function QueueTrackRow({
           </button>
         )}
       </div>
-      
+
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-white truncate">{track.title}</h4>
-        <Link 
+        <Link
           href={`/artists/${track.artist.slug}`}
           className="text-sm text-gray-400 hover:text-white hover:underline truncate block"
         >
           {track.artist.name}
         </Link>
       </div>
-      
+
       {track.album && (
-        <Link 
+        <Link
           href={`/albums/${track.album.slug}`}
           className="hidden md:block text-sm text-gray-400 hover:text-white hover:underline truncate max-w-[200px]"
         >
           {track.album.title}
         </Link>
       )}
-      
+
       <span className="text-sm text-gray-500 w-12 text-right">
         {formatDuration(track.duration_seconds || track.duration || 0)}
       </span>
-      
+
       {onRemove && (
-        <button 
+        <button
           onClick={onRemove}
           className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-500 transition-all"
         >
@@ -126,13 +126,13 @@ function QueueTrackRow({
 
 function NowPlayingCard({ track }: { track: QueueTrack }) {
   const [isPlaying, setIsPlaying] = useState(true);
-  
+
   return (
     <div className="bg-linear-to-br from-purple-900/50 to-pink-900/30 rounded-2xl p-6 mb-8">
       <h2 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-4">
         Now Playing
       </h2>
-      
+
       <div className="flex items-center gap-6">
         <div className="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0">
           {track.album?.artwork_url ? (
@@ -148,12 +148,12 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
             </div>
           )}
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <h3 className="text-xl md:text-2xl font-bold text-white truncate mb-1">
             {track.title}
           </h3>
-          <Link 
+          <Link
             href={`/artists/${track.artist.slug}`}
             className="text-gray-400 hover:text-white hover:underline"
           >
@@ -162,7 +162,7 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
           {track.album && (
             <p className="text-sm text-gray-500 mt-1">
               from{" "}
-              <Link 
+              <Link
                 href={`/albums/${track.album.slug}`}
                 className="hover:text-white hover:underline"
               >
@@ -171,12 +171,12 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
             </p>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button className="p-2 text-gray-400 hover:text-white transition-colors">
             <SkipBack className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="p-4 bg-white rounded-full text-black hover:scale-105 transition-transform"
           >
@@ -197,7 +197,7 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
 
 export default function QueuePage() {
   const queryClient = useQueryClient();
-  
+
   const { data: queueData, isLoading } = useQuery({
     queryKey: ["queue"],
     queryFn: () => apiGet<QueueData>("/music/queue"),
@@ -268,27 +268,27 @@ export default function QueuePage() {
             <ListMusic className="w-8 h-8 text-purple-500" />
             <h1 className="text-3xl font-bold text-white">Queue</h1>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Shuffle Button */}
             <button
               onClick={() => toggleShuffleMutation.mutate()}
               className={`p-2 rounded-full transition-colors ${
-                queueData?.shuffle 
-                  ? "text-green-500 bg-green-500/20" 
+                queueData?.shuffle
+                  ? "text-green-500 bg-green-500/20"
                   : "text-gray-400 hover:text-white hover:bg-white/10"
               }`}
               title={queueData?.shuffle ? "Shuffle on" : "Shuffle off"}
             >
               <Shuffle className="w-5 h-5" />
             </button>
-            
+
             {/* Repeat Button */}
             <button
               onClick={() => cycleRepeatMutation.mutate()}
               className={`p-2 rounded-full transition-colors relative ${
                 queueData?.repeat !== "off"
-                  ? "text-green-500 bg-green-500/20" 
+                  ? "text-green-500 bg-green-500/20"
                   : "text-gray-400 hover:text-white hover:bg-white/10"
               }`}
               title={`Repeat: ${queueData?.repeat || "off"}`}
@@ -300,7 +300,7 @@ export default function QueuePage() {
                 </span>
               )}
             </button>
-            
+
             {/* Clear Queue */}
             {hasQueue && (
               <button
@@ -329,7 +329,7 @@ export default function QueuePage() {
               </span>
             )}
           </div>
-          
+
           {hasQueue ? (
             <div className="bg-white/5 rounded-xl overflow-hidden">
               {queueData.queue.map((track, index) => (
@@ -370,7 +370,7 @@ export default function QueuePage() {
                 Recently Played
               </h2>
             </div>
-            
+
             <div className="bg-white/5 rounded-xl overflow-hidden opacity-75">
               {queueData.history.slice(0, 5).map((track, index) => (
                 <QueueTrackRow
@@ -382,7 +382,7 @@ export default function QueuePage() {
                 />
               ))}
             </div>
-            
+
             {queueData.history.length > 5 && (
               <div className="text-center mt-4">
                 <Link

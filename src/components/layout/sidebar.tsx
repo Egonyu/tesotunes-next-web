@@ -30,6 +30,7 @@ import {
   Megaphone,
   Heart,
   Share2,
+  Trophy,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -50,6 +51,7 @@ const browseItems = [
 ];
 
 const moduleItems = [
+  { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },

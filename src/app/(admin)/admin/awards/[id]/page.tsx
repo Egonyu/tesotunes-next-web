@@ -34,8 +34,10 @@ import {
 } from '@/hooks/useAwards';
 
 const statusConfig: Record<AwardStatus, { label: string; variant: 'success' | 'warning' | 'error' | 'info' | 'default' }> = {
+  draft: { label: 'Draft', variant: 'default' },
   upcoming: { label: 'Upcoming', variant: 'info' },
   nominations_open: { label: 'Nominations Open', variant: 'warning' },
+  nominations_closed: { label: 'Nominations Closed', variant: 'default' },
   voting_open: { label: 'Voting Open', variant: 'success' },
   voting_closed: { label: 'Voting Closed', variant: 'default' },
   completed: { label: 'Completed', variant: 'default' },

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -15,242 +15,519 @@ import {
   Mic,
   Disc,
   Clock,
+  Calendar,
+  Sparkles,
+  Award,
+  ArrowRight,
+  CheckCircle2,
+  Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatNumber, formatDate } from '@/lib/utils';
-import { useAwardSeason, useVoteForNomination, useAwardLeaderboard, type AwardCategory } from '@/hooks/useAwards';
+import {
+  useAwardDetail,
+  useAwardCategories,
+  useVote,
+  useSubmitNomination,
+  type AwardCategory,
+  type AwardNomination,
+} from '@/hooks/useAwards';
 import { toast } from 'sonner';
 
-const nomineeTypeIcons = {
+const nomineeTypeIcons: Record<string, typeof Music> = {
   artist: Mic,
   song: Music,
   album: Disc,
 };
 
-export default function AwardSeasonPage({ params }: { params: Promise<{ slug: string }> }) {
+const statusDisplay: Record<string, { label: string; color: string }> = {
+  upcoming: { label: 'Upcoming', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+  draft: { label: 'Draft', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20' },
+  nominations_open: { label: 'Nominations Open', color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20' },
+  nominations_closed: { label: 'Nominations Closed', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
+  voting_open: { label: 'Voting Open', color: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' },
+  voting_closed: { label: 'Voting Closed', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20' },
+  completed: { label: 'Completed', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' },
+};
+
+export default function AwardDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = use(params);
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const { data: season, isLoading } = useAwardSeason(slug);
-  const { data: leaderboard } = useAwardLeaderboard(slug, 10);
-  const vote = useVoteForNomination();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
-  const isVotingOpen = season?.status === 'voting_open';
-  const isCompleted = season?.status === 'completed' || season?.status === 'closed';
+  const { data: award, isLoading, error } = useAwardDetail(slug);
+  const { data: categories } = useAwardCategories(award?.id ?? '');
+  const voteMutation = useVote();
+  const nominationMutation = useSubmitNomination();
 
-  const handleVote = (nominationId: number) => {
+  const isVotingOpen = award?.is_voting_open ?? false;
+  const isNominationOpen = award?.is_nomination_open ?? false;
+  const isCompleted = award?.status === 'completed' || award?.status === 'voting_closed';
+
+  // Resolve active category
+  const activeCategory = useMemo(() => {
+    if (!categories?.length) return null;
+    if (selectedCategoryId) {
+      return categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
+    }
+    return categories[0];
+  }, [categories, selectedCategoryId]);
+
+  const handleVote = (nominationId: number, categoryId: number) => {
     if (!isVotingOpen) {
-      toast.info('Voting is not currently open for this season.');
+      toast.info('Voting is not currently open.');
       return;
     }
-    vote.mutate({ seasonSlug: slug, nominationId });
+    if (!award) return;
+    voteMutation.mutate({
+      awardId: award.id,
+      categoryId,
+      nominationId,
+    });
   };
 
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 animate-pulse space-y-6">
-        <div className="h-8 w-48 bg-muted rounded" />
-        <div className="h-48 bg-muted rounded-xl" />
-        <div className="grid md:grid-cols-2 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-64 bg-muted rounded-lg" />)}
+      <div className="container mx-auto px-4 py-8 animate-pulse space-y-8">
+        <div className="h-6 w-32 bg-muted rounded" />
+        <div className="h-56 bg-muted rounded-2xl" />
+        <div className="grid lg:grid-cols-4 gap-8">
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded-lg" />
+            ))}
+          </div>
+          <div className="lg:col-span-3 space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 bg-muted rounded-xl" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!season) {
+  // ── Not Found ────────────────────────────────────────────────────────────
+  if (!award || error) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Season Not Found</h1>
-        <Link href="/awards" className="text-primary hover:underline">Back to Awards</Link>
+      <div className="container mx-auto px-4 py-20 text-center">
+        <Trophy className="h-16 w-16 mx-auto text-muted-foreground/40 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Award Not Found</h1>
+        <p className="text-muted-foreground mb-6">
+          This award season doesn&apos;t exist or has been removed.
+        </p>
+        <Link
+          href="/awards"
+          className="inline-flex items-center gap-2 text-primary hover:underline"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Awards
+        </Link>
       </div>
     );
   }
 
-  const activeCategory = selectedCategory
-    ? season.categories?.find(c => c.id === selectedCategory)
-    : season.categories?.[0];
+  const display = statusDisplay[award.status] ?? statusDisplay.upcoming;
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Back Navigation */}
-      <Link href="/awards" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+      {/* ── Back Navigation ─────────────────────────────────────────────── */}
+      <Link
+        href="/awards"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
         <ChevronLeft className="h-4 w-4" />
         All Awards
       </Link>
 
-      {/* Season Header */}
-      <div className="relative rounded-2xl overflow-hidden bg-linear-to-br from-amber-500/20 via-yellow-500/10 to-orange-500/20 border border-amber-500/20 p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Trophy className="h-6 w-6 text-amber-500" />
-              <span className={cn(
-                'text-xs font-medium px-2.5 py-1 rounded-full',
-                isVotingOpen ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400' :
-                isCompleted ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400' :
-                'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400'
-              )}>
-                {isVotingOpen ? 'Voting Open' : isCompleted ? 'Completed' : season.status.replace('_', ' ')}
-              </span>
-            </div>
-            <h1 className="text-3xl font-bold">{season.name}</h1>
-            <div className="flex items-center gap-4 mt-2 text-muted-foreground">
-              <span className="flex items-center gap-1 text-sm">
-                <Star className="h-4 w-4" />
-                {season.categories_count} categories
-              </span>
-              <span className="flex items-center gap-1 text-sm">
-                <Vote className="h-4 w-4" />
-                {formatNumber(season.total_votes)} votes
-              </span>
-              {season.voting_end && (
-                <span className="flex items-center gap-1 text-sm">
-                  <Clock className="h-4 w-4" />
-                  {isVotingOpen ? 'Ends' : 'Ended'} {formatDate(season.voting_end)}
+      {/* ── Hero Header ─────────────────────────────────────────────────── */}
+      <div className="relative rounded-3xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-600/90 via-orange-500/80 to-yellow-500/70 dark:from-amber-900/90 dark:via-orange-900/80 dark:to-yellow-900/70" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(255,255,255,0.1),transparent_50%)]" />
+
+        {/* Decorative trophy */}
+        <div className="absolute top-6 right-10 opacity-10">
+          <Trophy className="h-40 w-40 text-white" />
+        </div>
+
+        <div className="relative p-8 md:p-12">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            <div className="max-w-2xl">
+              {/* Status indicator */}
+              <div className="flex items-center gap-3 mb-4">
+                {(isVotingOpen || isNominationOpen) && (
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    'text-xs font-semibold px-3 py-1 rounded-full border',
+                    display.color.replace(/bg-\S+\/10/g, 'bg-white/20').replace(/text-\S+/g, 'text-white').replace(/border-\S+/g, 'border-white/30')
+                  )}
+                >
+                  {display.label}
                 </span>
+              </div>
+
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">
+                {award.title}
+              </h1>
+
+              {award.description && (
+                <p className="text-white/75 text-base mt-3 line-clamp-2">
+                  {award.description}
+                </p>
               )}
+
+              <div className="flex flex-wrap items-center gap-5 mt-5 text-white/60 text-sm">
+                <span className="flex items-center gap-1.5">
+                  <Award className="h-4 w-4" />
+                  {award.year}
+                </span>
+                {categories && (
+                  <span className="flex items-center gap-1.5">
+                    <Star className="h-4 w-4" />
+                    {categories.length} categories
+                  </span>
+                )}
+                {award.nominations_count !== undefined && (
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-4 w-4" />
+                    {award.nominations_count} nominations
+                  </span>
+                )}
+                {award.ceremony_date && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" />
+                    Ceremony: {formatDate(award.ceremony_date)}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Voting timeline */}
+            {(award.voting_starts_at || award.voting_ends_at) && (
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 min-w-[200px]">
+                <h4 className="text-white/80 text-xs font-semibold uppercase tracking-wider mb-3">
+                  Timeline
+                </h4>
+                <div className="space-y-2.5 text-sm text-white/70">
+                  {award.nomination_starts_at && (
+                    <div className="flex items-center gap-2">
+                      <Star className="h-3.5 w-3.5 text-yellow-300" />
+                      <span>Nominations: {formatDate(award.nomination_starts_at)}</span>
+                    </div>
+                  )}
+                  {award.voting_starts_at && (
+                    <div className="flex items-center gap-2">
+                      <Vote className="h-3.5 w-3.5 text-green-300" />
+                      <span>Voting: {formatDate(award.voting_starts_at)}</span>
+                    </div>
+                  )}
+                  {award.voting_ends_at && (
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-3.5 w-3.5 text-red-300" />
+                      <span>Ends: {formatDate(award.voting_ends_at)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Content Grid */}
-      <div className="grid lg:grid-cols-4 gap-8">
-        {/* Category Sidebar */}
-        <div className="space-y-2">
-          <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-3">Categories</h3>
-          {season.categories?.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={cn(
-                'w-full text-left px-4 py-3 rounded-lg text-sm transition-colors',
-                (activeCategory?.id === category.id)
-                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium border border-amber-500/20'
-                  : 'hover:bg-muted text-muted-foreground'
-              )}
-            >
-              {category.name}
-              <span className="block text-[10px] mt-0.5 opacity-60">{category.nominations?.length ?? 0} nominees</span>
-            </button>
+      {/* ── Categories + Nominees Grid ──────────────────────────────────── */}
+      {categories && categories.length > 0 ? (
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Category Sidebar */}
+          <aside className="space-y-1.5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
+              Categories
+            </h3>
+            {categories.map((category) => {
+              const isSelected = activeCategory?.id === category.id;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategoryId(category.id)}
+                  className={cn(
+                    'w-full text-left px-4 py-3 rounded-xl text-sm transition-all',
+                    isSelected
+                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border border-amber-500/20 shadow-sm'
+                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <span className="block truncate">{category.name}</span>
+                  <span className="block text-[11px] mt-0.5 opacity-60">
+                    {category.nominations_count ?? 0} nominees
+                  </span>
+                </button>
+              );
+            })}
+          </aside>
+
+          {/* Nominees List */}
+          <div className="lg:col-span-3">
+            {activeCategory ? (
+              <CategoryNominees
+                category={activeCategory}
+                awardId={award.id}
+                isVotingOpen={isVotingOpen}
+                isCompleted={isCompleted}
+                onVote={handleVote}
+                isVoting={voteMutation.isPending}
+              />
+            ) : (
+              <div className="text-center py-16 rounded-2xl border bg-card">
+                <Star className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                <p className="text-muted-foreground">Select a category to view nominees</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-16 rounded-2xl border bg-card">
+          <Trophy className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
+          <h3 className="text-lg font-semibold mb-1">No Categories Yet</h3>
+          <p className="text-sm text-muted-foreground">
+            Categories and nominations will appear here once they are added.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Category Nominees Component ──────────────────────────────────────────────
+
+function CategoryNominees({
+  category,
+  awardId,
+  isVotingOpen,
+  isCompleted,
+  onVote,
+  isVoting,
+}: {
+  category: AwardCategory;
+  awardId: number;
+  isVotingOpen: boolean;
+  isCompleted: boolean;
+  onVote: (nominationId: number, categoryId: number) => void;
+  isVoting: boolean;
+}) {
+  const nominations = category.nominations ?? [];
+
+  // Sort: winners first, then by votes_count desc
+  const sorted = useMemo(() => {
+    return [...nominations].sort((a, b) => {
+      if (a.status === 'winner' && b.status !== 'winner') return -1;
+      if (b.status === 'winner' && a.status !== 'winner') return 1;
+      return (b.votes_count ?? 0) - (a.votes_count ?? 0);
+    });
+  }, [nominations]);
+
+  // Calculate max votes for percentage bar
+  const maxVotes = useMemo(() => {
+    return Math.max(1, ...nominations.map((n) => n.votes_count ?? 0));
+  }, [nominations]);
+
+  return (
+    <div>
+      {/* Category header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">{category.name}</h2>
+        {category.description && (
+          <p className="text-muted-foreground mt-1">{category.description}</p>
+        )}
+        <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+          <span>{nominations.length} nominees</span>
+          {isVotingOpen && (
+            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              Voting Open
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Nominees */}
+      {sorted.length === 0 ? (
+        <div className="text-center py-12 rounded-xl border bg-card/60">
+          <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-muted-foreground">No nominations in this category yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sorted.map((nomination, index) => (
+            <NomineeCard
+              key={nomination.id}
+              nomination={nomination}
+              rank={index + 1}
+              maxVotes={maxVotes}
+              categoryId={category.id}
+              isVotingOpen={isVotingOpen}
+              isCompleted={isCompleted}
+              onVote={onVote}
+              isVoting={isVoting}
+            />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Nominees */}
-        <div className="lg:col-span-2">
-          {activeCategory && (
-            <div>
-              <h2 className="text-xl font-bold mb-2">{activeCategory.name}</h2>
-              <p className="text-muted-foreground text-sm mb-6">{activeCategory.description}</p>
+// ─── Nominee Card ─────────────────────────────────────────────────────────────
 
-              <div className="space-y-3">
-                {(activeCategory.nominations ?? []).map((nomination) => {
-                  const Icon = nomineeTypeIcons[nomination.nominee_type] || Music;
-                  return (
-                    <div
-                      key={nomination.id}
-                      className={cn(
-                        'p-4 rounded-xl border bg-card flex items-center gap-4 transition-all',
-                        nomination.is_winner && 'ring-2 ring-amber-500 bg-amber-500/5',
-                        nomination.has_voted && !nomination.is_winner && 'ring-1 ring-primary/30',
-                      )}
-                    >
-                      <div className="relative w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0">
-                        {nomination.nominee_image_url ? (
-                          <Image src={nomination.nominee_image_url} alt={nomination.nominee_name} fill className="object-cover" />
-                        ) : (
-                          <Icon className="absolute inset-0 m-auto h-6 w-6 text-muted-foreground" />
-                        )}
-                        {nomination.is_winner && (
-                          <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5">
-                            <Crown className="h-3 w-3 text-white" />
-                          </div>
-                        )}
-                      </div>
+function NomineeCard({
+  nomination,
+  rank,
+  maxVotes,
+  categoryId,
+  isVotingOpen,
+  isCompleted,
+  onVote,
+  isVoting,
+}: {
+  nomination: AwardNomination;
+  rank: number;
+  maxVotes: number;
+  categoryId: number;
+  isVotingOpen: boolean;
+  isCompleted: boolean;
+  onVote: (nominationId: number, categoryId: number) => void;
+  isVoting: boolean;
+}) {
+  const Icon = nomineeTypeIcons[nomination.nominee_type ?? ''] ?? Music;
+  const isWinner = nomination.status === 'winner';
+  const voteCount = nomination.votes_count ?? 0;
+  const votePercentage = maxVotes > 0 ? Math.round((voteCount / maxVotes) * 100) : 0;
 
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{nomination.nominee_name}</p>
-                        {nomination.artist_name && (
-                          <p className="text-sm text-muted-foreground">{nomination.artist_name}</p>
-                        )}
-                        {/* Vote bar */}
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full rounded-full transition-all',
-                                nomination.is_winner ? 'bg-amber-500' : 'bg-primary/60'
-                              )}
-                              style={{ width: `${nomination.vote_percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatNumber(nomination.vote_count ?? 0)} ({nomination.vote_percentage}%)
-                          </span>
-                        </div>
-                      </div>
+  return (
+    <div
+      className={cn(
+        'group relative p-5 rounded-2xl border bg-card transition-all',
+        isWinner && 'ring-2 ring-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20',
+        !isWinner && isVotingOpen && 'hover:shadow-md hover:border-amber-500/30',
+      )}
+    >
+      <div className="flex items-center gap-4">
+        {/* Rank */}
+        <div
+          className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
+            rank === 1
+              ? 'bg-amber-500 text-white'
+              : rank === 2
+                ? 'bg-gray-400 text-white'
+                : rank === 3
+                  ? 'bg-amber-700 text-white'
+                  : 'bg-muted text-muted-foreground'
+          )}
+        >
+          {isWinner ? (
+            <Crown className="h-4 w-4" />
+          ) : (
+            rank
+          )}
+        </div>
 
-                      {isVotingOpen && !nomination.has_voted ? (
-                        <button
-                          onClick={() => handleVote(nomination.id)}
-                          disabled={vote.isPending}
-                          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 shrink-0"
-                        >
-                          Vote
-                        </button>
-                      ) : nomination.has_voted ? (
-                        <div className="flex items-center gap-1 text-primary text-sm shrink-0">
-                          <Check className="h-4 w-4" />
-                          Voted
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Avatar */}
+        <div className="relative w-14 h-14 rounded-xl bg-muted overflow-hidden shrink-0">
+          {nomination.nominee_artwork ? (
+            <Image
+              src={nomination.nominee_artwork}
+              alt={nomination.nominee_name}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Icon className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+          )}
+          {isWinner && (
+            <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 shadow-lg">
+              <Crown className="h-3.5 w-3.5 text-white" />
             </div>
           )}
         </div>
 
-        {/* Top Voters */}
-        <div>
-          <div className="rounded-xl border bg-card p-6 sticky top-24">
-            <div className="flex items-center gap-2 mb-4">
-              <Crown className="h-5 w-5 text-amber-500" />
-              <h3 className="font-bold">Top Voters</h3>
-            </div>
-            {!leaderboard?.length ? (
-              <p className="text-sm text-muted-foreground">Be the first to vote!</p>
-            ) : (
-              <div className="space-y-3">
-                {leaderboard.map((entry, index) => (
-                  <div key={entry.id} className="flex items-center gap-2.5">
-                    <span
-                      className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold',
-                        index === 0 ? 'bg-amber-500 text-white' :
-                        index === 1 ? 'bg-gray-400 text-white' :
-                        index === 2 ? 'bg-amber-700 text-white' :
-                        'bg-muted'
-                      )}
-                    >
-                      {entry.rank}
-                    </span>
-                    <div className="w-7 h-7 rounded-full bg-muted overflow-hidden">
-                      {entry.user.avatar_url ? (
-                        <Image src={entry.user.avatar_url} alt={entry.user.name} width={28} height={28} className="object-cover" />
-                      ) : (
-                        <Users className="w-3.5 h-3.5 m-1.5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="flex-1 text-sm font-medium truncate">{entry.user.name}</span>
-                    <span className="text-xs text-muted-foreground">{entry.total_votes}</span>
-                  </div>
-                ))}
-              </div>
+        {/* Info + Vote Bar */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold truncate text-base">
+              {nomination.nominee_name}
+            </p>
+            {isWinner && (
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
+                WINNER
+              </span>
             )}
           </div>
+
+          {nomination.nomination_reason && (
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">
+              {nomination.nomination_reason}
+            </p>
+          )}
+
+          {/* Vote Progress Bar — show when voting or completed */}
+          {(isVotingOpen || isCompleted || voteCount > 0) && (
+            <div className="mt-2.5 flex items-center gap-3">
+              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-500',
+                    isWinner
+                      ? 'bg-amber-500'
+                      : rank <= 3
+                        ? 'bg-amber-400/70'
+                        : 'bg-primary/50'
+                  )}
+                  style={{ width: `${votePercentage}%` }}
+                />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap min-w-[60px] text-right">
+                {formatNumber(voteCount)} votes
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Vote Button */}
+        <div className="shrink-0 ml-2">
+          {isVotingOpen ? (
+            <button
+              onClick={() => onVote(nomination.id, categoryId)}
+              disabled={isVoting}
+              className={cn(
+                'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                'bg-amber-500 text-white hover:bg-amber-600 active:scale-95',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'shadow-sm hover:shadow-md'
+              )}
+            >
+              <span className="flex items-center gap-1.5">
+                <Vote className="h-4 w-4" />
+                Vote
+              </span>
+            </button>
+          ) : isWinner ? (
+            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+              <Trophy className="h-5 w-5" />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

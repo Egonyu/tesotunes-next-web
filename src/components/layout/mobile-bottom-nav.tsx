@@ -30,6 +30,7 @@ import {
   Plus,
   Headphones,
   Heart,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -51,6 +52,7 @@ const browseItems = [
 ];
 
 const moduleItems = [
+  { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },

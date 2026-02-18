@@ -3,12 +3,14 @@ import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { toast } from 'sonner';
 
 // ============================================================================
-// Types — aligned to Laravel `awards` table schema
+// Types — aligned to Laravel API Resource outputs
 // ============================================================================
 
 export type AwardStatus =
   | 'upcoming'
+  | 'draft'
   | 'nominations_open'
+  | 'nominations_closed'
   | 'voting_open'
   | 'voting_closed'
   | 'completed';
@@ -26,9 +28,9 @@ export type CategoryType =
 
 export type NominationStatus = 'pending' | 'approved' | 'rejected' | 'winner';
 
-export type NomineeType = 'artist' | 'song' | 'album';
+export type NomineeType = 'artist' | 'song' | 'album' | 'video' | 'podcast' | 'user' | 'other';
 
-/** Main award (season/show) — maps to `awards` table */
+/** Award — maps to AwardResource */
 export interface Award {
   id: number;
   uuid: string;
@@ -49,11 +51,16 @@ export interface Award {
   allow_public_nominations: boolean;
   allow_public_voting: boolean;
   votes_per_category: number;
+  is_nomination_open: boolean;
+  is_voting_open: boolean;
+  categories_count?: number;
+  nominations_count?: number;
+  categories?: AwardCategory[];
   created_at: string;
   updated_at: string;
 }
 
-/** Award category — maps to `award_categories` table */
+/** AwardCategory — maps to AwardCategoryResource */
 export interface AwardCategory {
   id: number;
   uuid: string;
@@ -64,62 +71,34 @@ export interface AwardCategory {
   category_type: CategoryType;
   is_active: boolean;
   sort_order: number;
+  nominations_count?: number;
+  nominations?: AwardNomination[];
   created_at: string;
   updated_at: string;
-  // Loaded relations
-  nominations?: AwardNomination[];
 }
 
-/** Award nomination — maps to `award_nominations` table */
+/** AwardNomination — maps to AwardNominationResource */
 export interface AwardNomination {
   id: number;
   uuid: string;
-  award_id: number;
-  category_id: number;
-  nominee_type: NomineeType;
-  nominee_id: number;
+  award_id?: number;
+  category_id?: number;
   nominee_name: string;
   nominee_artwork: string | null;
-  nominated_by_id: number | null;
   nomination_reason: string | null;
   status: NominationStatus;
   is_official: boolean;
+  nominee_type: string | null;
+  nominee_id: number | null;
+  category?: AwardCategory;
+  award?: Pick<Award, 'id' | 'title' | 'year' | 'status'>;
+  nominated_by?: { id: number; username: string };
+  votes_count?: number;
   approved_at: string | null;
   created_at: string;
-  updated_at: string;
-  // Loaded relations
-  category?: AwardCategory;
-  award?: Award;
-  nominated_by?: { id: number; name: string };
-  // Computed / frontend-injected fields
-  is_winner?: boolean;
-  has_voted?: boolean;
-  vote_count?: number;
-  vote_percentage?: number;
-  nominee_image_url?: string | null;
-  artist_name?: string | null;
 }
 
-/** Award vote — maps to `award_votes` table */
-export interface AwardVote {
-  id: number;
-  uuid: string;
-  award_id: number;
-  category_id: number;
-  nomination_id: number;
-  user_id: number;
-  weight: number;
-  ip_address: string | null;
-  created_at: string;
-  // Joined fields
-  voter_name?: string;
-  nominee_name?: string;
-  category_name?: string;
-  season_name?: string;
-  year?: number;
-}
-
-/** Dashboard stats */
+/** Dashboard stats (admin) */
 export interface AwardStats {
   total_awards: number;
   active_awards: number;
@@ -127,10 +106,9 @@ export interface AwardStats {
   total_nominations: number;
   pending_nominations: number;
   total_votes: number;
-  unique_voters: number;
 }
 
-/** Pagination meta from Laravel */
+/** Pagination meta */
 interface PaginationMeta {
   current_page: number;
   last_page: number;
@@ -138,44 +116,15 @@ interface PaginationMeta {
   total: number;
 }
 
-// ============================================================================
-// Frontend types (kept for backward compat with (app)/awards pages)
-// ============================================================================
-
-export interface AwardSeason {
-  id: number;
-  name: string;
-  slug: string;
-  year: number;
-  status: AwardStatus | 'closed';
-  nominations_start: string;
-  nominations_end: string;
-  voting_start: string;
-  voting_end: string;
-  ceremony_date: string | null;
-  cover_image_url: string | null;
+/** Category result with total votes (for results page) */
+export interface CategoryResult {
+  category: AwardCategory;
+  nominations: AwardNomination[];
   total_votes: number;
-  categories_count: number;
-}
-
-export interface LeaderboardVoter {
-  id: number;
-  user: { id: number; name: string; avatar_url: string | null };
-  total_votes: number;
-  rank: number;
-  badge?: 'gold' | 'silver' | 'bronze';
-}
-
-export interface FrontendAwardStats {
-  total_votes: number;
-  total_voters: number;
-  total_categories: number;
-  total_nominees: number;
-  voting_ends_at: string | null;
 }
 
 // ============================================================================
-// Shared form-data types for mutations
+// Mutation DTOs
 // ============================================================================
 
 export interface CreateAwardData {
@@ -202,7 +151,7 @@ export interface UpdateAwardData extends CreateAwardData {
 export interface CreateCategoryData {
   name: string;
   description?: string;
-  category_type: CategoryType;
+  category_type?: CategoryType;
   sort_order?: number;
   is_active?: boolean;
 }
@@ -215,78 +164,132 @@ export interface CreateNominationData {
   award_id: number;
   category_id: number;
   nominee_name: string;
-  nominee_type: NomineeType;
+  nominee_type?: string;
   nominee_id?: number;
+  nominee_artwork?: string;
   nomination_reason?: string;
+  status?: NominationStatus;
   is_official?: boolean;
 }
 
+export interface SubmitNominationData {
+  category_id: number;
+  nominee_name: string;
+  nominee_type?: string;
+  nominee_id?: number;
+  nominee_artwork?: string;
+  nomination_reason?: string;
+}
+
 // ============================================================================
-// Frontend Hooks (used by (app)/awards pages)
+// Public Hooks — match actual backend routes under /api/awards
 // ============================================================================
 
-export function useAwardSeasons(status?: string) {
+/** GET /awards — list all public awards */
+export function useAwards(params?: { per_page?: number; page?: number }) {
   return useQuery({
-    queryKey: ['awards', 'seasons', status],
-    queryFn: () => {
-      const params = status ? `?status=${status}` : '';
-      return apiGet<{ data: AwardSeason[] }>(`/awards/seasons${params}`).then(res => res.data);
-    },
+    queryKey: ['awards', 'list', params],
+    queryFn: () =>
+      apiGet<{ data: Award[]; meta: PaginationMeta }>('/awards', { params }),
     staleTime: 60 * 1000,
   });
 }
 
-export function useAwardSeason(slug: string) {
+/** GET /awards/current-season — active award season with categories */
+export function useCurrentSeason() {
   return useQuery({
-    queryKey: ['awards', 'season', slug],
+    queryKey: ['awards', 'current-season'],
     queryFn: () =>
-      apiGet<{ data: AwardSeason & { categories: AwardCategory[] } }>(`/awards/seasons/${slug}`).then(res => res.data),
-    enabled: !!slug,
+      apiGet<{ data: Award }>('/awards/current-season').then(res => res.data),
+    staleTime: 60 * 1000,
+    retry: false,
   });
 }
 
-export function useAwardLeaderboard(seasonSlug?: string, limit = 20) {
+/** GET /awards/{idOrSlug} — single award detail with categories + nominations */
+export function useAwardDetail(idOrSlug: string | number) {
   return useQuery({
-    queryKey: ['awards', 'leaderboard', seasonSlug, limit],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (seasonSlug) params.append('season', seasonSlug);
-      params.append('limit', String(limit));
-      return apiGet<{ data: LeaderboardVoter[] }>(`/awards/leaderboard?${params.toString()}`).then(res => res.data);
-    },
+    queryKey: ['awards', 'detail', idOrSlug],
+    queryFn: () =>
+      apiGet<{ data: Award }>(`/awards/${idOrSlug}`).then(res => res.data),
+    enabled: !!idOrSlug,
     staleTime: 30 * 1000,
   });
 }
 
-export function useAwardStats(seasonSlug?: string) {
+/** GET /awards/{id}/categories — categories for an award */
+export function useAwardCategories(awardId: string | number) {
   return useQuery({
-    queryKey: ['awards', 'stats', seasonSlug],
+    queryKey: ['awards', 'categories', awardId],
     queryFn: () =>
-      apiGet<{ data: FrontendAwardStats }>(`/awards/stats${seasonSlug ? `?season=${seasonSlug}` : ''}`).then(
-        res => res.data,
-      ),
+      apiGet<{ data: AwardCategory[] }>(`/awards/${awardId}/categories`).then(res => res.data),
+    enabled: !!awardId,
     staleTime: 30 * 1000,
   });
 }
 
-export function useVoteForNomination() {
+/** GET /awards/{id}/results — voting results (only when voting_closed/completed) */
+export function useAwardResults(awardId: string | number) {
+  return useQuery({
+    queryKey: ['awards', 'results', awardId],
+    queryFn: () =>
+      apiGet<{ data: { award: Award; results: CategoryResult[] } }>(`/awards/${awardId}/results`).then(res => res.data),
+    enabled: !!awardId,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+}
+
+/** POST /awards/{id}/nominations — submit a public nomination (auth) */
+export function useSubmitNomination() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ seasonSlug, nominationId }: { seasonSlug: string; nominationId: number }) =>
-      apiPost(`/awards/seasons/${seasonSlug}/vote`, { nomination_id: nominationId }),
-    onSuccess: (_, variables) => {
-      toast.success('Vote cast successfully!');
-      queryClient.invalidateQueries({ queryKey: ['awards', 'season', variables.seasonSlug] });
-      queryClient.invalidateQueries({ queryKey: ['awards', 'leaderboard'] });
-      queryClient.invalidateQueries({ queryKey: ['awards', 'stats'] });
+    mutationFn: ({ awardId, data }: { awardId: number | string; data: SubmitNominationData }) =>
+      apiPost<{ data: AwardNomination; message: string }>(`/awards/${awardId}/nominations`, data),
+    onSuccess: (res, vars) => {
+      toast.success(res.message || 'Nomination submitted!');
+      queryClient.invalidateQueries({ queryKey: ['awards', 'detail', vars.awardId] });
+      queryClient.invalidateQueries({ queryKey: ['awards', 'categories', vars.awardId] });
     },
-    onError: () => toast.error('Failed to cast vote. You may have already voted in this category.'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Failed to submit nomination.');
+    },
+  });
+}
+
+/** POST /awards/{id}/vote — cast a vote (auth) */
+export function useVote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ awardId, categoryId, nominationId }: { awardId: number | string; categoryId: number; nominationId: number }) =>
+      apiPost<{ data: { voted: boolean }; message: string }>(`/awards/${awardId}/vote`, {
+        category_id: categoryId,
+        nomination_id: nominationId,
+      }),
+    onSuccess: (res, vars) => {
+      toast.success(res.message || 'Vote cast!');
+      queryClient.invalidateQueries({ queryKey: ['awards', 'detail', vars.awardId] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Failed to cast vote.');
+    },
   });
 }
 
 // ============================================================================
-// Admin — Award (Season) CRUD
+// Admin Hooks — prefix /admin/awards
 // ============================================================================
+
+export function useAdminAwardStats() {
+  return useQuery({
+    queryKey: ['admin', 'awards', 'stats'],
+    queryFn: () =>
+      apiGet<{ success: boolean; data: AwardStats }>('/admin/awards/stats').then(res => res.data),
+    staleTime: 60 * 1000,
+  });
+}
 
 export function useAdminAwards(params?: { search?: string; status?: string; page?: number; per_page?: number }) {
   return useQuery({
@@ -326,18 +329,11 @@ export function useAdminAwardDetail(id: number | string) {
   });
 }
 
-export function useAdminAwardStats() {
-  return useQuery({
-    queryKey: ['admin', 'awards', 'stats'],
-    queryFn: () => apiGet<{ success: boolean; data: AwardStats }>('/admin/awards/stats').then(res => res.data),
-    staleTime: 60 * 1000,
-  });
-}
-
 export function useCreateAward() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateAwardData) => apiPost<{ success: boolean; data: Award }>('/admin/awards/seasons', data),
+    mutationFn: (data: CreateAwardData) =>
+      apiPost<{ success: boolean; data: Award }>('/admin/awards/seasons', data),
     onSuccess: () => {
       toast.success('Award created successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'awards'] });
@@ -368,27 +364,17 @@ export function useDeleteAward() {
       toast.success('Award deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'awards'] });
     },
-    onError: () => toast.error('Failed to delete award. It may have nominations.'),
+    onError: () => toast.error('Failed to delete award. It may have votes.'),
   });
 }
 
-// ============================================================================
-// Admin — Award Categories CRUD
-// ============================================================================
+// ── Admin Categories ─────────────────────────────────────────────────────────
 
-export function useAdminAwardCategories(params?: {
-  search?: string;
-  status?: string;
-  type?: string;
-  page?: number;
-  per_page?: number;
-}) {
+export function useAdminAwardCategories(params?: { search?: string; type?: string; status?: string; page?: number; per_page?: number }) {
   return useQuery({
     queryKey: ['admin', 'awards', 'categories', params],
     queryFn: () =>
-      apiGet<{ success: boolean; data: AwardCategory[]; meta: PaginationMeta }>('/admin/awards/categories', {
-        params,
-      }),
+      apiGet<{ success: boolean; data: AwardCategory[]; meta: PaginationMeta }>('/admin/awards/categories', { params }),
     staleTime: 30 * 1000,
   });
 }
@@ -447,18 +433,9 @@ export function useDeleteAwardCategory() {
   });
 }
 
-// ============================================================================
-// Admin — Nominations
-// ============================================================================
+// ── Admin Nominations ────────────────────────────────────────────────────────
 
-export function useAdminNominations(params?: {
-  search?: string;
-  status?: string;
-  award_id?: number;
-  category_id?: number;
-  page?: number;
-  per_page?: number;
-}) {
+export function useAdminNominations(params?: { search?: string; status?: string; award_id?: number; category_id?: number; page?: number; per_page?: number }) {
   return useQuery({
     queryKey: ['admin', 'awards', 'nominations', params],
     queryFn: () =>
@@ -532,33 +509,5 @@ export function useDeleteNomination() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'awards', 'nominations'] });
     },
     onError: () => toast.error('Failed to delete nomination'),
-  });
-}
-
-// ============================================================================
-// Admin — Votes
-// ============================================================================
-
-export function useAdminVotes(params?: { award_id?: number; page?: number; per_page?: number }) {
-  return useQuery({
-    queryKey: ['admin', 'awards', 'votes', params],
-    queryFn: () =>
-      apiGet<{ success: boolean; data: AwardVote[]; seasons: Pick<Award, 'id' | 'title' | 'year'>[]; meta: PaginationMeta }>(
-        '/admin/awards/votes',
-        { params },
-      ),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useDeleteVote() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => apiDelete(`/admin/awards/votes/${id}`),
-    onSuccess: () => {
-      toast.success('Vote deleted');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'awards', 'votes'] });
-    },
-    onError: () => toast.error('Failed to delete vote'),
   });
 }

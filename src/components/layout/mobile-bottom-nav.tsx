@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { usePlayerStore, useUIStore } from "@/stores";
 
 const mainTabs = [
   { href: "/", label: "Home", icon: Home },
@@ -154,6 +155,10 @@ export function MobileBottomNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [fabExpanded, setFabExpanded] = useState(false);
   const { data: session } = useSession();
+  const { currentSong } = usePlayerStore();
+  const { playerMinimized } = useUIStore();
+
+  const hasActivePlayer = !!currentSong && !playerMinimized;
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
   const isArtist = userRole.toLowerCase().includes("artist");
@@ -292,7 +297,10 @@ export function MobileBottomNav() {
       )}
 
       {/* Right-side Vertical Action Buttons */}
-      <div className="fixed right-4 bottom-[5.5rem] z-50 lg:hidden flex flex-col items-center gap-2.5">
+      <div className={cn(
+        "fixed right-4 z-50 lg:hidden flex flex-col items-center gap-2.5 transition-all duration-300",
+        hasActivePlayer ? "bottom-[10rem]" : "bottom-[5.5rem]"
+      )}>
         {/* Side action buttons - slide up when FAB expanded */}
         {fabExpanded && sideActions.map((action, i) => (
           <Link
@@ -329,8 +337,10 @@ export function MobileBottomNav() {
         </button>
       </div>
 
-      {/* Floating Bottom Navigation Bar — centered */}
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 lg:hidden w-[min(92vw,22rem)]">
+      {/* Floating Bottom Navigation Bar — always at the very bottom */}
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 lg:hidden w-[min(92vw,22rem)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <div className={cn(
           "flex items-center justify-around rounded-full px-1 py-1",
           "bg-background/70 dark:bg-neutral-900/70",

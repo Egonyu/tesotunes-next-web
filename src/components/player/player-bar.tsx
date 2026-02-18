@@ -64,14 +64,13 @@ export function PlayerBar() {
   };
 
   const handleDismiss = () => {
-    pause();
     setPlayerMinimized(true);
   };
 
-  // Minimized: small floating pill in bottom-right
+  // Minimized: small floating pill above mobile nav
   if (playerMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="fixed bottom-20 right-4 lg:bottom-4 z-40 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
           {currentSong.artwork_url ? (
             <Image
@@ -106,9 +105,9 @@ export function PlayerBar() {
     );
   }
 
-  // Full player bar
+  // Full player bar — sits above mobile nav (bottom-16 on mobile, bottom-0 on desktop)
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="fixed bottom-[4.5rem] left-0 right-0 lg:bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-t-xl lg:rounded-none shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
       {/* Thin progress bar at top of player */}
       <div
         className="h-0.5 bg-muted cursor-pointer lg:hidden"

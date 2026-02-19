@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Heart, MoreHorizontal, Music } from "lucide-react";
+import { Play, Pause, Heart, MoreHorizontal, Music } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { usePlayerStore } from "@/stores";
 import { formatDuration } from "@/lib/utils";
@@ -75,14 +75,19 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
             key={song.id}
             className="group relative rounded-lg bg-card/50 p-3 transition-colors hover:bg-card"
           >
-            {/* Artwork */}
-            <div className="relative aspect-square mb-3 overflow-hidden rounded-md bg-muted">
+            {/* Artwork - entire area is clickable to play */}
+            <button
+              onClick={() => handlePlay(song)}
+              className="relative aspect-square mb-3 overflow-hidden rounded-md bg-muted w-full cursor-pointer"
+              aria-label={isCurrentlyPlaying ? `Pause ${song.title}` : `Play ${song.title}`}
+            >
               {song.artwork_url ? (
                 <Image
                   src={song.artwork_url}
                   alt={song.title}
                   fill
                   className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
@@ -90,26 +95,23 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                 </div>
               )}
 
-              {/* Play Button Overlay */}
-              <button
-                onClick={() => handlePlay(song)}
-                className={`absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all ${
+              {/* Full overlay on hover / always visible when playing */}
+              <div
+                className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${
                   isCurrentlyPlaying
                     ? "opacity-100"
-                    : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
+                    : "opacity-0 group-hover:opacity-100"
                 }`}
               >
-                {isCurrentlyPlaying ? (
-                  <span className="flex items-center gap-0.5">
-                    <span className="w-0.5 h-3 bg-primary-foreground animate-pulse" />
-                    <span className="w-0.5 h-4 bg-primary-foreground animate-pulse delay-75" />
-                    <span className="w-0.5 h-2 bg-primary-foreground animate-pulse delay-150" />
-                  </span>
-                ) : (
-                  <Play className="h-4 w-4 ml-0.5" />
-                )}
-              </button>
-            </div>
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+                  {isCurrentlyPlaying ? (
+                    <Pause className="h-6 w-6" />
+                  ) : (
+                    <Play className="h-6 w-6 ml-0.5" />
+                  )}
+                </div>
+              </div>
+            </button>
 
             {/* Song Info */}
             <div className="min-w-0">

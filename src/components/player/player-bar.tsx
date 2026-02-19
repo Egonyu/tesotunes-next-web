@@ -77,6 +77,7 @@ export function PlayerBar() {
               src={currentSong.artwork_url}
               alt={currentSong.title}
               fill
+              unoptimized
               className="object-cover"
             />
           ) : (
@@ -131,6 +132,7 @@ export function PlayerBar() {
                 src={currentSong.artwork_url}
                 alt={currentSong.title}
                 fill
+                unoptimized
                 className="object-cover"
               />
             ) : (

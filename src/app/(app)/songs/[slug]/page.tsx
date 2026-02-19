@@ -30,15 +30,19 @@ interface SongDetail {
   id: number;
   title: string;
   slug: string;
-  duration: number;
-  duration_seconds?: number;
+  duration_seconds: number;
   play_count: number;
-  release_date: string;
-  cover_url: string | null;
-  explicit: boolean;
-  is_liked: boolean;
+  release_date: string | null;
+  artwork_url: string | null;
+  is_explicit: boolean;
+  is_free: boolean;
+  is_featured: boolean;
+  price?: number;
+  like_count: number;
+  download_count: number;
+  audio_url?: string;
   lyrics?: string;
-  credits: {
+  credits?: {
     role: string;
     name: string;
   }[];
@@ -47,44 +51,46 @@ interface SongDetail {
     name: string;
     slug: string;
     avatar_url: string | null;
-    is_verified: boolean;
-    followers_count: number;
+    is_verified?: boolean;
+    followers_count?: number;
   };
   album?: {
     id: number;
     title: string;
     slug: string;
-    cover_url: string | null;
-    release_date: string;
-    tracks_count: number;
+    artwork_url: string | null;
   };
-  genres: {
+  genre?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  genres?: {
     id: number;
     name: string;
     slug: string;
   }[];
-  moods: {
+  moods?: {
     id: number;
     name: string;
     slug: string;
   }[];
-  similar_songs: {
+  similar_songs?: {
     id: number;
     title: string;
     slug: string;
-    cover_url: string | null;
-    duration: number;
+    artwork_url: string | null;
     duration_seconds?: number;
     artist: {
       name: string;
       slug: string;
     };
   }[];
-  artist_top_songs: {
+  artist_top_songs?: {
     id: number;
     title: string;
     slug: string;
-    cover_url: string | null;
+    artwork_url: string | null;
     play_count: number;
   }[];
 }
@@ -105,7 +111,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
     mutationFn: () => apiPost(`/songs/${song?.id}/like`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["song", slug] });
-      toast.success(song?.is_liked ? "Removed from liked songs" : "Added to liked songs");
+      toast.success("Updated liked songs");
     },
   });
 
@@ -146,11 +152,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
         <div className="lg:w-80 flex-shrink-0">
           {/* Cover Art */}
           <div className="relative aspect-square rounded-xl overflow-hidden bg-muted shadow-xl mb-6">
-            {song.cover_url ? (
+            {song.artwork_url ? (
               <Image
-                src={song.cover_url}
+                src={song.artwork_url}
                 alt={song.title}
                 fill
+                unoptimized
                 className="object-cover"
                 priority
               />
@@ -168,11 +175,9 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
             <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => toggleLike.mutate()}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted ${
-                  song.is_liked ? "text-red-500 border-red-500/30" : ""
-                }`}
+                className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted"
               >
-                <Heart className={`h-5 w-5 ${song.is_liked ? "fill-current" : ""}`} />
+                <Heart className="h-5 w-5" />
                 <span className="text-xs">Like</span>
               </button>
               <button className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted">
@@ -198,7 +203,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 <p className="text-sm text-muted-foreground">Plays</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatDuration(song.duration_seconds || song.duration || 0)}</p>
+                <p className="text-2xl font-bold">{formatDuration(song.duration_seconds || 0)}</p>
                 <p className="text-sm text-muted-foreground">Duration</p>
               </div>
             </div>
@@ -210,7 +215,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           {/* Title & Artist */}
           <div className="mb-6">
             <div className="flex items-center gap-2 flex-wrap mb-2">
-              {song.explicit && (
+              {song.is_explicit && (
                 <span className="px-2 py-0.5 bg-muted text-xs font-bold rounded">E</span>
               )}
               <h1 className="text-3xl md:text-4xl font-bold">{song.title}</h1>
@@ -226,6 +231,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                     src={song.artist.avatar_url}
                     alt={song.artist.name}
                     fill
+                    unoptimized
                     className="object-cover"
                   />
                 ) : (
@@ -254,15 +260,25 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 {song.album.title}
               </Link>
             )}
-            <span className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {formatDate(song.release_date)}
-            </span>
+            {song.release_date && (
+              <span className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {formatDate(song.release_date)}
+              </span>
+            )}
           </div>
 
           {/* Genres & Moods */}
           <div className="flex flex-wrap gap-2 mb-8">
-            {song.genres.map((genre) => (
+            {song.genre && (
+              <Link
+                href={`/genres/${song.genre.slug}`}
+                className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20"
+              >
+                {song.genre.name}
+              </Link>
+            )}
+            {song.genres?.map((genre) => (
               <Link
                 key={genre.id}
                 href={`/genres/${genre.slug}`}
@@ -271,7 +287,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 {genre.name}
               </Link>
             ))}
-            {song.moods.map((mood) => (
+            {song.moods?.map((mood) => (
               <Link
                 key={mood.id}
                 href={`/moods/${mood.slug}`}
@@ -295,7 +311,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           )}
 
           {/* Credits */}
-          {song.credits.length > 0 && (
+          {song.credits && song.credits.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl font-bold mb-4">Credits</h2>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -323,11 +339,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 className="flex items-center gap-4 p-4 bg-card rounded-lg border hover:border-primary transition-colors"
               >
                 <div className="relative w-20 h-20 rounded bg-muted overflow-hidden flex-shrink-0">
-                  {song.album.cover_url ? (
+                  {song.album.artwork_url ? (
                     <Image
-                      src={song.album.cover_url}
+                      src={song.album.artwork_url}
                       alt={song.album.title}
                       fill
+                      unoptimized
                       className="object-cover"
                     />
                   ) : (
@@ -337,7 +354,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 <div>
                   <p className="font-bold text-lg">{song.album.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {song.album.tracks_count} tracks • {formatDate(song.album.release_date)}
+                    Album
                   </p>
                 </div>
                 <ExternalLink className="h-5 w-5 ml-auto text-muted-foreground" />
@@ -348,7 +365,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
       </div>
 
       {/* Similar Songs */}
-      {song.similar_songs.length > 0 && (
+      {song.similar_songs && song.similar_songs.length > 0 && (
         <section className="mt-12">
           <h2 className="text-2xl font-bold mb-6">You Might Also Like</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -359,11 +376,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 className="group"
               >
                 <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-3">
-                  {similar.cover_url ? (
+                  {similar.artwork_url ? (
                     <Image
-                      src={similar.cover_url}
+                      src={similar.artwork_url}
                       alt={similar.title}
                       fill
+                      unoptimized
                       className="object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (
@@ -386,7 +404,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
       )}
 
       {/* More from Artist */}
-      {song.artist_top_songs.length > 0 && (
+      {song.artist_top_songs && song.artist_top_songs.length > 0 && (
         <section className="mt-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">More from {song.artist.name}</h2>
@@ -405,11 +423,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 className="group"
               >
                 <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-3">
-                  {track.cover_url ? (
+                  {track.artwork_url ? (
                     <Image
-                      src={track.cover_url}
+                      src={track.artwork_url}
                       alt={track.title}
                       fill
+                      unoptimized
                       className="object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (

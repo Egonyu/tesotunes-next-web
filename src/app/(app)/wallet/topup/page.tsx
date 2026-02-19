@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
+import {
   ChevronLeft,
   Smartphone,
   CreditCard,
@@ -16,7 +16,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useDeposit, usePaymentStatus, formatPhoneNumber } from '@/hooks/usePayments';
+import { useDeposit, usePaymentStatus, formatPhoneNumber, detectProvider } from '@/hooks/usePayments';
 import { toast } from 'sonner';
 
 export default function TopUpPage() {
@@ -26,29 +26,29 @@ export default function TopUpPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'input' | 'processing' | 'success' | 'failed'>('input');
-  
+
   // Hook for initiating deposit
   const depositMutation = useDeposit();
-  
+
   // Hook for polling payment status
   const { data: paymentStatus } = usePaymentStatus(transactionRef || '', {
     enabled: !!transactionRef && paymentStep === 'processing',
     refetchInterval: transactionRef && paymentStep === 'processing' ? 3000 : undefined,
   });
-  
+
   const presetAmounts = [5000, 10000, 20000, 50000, 100000, 200000];
-  
+
   const handleAmountSelect = (value: number) => {
     setAmount(value);
     setCustomAmount('');
   };
-  
+
   const handleCustomAmount = (value: string) => {
     const numValue = parseInt(value.replace(/\D/g, ''));
     setCustomAmount(value);
     setAmount(numValue || null);
   };
-  
+
   // Validate phone number
   const validatePhone = () => {
     const cleaned = phoneNumber.replace(/\D/g, '');
@@ -58,7 +58,7 @@ export default function TopUpPage() {
     }
     return true;
   };
-  
+
   // Handle payment status changes
   useEffect(() => {
     if (paymentStatus?.status === 'completed') {
@@ -69,26 +69,33 @@ export default function TopUpPage() {
       toast.error('Payment failed. Please try again.');
     }
   }, [paymentStatus]);
-  
+
   const handleSubmit = async () => {
     if (!amount || amount < 1000) {
       toast.error('Minimum top-up amount is UGX 1,000');
       return;
     }
-    
+
     if (!validatePhone()) return;
-    
+
     setPaymentStep('processing');
-    
+
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      
+      const detectedProvider = detectProvider(phoneNumber);
+
+      if (detectedProvider === 'unknown') {
+        toast.error('Could not detect mobile money provider. Please use an MTN or Airtel number.');
+        setPaymentStep('input');
+        return;
+      }
+
       const result = await depositMutation.mutateAsync({
         amount,
         phone: formattedPhone,
-        provider: 'zengapay',
+        provider: detectedProvider,
       });
-      
+
       if (result.transaction_ref) {
         setTransactionRef(result.transaction_ref);
         toast.info('Please check your phone to confirm the payment');
@@ -102,12 +109,12 @@ export default function TopUpPage() {
       toast.error(errorMessage);
     }
   };
-  
+
   const handleRetry = () => {
     setPaymentStep('input');
     setTransactionRef(null);
   };
-  
+
   const selectedAmount = amount || 0;
   const isProcessing = paymentStep === 'processing' || depositMutation.isPending;
 
@@ -193,12 +200,12 @@ export default function TopUpPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-6 max-w-lg mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link 
+        <Link
           href="/wallet"
           className="p-2 hover:bg-muted rounded-lg"
         >
@@ -206,11 +213,11 @@ export default function TopUpPage() {
         </Link>
         <h1 className="text-xl font-bold">Top Up Wallet</h1>
       </div>
-      
+
       {/* Amount Selection */}
       <div className="p-6 rounded-xl border bg-card">
         <h2 className="font-semibold mb-4">Select Amount</h2>
-        
+
         {/* Preset Amounts */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           {presetAmounts.map((preset) => (
@@ -228,7 +235,7 @@ export default function TopUpPage() {
             </button>
           ))}
         </div>
-        
+
         {/* Custom Amount */}
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -246,7 +253,7 @@ export default function TopUpPage() {
           Minimum: UGX 1,000 • Maximum: UGX 5,000,000
         </p>
       </div>
-      
+
       {/* Payment via ZengaPay */}
       <div className="p-6 rounded-xl border bg-card">
         <h2 className="font-semibold mb-4">Payment Method</h2>
@@ -263,7 +270,7 @@ export default function TopUpPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Phone Number */}
       <div className="p-6 rounded-xl border bg-card">
         <h2 className="font-semibold mb-4">Phone Number</h2>
@@ -278,7 +285,7 @@ export default function TopUpPage() {
           Enter your MTN or Airtel number. You will receive a prompt to confirm payment.
         </p>
       </div>
-      
+
       {/* Summary */}
       {selectedAmount > 0 && (
         <div className="p-6 rounded-xl border bg-card">
@@ -299,7 +306,7 @@ export default function TopUpPage() {
           </div>
         </div>
       )}
-      
+
       {/* Security Notice */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
         <Shield className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -310,7 +317,7 @@ export default function TopUpPage() {
           </p>
         </div>
       </div>
-      
+
       {/* Submit Button */}
       <button
         onClick={handleSubmit}

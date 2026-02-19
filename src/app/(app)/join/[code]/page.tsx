@@ -23,7 +23,7 @@ interface ReferrerData {
 // Fetch referrer data from API
 async function getReferrer(code: string): Promise<ReferrerData> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://beta.test/api';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com';
     const response = await fetch(`${apiUrl}/referrals/validate/${code}`, {
       cache: 'no-store',
     });
@@ -62,7 +62,7 @@ async function getReferrer(code: string): Promise<ReferrerData> {
 export async function generateMetadata({ params }: JoinPageProps): Promise<Metadata> {
   const { code } = await params;
   const data = await getReferrer(code);
-  
+
   return {
     title: `Join TesoTunes - Invited by ${data.referrer?.name || 'a friend'}`,
     description: 'Join Uganda\'s #1 music streaming platform. Get 50 free credits when you sign up!',

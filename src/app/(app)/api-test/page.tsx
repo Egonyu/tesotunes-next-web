@@ -12,7 +12,7 @@ interface TestResult {
   data?: unknown;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://beta.test/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
 
 export default function ApiTestPage() {
   const [tests, setTests] = useState<TestResult[]>([
@@ -29,15 +29,15 @@ export default function ApiTestPage() {
   async function runTest(index: number): Promise<TestResult> {
     const test = tests[index];
     const startTime = performance.now();
-    
+
     try {
       let url = API_URL + test.endpoint;
-      
+
       // CSRF cookie requires different handling
       if (test.endpoint === "/sanctum/csrf-cookie") {
         url = API_URL.replace("/api", "") + test.endpoint;
       }
-      
+
       // Health check - try root first
       if (test.endpoint === "/health") {
         url = API_URL.replace("/api", "") + "/api" + test.endpoint;
@@ -76,7 +76,7 @@ export default function ApiTestPage() {
         } catch {
           // Ignore JSON parse errors
         }
-        
+
         return {
           ...test,
           status: "error",
@@ -96,14 +96,14 @@ export default function ApiTestPage() {
   async function runAllTests() {
     setIsRunning(true);
     setOverallStatus("pending");
-    
+
     // Reset tests
     setTests((prev) =>
       prev.map((t) => ({ ...t, status: "pending" as const, message: "Testing..." }))
     );
 
     const results: TestResult[] = [];
-    
+
     for (let i = 0; i < tests.length; i++) {
       const result = await runTest(i);
       results.push(result);
@@ -112,7 +112,7 @@ export default function ApiTestPage() {
         updated[i] = result;
         return updated;
       });
-      
+
       // Small delay between tests
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -290,7 +290,7 @@ export default function ApiTestPage() {
             <li className="flex items-start gap-2">
               <span>1.</span>
               <span>
-                Make sure Laravel is running at <code className="bg-muted px-1 rounded">http://beta.test</code>
+                Make sure Laravel API is running at <code className="bg-muted px-1 rounded">https://api.tesotunes.com</code>
               </span>
             </li>
             <li className="flex items-start gap-2">

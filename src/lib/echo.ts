@@ -10,7 +10,7 @@ let echoInstance: Echo<'pusher'> | null = null;
 
 export function getEchoInstance(): Echo<'pusher'> | null {
   if (typeof window === 'undefined') return null;
-  
+
   if (!echoInstance) {
     // Get auth token from cookie or localStorage
     const getAuthToken = () => {
@@ -31,7 +31,7 @@ export function getEchoInstance(): Echo<'pusher'> | null {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'ap4',
       forceTLS: true,
       enabledTransports: ['ws', 'wss'],
-      authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'http://beta.test/api'}/broadcasting/auth`,
+      authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com'}/broadcasting/auth`,
       auth: {
         headers: {
           'X-XSRF-TOKEN': getAuthToken() || '',
@@ -40,7 +40,7 @@ export function getEchoInstance(): Echo<'pusher'> | null {
       },
     });
   }
-  
+
   return echoInstance;
 }
 

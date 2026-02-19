@@ -11,7 +11,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useDeposit, usePaymentStatus, formatPhoneNumber } from '@/hooks/usePayments';
+import { useDeposit, usePaymentStatus, formatPhoneNumber, detectProvider } from '@/hooks/usePayments';
 import { toast } from 'sonner';
 
 export default function ArtistTopUpPage() {
@@ -72,11 +72,18 @@ export default function ArtistTopUpPage() {
 
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
+      const detectedProvider = detectProvider(phoneNumber);
+
+      if (detectedProvider === 'unknown') {
+        toast.error('Could not detect mobile money provider. Please use an MTN or Airtel number.');
+        setPaymentStep('input');
+        return;
+      }
 
       const result = await depositMutation.mutateAsync({
         amount,
         phone: formattedPhone,
-        provider: 'zengapay',
+        provider: detectedProvider,
       });
 
       if (result.transaction_ref) {

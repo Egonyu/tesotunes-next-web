@@ -111,11 +111,14 @@ export interface SaccoDividend {
 // ============================================================================
 
 export function useSaccoMembership() {
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
   return useQuery({
     queryKey: ["sacco", "membership"],
     queryFn: () => apiGet<{ data: SaccoMember | null }>("/sacco/membership")
       .then(res => res.data),
     staleTime: 60 * 1000,
+    enabled: hasToken,
+    retry: 1,
   });
 }
 
@@ -128,7 +131,8 @@ export function useJoinSacco() {
       initial_shares?: number;
       phone_number: string;
       payment_method?: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ message: string; data: SaccoMember }>("/sacco/join", data),
+    }) => apiPost<{ message: string; data: SaccoMember }>("/sacco/join", data)
+      .then(res => res),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },

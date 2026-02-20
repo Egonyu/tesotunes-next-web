@@ -41,7 +41,7 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   return (
-    <SessionProvider>
+    <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={false}>
       <TokenSync />
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>

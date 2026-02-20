@@ -60,6 +60,10 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
 }
 
 export const authConfig: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   pages: {
     signIn: "/login",
     signOut: "/logout",
@@ -190,5 +194,5 @@ export const authConfig: NextAuthOptions = {
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET || "tesotunes-secret-key-change-in-production-2026",
+  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-abc123xyz",
 };

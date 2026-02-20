@@ -154,7 +154,7 @@ export default function ReferralHistoryPage() {
                 className="pl-10 bg-zinc-800 border-zinc-700"
               />
             </div>
-            
+
             {/* Status Filter */}
             <div className="flex gap-2 flex-wrap">
               <Button
@@ -232,7 +232,7 @@ export default function ReferralHistoryPage() {
                         <p className="text-sm text-gray-400">{referral.user.email}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-4 text-sm">
                       <div className="text-gray-400">
                         Joined: <span className="text-white">{new Date(referral.joined_at).toLocaleDateString()}</span>

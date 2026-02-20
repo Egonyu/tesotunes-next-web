@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/api";
 
@@ -111,13 +112,16 @@ export interface SaccoDividend {
 // ============================================================================
 
 export function useSaccoMembership() {
-  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    setEnabled(!!localStorage.getItem("auth_token"));
+  }, []);
   return useQuery({
     queryKey: ["sacco", "membership"],
     queryFn: () => apiGet<{ data: SaccoMember | null }>("/sacco/membership")
       .then(res => res.data),
     staleTime: 60 * 1000,
-    enabled: hasToken,
+    enabled,
     retry: 1,
   });
 }
@@ -126,7 +130,7 @@ export function useJoinSacco() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { 
+    mutationFn: (data: {
       initial_deposit?: number;
       initial_shares?: number;
       phone_number: string;
@@ -159,9 +163,9 @@ export function useSaccoDashboard() {
 export function useSaccoSavings() {
   return useQuery({
     queryKey: ["sacco", "savings"],
-    queryFn: () => apiGet<{ 
-            data: { 
-        balance: number; 
+    queryFn: () => apiGet<{
+            data: {
+        balance: number;
         interest_earned: number;
         interest_rate: number;
         this_month: number;
@@ -173,7 +177,7 @@ export function useSaccoSavings() {
           current: number;
           deadline: string;
         }>;
-      } 
+      }
     }>("/sacco/savings").then(res => res.data),
     staleTime: 60 * 1000,
   });
@@ -183,11 +187,11 @@ export function useSaccoDeposit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { 
-      amount: number; 
+    mutationFn: (data: {
+      amount: number;
       phone_number: string;
       payment_method: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ 
+    }) => apiPost<{
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
     }>("/sacco/deposit", data),
@@ -201,11 +205,11 @@ export function useSaccoWithdraw() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { 
-      amount: number; 
+    mutationFn: (data: {
+      amount: number;
       phone_number: string;
       payment_method: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ 
+    }) => apiPost<{
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
     }>("/sacco/withdraw", data),
@@ -219,14 +223,14 @@ export function useSaccoWithdraw() {
 // Transaction Hooks
 // ============================================================================
 
-export function useSaccoTransactions(params?: { 
-  type?: string; 
-  page?: number; 
+export function useSaccoTransactions(params?: {
+  type?: string;
+  page?: number;
   limit?: number;
 }) {
   return useQuery({
     queryKey: ["sacco", "transactions", params],
-    queryFn: () => apiGet<{ 
+    queryFn: () => apiGet<{
             data: SaccoTransaction[];
       pagination: { current_page: number; last_page: number; total: number };
     }>("/sacco/transactions", { params }),
@@ -250,7 +254,7 @@ export function useSaccoLoanProducts() {
 export function useSaccoLoans(params?: { status?: string }) {
   return useQuery({
     queryKey: ["sacco", "loans", params],
-    queryFn: () => apiGet<{ 
+    queryFn: () => apiGet<{
             data: SaccoLoan[];
     }>("/sacco/loans", { params }).then(res => res.data),
     staleTime: 60 * 1000,
@@ -286,8 +290,8 @@ export function useApplyForLoan() {
       purpose: string;
       phone_number: string;
       payment_method?: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ 
-            message: string; 
+    }) => apiPost<{
+            message: string;
       data: { loan_id: number; status: 'pending' };
     }>("/sacco/loans/apply", data),
     onSuccess: () => {
@@ -306,7 +310,7 @@ export function useMakeLoanPayment() {
       amount: number;
       phone_number: string;
       payment_method: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ 
+    }) => apiPost<{
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
     }>(`/sacco/loans/${data.loan_id}/pay`, data),
@@ -337,7 +341,7 @@ export function useBuyShares() {
       quantity: number;
       phone_number: string;
       payment_method: 'mtn_momo' | 'airtel_money';
-    }) => apiPost<{ 
+    }) => apiPost<{
             message: string;
       data: { reference: string; status: 'pending' | 'processing' };
     }>("/sacco/shares/buy", data),

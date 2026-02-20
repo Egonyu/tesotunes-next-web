@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 
@@ -155,7 +156,10 @@ export interface ArtistProfile {
 // ============================================================================
 
 export function useArtistDashboard(options?: { enabled?: boolean }) {
-  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
+  const [hasToken, setHasToken] = useState(false);
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem("auth_token"));
+  }, []);
   return useQuery({
     queryKey: ["artist", "dashboard"],
     queryFn: () => apiGet<{ data: ArtistDashboard }>("/artist/dashboard")
@@ -177,7 +181,10 @@ export function useMyArtistSongs(params?: {
   sort?: string;
   order?: 'asc' | 'desc';
 }, options?: { enabled?: boolean }) {
-  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
+  const [hasToken, setHasToken] = useState(false);
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem("auth_token"));
+  }, []);
   return useQuery({
     queryKey: ["artist", "songs", params],
     queryFn: () => apiGet<SongsResponse>("/artist/songs", { params }),

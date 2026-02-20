@@ -27,7 +27,7 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
  * Fetch fresh user data from the API to refresh role.
  * Returns null if the request fails (keeps existing role).
  */
-async function fetchFreshUserData(accessToken: string): Promise<{ role: string } | null> {
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string } | { expired: true } | null> {
   try {
     const response = await fetch(`${API_URL}/user/profile`, {
       headers: {
@@ -35,6 +35,11 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
         Accept: "application/json",
       },
     });
+
+    if (response.status === 401) {
+      console.warn("[Auth] Access token expired (401)");
+      return { expired: true };
+    }
 
     if (!response.ok) {
       console.warn("[Auth] Failed to refresh user data, status:", response.status);
@@ -88,7 +93,12 @@ export const authConfig: NextAuthOptions = {
 
       if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
         const freshData = await fetchFreshUserData(token.accessToken as string);
-        if (freshData?.role) {
+        if (freshData && 'expired' in freshData) {
+          // Token expired — clear it so TokenSync removes from localStorage
+          // User will be redirected to login on next protected API call
+          console.warn("[Auth] Clearing expired access token");
+          token.accessToken = undefined;
+        } else if (freshData && 'role' in freshData) {
           token.role = freshData.role;
         }
         token.roleRefreshedAt = now;

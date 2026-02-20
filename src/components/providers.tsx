@@ -14,7 +14,8 @@ function TokenSync() {
   useEffect(() => {
     if (status === "authenticated" && session?.accessToken) {
       localStorage.setItem("auth_token", session.accessToken);
-    } else if (status === "unauthenticated") {
+    } else if (status === "unauthenticated" || (status === "authenticated" && !session?.accessToken)) {
+      // Clear token if unauthenticated OR if session exists but token was invalidated
       localStorage.removeItem("auth_token");
     }
   }, [session, status]);
@@ -34,7 +35,8 @@ export function Providers({ children }: ProvidersProps) {
           queries: {
             staleTime: 60 * 1000, // 1 minute
             refetchOnWindowFocus: false,
-            retry: 1,
+            retry: 2,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
           },
         },
       })

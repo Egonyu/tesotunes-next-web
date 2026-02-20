@@ -45,15 +45,45 @@ const PROTECTED_PATHS = ["/library", "/profile", "/settings", "/wallet", "/sacco
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Only redirect to login if on a protected page
-      if (typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
-        const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
-        if (isProtected) {
-          window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+    // Retry once on 401 if a token has appeared in localStorage
+    // (handles race condition where TokenSync hasn't written the token yet)
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      typeof window !== "undefined"
+    ) {
+      originalRequest._retry = true;
+
+      // Wait briefly for TokenSync to write the token
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const token = localStorage.getItem("auth_token");
+      if (token && originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        try {
+          return await api(originalRequest);
+        } catch (retryError) {
+          // Retry also failed — token is stale, clear it and redirect
+          if (axios.isAxiosError(retryError) && retryError.response?.status === 401) {
+            localStorage.removeItem("auth_token");
+            const currentPath = window.location.pathname;
+            const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
+            if (isProtected) {
+              window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`;
+            }
+          }
+          return Promise.reject(retryError);
         }
+      }
+
+      // No token after waiting — redirect to login if on a protected page
+      const currentPath = window.location.pathname;
+      const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
+      if (isProtected) {
+        window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`;
       }
     }
     return Promise.reject(error);

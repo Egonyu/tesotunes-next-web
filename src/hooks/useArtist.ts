@@ -154,12 +154,14 @@ export interface ArtistProfile {
 // Dashboard Hook
 // ============================================================================
 
-export function useArtistDashboard() {
+export function useArtistDashboard(options?: { enabled?: boolean }) {
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
   return useQuery({
     queryKey: ["artist", "dashboard"],
     queryFn: () => apiGet<{ data: ArtistDashboard }>("/artist/dashboard")
       .then(res => res.data),
     staleTime: 30 * 1000, // 30 seconds
+    enabled: options?.enabled ?? hasToken,
   });
 }
 
@@ -174,11 +176,13 @@ export function useMyArtistSongs(params?: {
   per_page?: number;
   sort?: string;
   order?: 'asc' | 'desc';
-}) {
+}, options?: { enabled?: boolean }) {
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
   return useQuery({
     queryKey: ["artist", "songs", params],
     queryFn: () => apiGet<SongsResponse>("/artist/songs", { params }),
     staleTime: 30 * 1000,
+    enabled: options?.enabled ?? hasToken,
   });
 }
 

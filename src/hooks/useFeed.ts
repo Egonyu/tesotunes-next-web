@@ -1,81 +1,32 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 
-// ============================================================================
-// Types
-// ============================================================================
+// Re-export types from central location
+export type {
+  Post,
+  PostAuthor,
+  PostMedia,
+  Comment,
+  FeedResponse,
+  TrendingItem,
+  Announcement,
+  SuggestedUser,
+  FeedItem,
+  FeedItemType,
+  PostCardData,
+} from "@/types/edula";
 
-export interface PostAuthor {
-  id: number;
-  name: string;
-  username: string;
-  avatar_url: string;
-  is_verified: boolean;
-}
+export { transformPost as transformPostToComponent } from "@/types/edula";
 
-export interface PostMedia {
-  type: 'image' | 'video' | 'song' | 'album';
-  url: string;
-  thumbnail_url?: string;
-  title?: string;
-  artist?: string;
-  song_id?: number;
-  album_id?: number;
-}
-
-export interface Post {
-  id: number;
-  author: PostAuthor;
-  content: string;
-  media?: PostMedia;
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  reposts_count: number;
-  is_liked: boolean;
-  is_reposted: boolean;
-  is_bookmarked: boolean;
-}
-
-export interface Comment {
-  id: number;
-  author: PostAuthor;
-  content: string;
-  created_at: string;
-  likes_count: number;
-  is_liked: boolean;
-  replies_count: number;
-  replies?: Comment[];
-}
-
-export interface FeedResponse {
-  data: Post[];
-  meta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-}
-
-export interface TrendingItem {
-  id: number;
-  type: 'hashtag' | 'topic' | 'song' | 'artist';
-  title: string;
-  subtitle?: string;
-  count: number;
-}
-
-export interface Announcement {
-  id: number;
-  title: string;
-  content: string;
-  type: 'info' | 'warning' | 'success' | 'event';
-  link_url?: string;
-  link_text?: string;
-  created_at: string;
-  expires_at?: string;
-}
+// Import for internal use
+import type {
+  Post,
+  FeedResponse,
+  Comment,
+  TrendingItem,
+  Announcement,
+  SuggestedUser,
+} from "@/types/edula";
 
 // ============================================================================
 // Feed Hooks
@@ -84,11 +35,11 @@ export interface Announcement {
 export function useFeed(type: 'for-you' | 'following' = 'for-you') {
   return useInfiniteQuery({
     queryKey: ['feed', type],
-    queryFn: ({ pageParam = 1 }) => 
+    queryFn: ({ pageParam = 1 }) =>
       apiGet<FeedResponse>(`/feed/${type}`, { params: { page: pageParam } }),
-    getNextPageParam: (lastPage) => 
-      lastPage.meta.current_page < lastPage.meta.last_page 
-        ? lastPage.meta.current_page + 1 
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.current_page < lastPage.meta.last_page
+        ? lastPage.meta.current_page + 1
         : undefined,
     initialPageParam: 1,
     staleTime: 60 * 1000, // 1 minute
@@ -134,14 +85,14 @@ export function usePost(postId: number) {
 export function usePostComments(postId: number) {
   return useInfiniteQuery({
     queryKey: ['post', postId, 'comments'],
-    queryFn: ({ pageParam = 1 }) => 
+    queryFn: ({ pageParam = 1 }) =>
       apiGet<{ data: Comment[]; meta: { current_page: number; last_page: number } }>(
-        `/posts/${postId}/comments`, 
+        `/posts/${postId}/comments`,
         { params: { page: pageParam } }
       ),
-    getNextPageParam: (lastPage) => 
-      lastPage.meta.current_page < lastPage.meta.last_page 
-        ? lastPage.meta.current_page + 1 
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.current_page < lastPage.meta.last_page
+        ? lastPage.meta.current_page + 1
         : undefined,
     initialPageParam: 1,
     enabled: !!postId,
@@ -154,7 +105,7 @@ export function usePostComments(postId: number) {
 
 export function useCreatePost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: { content: string; media_type?: string; media_id?: number; media_url?: string }) =>
       apiPost<{ data: Post }>('/posts', data),
@@ -166,13 +117,13 @@ export function useCreatePost() {
 
 export function useLikePost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (postId: number) => apiPost(`/posts/${postId}/like`, {}),
     onMutate: async (postId) => {
       // Optimistic update
       await queryClient.cancelQueries({ queryKey: ['feed'] });
-      
+
       queryClient.setQueriesData({ queryKey: ['feed'] }, (old: unknown) => {
         if (!old) return old;
         const typedOld = old as { pages: FeedResponse[] };
@@ -180,8 +131,8 @@ export function useLikePost() {
           ...typedOld,
           pages: typedOld.pages.map((page) => ({
             ...page,
-            data: page.data.map((post) => 
-              post.id === postId 
+            data: page.data.map((post) =>
+              post.id === postId
                 ? { ...post, is_liked: true, likes_count: post.likes_count + 1 }
                 : post
             ),
@@ -197,12 +148,12 @@ export function useLikePost() {
 
 export function useUnlikePost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (postId: number) => apiDelete(`/posts/${postId}/like`),
     onMutate: async (postId) => {
       await queryClient.cancelQueries({ queryKey: ['feed'] });
-      
+
       queryClient.setQueriesData({ queryKey: ['feed'] }, (old: unknown) => {
         if (!old) return old;
         const typedOld = old as { pages: FeedResponse[] };
@@ -210,8 +161,8 @@ export function useUnlikePost() {
           ...typedOld,
           pages: typedOld.pages.map((page) => ({
             ...page,
-            data: page.data.map((post) => 
-              post.id === postId 
+            data: page.data.map((post) =>
+              post.id === postId
                 ? { ...post, is_liked: false, likes_count: Math.max(0, post.likes_count - 1) }
                 : post
             ),
@@ -227,7 +178,7 @@ export function useUnlikePost() {
 
 export function useBookmarkPost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (postId: number) => apiPost(`/posts/${postId}/bookmark`, {}),
     onSuccess: () => {
@@ -239,7 +190,7 @@ export function useBookmarkPost() {
 
 export function useUnbookmarkPost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (postId: number) => apiDelete(`/posts/${postId}/bookmark`),
     onSuccess: () => {
@@ -251,9 +202,9 @@ export function useUnbookmarkPost() {
 
 export function useRepost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (data: { postId: number; comment?: string }) => 
+    mutationFn: (data: { postId: number; comment?: string }) =>
       apiPost(`/posts/${data.postId}/repost`, { comment: data.comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
@@ -263,7 +214,7 @@ export function useRepost() {
 
 export function useDeletePost() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (postId: number) => apiDelete(`/posts/${postId}`),
     onSuccess: () => {
@@ -278,7 +229,7 @@ export function useDeletePost() {
 
 export function useCreateComment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: { postId: number; content: string; parentId?: number }) =>
       apiPost<{ data: Comment }>(`/posts/${data.postId}/comments`, {
@@ -294,7 +245,7 @@ export function useCreateComment() {
 
 export function useLikeComment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (commentId: number) => apiPost(`/comments/${commentId}/like`, {}),
     onSuccess: () => {
@@ -305,9 +256,9 @@ export function useLikeComment() {
 
 export function useDeleteComment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (data: { postId: number; commentId: number }) => 
+    mutationFn: (data: { postId: number; commentId: number }) =>
       apiDelete(`/posts/${data.postId}/comments/${data.commentId}`),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['post', variables.postId, 'comments'] });
@@ -317,9 +268,10 @@ export function useDeleteComment() {
 
 // ============================================================================
 // Helper to transform API response to component format
+// (kept for backward compat — prefer transformPost from @/types/edula)
 // ============================================================================
 
-export function transformPostToComponent(post: Post) {
+export function transformPostToComponentLegacy(post: Post) {
   return {
     id: post.id,
     author: {
@@ -351,17 +303,6 @@ export function transformPostToComponent(post: Post) {
 // User Follow/Unfollow Actions
 // ============================================================================
 
-interface SuggestedUser {
-  id: number;
-  name: string;
-  username: string;
-  avatar_url: string;
-  is_verified: boolean;
-  bio: string;
-  followers_count: number;
-  is_following: boolean;
-}
-
 export function useSuggestedUsers() {
   return useQuery({
     queryKey: ['suggested-users'],
@@ -371,7 +312,7 @@ export function useSuggestedUsers() {
 
 export function useFollowUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (userId: number) => apiPost(`/users/${userId}/follow`, {}),
     onSuccess: () => {
@@ -383,7 +324,7 @@ export function useFollowUser() {
 
 export function useUnfollowUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (userId: number) => apiDelete(`/users/${userId}/follow`),
     onSuccess: () => {
@@ -392,3 +333,51 @@ export function useUnfollowUser() {
     },
   });
 }
+
+// ============================================================================
+// Edula Feed-Item Actions (from Edula doc API)
+// ============================================================================
+
+/** Refresh the feed — POST /edula/api/refresh */
+export function useRefreshFeed() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => apiPost<{ new_items_count: number }>('/edula/api/refresh', {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
+/** Mark a feed item as not-interested — POST /edula/api/items/{uuid}/not-interested */
+export function useNotInterested() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { uuid: string; reason?: string }) =>
+      apiPost(`/edula/api/items/${data.uuid}/not-interested`, { reason: data.reason || 'not_relevant' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
+/** Save a feed item — POST /edula/api/items/{uuid}/save */
+export function useSaveFeedItem() {
+  return useMutation({
+    mutationFn: (uuid: string) => apiPost(`/edula/api/items/${uuid}/save`, {}),
+  });
+}
+
+/** Track interaction — POST /edula/api/items/{uuid}/track */
+export function useTrackInteraction() {
+  return useMutation({
+    mutationFn: (data: { uuid: string; action: 'click' | 'view' | 'like' | 'share'; duration?: number }) =>
+      apiPost(`/edula/api/items/${data.uuid}/track`, {
+        action: data.action,
+        duration: data.duration,
+      }),
+  });
+}
+

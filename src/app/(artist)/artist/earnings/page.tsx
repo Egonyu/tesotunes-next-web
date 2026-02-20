@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { 
+import {
   Wallet,
   TrendingUp,
   ArrowUpRight,
@@ -23,10 +23,10 @@ export default function ArtistEarningsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState<'zengapay'>('zengapay');
   const [withdrawPhone, setWithdrawPhone] = useState('');
-  
+
   const { data: earningsData, isLoading, error } = useArtistEarnings();
   const withdrawMutation = useRequestWithdrawal();
-  
+
   const stats = earningsData?.stats || {
     balance: 0,
     pending_earnings: 0,
@@ -34,10 +34,10 @@ export default function ArtistEarningsPage() {
     this_month: 0,
     monthly_change: 0
   };
-  
+
   const earningsSources = earningsData?.earnings_sources || [];
   const transactions = earningsData?.transactions || [];
-  
+
   // Build monthly chart from API data or derive from transactions
   const monthlyChart = useMemo(() => {
     if (earningsData?.monthly_chart && earningsData.monthly_chart.length > 0) {
@@ -62,7 +62,7 @@ export default function ArtistEarningsPage() {
     }
     return Array.from(monthMap.entries()).map(([month, amount]) => ({ month, amount }));
   }, [earningsData?.monthly_chart, transactions]);
-  
+
   const handleWithdraw = () => {
     const amount = parseInt(withdrawAmount);
     if (amount >= 50000 && amount <= stats.balance) {
@@ -78,7 +78,7 @@ export default function ArtistEarningsPage() {
       });
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -86,14 +86,14 @@ export default function ArtistEarningsPage() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-destructive">Failed to load earnings data</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
           Retry
@@ -101,7 +101,7 @@ export default function ArtistEarningsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -118,7 +118,7 @@ export default function ArtistEarningsPage() {
           Withdraw Funds
         </button>
       </div>
-      
+
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 rounded-xl bg-linear-to-br from-primary to-purple-600 text-white">
@@ -129,7 +129,7 @@ export default function ArtistEarningsPage() {
           <p className="text-3xl font-bold">UGX {stats.balance.toLocaleString()}</p>
           <p className="text-sm opacity-75 mt-2">Ready for withdrawal</p>
         </div>
-        
+
         <div className="p-6 rounded-xl border bg-card">
           <div className="flex items-center gap-2 mb-2 text-muted-foreground">
             <Clock className="h-5 w-5" />
@@ -138,7 +138,7 @@ export default function ArtistEarningsPage() {
           <p className="text-2xl font-bold">UGX {stats.pending_earnings.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground mt-2">Being processed</p>
         </div>
-        
+
         <div className="p-6 rounded-xl border bg-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -157,7 +157,7 @@ export default function ArtistEarningsPage() {
           <p className="text-sm text-muted-foreground mt-2">vs last month</p>
         </div>
       </div>
-      
+
       {/* Earnings Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="p-6 rounded-xl border bg-card">
@@ -174,7 +174,7 @@ export default function ArtistEarningsPage() {
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-primary rounded-full"
                     style={{ width: `${item.percentage}%` }}
                   />
@@ -182,7 +182,7 @@ export default function ArtistEarningsPage() {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-6 pt-4 border-t">
             <div className="flex items-center justify-between font-medium">
               <span>Total This Month</span>
@@ -190,7 +190,7 @@ export default function ArtistEarningsPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Earnings Chart */}
         <div className="p-6 rounded-xl border bg-card">
           <h2 className="font-semibold mb-4">Earnings Trend (6 Months)</h2>
@@ -201,7 +201,7 @@ export default function ArtistEarningsPage() {
                 const height = maxAmount > 0 ? Math.max((item.amount / maxAmount) * 100, 4) : 4;
                 return (
                   <div key={item.month} className="flex-1 flex flex-col items-center gap-2" title={`UGX ${item.amount.toLocaleString()}`}>
-                    <div 
+                    <div
                       className={cn(
                         'w-full rounded-t transition-colors',
                         i === monthlyChart.length - 1 ? 'bg-primary' : 'bg-primary/40 hover:bg-primary/60'
@@ -221,7 +221,7 @@ export default function ArtistEarningsPage() {
           )}
         </div>
       </div>
-      
+
       {/* Transaction History */}
       <div className="p-6 rounded-xl border bg-card">
         <div className="flex items-center justify-between mb-4">
@@ -232,17 +232,17 @@ export default function ArtistEarningsPage() {
             <option>Withdrawals only</option>
           </select>
         </div>
-        
+
         <div className="space-y-3">
           {transactions.map((tx) => (
-            <div 
-              key={tx.id} 
+            <div
+              key={tx.id}
               className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
             >
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'p-2 rounded-lg',
-                  tx.type === 'earning' 
+                  tx.type === 'earning'
                     ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
                     : 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                 )}>
@@ -255,10 +255,10 @@ export default function ArtistEarningsPage() {
                 <div>
                   <p className="font-medium">{tx.description}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric' 
+                    {new Date(tx.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
                     })}
                   </p>
                 </div>
@@ -272,7 +272,7 @@ export default function ArtistEarningsPage() {
                 </p>
                 <span className={cn(
                   'text-xs px-2 py-0.5 rounded-full',
-                  tx.status === 'completed' 
+                  tx.status === 'completed'
                     ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                     : tx.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
@@ -284,7 +284,7 @@ export default function ArtistEarningsPage() {
             </div>
           ))}
         </div>
-        
+
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t">
           <p className="text-sm text-muted-foreground">
@@ -300,19 +300,19 @@ export default function ArtistEarningsPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Withdrawal Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-card rounded-xl p-6 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold mb-4">Withdraw Funds</h2>
-            
+
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-muted">
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <p className="text-2xl font-bold">UGX {stats.balance.toLocaleString()}</p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Amount (UGX)</label>
                 <input
@@ -325,7 +325,7 @@ export default function ArtistEarningsPage() {
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
                 <div className="w-full px-4 py-2 border rounded-lg bg-background flex items-center gap-2">
@@ -333,7 +333,7 @@ export default function ArtistEarningsPage() {
                   <span className="text-xs text-muted-foreground ml-auto">MTN & Airtel</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Phone Number</label>
                 <input
@@ -347,13 +347,13 @@ export default function ArtistEarningsPage() {
                   Enter your MTN or Airtel number. ZengaPay will process it automatically.
                 </p>
               </div>
-              
+
               <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
                 <p className="text-yellow-700 dark:text-yellow-300">
                   Minimum withdrawal: UGX 50,000 • Processing: 1-3 business days
                 </p>
               </div>
-              
+
               {withdrawMutation.error && (
                 <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-sm">
                   <p className="text-red-700 dark:text-red-300">
@@ -362,7 +362,7 @@ export default function ArtistEarningsPage() {
                 </div>
               )}
             </div>
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowWithdrawModal(false)}
@@ -371,7 +371,7 @@ export default function ArtistEarningsPage() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleWithdraw}
                 disabled={withdrawMutation.isPending || parseInt(withdrawAmount) < 50000 || parseInt(withdrawAmount) > stats.balance}
                 className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"

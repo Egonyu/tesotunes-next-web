@@ -3,6 +3,7 @@
 import { Sidebar, Header } from "@/components/layout";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from "@/components/player";
+import { AdBanner, AudioAdManager } from "@/components/ads";
 import { useUIStore, usePlayerStore } from "@/stores";
 import { useQueueSync } from "@/hooks/useQueueSync";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,9 @@ export default function AppLayout({
       {/* Hidden audio element for playback */}
       <AudioPlayer />
 
+      {/* Audio ad manager — inserts ads between songs for free-tier */}
+      <AudioAdManager />
+
       {/* Sidebar - Desktop only */}
       <Sidebar />
 
@@ -42,8 +46,15 @@ export default function AppLayout({
         {/* Header */}
         <Header />
 
+        {/* Top banner ad for free-tier users */}
+        <div className="pt-16 px-4 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <AdBanner placement="top_banner" className="mb-4" />
+          </div>
+        </div>
+
         {/* Page Content */}
-        <main className="pt-16 px-4 md:px-6 lg:px-8">
+        <main className="px-4 md:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>

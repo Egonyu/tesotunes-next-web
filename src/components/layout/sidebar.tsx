@@ -31,6 +31,7 @@ import {
   Heart,
   Share2,
   Trophy,
+  Rss,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -51,6 +52,7 @@ const browseItems = [
 ];
 
 const moduleItems = [
+  { href: "/edula", label: "Edula", icon: Rss },
   { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/store", label: "Store", icon: ShoppingBag },

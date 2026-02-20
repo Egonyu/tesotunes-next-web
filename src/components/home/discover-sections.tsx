@@ -120,7 +120,7 @@ export function DiscoverSections() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                A savings &amp; credit cooperative for music artists. Earn dividends, access affordable loans, 
+                A savings &amp; credit cooperative for music artists. Earn dividends, access affordable loans,
                 and build wealth with your community.
               </p>
             </div>

@@ -98,7 +98,12 @@ export default function ArtistPage() {
 
   const handleShufflePlay = () => {
     if (songs.length === 0) return;
-    const shuffled = [...songs].sort(() => Math.random() - 0.5);
+    // Fisher-Yates shuffle for uniform distribution
+    const shuffled = [...songs];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     play(shuffled[0], shuffled);
   };
 

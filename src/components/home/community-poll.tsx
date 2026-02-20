@@ -55,7 +55,7 @@ export function CommunityPoll() {
   // Optimistic local state for after voting
   const displayOptions = useMemo(() => {
     if (!localVoted || !selectedOption) return poll.options;
-    
+
     const updated = poll.options.map((opt) => ({
       ...opt,
       votes: opt.id === selectedOption ? opt.votes + 1 : opt.votes,
@@ -71,7 +71,7 @@ export function CommunityPoll() {
 
   const handleVote = (optionId: number) => {
     if (hasVoted || poll.status === "ended") return;
-    
+
     if (!session) {
       // Not logged in — just select visually
       setSelectedOption(optionId);

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useReferralHistory, type ReferralHistoryItem } from '@/hooks/useReferrals';
+import { toast } from 'sonner';
 
 type ReferralStatus = 'active' | 'pending' | 'churned' | 'completed';
 
@@ -31,9 +32,27 @@ export default function ReferralHistoryPage() {
   );
 
   const handleExport = () => {
-    // In production, generate CSV and download
-    console.log('Exporting referral data...');
-    alert('Export feature coming soon!');
+    if (!referrals || referrals.length === 0) {
+      toast.info('No referral data to export');
+      return;
+    }
+    const headers = ['Name', 'Email', 'Status', 'Credits Earned', 'Date Joined'];
+    const rows = referrals.map((r: ReferralHistoryItem) => [
+      r.user?.name || 'Unknown',
+      r.user?.email || '',
+      r.status,
+      r.credits_earned ?? 0,
+      r.joined_at ? new Date(r.joined_at).toLocaleDateString() : '',
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((v) => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `referral-history-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Referral history exported!');
   };
 
   const handleStatusFilter = (newFilter: ReferralStatus | 'all') => {

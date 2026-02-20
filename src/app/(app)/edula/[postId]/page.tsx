@@ -3,7 +3,7 @@
 import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   ChevronLeft,
   Heart,
   MessageCircle,
@@ -13,21 +13,23 @@ import {
   CheckCircle,
   Bookmark,
   Send,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  usePost, 
-  usePostComments, 
-  useLikePost, 
-  useUnlikePost, 
-  useBookmarkPost, 
+import { formatNumber, formatTimeAgo } from '@/components/edula/post-card';
+import type { PostCardData } from '@/types/edula';
+import {
+  usePost,
+  usePostComments,
+  useLikePost,
+  useUnlikePost,
+  useBookmarkPost,
   useUnbookmarkPost,
   useCreateComment,
-  useLikeComment
+  useLikeComment,
 } from '@/hooks/useFeed';
 
-interface Comment {
+interface CommentData {
   id: number;
   author: {
     name: string;
@@ -39,31 +41,11 @@ interface Comment {
   createdAt: string;
   likes: number;
   isLiked: boolean;
-  replies?: Comment[];
-}
-
-interface Post {
-  id: number;
-  author: {
-    id: number;
-    name: string;
-    username: string;
-    avatar: string;
-    isVerified: boolean;
-    bio: string;
-  };
-  content: string;
-  createdAt: string;
-  likes: number;
-  comments: number;
-  reposts: number;
-  isLiked: boolean;
-  isReposted: boolean;
-  isBookmarked: boolean;
+  replies?: CommentData[];
 }
 
 // Mock data for fallback
-const mockPost: Post = {
+const mockPost: PostCardData = {
   id: 1,
   author: {
     id: 1,
@@ -71,10 +53,9 @@ const mockPost: Post = {
     username: '@eddykenzo',
     avatar: '/images/artists/kenzo.jpg',
     isVerified: true,
-    bio: 'Award-winning Ugandan artist 🇺🇬 | BET Award Winner | Making music for the world 🎵',
   },
   content: 'Just dropped a new track! 🔥 This one is for all my fans who\'ve been waiting. "Midnight Dreams" available now on TesoTunes. Let me know what you think! 🎵\n\nProduced by @producerjay | Mixed by @studioguru\n\n#NewMusic #MidnightDreams #Afrobeats',
-  createdAt: '2026-02-06T10:30:00',
+  createdAt: '2026-02-20T10:30:00',
   likes: 2456,
   comments: 345,
   reposts: 567,
@@ -83,7 +64,7 @@ const mockPost: Post = {
   isBookmarked: false,
 };
 
-const mockComments: Comment[] = [
+const mockComments: CommentData[] = [
   {
     id: 1,
     author: {
@@ -125,15 +106,15 @@ const mockComments: Comment[] = [
   },
 ];
 
-export default function PostDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ postId: string }> 
+export default function PostDetailPage({
+  params
+}: {
+  params: Promise<{ postId: string }>
 }) {
   const { postId } = use(params);
   const postIdNum = parseInt(postId);
   const [newComment, setNewComment] = useState('');
-  
+
   // API hooks
   const { data: postData, isLoading: postLoading } = usePost(postIdNum);
   const { data: commentsData, isLoading: commentsLoading } = usePostComments(postIdNum);
@@ -143,9 +124,9 @@ export default function PostDetailPage({
   const unbookmarkPost = useUnbookmarkPost();
   const createComment = useCreateComment();
   const likeComment = useLikeComment();
-  
+
   // Transform API data or use mock
-  const post: Post = useMemo(() => {
+  const post: PostCardData = useMemo(() => {
     if (postData?.data) {
       const p = postData.data;
       return {
@@ -156,7 +137,6 @@ export default function PostDetailPage({
           username: `@${p.author.username}`,
           avatar: p.author.avatar_url,
           isVerified: p.author.is_verified,
-          bio: (p.author as { bio?: string }).bio || '',
         },
         content: p.content,
         createdAt: p.created_at,
@@ -170,10 +150,10 @@ export default function PostDetailPage({
     }
     return { ...mockPost, id: postIdNum };
   }, [postData, postIdNum]);
-  
-  const comments: Comment[] = useMemo(() => {
+
+  const comments: CommentData[] = useMemo(() => {
     if (commentsData?.pages) {
-      return commentsData.pages.flatMap(page => 
+      return commentsData.pages.flatMap(page =>
         page.data.map(c => ({
           id: c.id,
           author: {
@@ -191,7 +171,7 @@ export default function PostDetailPage({
     }
     return mockComments;
   }, [commentsData]);
-  
+
   const handleToggleLike = () => {
     if (post.isLiked) {
       unlikePost.mutate(post.id);
@@ -199,7 +179,7 @@ export default function PostDetailPage({
       likePost.mutate(post.id);
     }
   };
-  
+
   const handleToggleBookmark = () => {
     if (post.isBookmarked) {
       unbookmarkPost.mutate(post.id);
@@ -207,11 +187,11 @@ export default function PostDetailPage({
       bookmarkPost.mutate(post.id);
     }
   };
-  
+
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-    
+
     createComment.mutate({
       postId: post.id,
       content: newComment,
@@ -219,11 +199,11 @@ export default function PostDetailPage({
       onSuccess: () => setNewComment(''),
     });
   };
-  
+
   const handleLikeComment = (commentId: number) => {
     likeComment.mutate(commentId);
   };
-  
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en', {
       hour: 'numeric',
@@ -233,18 +213,7 @@ export default function PostDetailPage({
       year: 'numeric',
     });
   };
-  
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffHrs < 1) return 'Just now';
-    if (diffHrs < 24) return `${diffHrs}h`;
-    return `${Math.floor(diffHrs / 24)}d`;
-  };
-  
+
   if (postLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -252,18 +221,18 @@ export default function PostDetailPage({
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-0">
       {/* Back Link */}
-      <Link 
+      <Link
         href="/edula"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Feed
       </Link>
-      
+
       {/* Post */}
       <article className="p-4 rounded-xl border bg-card">
         {/* Author */}
@@ -292,17 +261,17 @@ export default function PostDetailPage({
             <MoreHorizontal className="h-5 w-5" />
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="mb-4">
           <p className="text-lg whitespace-pre-wrap">{post.content}</p>
         </div>
-        
+
         {/* Timestamp */}
         <p className="text-sm text-muted-foreground mb-4 pb-4 border-b">
           {formatDate(post.createdAt)}
         </p>
-        
+
         {/* Stats */}
         <div className="flex items-center gap-6 text-sm mb-4 pb-4 border-b">
           <span>
@@ -318,10 +287,10 @@ export default function PostDetailPage({
             <span className="text-muted-foreground">Comments</span>
           </span>
         </div>
-        
+
         {/* Actions */}
         <div className="flex items-center justify-around">
-          <button 
+          <button
             onClick={handleToggleLike}
             className={cn(
               'flex items-center gap-2 p-2 rounded-full transition-colors',
@@ -336,7 +305,7 @@ export default function PostDetailPage({
           <button className="flex items-center gap-2 p-2 rounded-full text-muted-foreground hover:text-green-500 transition-colors">
             <Repeat2 className="h-6 w-6" />
           </button>
-          <button 
+          <button
             onClick={handleToggleBookmark}
             className={cn(
               'flex items-center gap-2 p-2 rounded-full transition-colors',
@@ -350,7 +319,7 @@ export default function PostDetailPage({
           </button>
         </div>
       </article>
-      
+
       {/* Reply Box */}
       <form onSubmit={handleSubmitComment} className="p-4 border-x bg-card">
         <div className="flex gap-3">
@@ -382,7 +351,7 @@ export default function PostDetailPage({
           </div>
         </div>
       </form>
-      
+
       {/* Comments */}
       <div className="rounded-b-xl border bg-card overflow-hidden">
         {commentsLoading ? (
@@ -391,8 +360,8 @@ export default function PostDetailPage({
           </div>
         ) : (
           comments.map((comment, index) => (
-            <div 
-              key={comment.id} 
+            <div
+              key={comment.id}
               className={cn('p-4', index !== comments.length - 1 && 'border-b')}
             >
               <div className="flex gap-3">
@@ -417,7 +386,7 @@ export default function PostDetailPage({
                   </div>
                   <p className="mt-1">{comment.content}</p>
                   <div className="flex items-center gap-4 mt-2">
-                    <button 
+                    <button
                       onClick={() => handleLikeComment(comment.id)}
                       className={cn(
                         'flex items-center gap-1 text-sm',

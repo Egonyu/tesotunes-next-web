@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { Search, ShoppingBag } from "lucide-react";
 import { StoreProductGrid } from "@/components/store/product-grid";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 
-const categories = [
+interface StoreCategory {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+const defaultCategories = [
   { id: "all", name: "All Products" },
   { id: "merchandise", name: "Merchandise" },
   { id: "music", name: "Music" },
@@ -15,6 +23,24 @@ const categories = [
 export default function StorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const { data: apiCategories } = useQuery({
+    queryKey: ["store-categories"],
+    queryFn: async () => {
+      try {
+        const res = await apiGet<{ data: StoreCategory[] }>("/store/categories");
+        return [
+          { id: "all", name: "All Products" },
+          ...res.data.map((c) => ({ id: c.slug || c.id, name: c.name })),
+        ];
+      } catch {
+        return defaultCategories;
+      }
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const categories = apiCategories ?? defaultCategories;
 
   return (
     <div className="container mx-auto py-8 px-4">

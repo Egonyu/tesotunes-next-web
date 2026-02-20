@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Wallet,
   TrendingUp,
@@ -37,6 +37,31 @@ export default function ArtistEarningsPage() {
   
   const earningsSources = earningsData?.earnings_sources || [];
   const transactions = earningsData?.transactions || [];
+  
+  // Build monthly chart from API data or derive from transactions
+  const monthlyChart = useMemo(() => {
+    if (earningsData?.monthly_chart && earningsData.monthly_chart.length > 0) {
+      return earningsData.monthly_chart;
+    }
+    // Derive from transactions if monthly_chart not available
+    const monthMap = new Map<string, number>();
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toLocaleString('en-US', { month: 'short' });
+      monthMap.set(key, 0);
+    }
+    for (const tx of transactions) {
+      if (tx.type === 'earning' && tx.status === 'completed') {
+        const txDate = new Date(tx.date);
+        const key = txDate.toLocaleString('en-US', { month: 'short' });
+        if (monthMap.has(key)) {
+          monthMap.set(key, (monthMap.get(key) || 0) + tx.amount);
+        }
+      }
+    }
+    return Array.from(monthMap.entries()).map(([month, amount]) => ({ month, amount }));
+  }, [earningsData?.monthly_chart, transactions]);
   
   const handleWithdraw = () => {
     const amount = parseInt(withdrawAmount);
@@ -170,22 +195,30 @@ export default function ArtistEarningsPage() {
         <div className="p-6 rounded-xl border bg-card">
           <h2 className="font-semibold mb-4">Earnings Trend (6 Months)</h2>
           <div className="h-48 flex items-end justify-between gap-2">
-            {['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'].map((month, i) => {
-              const height = 40 + Math.random() * 60;
-              return (
-                <div key={month} className="flex-1 flex flex-col items-center gap-2">
-                  <div 
-                    className={cn(
-                      'w-full rounded-t transition-colors',
-                      i === 5 ? 'bg-primary' : 'bg-primary/40 hover:bg-primary/60'
-                    )}
-                    style={{ height: `${height}%` }}
-                  />
-                  <span className="text-xs text-muted-foreground">{month}</span>
-                </div>
-              );
-            })}
+            {(() => {
+              const maxAmount = Math.max(...monthlyChart.map(m => m.amount), 1);
+              return monthlyChart.map((item, i) => {
+                const height = maxAmount > 0 ? Math.max((item.amount / maxAmount) * 100, 4) : 4;
+                return (
+                  <div key={item.month} className="flex-1 flex flex-col items-center gap-2" title={`UGX ${item.amount.toLocaleString()}`}>
+                    <div 
+                      className={cn(
+                        'w-full rounded-t transition-colors',
+                        i === monthlyChart.length - 1 ? 'bg-primary' : 'bg-primary/40 hover:bg-primary/60'
+                      )}
+                      style={{ height: `${height}%` }}
+                    />
+                    <span className="text-xs text-muted-foreground">{item.month}</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
+          {monthlyChart.every(m => m.amount === 0) && (
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              No earnings data to display yet
+            </p>
+          )}
         </div>
       </div>
       

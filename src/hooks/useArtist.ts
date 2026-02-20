@@ -105,10 +105,16 @@ export interface Transaction {
   date: string;
 }
 
+export interface MonthlyEarning {
+  month: string;
+  amount: number;
+}
+
 export interface EarningsData {
   stats: EarningsStats;
   earnings_sources: EarningsSource[];
   transactions: Transaction[];
+  monthly_chart?: MonthlyEarning[];
 }
 
 export interface TopSong {

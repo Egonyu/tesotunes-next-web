@@ -3,10 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Pause, Heart, MoreHorizontal, Music } from "lucide-react";
+import { Play, Pause, Heart, MoreHorizontal, Music, Download, Headphones } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { usePlayerStore } from "@/stores";
-import { formatDuration } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import type { Song, PaginatedResponse } from "@/types";
 
 interface SongGridProps {
@@ -130,14 +130,26 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                 </Link>
               )}
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-muted-foreground">
-                  {formatDuration(song.duration_seconds || song.duration || 0)}
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Headphones className="h-3 w-3" />
+                  {formatNumber(song.play_count || 0)}
                 </span>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-1 hover:text-primary">
+                <div className="flex items-center gap-1">
+                  {(song.is_free || song.is_downloadable) && song.audio_url && (
+                    <a
+                      href={song.audio_url}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Download"
+                    >
+                      <Download className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button className="p-1 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     <Heart className="h-4 w-4" />
                   </button>
-                  <button className="p-1 hover:text-primary">
+                  <button className="p-1 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </div>

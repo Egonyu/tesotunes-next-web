@@ -31,6 +31,10 @@ export interface Song {
   play_count: number;
   download_count: number;
   like_count: number;
+  is_downloadable?: boolean;
+  is_free?: boolean;
+  is_explicit?: boolean;
+  is_featured?: boolean;
   status: SongStatus;
   audio_url: string;
   stream_url?: string;

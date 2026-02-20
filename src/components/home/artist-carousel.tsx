@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Play, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, User, Headphones } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { useRef } from "react";
 import type { Artist, PaginatedResponse } from "@/types";
@@ -110,8 +110,9 @@ export function ArtistCarousel() {
             <h3 className="font-medium truncate group-hover/card:text-primary transition-colors">
               {artist.name}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              {formatNumber(artist.follower_count || 0)} followers
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+              <Headphones className="h-3 w-3" />
+              {formatNumber(artist.total_plays || 0)} plays
             </p>
           </Link>
         ))}

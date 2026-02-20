@@ -4,6 +4,7 @@ import { FeaturedSection } from "@/components/home/featured-section";
 import { SongGrid } from "@/components/home/song-grid";
 import { ArtistCarousel } from "@/components/home/artist-carousel";
 import { GenreGrid } from "@/components/home/genre-grid";
+import { DiscoverSections } from "@/components/home/discover-sections";
 import { ChevronRight } from "lucide-react";
 
 function SectionHeader({
@@ -106,6 +107,15 @@ export default function HomePage() {
         <Suspense fallback={<LoadingSkeleton />}>
           <GenreGrid />
         </Suspense>
+      </section>
+
+      {/* Discover More - SACCO, Polls, Events, Store, Awards */}
+      <section>
+        <SectionHeader
+          title="Discover More"
+          subtitle="More than just music — join the community"
+        />
+        <DiscoverSections />
       </section>
 
       {/* Recently Played - only for authenticated users */}

@@ -4,16 +4,18 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Camera, Link as LinkIcon, Twitter, Instagram, Youtube, Music2, Loader2 } from 'lucide-react';
-import { useSettings, useUpdateProfileSettings } from '@/hooks/useSettings';
+import { useSettings, useUpdateProfileSettings, useUpdateAvatar } from '@/hooks/useSettings';
 import { toast } from 'sonner';
 
 export default function ProfileSettingsPage() {
   const { data: session } = useSession();
   const { data: settings } = useSettings();
   const updateProfile = useUpdateProfileSettings();
+  const updateAvatar = useUpdateAvatar();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [avatar, setAvatar] = useState(session?.user?.image || '/images/default-avatar.jpg');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     displayName: session?.user?.name || '',
     username: '',
@@ -42,6 +44,16 @@ export default function ProfileSettingsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate type and size
+      if (!file.type.startsWith('image/') && file.type !== '') {
+        toast.error('Please select an image file');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be less than 5MB');
+        return;
+      }
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatar(e.target?.result as string);
@@ -53,15 +65,21 @@ export default function ProfileSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Upload avatar if changed
+      if (avatarFile) {
+        await updateAvatar.mutateAsync(avatarFile);
+        setAvatarFile(null);
+      }
+      // Save profile settings
       await updateProfile.mutateAsync({
         public_profile: settings?.profile?.public_profile ?? true,
         show_listening_activity: settings?.profile?.show_listening_activity ?? true,
         show_followers: settings?.profile?.show_followers ?? true,
         show_following: settings?.profile?.show_following ?? true,
       });
-      toast.success('Profile settings saved successfully!');
+      toast.success('Profile saved successfully!');
     } catch {
-      toast.error('Failed to save profile settings. Please try again.');
+      toast.error('Failed to save profile. Please try again.');
     }
   };
   
@@ -231,11 +249,11 @@ export default function ProfileSettingsPage() {
         <div className="flex gap-4 pt-4 border-t">
           <button
             type="submit"
-            disabled={updateProfile.isPending}
+            disabled={updateProfile.isPending || updateAvatar.isPending}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
           >
-            {updateProfile.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {updateProfile.isPending ? 'Saving...' : 'Save Profile'}
+            {(updateProfile.isPending || updateAvatar.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+            {updateAvatar.isPending ? 'Uploading photo...' : updateProfile.isPending ? 'Saving...' : 'Save Profile'}
           </button>
           <button
             type="button"

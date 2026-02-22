@@ -71,9 +71,17 @@ export default function UploadPage() {
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      const validTypes = ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/mp3', 'audio/aac', 'audio/m4a', 'audio/ogg'];
-      if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|flac|aac|m4a|ogg)$/i)) {
+      // Validate file type — mobile browsers report varied MIME types
+      const validTypes = [
+        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave',
+        'audio/flac', 'audio/x-flac', 'audio/aac', 'audio/x-aac', 'audio/mp4',
+        'audio/m4a', 'audio/x-m4a', 'audio/ogg', 'audio/vorbis',
+        'audio/webm', 'video/mp4',  // some mobile browsers report video/mp4 for m4a
+      ];
+      const validExtensions = /\.(mp3|wav|flac|aac|m4a|ogg|mp4|wma|webm)$/i;
+      const hasValidType = !file.type || validTypes.includes(file.type) || file.type.startsWith('audio/');
+      const hasValidExt = validExtensions.test(file.name);
+      if (!hasValidType && !hasValidExt) {
         setError('Please select a valid audio file (MP3, WAV, FLAC, AAC, M4A, or OGG)');
         return;
       }

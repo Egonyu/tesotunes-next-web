@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPut, apiPostForm } from "@/lib/api";
 
 // ============================================================================
 // Types
@@ -107,6 +107,22 @@ export function useUpdateProfileSettings() {
       apiPut<{ message: string }>("/settings/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      return apiPostForm<{ message: string; avatar_url: string }>("/user/avatar", formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
     },
   });
 }

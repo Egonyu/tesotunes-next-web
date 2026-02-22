@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { apiGet, apiPost } from '@/lib/api';
-import { 
+import {
   Eye, Package, Truck, CheckCircle, XCircle, Clock, DollarSign,
   Filter, Download, RefreshCw
 } from 'lucide-react';
@@ -65,14 +65,14 @@ export default function StoreOrdersPage() {
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'orders', { page, search, status, paymentStatus, dateRange }],
-    queryFn: () => apiGet<OrdersResponse>('/admin/store/api/orders', {
+    queryFn: () => apiGet<OrdersResponse>('/admin/store/orders', {
       params: { page, search, status, payment_status: paymentStatus, date_range: dateRange, per_page: 20 }
     }),
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, newStatus }: { orderId: string; newStatus: string }) =>
-      apiPost(`/admin/store/api/orders/${orderId}/status`, { status: newStatus }),
+      apiPost(`/admin/store/orders/${orderId}/status`, { status: newStatus }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'orders'] });
     },
@@ -95,7 +95,7 @@ export default function StoreOrdersPage() {
       header: 'Order',
       render: (order) => (
         <div>
-          <Link 
+          <Link
             href={`/admin/store/orders/${order.id}`}
             className="font-medium hover:text-primary"
           >

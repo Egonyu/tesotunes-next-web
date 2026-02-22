@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
-import { 
+import {
   Search,
   Plus,
   ChevronLeft,
@@ -89,7 +89,7 @@ export default function EventsPage() {
 
   const events = eventsRes?.data || [];
   const meta = eventsRes?.meta;
-  
+
   const statusStyles: Record<string, string> = {
     upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     ongoing: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
@@ -106,7 +106,7 @@ export default function EventsPage() {
     if (val >= 1000000) return `UGX ${(val / 1000000).toFixed(0)}M`;
     return `UGX ${val.toLocaleString()}`;
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -116,14 +116,14 @@ export default function EventsPage() {
           <p className="text-muted-foreground">Manage concerts and events</p>
         </div>
         <Link
-          href="/admin/events/create"
+          href="/admin/events/new"
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Create Event
         </Link>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -157,7 +157,7 @@ export default function EventsPage() {
           <p className="text-sm text-muted-foreground">Avg. Attendance</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -216,7 +216,7 @@ export default function EventsPage() {
                     className="object-cover"
                   />
                 </div>
-                
+
                 <div className="flex-1 p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold">{event.title}</h3>
@@ -227,7 +227,7 @@ export default function EventsPage() {
                       {event.status}
                     </span>
                   </div>
-                  
+
                   <div className="space-y-2 mb-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
@@ -238,7 +238,7 @@ export default function EventsPage() {
                       {event.venue_name || event.venue || 'TBD'}{event.city || event.location ? `, ${event.city || event.location}` : ''}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-2 mb-4 text-center p-2 bg-muted/50 rounded-lg">
                     <div>
                       <p className="font-semibold">{sold.toLocaleString()}</p>
@@ -255,7 +255,7 @@ export default function EventsPage() {
                       <p className="text-xs text-muted-foreground">Filled</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">
                       {formatRevenue(event.revenue)} revenue
@@ -281,7 +281,7 @@ export default function EventsPage() {
           })}
         </div>
       )}
-      
+
       {/* Pagination */}
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between">

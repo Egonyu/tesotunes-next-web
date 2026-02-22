@@ -6,8 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { apiGet, apiDelete } from '@/lib/api';
-import { 
-  Eye, Edit, Trash2, Package, ShoppingBag, TrendingUp, DollarSign, Filter 
+import {
+  Eye, Edit, Trash2, Package, ShoppingBag, TrendingUp, DollarSign, Filter
 } from 'lucide-react';
 import { DataTable, PageHeader, StatusBadge, ConfirmDialog, Column } from '@/components/admin';
 
@@ -56,18 +56,18 @@ export default function StoreProductsPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['admin', 'store', 'stats'],
-    queryFn: () => apiGet<StatsResponse>('/admin/store/api/stats'),
+    queryFn: () => apiGet<StatsResponse>('/admin/store/stats'),
   });
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'products', { page, search, category, status }],
-    queryFn: () => apiGet<ProductsResponse>('/admin/store/api/products', { 
+    queryFn: () => apiGet<ProductsResponse>('/admin/store/products', {
       params: { page, search, category, status, per_page: 15 }
     }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(`/admin/store/api/products/${id}`),
+    mutationFn: (id: string) => apiDelete(`/admin/store/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'products'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'stats'] });
@@ -76,7 +76,7 @@ export default function StoreProductsPage() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (ids: string[]) => Promise.all(ids.map(id => apiDelete(`/admin/store/api/products/${id}`))),
+    mutationFn: (ids: string[]) => Promise.all(ids.map(id => apiDelete(`/admin/store/products/${id}`))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'products'] });
       setSelectedProducts([]);
@@ -289,7 +289,7 @@ export default function StoreProductsPage() {
         } : undefined}
         bulkActions={
           <>
-            <button 
+            <button
               onClick={() => bulkDeleteMutation.mutate(selectedProducts)}
               className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
             >

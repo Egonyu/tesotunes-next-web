@@ -173,10 +173,8 @@ export default function EdulaLayout({
             {/* Footer Links */}
             <div className="px-2 text-[11px] text-muted-foreground space-y-1">
               <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                <Link href="/about" className="hover:underline">About</Link>
                 <Link href="/privacy" className="hover:underline">Privacy</Link>
                 <Link href="/terms" className="hover:underline">Terms</Link>
-                <Link href="/help" className="hover:underline">Help</Link>
               </div>
               <p>&copy; {new Date().getFullYear()} TesoTunes</p>
             </div>

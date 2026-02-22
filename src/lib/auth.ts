@@ -94,7 +94,7 @@ export const authConfig: NextAuthOptions = {
       if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
         const freshData = await fetchFreshUserData(token.accessToken as string);
         if (freshData && 'expired' in freshData) {
-          // Token expired — clear it so TokenSync removes from localStorage
+          // Token expired — clear it so TokenSync removes from in-memory store
           // User will be redirected to login on next protected API call
           console.warn("[Auth] Clearing expired access token");
           token.accessToken = undefined;
@@ -204,5 +204,5 @@ export const authConfig: NextAuthOptions = {
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-abc123xyz",
+  secret: process.env.NEXTAUTH_SECRET,
 };

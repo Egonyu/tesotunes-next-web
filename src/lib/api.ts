@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
 
 // Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
@@ -12,32 +12,30 @@ export const api: AxiosInstance = axios.create({
   withCredentials: true, // Important for Sanctum cookies
 });
 
+// In-memory auth token — never persisted to localStorage (XSS mitigation).
+// Populated on mount by TokenSync from the httpOnly NextAuth JWT cookie.
+let _authToken: string | null = null;
+
+/** Set the in-memory auth token (called by TokenSync / login flows). */
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
+
+/** Read the current in-memory auth token. */
+export function getAuthToken(): string | null {
+  return _authToken;
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // Token will be added by next-auth or from cookies
-    const token = typeof window !== "undefined"
-      ? localStorage.getItem("auth_token")
-      : null;
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (_authToken) {
+      config.headers.Authorization = `Bearer ${_authToken}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
-
-// Helper to set/get auth token for API calls
-export function setAuthToken(token: string | null) {
-  if (typeof window !== "undefined") {
-    if (token) {
-      localStorage.setItem("auth_token", token);
-    } else {
-      localStorage.removeItem("auth_token");
-    }
-  }
-}
 
 // Protected paths that should redirect to login on 401
 const PROTECTED_PATHS = ["/library", "/profile", "/settings", "/wallet", "/sacco", "/artist-dashboard", "/admin", "/artist", "/become-artist"];
@@ -48,8 +46,8 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // Retry once on 401 if a token has appeared in localStorage
-    // (handles race condition where TokenSync hasn't written the token yet)
+    // Retry once on 401 if a token has appeared in memory
+    // (handles race condition where TokenSync hasn't synced the token yet)
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -57,18 +55,17 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      // Wait briefly for TokenSync to write the token
+      // Wait briefly for TokenSync to populate the in-memory token
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const token = localStorage.getItem("auth_token");
-      if (token && originalRequest.headers) {
-        originalRequest.headers.Authorization = `Bearer ${token}`;
+      if (_authToken && originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${_authToken}`;
         try {
           return await api(originalRequest);
         } catch (retryError) {
           // Retry also failed — token is stale, clear it and redirect
           if (axios.isAxiosError(retryError) && retryError.response?.status === 401) {
-            localStorage.removeItem("auth_token");
+            _authToken = null;
             const currentPath = window.location.pathname;
             const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
             if (isProtected) {

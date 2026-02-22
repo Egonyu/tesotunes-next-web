@@ -1,111 +1,26 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, getAuthToken } from "@/lib/api";
+import type {
+  SaccoMember,
+  SaccoMemberDashboard,
+  SaccoTransaction,
+  SaccoLoanProduct,
+  SaccoLoan,
+  SaccoShare,
+  SaccoDividend,
+} from "@/types/sacco";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface SaccoMember {
-  id: number;
-  member_number: string;
-  user_id: number;
-  status: 'active' | 'suspended' | 'pending';
-  joined_at: string;
-  savings_balance: number;
-  shares_count: number;
-  shares_value: number;
-}
-
-export interface SaccoMemberDashboard {
-  member_number: string;
-  member_since: string;
-  status: 'active' | 'pending' | 'suspended';
-  savings: {
-    balance: number;
-    change: number;
-    this_month: number;
-  };
-  shares: {
-    count: number;
-    value: number;
-    change: number;
-  };
-  loans: {
-    active: number;
-    total_borrowed: number;
-    total_paid: number;
-    balance: number;
-  };
-  dividends: {
-    last_year: number;
-    pending: number;
-  };
-}
-
-export interface SaccoTransaction {
-  id: number;
-  type: 'deposit' | 'withdrawal' | 'loan_payment' | 'dividend' | 'share_purchase';
-  amount: number;
-  description: string;
-  date: string;
-  status: 'completed' | 'pending' | 'failed';
-  reference?: string;
-}
-
-export interface SaccoLoanProduct {
-  id: number;
-  name: string;
-  description: string;
-  min_amount: number;
-  max_amount: number;
-  interest_rate: number;
-  term_months: number[];
-  requirements: string[];
-  processing_fee: number;
-}
-
-export interface SaccoLoan {
-  id: number;
-  amount: number;
-  balance: number;
-  interest_rate: number;
-  term_months: number;
-  monthly_payment: number;
-  next_payment: number;
-  due_date: string;
-  status: 'active' | 'overdue' | 'paid_off' | 'pending' | 'rejected';
-  product: string;
-  disbursed_at: string | null;
-  payments: Array<{
-    id: number;
-    amount: number;
-    date: string;
-    principal: number;
-    interest: number;
-  }>;
-}
-
-export interface SaccoShare {
-  total_shares: number;
-  share_value: number;
-  total_value: number;
-  purchases: Array<{
-    id: number;
-    quantity: number;
-    amount: number;
-    date: string;
-  }>;
-}
-
-export interface SaccoDividend {
-  id: number;
-  year: number;
-  amount: number;
-  rate: number;
-  status: 'paid' | 'pending';
-  paid_at: string | null;
-}
+// Re-export types for backward compatibility
+export type {
+  SaccoMember,
+  SaccoMemberDashboard,
+  SaccoTransaction,
+  SaccoLoanProduct,
+  SaccoLoan,
+  SaccoShare,
+  SaccoDividend,
+} from "@/types/sacco";
 
 // ============================================================================
 // Membership Hooks
@@ -114,7 +29,7 @@ export interface SaccoDividend {
 export function useSaccoMembership() {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
-    setEnabled(!!localStorage.getItem("auth_token"));
+    setEnabled(!!getAuthToken());
   }, []);
   return useQuery({
     queryKey: ["sacco", "membership"],

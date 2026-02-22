@@ -26,6 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { setAuthToken } from "@/lib/api";
 import { toast } from "sonner";
 import {
   useSubmitArtistApplication,
@@ -188,9 +189,9 @@ export default function BecomeArtistPage() {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    // Ensure auth token is synced to localStorage before API call
+    // Ensure auth token is synced to memory before API call
     if (session?.accessToken) {
-      localStorage.setItem("auth_token", session.accessToken);
+      setAuthToken(session.accessToken);
     } else {
       toast.error("Session expired. Please log in again.");
       setIsSubmitting(false);

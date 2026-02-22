@@ -91,7 +91,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const { data: stores } = useQuery({
     queryKey: ['admin', 'stores'],
-    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/api/shops'),
+    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/shops'),
   });
 
   // Initialize form data when product loads
@@ -180,7 +180,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setFormData(prev => prev ? { ...prev, new_images: [...prev.new_images, ...files] } : null);
-    
+
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -226,10 +226,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData) return;
-    
+
     const data = new FormData();
     data.append('_method', 'PUT');
-    
+
     Object.entries(formData).forEach(([key, value]) => {
       if (key === 'new_images') {
         (value as File[]).forEach((file, i) => {
@@ -245,7 +245,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         data.append(key, String(value));
       }
     });
-    
+
     updateMutation.mutate(data);
   };
 
@@ -434,7 +434,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     This is a digital product (no shipping required)
                   </label>
                 </div>
-                
+
                 {!formData.is_digital && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField

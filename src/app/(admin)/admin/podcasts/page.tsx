@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   Search,
   Plus,
   ChevronLeft,
@@ -34,7 +34,7 @@ interface Podcast {
 export default function PodcastsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   const podcasts: Podcast[] = [
     { id: 1, title: 'Uganda Music Weekly', host: 'DJ Trevor', cover: '/images/podcasts/music-weekly.jpg', episodes: 156, subscribers: 45000, totalPlays: 1200000, category: 'Music', status: 'active', lastEpisode: '2026-02-01' },
     { id: 2, title: 'Artist Spotlight', host: 'Sarah Kato', cover: '/images/podcasts/spotlight.jpg', episodes: 89, subscribers: 32000, totalPlays: 890000, category: 'Interviews', status: 'active', lastEpisode: '2026-01-28' },
@@ -42,19 +42,19 @@ export default function PodcastsPage() {
     { id: 4, title: 'Producer Diaries', host: 'Nessim Pan Production', cover: '/images/podcasts/producer.jpg', episodes: 45, subscribers: 15000, totalPlays: 340000, category: 'Production', status: 'paused', lastEpisode: '2025-11-15' },
     { id: 5, title: 'New Show', host: 'New Host', cover: '/images/podcasts/default.jpg', episodes: 0, subscribers: 0, totalPlays: 0, category: 'Talk', status: 'pending', lastEpisode: '' },
   ];
-  
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
-  
+
   const statusStyles = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     pending: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -64,14 +64,14 @@ export default function PodcastsPage() {
           <p className="text-muted-foreground">Manage podcast shows</p>
         </div>
         <Link
-          href="/admin/podcasts/create"
+          href="/admin/podcasts/new"
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Add Podcast
         </Link>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -100,7 +100,7 @@ export default function PodcastsPage() {
           <p className="text-sm text-muted-foreground">This Month</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -131,7 +131,7 @@ export default function PodcastsPage() {
           <option value="talk">Talk</option>
         </select>
       </div>
-      
+
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {podcasts.map((podcast) => (
@@ -150,11 +150,11 @@ export default function PodcastsPage() {
                 {podcast.status}
               </span>
             </div>
-            
+
             <div className="p-4">
               <h3 className="font-semibold mb-1">{podcast.title}</h3>
               <p className="text-sm text-muted-foreground mb-3">by {podcast.host}</p>
-              
+
               <div className="grid grid-cols-3 gap-2 mb-4 text-center border-y py-3">
                 <div>
                   <p className="font-semibold">{podcast.episodes}</p>
@@ -169,7 +169,7 @@ export default function PodcastsPage() {
                   <p className="text-xs text-muted-foreground">Plays</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-xs px-2 py-1 bg-muted rounded">{podcast.category}</span>
                 <div className="flex items-center gap-1">
@@ -194,7 +194,7 @@ export default function PodcastsPage() {
           </div>
         ))}
       </div>
-      
+
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">

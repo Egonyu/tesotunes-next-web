@@ -32,6 +32,14 @@ import {
   Heart,
   Trophy,
   Rss,
+  TrendingUp,
+  Bell,
+  Clock,
+  Coins,
+  CreditCard,
+  Megaphone,
+  ThumbsUp,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -48,7 +56,11 @@ const browseItems = [
   { href: "/genres", label: "Genres", icon: Disc3 },
   { href: "/artists", label: "Artists", icon: Users },
   { href: "/albums", label: "Albums", icon: Disc3 },
+  { href: "/songs", label: "Songs", icon: Music },
   { href: "/playlists", label: "Playlists", icon: Library },
+  { href: "/charts", label: "Charts", icon: TrendingUp },
+  { href: "/new-releases", label: "New Releases", icon: Sparkles },
+  { href: "/moods", label: "Moods", icon: Heart },
   { href: "/radio", label: "Radio", icon: Radio },
 ];
 
@@ -58,9 +70,19 @@ const moduleItems = [
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },
+  { href: "/polls", label: "Polls", icon: ThumbsUp },
+  { href: "/promotions", label: "Promotions", icon: Megaphone },
   { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
+];
+
+const activityItems = [
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/history", label: "History", icon: Clock },
+  { href: "/wallet", label: "Wallet", icon: CreditCard },
+  { href: "/credits", label: "Credits", icon: Coins },
 ];
 
 interface MobileNavItemProps {
@@ -261,6 +283,20 @@ export function MobileBottomNav() {
                   ))}
                 </div>
               </div>
+
+              {/* Your Activity — authenticated only */}
+              {session && (
+                <div>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
+                    Your Activity
+                  </h3>
+                  <div className="grid grid-cols-1 gap-0.5">
+                    {activityItems.map((item) => (
+                      <MenuItem key={item.href} {...item} onClick={closeMenu} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* User Section */}
               <div className="border-t pt-3">

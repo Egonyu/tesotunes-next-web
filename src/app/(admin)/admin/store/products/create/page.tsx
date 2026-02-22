@@ -78,7 +78,7 @@ export default function CreateProductPage() {
 
   const { data: stores } = useQuery({
     queryKey: ['admin', 'stores'],
-    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/api/shops'),
+    queryFn: () => apiGet<{ data: Store[] }>('/admin/store/shops'),
   });
 
   const createMutation = useMutation({
@@ -115,7 +115,7 @@ export default function CreateProductPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setFormData(prev => ({ ...prev, images: [...prev.images, ...files] }));
-    
+
     // Create previews
     files.forEach(file => {
       const reader = new FileReader();
@@ -153,7 +153,7 @@ export default function CreateProductPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (key === 'images') {
@@ -170,7 +170,7 @@ export default function CreateProductPage() {
         data.append(key, String(value));
       }
     });
-    
+
     createMutation.mutate(data);
   };
 
@@ -347,7 +347,7 @@ export default function CreateProductPage() {
                     This is a digital product (no shipping required)
                   </label>
                 </div>
-                
+
                 {!formData.is_digital && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField

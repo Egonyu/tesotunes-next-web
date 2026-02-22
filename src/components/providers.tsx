@@ -6,17 +6,18 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { useState, useEffect, type ReactNode } from "react";
+import { setAuthToken } from "@/lib/api";
 
-// Sync NextAuth session token to localStorage for API interceptor
+// Sync NextAuth session token to in-memory auth variable for API interceptor
 function TokenSync() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status === "authenticated" && session?.accessToken) {
-      localStorage.setItem("auth_token", session.accessToken);
+      setAuthToken(session.accessToken);
     } else if (status === "unauthenticated" || (status === "authenticated" && !session?.accessToken)) {
       // Clear token if unauthenticated OR if session exists but token was invalidated
-      localStorage.removeItem("auth_token");
+      setAuthToken(null);
     }
   }, [session, status]);
 

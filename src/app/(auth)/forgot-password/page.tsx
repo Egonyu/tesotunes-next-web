@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Mail, CheckCircle } from 'lucide-react';
+import { apiPost } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -16,21 +17,8 @@ export default function ForgotPasswordPage() {
     setError('');
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com'}/auth/forgot-password`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        }
-      );
-
-      if (res.ok) {
-        setIsSent(true);
-      } else {
-        const data = await res.json().catch(() => null);
-        setError(data?.message || 'Failed to send reset link. Please try again.');
-      }
+      await apiPost('/auth/forgot-password', { email });
+      setIsSent(true);
     } catch {
       setError('An error occurred. Please try again.');
     } finally {

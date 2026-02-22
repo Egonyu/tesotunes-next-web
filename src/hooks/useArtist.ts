@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiPostForm, getAuthToken } from "@/lib/api";
 
 // ============================================================================
 // Types
@@ -164,7 +164,7 @@ export interface ArtistProfile {
 export function useArtistDashboard(options?: { enabled?: boolean }) {
   const [hasToken, setHasToken] = useState(false);
   useEffect(() => {
-    setHasToken(!!localStorage.getItem("auth_token"));
+    setHasToken(!!getAuthToken());
   }, []);
   return useQuery({
     queryKey: ["artist", "dashboard"],
@@ -189,7 +189,7 @@ export function useMyArtistSongs(params?: {
 }, options?: { enabled?: boolean }) {
   const [hasToken, setHasToken] = useState(false);
   useEffect(() => {
-    setHasToken(!!localStorage.getItem("auth_token"));
+    setHasToken(!!getAuthToken());
   }, []);
   return useQuery({
     queryKey: ["artist", "songs", params],

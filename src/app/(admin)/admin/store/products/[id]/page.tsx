@@ -6,9 +6,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  Edit, Trash2, Package, ShoppingCart, Eye, ArrowUpRight, 
-  Calendar, TrendingUp, Tag, Box, Store 
+import {
+  Edit, Trash2, Package, ShoppingCart, Eye, ArrowUpRight,
+  Calendar, TrendingUp, Tag, Box, Store
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 import { useState } from 'react';
@@ -79,7 +79,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/store/api/products/${id}/toggle-status`),
+    mutationFn: () => apiPost(`/admin/store/products/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'product', id] });
     },
@@ -210,7 +210,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 {recentOrders.data.slice(0, 5).map((item) => (
                   <div key={item.id} className="py-3 flex items-center justify-between">
                     <div>
-                      <Link 
+                      <Link
                         href={`/admin/store/orders/${item.order_id}`}
                         className="font-medium hover:text-primary"
                       >

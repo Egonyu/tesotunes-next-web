@@ -13,10 +13,10 @@ export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerDivId = "qr-scanner";
-  
+
   const checkInTicket = useCheckInTicket();
   const { data: validationResult } = useValidateTicket(scanResult || '');
-  
+
   useEffect(() => {
     if (!isScanning) {
       // Cleanup scanner
@@ -26,7 +26,7 @@ export default function QRScannerPage() {
       }
       return;
     }
-    
+
     // Initialize scanner
     const scanner = new Html5QrcodeScanner(
       scannerDivId,
@@ -38,7 +38,7 @@ export default function QRScannerPage() {
       },
       false
     );
-    
+
     scanner.render(
       (decodedText) => {
         setScanResult(decodedText);
@@ -49,16 +49,16 @@ export default function QRScannerPage() {
         // Ignore scan errors (they happen frequently)
       }
     );
-    
+
     scannerRef.current = scanner;
-    
+
     return () => {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(console.error);
       }
     };
   }, [isScanning]);
-  
+
   const handleCheckIn = async (ticketNumber: string) => {
     try {
       const result = await checkInTicket.mutateAsync({ ticket_number: ticketNumber });
@@ -69,14 +69,14 @@ export default function QRScannerPage() {
       toast.error(error?.message || 'Failed to check in ticket');
     }
   };
-  
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim()) {
       setScanResult(manualCode.trim());
     }
   };
-  
+
   return (
     <div className="container py-8 max-w-2xl space-y-6">
       {/* Header */}
@@ -86,7 +86,7 @@ export default function QRScannerPage() {
           Scan QR codes to verify and check in event tickets
         </p>
       </div>
-      
+
       {/* Scanner Status */}
       {!isScanning && !scanResult && (
         <div className="space-y-4">
@@ -98,7 +98,7 @@ export default function QRScannerPage() {
             <ScanLine className="h-6 w-6 text-primary" />
             <span className="font-medium">Start QR Scanner</span>
           </button>
-          
+
           {/* Manual Entry */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -108,7 +108,7 @@ export default function QRScannerPage() {
               <span className="bg-background px-2 text-muted-foreground">Or enter manually</span>
             </div>
           </div>
-          
+
           <form onSubmit={handleManualSubmit} className="space-y-3">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -138,7 +138,7 @@ export default function QRScannerPage() {
           </form>
         </div>
       )}
-      
+
       {/* Scanner */}
       {isScanning && (
         <div className="space-y-4">
@@ -151,7 +151,7 @@ export default function QRScannerPage() {
           >
             Cancel Scanning
           </button>
-          
+
           <div className="flex items-start gap-2 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-blue-500">
@@ -160,11 +160,11 @@ export default function QRScannerPage() {
           </div>
         </div>
       )}
-      
+
       {/* Validation Result */}
       {scanResult && validationResult && (
         <div className="space-y-4">
-          {validationResult.valid && validationResult.ticket ? (
+          {validationResult.valid && validationResult.data ? (
             <div className="p-6 rounded-lg border-2 border-green-500 bg-green-500/10 space-y-4">
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-8 w-8 text-green-500" />
@@ -173,34 +173,44 @@ export default function QRScannerPage() {
                   <p className="text-sm text-muted-foreground">{validationResult.message}</p>
                 </div>
               </div>
-              
+
               <div className="h-px bg-border" />
-              
+
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Event:</span>
-                  <span className="font-medium">{validationResult.ticket.event.title}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ticket Type:</span>
-                  <span className="font-medium">{validationResult.ticket.ticket_tier.name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Holder:</span>
-                  <span className="font-medium">{validationResult.ticket.holder_name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span className={cn(
-                    'font-medium capitalize',
-                    validationResult.ticket.status === 'valid' ? 'text-green-500' : 'text-red-500'
-                  )}>
-                    {validationResult.ticket.status}
-                  </span>
-                </div>
+                {(() => {
+                  const ticketData = validationResult.data as Record<string, unknown>;
+                  const eventInfo = ticketData.event as Record<string, unknown> | undefined;
+                  return (
+                    <>
+                      {eventInfo && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Event:</span>
+                          <span className="font-medium">{String(eventInfo.title || '')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Ticket:</span>
+                        <span className="font-medium font-mono">{String(ticketData.ticket_number || '')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Holder:</span>
+                        <span className="font-medium">{String(ticketData.holder_name || '')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Status:</span>
+                        <span className={cn(
+                          'font-medium capitalize',
+                          !ticketData.checked_in_at ? 'text-green-500' : 'text-yellow-500'
+                        )}>
+                          {ticketData.checked_in_at ? 'Already Checked In' : String(ticketData.status || '')}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-              
-              {validationResult.ticket.status === 'valid' && (
+
+              {!(validationResult.data as Record<string, unknown>)?.checked_in_at && (
                 <button
                   onClick={() => handleCheckIn(scanResult)}
                   disabled={checkInTicket.isPending}
@@ -231,7 +241,7 @@ export default function QRScannerPage() {
               </div>
             </div>
           )}
-          
+
           <button
             onClick={() => {
               setScanResult(null);
@@ -243,7 +253,7 @@ export default function QRScannerPage() {
           </button>
         </div>
       )}
-      
+
       {/* Info Card */}
       {!isScanning && !scanResult && (
         <div className="p-4 rounded-lg bg-muted/50 border">

@@ -338,43 +338,43 @@ export function useUnfollowUser() {
 // Edula Feed-Item Actions (from Edula doc API)
 // ============================================================================
 
-/** Refresh the feed — POST /edula/api/refresh */
+/** Refresh the feed — POST /edula/refresh */
 export function useRefreshFeed() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => apiPost<{ new_items_count: number }>('/edula/api/refresh', {}),
+    mutationFn: () => apiPost<{ new_items_count: number }>('/edula/refresh', {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
   });
 }
 
-/** Mark a feed item as not-interested — POST /edula/api/items/{uuid}/not-interested */
+/** Mark a feed item as not-interested — POST /edula/items/{uuid}/not-interested */
 export function useNotInterested() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: { uuid: string; reason?: string }) =>
-      apiPost(`/edula/api/items/${data.uuid}/not-interested`, { reason: data.reason || 'not_relevant' }),
+      apiPost(`/edula/items/${data.uuid}/not-interested`, { reason: data.reason || 'not_relevant' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
   });
 }
 
-/** Save a feed item — POST /edula/api/items/{uuid}/save */
+/** Save a feed item — POST /edula/items/{uuid}/save */
 export function useSaveFeedItem() {
   return useMutation({
-    mutationFn: (uuid: string) => apiPost(`/edula/api/items/${uuid}/save`, {}),
+    mutationFn: (uuid: string) => apiPost(`/edula/items/${uuid}/save`, {}),
   });
 }
 
-/** Track interaction — POST /edula/api/items/{uuid}/track */
+/** Track interaction — POST /edula/items/{uuid}/track */
 export function useTrackInteraction() {
   return useMutation({
     mutationFn: (data: { uuid: string; action: 'click' | 'view' | 'like' | 'share'; duration?: number }) =>
-      apiPost(`/edula/api/items/${data.uuid}/track`, {
+      apiPost(`/edula/items/${data.uuid}/track`, {
         action: data.action,
         duration: data.duration,
       }),

@@ -1,85 +1,158 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
+import { apiGet, apiPost, apiDelete, apiPostForm } from "@/lib/api";
 
 // ============================================================================
-// Types
+// API Response Shapes (match Laravel paginator / EventResource format)
+// ============================================================================
+
+/** Standard Laravel paginator response from EventResource::collection() */
+interface PaginatedEventsResponse {
+  data: Record<string, unknown>[];
+  links: Record<string, unknown>;
+  meta: {
+    current_page: number;
+    from: number | null;
+    last_page: number;
+    per_page: number;
+    to: number | null;
+    total: number;
+  };
+}
+
+/** Admin wrapper response from GET /admin/events */
+interface AdminEventsApiResponse {
+  success: boolean;
+  data: Record<string, unknown>[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+/** Admin wrapper response from GET /admin/events/{id} */
+interface AdminEventApiResponse {
+  success: boolean;
+  data: Record<string, unknown>;
+}
+
+// ============================================================================
+// Types — aligned with EventResource.php in tesotunes-api
 // ============================================================================
 
 export interface EventTicketTier {
   id: number;
-  event_id: number;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
   price_ugx?: number;
   price_credits?: number;
-  is_free?: boolean;
-  quantity: number;
-  quantity_total?: number;
+  is_free: boolean;
+  quantity: number | null;
+  quantity_total?: number | null;
   quantity_sold?: number;
   available: number;
   max_per_order: number;
-  sales_start_date?: string;
-  sales_end_date?: string;
+  sales_start_date?: string | null;
+  sales_end_date?: string | null;
   is_active?: boolean;
-  required_loyalty_tier?: string;
-  tier_early_access_hours?: number;
-  created_at: string;
-  updated_at: string;
+  required_loyalty_tier?: string | null;
+  tier_early_access_hours?: number | null;
 }
 
+/**
+ * Event interface — aligned with EventResource.php from tesotunes-api.
+ *
+ * EventResource returns these exact fields. The frontend normalises
+ * a few aliases (artwork → image, starts_at → date, venue_name → venue)
+ * via `transformEvent()` for backward-compat with UI components.
+ */
 export interface Event {
   id: number;
   uuid?: string;
   title: string;
   slug: string;
   description: string;
-  image: string;
-  artwork?: string;
-  banner?: string;
-  banner_image?: string;
+
+  // Media — EventResource returns `artwork` and `banner` as full URLs
+  image: string;          // normalised alias of artwork
+  artwork?: string;       // raw from EventResource
+  banner?: string;        // raw from EventResource
+  banner_image?: string;  // alias of banner for backward compat
+
   category: string;
   event_type?: string;
-  date: string;
-  end_date?: string;
+
+  // Schedule — EventResource returns ISO-8601 strings
+  date: string;           // normalised alias of starts_at
   starts_at?: string;
   ends_at?: string;
+  end_date?: string;      // alias of ends_at for backward compat
   doors_open_at?: string;
-  time: string;
+  time: string;           // derived from starts_at for display
   timezone?: string;
-  venue: string;
+
+  // Venue — EventResource returns flat fields + nested location object
+  venue: string;          // normalised: venue_name || location.name
   venue_name?: string;
   venue_address?: string;
-  location: string;
+  location: string;       // normalised: city || location.city
   city: string;
   country: string;
-  capacity?: number;
+  location_obj?: {
+    id: number;
+    name: string;
+    address?: string | null;
+    city?: string | null;
+  };
+  // Backward-compat aliases used by UI pages
+  location_name?: string;
+  location_address?: string;
+  location_city?: string;
+
+  // Capacity & status
   attendee_limit?: number;
+  capacity?: number;      // alias of attendee_limit for backward compat
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'postponed';
   is_virtual?: boolean;
   virtual_link?: string;
   is_free?: boolean;
   is_featured: boolean;
   is_published?: boolean;
+  requires_approval?: boolean;
+
+  // Pricing
   ticket_price?: number;
   currency?: string;
-  artist_id?: number;
-  artist?: {
-    id: number;
-    name: string;
-    slug: string;
-    image?: string;
-  };
+
+  // Organizer — EventResource returns nested { id, name, avatar }
+  organizer_id?: number;
+  organizer_name?: string;  // alias of organizer?.name for backward compat
   organizer?: {
     id: number;
     name: string;
     avatar?: string;
   };
+
+  // Artist performing at event — mapped from organizer if organizer is an artist
+  artist?: {
+    id: number;
+    name: string;
+    slug?: string;
+    image?: string;
+  };
+
+  // Ticket tiers — included when tickets relation is loaded (show endpoint)
   ticket_tiers?: EventTicketTier[];
+
+  // Stats
   tickets_sold?: number;
   attendee_count?: number;
-  rating_average?: number;
+  rating_average?: number | null;
   review_count?: number;
+
+  // Metadata
   tags?: string[];
   registration_deadline?: string;
   published_at?: string;
@@ -97,28 +170,37 @@ export interface EventsResponse {
   };
 }
 
+/**
+ * Ticket — matches TicketController::myTickets() / show() response
+ */
 export interface Ticket {
   id: number;
-  event_id: number;
-  event: Event;
-  ticket_tier_id: number;
-  ticket_tier: EventTicketTier;
-  order_id: number;
   ticket_number: string;
   qr_code: string;
-  status: 'valid' | 'used' | 'cancelled' | 'expired';
+  status: 'pending' | 'confirmed' | 'attended' | 'cancelled';
   holder_name: string;
-  holder_email: string;
+  holder_email?: string;
   holder_phone?: string;
-  checked_in_at?: string;
-  checked_in_by?: number;
+  price_paid: number;
+  price_paid_credits: number;
+  payment_method: string;
+  checked_in_at?: string | null;
+  confirmed_at?: string | null;
+  event?: {
+    id: number;
+    title: string;
+    starts_at?: string;
+    ends_at?: string;
+    artwork?: string | null;
+    venue_name?: string;
+    city?: string;
+  } | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface TicketsResponse {
   data: Ticket[];
-  pagination: {
+  meta: {
     current_page: number;
     last_page: number;
     per_page: number;
@@ -126,22 +208,41 @@ export interface TicketsResponse {
   };
 }
 
+/**
+ * Purchase request — matches TicketController::purchase() validation
+ */
 export interface PurchaseTicketRequest {
   event_id: number;
   ticket_tier_id: number;
   quantity: number;
   payment_method: 'wallet' | 'mtn_momo' | 'airtel_money' | 'card' | 'credits';
   phone?: string;
-  holder_name: string;
-  holder_email: string;
+  holder_name?: string;
+  holder_email?: string;
   holder_phone?: string;
 }
 
+/**
+ * Purchase response — matches TicketController::purchase() return shape
+ */
 export interface PurchaseTicketResponse {
-    order_id: number;
-  tickets: Ticket[];
-  total_amount: number;
-  payment_reference?: string;
+  data: {
+    order_id: string;
+    tickets: Array<{
+      id: number;
+      ticket_number: string;
+      qr_code: string;
+      status: string;
+      tier: string;
+      price: number;
+      holder_name: string;
+    }>;
+    total_amount: number;
+    service_fee: number;
+    payment_method: string;
+    payment_reference: string | null;
+    status: 'completed' | 'pending_payment';
+  };
   message: string;
 }
 
@@ -149,34 +250,193 @@ export interface CheckInRequest {
   ticket_number: string;
 }
 
+/**
+ * Check-in response — matches TicketController::checkIn() return shape
+ */
 export interface CheckInResponse {
-    ticket: Ticket;
   message: string;
+  data: {
+    ticket_number: string;
+    holder_name: string;
+    checked_in_at: string;
+    event: string | null;
+    loyalty_points_earned: number;
+  };
 }
 
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Transform a raw EventResource JSON object into our Event interface.
+ * EventResource returns consistent field names — we only add convenience
+ * aliases (artwork → image, starts_at → date, venue_name → venue) for
+ * backward compatibility with UI components.
+ */
+function transformEvent(raw: Record<string, unknown>): Event {
+  // Parse tags — backend may store as JSON string
+  let tags: string[] | undefined;
+  if (typeof raw.tags === 'string') {
+    try { tags = JSON.parse(raw.tags); } catch { tags = undefined; }
+  } else if (Array.isArray(raw.tags)) {
+    tags = raw.tags as string[];
+  }
+
+  // Organizer is a nested object from EventResource
+  const rawOrganizer = raw.organizer as { id: number; name: string; avatar?: string } | undefined;
+
+  // Location is a nested object from EventResource
+  const rawLocation = raw.location as { id: number; name: string; address?: string; city?: string } | undefined;
+
+  // Ticket tiers are included when tickets relation is loaded
+  const rawTiers = raw.ticket_tiers as EventTicketTier[] | undefined;
+
+  return {
+    id: raw.id as number,
+    uuid: raw.uuid as string | undefined,
+    title: (raw.title as string) || '',
+    slug: (raw.slug as string) || '',
+    description: (raw.description as string) || '',
+
+    // Media: EventResource returns `artwork` and `banner` as full URLs
+    image: (raw.artwork || '') as string,
+    artwork: raw.artwork as string | undefined,
+    banner: raw.banner as string | undefined,
+    banner_image: raw.banner as string | undefined,
+
+    category: (raw.category || '') as string,
+    event_type: raw.event_type as string | undefined,
+
+    // Schedule: EventResource returns starts_at, ends_at, doors_open_at
+    date: (raw.starts_at || '') as string,
+    starts_at: raw.starts_at as string | undefined,
+    ends_at: raw.ends_at as string | undefined,
+    end_date: raw.ends_at as string | undefined,
+    doors_open_at: raw.doors_open_at as string | undefined,
+    time: '',
+    timezone: raw.timezone as string | undefined,
+
+    // Venue: EventResource returns flat venue_name/city + nested location object
+    venue: (raw.venue_name || rawLocation?.name || '') as string,
+    venue_name: raw.venue_name as string | undefined,
+    venue_address: raw.venue_address as string | undefined,
+    location: (raw.city || rawLocation?.city || '') as string,
+    city: (raw.city || rawLocation?.city || '') as string,
+    country: (raw.country || '') as string,
+    location_obj: rawLocation ? {
+      id: rawLocation.id,
+      name: rawLocation.name,
+      address: rawLocation.address,
+      city: rawLocation.city,
+    } : undefined,
+    // Backward-compat aliases
+    location_name: (rawLocation?.name || raw.venue_name) as string | undefined,
+    location_address: (rawLocation?.address || raw.venue_address) as string | undefined,
+    location_city: (rawLocation?.city || raw.city) as string | undefined,
+
+    // Capacity & status
+    attendee_limit: raw.attendee_limit as number | undefined,
+    capacity: raw.attendee_limit as number | undefined,
+    status: (raw.status || 'draft') as Event['status'],
+    is_virtual: raw.is_virtual as boolean | undefined,
+    virtual_link: raw.virtual_link as string | undefined,
+    is_free: raw.is_free as boolean | undefined,
+    is_featured: (raw.is_featured || false) as boolean,
+    is_published: raw.is_published as boolean | undefined,
+    requires_approval: raw.requires_approval as boolean | undefined,
+
+    // Pricing
+    ticket_price: raw.ticket_price as number | undefined,
+    currency: raw.currency as string | undefined,
+
+    // Organizer
+    organizer_id: rawOrganizer?.id,
+    organizer_name: rawOrganizer?.name,
+    organizer: rawOrganizer,
+
+    // Artist — map organizer as performing artist for backward compat
+    artist: rawOrganizer ? {
+      id: rawOrganizer.id,
+      name: rawOrganizer.name,
+      image: rawOrganizer.avatar,
+    } : undefined,
+
+    // Ticket tiers (from show endpoint)
+    ticket_tiers: rawTiers,
+
+    // Stats
+    tickets_sold: raw.tickets_sold as number | undefined,
+    attendee_count: raw.attendee_count as number | undefined,
+    rating_average: raw.rating_average as number | null | undefined,
+    review_count: raw.review_count as number | undefined,
+
+    // Metadata
+    tags,
+    registration_deadline: raw.registration_deadline as string | undefined,
+    published_at: raw.published_at as string | undefined,
+    created_at: (raw.created_at || '') as string,
+    updated_at: (raw.updated_at || '') as string,
+  };
+}
+
+/**
+ * CreateEventRequest — matches ArtistEventsController::store() validation.
+ * Supports both combined datetime (starts_at/ends_at) and split
+ * (start_date + start_time) formats.
+ */
 export interface CreateEventRequest {
   title: string;
-  description: string;
-  category: string;
-  date: string;
+  description?: string;
+  short_description?: string;
+  category?: string;
+  event_type?: string;
+  // Date — backend accepts combined (starts_at/ends_at) or split (start_date + start_time)
+  date?: string;          // alias → mapped to start_date in FormData
+  time?: string;          // alias → mapped to start_time in FormData
+  start_date?: string;
+  start_time?: string;
   end_date?: string;
-  time: string;
-  venue: string;
-  location: string;
-  city: string;
-  country: string;
-  capacity?: number;
-  image?: File;
-  banner_image?: File;
-  ticket_tiers: {
+  end_time?: string;
+  starts_at?: string;
+  ends_at?: string;
+  timezone?: string;
+  // Venue
+  venue?: string;         // alias → mapped to venue_name in FormData
+  venue_name?: string;
+  venue_address?: string;
+  location?: string;      // alias (used as city fallback)
+  city?: string;
+  country?: string;
+  is_virtual?: boolean;
+  is_online?: boolean;
+  virtual_link?: string;
+  online_url?: string;
+  // Capacity
+  capacity?: number;      // alias → mapped to attendee_limit in FormData
+  attendee_limit?: number;
+  max_capacity?: number;
+  min_age?: number;
+  is_free?: boolean;
+  status?: string;
+  // Files — sent via FormData
+  image?: File;           // alias → mapped to cover_image in FormData
+  cover_image?: File;
+  banner_image?: File;    // alias → mapped to cover_image if no cover_image
+  // Ticket tiers (sent as JSON string)
+  ticket_tiers?: Array<{
     name: string;
-    description: string;
+    description?: string;
     price: number;
-    quantity: number;
-    max_per_order: number;
+    price_credits?: number;
+    quantity?: number;
+    max_per_order?: number;
+    sale_starts_at?: string;
+    sale_ends_at?: string;
+    // Backward compat field names
     sales_start_date?: string;
     sales_end_date?: string;
-  }[];
+  }>;
 }
 
 export interface UpdateEventRequest extends Partial<CreateEventRequest> {
@@ -184,7 +444,12 @@ export interface UpdateEventRequest extends Partial<CreateEventRequest> {
 }
 
 // ============================================================================
-// Events Hooks
+// Public Events Hooks — aligned with PublicEventsController
+// GET /events — paginated listing (EventResource::collection)
+// GET /events/featured — featured events
+// GET /events/upcoming — upcoming events
+// GET /events/categories — distinct categories
+// GET /events/{id} — event detail with ticket_tiers
 // ============================================================================
 
 export function useEvents(params?: {
@@ -195,44 +460,70 @@ export function useEvents(params?: {
   status?: string;
   featured?: boolean;
   search?: string;
+  month?: string;
 }) {
   return useQuery({
     queryKey: ["events", params],
-    queryFn: () => apiGet<EventsResponse>("/events", { params }),
+    queryFn: async () => {
+      const res = await apiGet<PaginatedEventsResponse>("/events", { params });
+      return {
+        data: (res.data || []).map(transformEvent),
+        pagination: res.meta,
+      } as EventsResponse;
+    },
   });
 }
 
-export function useEvent(eventId: number | string, options?: UseQueryOptions<Event>) {
+export function useEvent(eventId: number | string, options?: Partial<UseQueryOptions<Event>>) {
   return useQuery({
     queryKey: ["event", eventId],
-    queryFn: () => apiGet<{ data: Event }>(`/events/${eventId}`).then(res => res.data),
+    queryFn: async () => {
+      const res = await apiGet<{ data: Record<string, unknown> }>(`/events/${eventId}`);
+      const eventData = (res.data ? res.data : res) as Record<string, unknown>;
+      return transformEvent(eventData);
+    },
     enabled: !!eventId,
     ...options,
   });
 }
 
+/**
+ * Featured events — GET /events/featured
+ * PublicEventsController returns is_featured=true events starting in the future, limit 6.
+ */
 export function useFeaturedEvents() {
   return useQuery({
     queryKey: ["events", "featured"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Event[] }>("/events/featured");
-      return res.data;
+      const res = await apiGet<{ data: Record<string, unknown>[] }>("/events/featured");
+      return (res.data || []).map(transformEvent);
     },
   });
 }
 
+/**
+ * Upcoming events — GET /events/upcoming
+ * PublicEventsController returns published events with starts_at >= now(), sorted by date.
+ */
 export function useUpcomingEvents(limit = 10) {
   return useQuery({
     queryKey: ["events", "upcoming", limit],
     queryFn: async () => {
-      const res = await apiGet<{ data: Event[] }>("/events/upcoming", { params: { limit } });
-      return res.data;
+      const res = await apiGet<{ data: Record<string, unknown>[] }>("/events/upcoming", {
+        params: { limit },
+      });
+      return (res.data || []).map(transformEvent);
     },
   });
 }
 
 // ============================================================================
-// Ticket Purchase Hooks
+// Ticket Hooks — aligned with TicketController
+// POST /tickets/purchase — purchase tickets
+// GET /tickets/my — user's tickets
+// GET /tickets/{id} — ticket detail
+// GET /tickets/validate/{ticketNumber} — validate a ticket
+// POST /tickets/check-in — check in a ticket
 // ============================================================================
 
 export function usePurchaseTickets() {
@@ -268,7 +559,7 @@ export function useTicket(ticketId: number | string) {
 }
 
 // ============================================================================
-// Check-in Hooks
+// Check-in Hooks — aligned with TicketController
 // ============================================================================
 
 export function useCheckInTicket() {
@@ -286,13 +577,19 @@ export function useCheckInTicket() {
 export function useValidateTicket(ticketNumber: string) {
   return useQuery({
     queryKey: ["ticket", "validate", ticketNumber],
-    queryFn: () => apiGet<{ valid: boolean; ticket?: Ticket; message: string }>(`/tickets/validate/${ticketNumber}`),
+    queryFn: () => apiGet<{ valid: boolean; data?: Record<string, unknown>; message?: string }>(`/tickets/validate/${ticketNumber}`),
     enabled: !!ticketNumber && ticketNumber.length > 5,
   });
 }
 
 // ============================================================================
-// Artist Event Management Hooks
+// Artist Event Management Hooks — aligned with ArtistEventsController
+// GET /artist/events — artist's own events
+// POST /artist/events — create event
+// GET /artist/events/{id} — show with ticket_tiers + attendees
+// PUT /artist/events/{id} — update event
+// DELETE /artist/events/{id} — delete event
+// GET /artist/events/{id}/analytics — event analytics
 // ============================================================================
 
 export function useArtistEvents(params?: {
@@ -302,7 +599,13 @@ export function useArtistEvents(params?: {
 }) {
   return useQuery({
     queryKey: ["artist", "events", params],
-    queryFn: () => apiGet<EventsResponse>("/artist/events", { params }),
+    queryFn: async () => {
+      const res = await apiGet<PaginatedEventsResponse>("/artist/events", { params });
+      return {
+        data: (res.data || []).map(transformEvent),
+        pagination: res.meta,
+      } as EventsResponse;
+    },
   });
 }
 
@@ -312,19 +615,38 @@ export function useCreateEvent() {
   return useMutation({
     mutationFn: (data: CreateEventRequest) => {
       const formData = new FormData();
+
+      // Map alias fields to backend-accepted field names
+      const fieldMap: Record<string, string> = {
+        date: 'start_date',
+        time: 'start_time',
+        venue: 'venue_name',
+        capacity: 'attendee_limit',
+        image: 'cover_image',
+        banner_image: 'cover_image', // banner uses same upload field
+      };
+
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'ticket_tiers') {
           formData.append(key, JSON.stringify(value));
+        } else if (key === 'location') {
+          // 'location' is used as city fallback
+          if (!data.city && typeof value === 'string') {
+            formData.append('city', value);
+          }
         } else if (value instanceof File) {
-          formData.append(key, value);
+          const mappedKey = fieldMap[key] || key;
+          formData.append(mappedKey, value);
         } else if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
+          const mappedKey = fieldMap[key] || key;
+          formData.append(mappedKey, String(value));
         }
       });
-      return apiPostForm<Event>("/artist/events", formData);
+      return apiPostForm<{ message: string; data: Record<string, unknown> }>("/artist/events", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
     },
   });
 }
@@ -345,11 +667,12 @@ export function useUpdateEvent() {
           formData.append(key, String(value));
         }
       });
-      return apiPostForm<Event>(`/artist/events/${id}`, formData);
+      return apiPostForm<{ message: string; data: Record<string, unknown> }>(`/artist/events/${id}`, formData);
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
-      queryClient.invalidateQueries({ queryKey: ["event", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["event", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
     },
   });
 }
@@ -362,26 +685,35 @@ export function useDeleteEvent() {
       apiDelete(`/artist/events/${eventId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "events"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
     },
   });
 }
 
+/**
+ * Event analytics — GET /artist/events/{id}/analytics
+ * Returns tickets_sold, revenue, check_ins, by_tier, by_date.
+ */
 export function useEventAnalytics(eventId: number | string) {
   return useQuery({
     queryKey: ["artist", "events", eventId, "analytics"],
     queryFn: () => apiGet<{
-      tickets_sold: number;
-      revenue: number;
-      check_ins: number;
-      by_tier: Array<{ tier_name: string; sold: number; revenue: number }>;
-      by_date: Array<{ date: string; sold: number }>;
+      data: {
+        tickets_sold: number;
+        revenue: number;
+        revenue_credits: number;
+        check_ins: number;
+        by_tier: Array<{ name: string; sold: number; total: number | null; revenue: number }>;
+        by_date: Array<{ date: string; revenue: number; count: number }>;
+      };
     }>(`/artist/events/${eventId}/analytics`),
     enabled: !!eventId,
   });
 }
 
 // ============================================================================
-// Event Categories Hook
+// Event Categories — GET /events/categories
+// PublicEventsController returns distinct categories from the database.
 // ============================================================================
 
 export function useEventCategories() {
@@ -389,7 +721,267 @@ export function useEventCategories() {
     queryKey: ["event", "categories"],
     queryFn: async () => {
       const res = await apiGet<{ data: string[] }>("/events/categories");
-      return res.data;
+      return res.data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// ============================================================================
+// Social & Engagement Hooks
+// ============================================================================
+
+/**
+ * Trending events — no dedicated backend endpoint.
+ * Falls back to upcoming events sorted by tickets_sold.
+ */
+export function useTrendingEvents(limit = 20) {
+  return useQuery({
+    queryKey: ["events", "trending", limit],
+    queryFn: async () => {
+      const res = await apiGet<{ data: Record<string, unknown>[] }>("/events/upcoming", {
+        params: { limit },
+      });
+      const events = (res.data || []).map(transformEvent);
+      return events.sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0));
+    },
+  });
+}
+
+/**
+ * Event recommendations — no dedicated backend endpoint yet.
+ * Returns empty structure as placeholder.
+ */
+export function useEventRecommendations() {
+  return useQuery({
+    queryKey: ["events", "recommendations"],
+    queryFn: async () => ({
+      for_you: [] as Event[],
+      trending: [] as Event[],
+      friends_attending: [] as Event[],
+      based_on_history: [] as Event[],
+    }),
+    staleTime: Infinity,
+  });
+}
+
+// ============================================================================
+// Event Interactions — aligned with ActivityInteractionController
+// POST /events/{id}/interest — toggle interest
+// POST /bookmark/event/{id} — toggle bookmark (requires 'event' type in backend)
+// POST /like/event/{id} — toggle like (requires 'event' type in backend)
+// ============================================================================
+
+export function useToggleEventInterest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: number) =>
+      apiPost<{ data: { interested: boolean; event_id: number }; message: string }>(`/events/${eventId}/interest`),
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ["event", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
+export function useToggleEventBookmark() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: number) =>
+      apiPost<{ data: { bookmarked: boolean }; message: string }>(`/bookmark/event/${eventId}`),
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ["event", eventId] });
+    },
+  });
+}
+
+/**
+ * Share tracking — no dedicated backend endpoint yet.
+ * Resolves silently; will be connected once backend supports it.
+ */
+export function useTrackEventShare() {
+  return useMutation({
+    mutationFn: async (_eventId: number) => ({ success: true }),
+  });
+}
+
+// ============================================================================
+// Checkout Hooks
+// The backend uses a single POST /tickets/purchase endpoint.
+// useInitiateCheckout and useCompleteCheckout are convenience wrappers
+// that map to the same underlying endpoint for the UI's multi-step flow.
+// ============================================================================
+
+/**
+ * Initiate checkout — prepares order summary.
+ * This is a frontend-only step; the backend processes everything in one call.
+ * Returns a calculated summary the caller can display before confirming.
+ */
+export function useInitiateCheckout() {
+  return useMutation({
+    mutationFn: async (data: {
+      event_id: number;
+      tickets: Array<{ ticket_tier_id: number; quantity: number }>;
+      payment_method: string;
+      discount_code?: string;
+      credits_to_use?: number;
+    }) => {
+      // For the multi-step UI, we just validate availability via the event detail
+      const res = await apiGet<{ data: Record<string, unknown> }>(`/events/${data.event_id}`);
+      const event = transformEvent((res.data || res) as Record<string, unknown>);
+      const tiers = event.ticket_tiers || [];
+
+      let totalUgx = 0;
+      let totalCredits = 0;
+      for (const item of data.tickets) {
+        const tier = tiers.find(t => t.id === item.ticket_tier_id);
+        if (tier) {
+          totalUgx += (tier.price || 0) * item.quantity;
+          totalCredits += (tier.price_credits || 0) * item.quantity;
+        }
+      }
+      const platformFee = Math.round(totalUgx * 0.05);
+
+      return {
+        checkout_id: `checkout_${Date.now()}`,
+        total_ugx: totalUgx + platformFee,
+        total_credits: totalCredits,
+        platform_fee: platformFee,
+        discount_amount: 0,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      };
+    },
+  });
+}
+
+/**
+ * Complete checkout — calls POST /tickets/purchase.
+ * Purchases the first ticket tier in the cart via the backend's ticket purchase endpoint.
+ */
+export function useCompleteCheckout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      event_id: number;
+      checkout_id: string;
+      payment_provider: string;
+      payment_details: Record<string, unknown>;
+      phone_number?: string;
+      // The actual ticket info
+      ticket_tier_id: number;
+      quantity: number;
+      holder_name?: string;
+      holder_email?: string;
+    }) => {
+      const purchaseData: PurchaseTicketRequest = {
+        event_id: data.event_id,
+        ticket_tier_id: data.ticket_tier_id,
+        quantity: data.quantity,
+        payment_method: data.payment_provider as PurchaseTicketRequest['payment_method'],
+        phone: data.phone_number,
+        holder_name: data.holder_name,
+        holder_email: data.holder_email,
+      };
+      return apiPost<PurchaseTicketResponse>("/tickets/purchase", purchaseData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    },
+  });
+}
+
+// ============================================================================
+// Group Booking Hooks — no backend endpoint yet
+// These are placeholders for the UI; will error until implemented server-side.
+// ============================================================================
+
+export function useCreateGroupBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      event_id: number;
+      ticket_tier_id: number;
+      total_seats: number;
+      payment_split: 'equal' | 'custom' | 'organizer_pays';
+      deadline?: string;
+    }) => apiPost<{
+      id: string;
+      invite_link: string;
+      invite_code: string;
+    }>(`/events/${data.event_id}/group`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["group-bookings"] });
+    },
+  });
+}
+
+export function useGroupBooking(eventId: number | string, groupId: string) {
+  return useQuery({
+    queryKey: ["group-booking", eventId, groupId],
+    queryFn: () => apiGet<{
+      data: {
+        id: string;
+        members: Array<{
+          id: number;
+          user: { id: number; name: string; avatar_url?: string };
+          status: string;
+          amount_owed: number;
+          amount_paid: number;
+        }>;
+        total_seats: number;
+        seats_booked: number;
+        deadline: string;
+        discount_percent: number;
+        total_amount: number;
+        per_person_amount: number;
+        invite_link: string;
+      };
+    }>(`/events/${eventId}/group/${groupId}`),
+    enabled: !!eventId && !!groupId,
+  });
+}
+
+export function useJoinGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { event_id: number; group_id: string }) =>
+      apiPost(`/events/${data.event_id}/group/${data.group_id}/join`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["group-bookings"] });
+    },
+  });
+}
+
+// Discount Code Validation — no backend endpoint yet
+export function useValidateDiscountCode() {
+  return useMutation({
+    mutationFn: (data: { event_id: number; code: string }) =>
+      apiPost<{
+        valid: boolean;
+        discount_percent?: number;
+        discount_amount?: number;
+        message: string;
+      }>(`/events/${data.event_id}/validate-discount`, data),
+  });
+}
+
+// Live Event Check-in — no backend endpoint yet
+export function useLiveCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      event_id: number;
+      latitude?: number;
+      longitude?: number;
+    }) => apiPost<{
+      success: boolean;
+      credits_earned: number;
+      message: string;
+    }>(`/events/${data.event_id}/live/check-in`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
   });
 }

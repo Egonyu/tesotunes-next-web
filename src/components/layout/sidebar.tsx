@@ -21,17 +21,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  LayoutDashboard,
-  Upload,
-  Music,
-  DollarSign,
-  TrendingUp,
-  Store,
-  Megaphone,
-  Heart,
-  Share2,
   Trophy,
   Rss,
+  Music,
+  TrendingUp,
+  Heart,
+  Bell,
+  Clock,
+  Coins,
+  CreditCard,
+  Megaphone,
+  ThumbsUp,
+  MessageCircle,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -47,7 +48,11 @@ const browseItems = [
   { href: "/genres", label: "Genres", icon: Disc3 },
   { href: "/artists", label: "Artists", icon: Users },
   { href: "/albums", label: "Albums", icon: Disc3 },
+  { href: "/songs", label: "Songs", icon: Music },
   { href: "/playlists", label: "Playlists", icon: Library },
+  { href: "/charts", label: "Charts", icon: TrendingUp },
+  { href: "/new-releases", label: "New Releases", icon: Sparkles },
+  { href: "/moods", label: "Moods", icon: Heart },
   { href: "/radio", label: "Radio", icon: Radio },
 ];
 
@@ -57,62 +62,19 @@ const moduleItems = [
   { href: "/events", label: "Events", icon: Calendar },
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },
+  { href: "/polls", label: "Polls", icon: ThumbsUp },
+  { href: "/promotions", label: "Promotions", icon: Megaphone },
   { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
 ];
 
-/** Artist sidebar navigation — grouped by business section */
-const artistSections = [
-  {
-    title: "Overview",
-    items: [
-      { href: "/artist", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/artist/profile", label: "Artist Profile", icon: User },
-    ],
-  },
-  {
-    title: "Music Management",
-    items: [
-      { href: "/artist/songs", label: "My Songs", icon: Music },
-      { href: "/artist/albums", label: "Albums", icon: Disc3 },
-      { href: "/artist/upload", label: "Upload Music", icon: Upload },
-      { href: "/artist/analytics", label: "Streams & Stats", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "Sacco & Wallet",
-    items: [
-      { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
-      { href: "/artist/wallet", label: "Wallet / Top-Up", icon: Wallet },
-    ],
-  },
-  {
-    title: "Store",
-    items: [
-      { href: "/artist/store", label: "My Store", icon: Store },
-    ],
-  },
-  {
-    title: "Events",
-    items: [
-      { href: "/artist/events", label: "Manage Events", icon: Calendar },
-    ],
-  },
-  {
-    title: "Promotions",
-    items: [
-      { href: "/artist/campaigns", label: "Campaigns", icon: Megaphone },
-      { href: "/artist/referrals", label: "Referrals", icon: Share2 },
-      { href: "/artist/fan-club", label: "Fan Club", icon: Heart },
-    ],
-  },
-  {
-    title: "Settings",
-    items: [
-      { href: "/artist/settings", label: "Artist Settings", icon: Settings },
-    ],
-  },
+const activityItems = [
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/history", label: "History", icon: Clock },
+  { href: "/wallet", label: "Wallet", icon: CreditCard },
+  { href: "/credits", label: "Credits", icon: Coins },
 ];
 
 interface NavItemProps {
@@ -198,28 +160,6 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* Artist Section — comprehensive sidebar for artists */}
-        {isArtist && (
-          <>
-            {artistSections.map((section) => (
-              <div key={section.title} className="space-y-1">
-                {!sidebarCollapsed && (
-                  <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">
-                    {section.title}
-                  </h3>
-                )}
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.href}
-                    {...item}
-                    collapsed={sidebarCollapsed}
-                  />
-                ))}
-              </div>
-            ))}
-          </>
-        )}
-
         {/* Browse */}
         <div className="space-y-1">
           {!sidebarCollapsed && (
@@ -251,6 +191,24 @@ export function Sidebar() {
             />
           ))}
         </div>
+
+        {/* Your Activity — authenticated only */}
+        {session?.user && (
+          <div className="space-y-1">
+            {!sidebarCollapsed && (
+              <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">
+                Your Activity
+              </h3>
+            )}
+            {activityItems.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
+                collapsed={sidebarCollapsed}
+              />
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* User Section */}
@@ -269,6 +227,21 @@ export function Sidebar() {
               >
                 <Sparkles className="h-4 w-4 shrink-0" />
                 {!sidebarCollapsed && <span>Become an Artist</span>}
+              </Link>
+            )}
+
+            {/* Artist Studio link — only for artists */}
+            {isArtist && (
+              <Link
+                href="/artist"
+                className={cn(
+                  "flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-3 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all shadow-sm mb-2",
+                  sidebarCollapsed && "justify-center px-2"
+                )}
+                title={sidebarCollapsed ? "Artist Studio" : undefined}
+              >
+                <Sparkles className="h-4 w-4 shrink-0" />
+                {!sidebarCollapsed && <span>Artist Studio</span>}
               </Link>
             )}
 

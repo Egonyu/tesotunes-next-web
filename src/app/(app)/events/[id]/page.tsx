@@ -1,137 +1,158 @@
-'use client';
+'use client'
 
-import { use, useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Users, 
-  Share2, 
+import { use, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  Users,
   Heart,
-  Ticket,
+  Bookmark,
   ChevronLeft,
-  Check,
   ExternalLink,
   Globe,
-  AlertCircle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useEvent, Event, EventTicketTier } from '@/hooks/useEvents';
-import { toast } from 'sonner';
-
+  Star,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useEvent, type EventTicketTier } from '@/hooks/useEvents'
+import { toast } from 'sonner'
+import { SocialProof } from '@/components/events/SocialProof'
+import { TicketSelector } from '@/components/events/TicketSelector'
+import { GroupBookingCTA } from '@/components/events/GroupBookingCTA'
+import { ShareButtons } from '@/components/events/ShareButtons'
 function formatDate(dateStr?: string) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en', { 
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
-  });
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 function formatTime(dateStr?: string) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('en', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
 }
 
 function formatTimeRange(start?: string, end?: string) {
-  const s = formatTime(start);
-  const e = formatTime(end);
-  if (s && e) return `${s} - ${e}`;
-  return s || 'TBA';
+  const s = formatTime(start)
+  const e = formatTime(end)
+  if (s && e) return `${s} - ${e}`
+  return s || 'TBA'
 }
 
-export default function EventDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
+export default function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
 }) {
-  const { id } = use(params);
-  const [isInterested, setIsInterested] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<number | null>(null);
-  
-  const { data: event, isLoading, error } = useEvent(id);
-  
+  const { id } = use(params)
+  const router = useRouter()
+  const { data: event, isLoading, error } = useEvent(id)
+  const [isInterested, setIsInterested] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+
   if (isLoading) {
     return (
-      <div className="container py-8 space-y-8">
-        <div className="h-96 bg-muted rounded-xl animate-pulse" />
-        <div className="space-y-4">
-          <div className="h-10 w-3/4 bg-muted rounded animate-pulse" />
-          <div className="h-6 w-1/2 bg-muted rounded animate-pulse" />
-        </div>
+      <div className="container py-8 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    );
+    )
   }
-  
+
   if (error || !event) {
     return (
       <div className="container py-16 text-center">
         <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
         <h2 className="text-2xl font-bold mb-2">Event Not Found</h2>
         <p className="text-muted-foreground mb-6">
-          This event may have been removed or doesn&apos;t exist.
+          This event may have been removed or does not exist.
         </p>
         <Link
           href="/events"
           className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
-          <ChevronLeft className="h-4 w-4" />
           Browse Events
         </Link>
       </div>
-    );
+    )
   }
-  
-  const eventDate = event.starts_at ? new Date(event.starts_at) : null;
-  const isPastEvent = eventDate ? eventDate < new Date() : false;
-  const isSoldOut = event.ticket_tiers?.every(t => t.available <= 0) ?? false;
-  const totalSold = event.tickets_sold ?? event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_sold || 0), 0) ?? 0;
-  
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: event.title, url });
-        toast.success('Shared successfully');
-      } catch {
-        // User cancelled
-      }
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard');
-    }
-  };
-  
+
+  const isPastEvent = event.starts_at
+    ? new Date(event.starts_at) < new Date()
+    : event.date
+      ? new Date(event.date) < new Date()
+      : false
+
+  const totalSold =
+    event.ticket_tiers?.reduce(
+      (sum: number, t: EventTicketTier) => sum + (t.quantity_sold || 0),
+      0,
+    ) || 0
+  const totalCapacity =
+    event.ticket_tiers?.reduce(
+      (sum: number, t: EventTicketTier) => sum + (t.quantity || 0),
+      0,
+    ) || event.attendee_limit || event.capacity || 0
+  const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity
+
+  function handleInterest() {
+    setIsInterested(!isInterested)
+    toast.success(isInterested ? 'Removed from interests' : 'Added to interests')
+  }
+
+  function handleBookmark() {
+    setIsBookmarked(!isBookmarked)
+    toast.success(isBookmarked ? 'Bookmark removed' : 'Event saved')
+  }
+
+  function handleProceedToCheckout() {
+    router.push(`/events/${id}/checkout`)
+  }
   return (
     <div>
       {/* Hero */}
       <div className="relative h-[400px] md:h-[500px]">
         <Image
-          src={event.artwork || event.banner || event.image || '/images/illustrations/default-event.jpg'}
+          src={
+            event.artwork ||
+            event.banner ||
+            event.banner_image ||
+            event.image ||
+            '/images/illustrations/default-event.jpg'
+          }
           alt={event.title}
           fill
           className="object-cover"
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-        
-        {/* Back button */}
-        <Link 
+
+        <Link
           href="/events"
           className="absolute top-6 left-6 flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 text-white hover:bg-black/60 backdrop-blur-sm transition-colors z-10"
         >
           <ChevronLeft className="h-4 w-4" />
           Events
         </Link>
-        
+
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
           <div className="container">
-            {/* Category & Status */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
               {event.category && (
-                <span className="px-3 py-1 bg-primary text-primary-foreground text-sm rounded-full">
+                <span className="px-3 py-1 bg-primary text-primary-foreground text-sm rounded-full capitalize">
                   {event.category}
                 </span>
               )}
@@ -146,23 +167,34 @@ export default function EventDetailPage({
                 </span>
               )}
               {event.is_featured && (
-                <span className="px-3 py-1 bg-yellow-500 text-black text-sm rounded-full">
-                  Featured
+                <span className="px-3 py-1 bg-yellow-500 text-black text-sm rounded-full flex items-center gap-1">
+                  <Star className="h-3 w-3" /> Featured
                 </span>
               )}
-              <span className="text-white/80">
-                {formatDate(event.starts_at || event.date)}
-              </span>
+              {isSoldOut && (
+                <span className="px-3 py-1 bg-red-500/90 text-white text-sm rounded-full">
+                  Sold Out
+                </span>
+              )}
             </div>
-            
+
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
               {event.title}
             </h1>
-            
+
             <div className="flex flex-wrap items-center gap-4 text-white/80">
               <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                <span>{formatDate(event.starts_at || event.date)}</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                <span>{formatTimeRange(event.starts_at || event.date, event.ends_at || event.end_date)}</span>
+                <span>
+                  {formatTimeRange(
+                    event.starts_at || event.date,
+                    event.ends_at || event.end_date,
+                  )}
+                </span>
               </div>
               {event.is_virtual ? (
                 <div className="flex items-center gap-2">
@@ -172,7 +204,7 @@ export default function EventDetailPage({
               ) : (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  <span>{event.venue_name || event.venue || event.city || 'TBA'}</span>
+                  <span>{event.venue_name || event.location_name || event.venue || event.city || event.location_city || 'TBA'}</span>
                 </div>
               )}
               {totalSold > 0 && (
@@ -185,51 +217,55 @@ export default function EventDetailPage({
           </div>
         </div>
       </div>
-      
       <div className="container py-8">
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setIsInterested(!isInterested)}
+                onClick={handleInterest}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors',
-                  isInterested 
-                    ? 'bg-primary/10 border-primary text-primary' 
-                    : 'hover:bg-muted'
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all text-sm font-medium',
+                  isInterested
+                    ? 'bg-primary/10 border-primary text-primary'
+                    : 'hover:bg-muted',
                 )}
               >
-                <Heart className={cn('h-5 w-5', isInterested && 'fill-primary')} />
-                {isInterested ? 'Interested' : 'Mark Interested'}
+                <Heart className={cn('h-4 w-4', isInterested && 'fill-primary')} />
+                {isInterested ? 'Interested' : 'Interested?'}
               </button>
-              <button 
-                onClick={handleShare}
-                className="p-2 border rounded-lg hover:bg-muted"
-                title="Share event"
+              <button
+                onClick={handleBookmark}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all text-sm font-medium',
+                  isBookmarked
+                    ? 'bg-yellow-500/10 border-yellow-500 text-yellow-600'
+                    : 'hover:bg-muted',
+                )}
               >
-                <Share2 className="h-5 w-5" />
+                <Bookmark className={cn('h-4 w-4', isBookmarked && 'fill-yellow-500')} />
+                {isBookmarked ? 'Saved' : 'Save'}
               </button>
+              <ShareButtons title={event.title} />
             </div>
-            
-            {/* Description */}
+
+            {/* About */}
             <section>
               <h2 className="text-xl font-semibold mb-4">About This Event</h2>
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <p className="whitespace-pre-line">{event.description}</p>
               </div>
             </section>
-            
-            {/* Artist info if available */}
+
+            {/* Artist */}
             {event.artist && (
               <section>
-                <h2 className="text-xl font-semibold mb-4">Artist</h2>
+                <h2 className="text-xl font-semibold mb-4">Performing Artist</h2>
                 <Link
                   href={`/artists/${event.artist.slug || event.artist.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted transition-colors w-fit"
+                  className="flex items-center gap-4 p-4 rounded-xl border hover:bg-muted transition-colors"
                 >
-                  <div className="relative h-12 w-12 rounded-full overflow-hidden bg-muted">
+                  <div className="relative h-14 w-14 rounded-full overflow-hidden bg-muted">
                     {event.artist.image ? (
                       <Image
                         src={event.artist.image}
@@ -238,32 +274,32 @@ export default function EventDetailPage({
                         className="object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full flex items-center justify-center text-lg font-bold text-muted-foreground">
+                      <div className="h-full w-full flex items-center justify-center text-xl font-bold text-muted-foreground">
                         {event.artist.name.charAt(0)}
                       </div>
                     )}
                   </div>
                   <div>
-                    <p className="font-medium">{event.artist.name}</p>
-                    <p className="text-sm text-muted-foreground">View profile</p>
+                    <p className="font-semibold">{event.artist.name}</p>
+                    <p className="text-sm text-muted-foreground">View artist profile</p>
                   </div>
                 </Link>
               </section>
             )}
-            
+
             {/* Venue */}
             <section>
               <h2 className="text-xl font-semibold mb-4">
-                {event.is_virtual ? 'Online Event' : 'Venue'}
+                {event.is_virtual ? 'Online Event' : 'Venue & Location'}
               </h2>
-              <div className="p-4 rounded-lg border">
+              <div className="p-5 rounded-xl border">
                 {event.is_virtual ? (
                   <div className="flex items-start gap-3">
                     <Globe className="h-5 w-5 text-primary mt-0.5" />
                     <div>
                       <p className="font-medium">This is an online event</p>
                       {event.virtual_link ? (
-                        <a 
+                        <a
                           href={event.virtual_link}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -279,199 +315,120 @@ export default function EventDetailPage({
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <p className="font-medium text-lg">
-                      {event.venue_name || event.venue || 'Venue TBA'}
-                    </p>
-                    {event.venue_address && (
-                      <p className="text-muted-foreground">{event.venue_address}</p>
-                    )}
-                    <p className="text-muted-foreground">
-                      {[event.city, event.country].filter(Boolean).join(', ')}
-                    </p>
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <MapPin className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">
+                        {event.venue_name || event.location_name || event.venue || 'Venue TBA'}
+                      </p>
+                      {(event.venue_address || event.location_address) && (
+                        <p className="text-muted-foreground text-sm">
+                          {event.venue_address || event.location_address}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-sm">
+                        {[event.city || event.location_city, event.country].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
             </section>
-            
-            {/* Event Details */}
+            {/* Event Details Grid */}
             <section>
               <h2 className="text-xl font-semibold mb-4">Event Details</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center gap-3 p-3 rounded-lg border">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-medium">{formatDate(event.starts_at || event.date)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg border">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Time</p>
-                    <p className="font-medium">
-                      {formatTimeRange(event.starts_at || event.date, event.ends_at || event.end_date)}
-                    </p>
-                  </div>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DetailCard
+                  icon={<Calendar className="h-5 w-5 text-primary" />}
+                  label="Date"
+                  value={formatDate(event.starts_at || event.date)}
+                />
+                <DetailCard
+                  icon={<Clock className="h-5 w-5 text-primary" />}
+                  label="Time"
+                  value={formatTimeRange(
+                    event.starts_at || event.date,
+                    event.ends_at || event.end_date,
+                  )}
+                />
                 {(event.attendee_limit || event.capacity) && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Users className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Capacity</p>
-                      <p className="font-medium">{(event.attendee_limit || event.capacity)?.toLocaleString()} attendees</p>
-                    </div>
-                  </div>
+                  <DetailCard
+                    icon={<Users className="h-5 w-5 text-primary" />}
+                    label="Capacity"
+                    value={`${(event.attendee_limit || event.capacity)?.toLocaleString()} attendees`}
+                  />
                 )}
                 {event.timezone && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Globe className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Timezone</p>
-                      <p className="font-medium">{event.timezone}</p>
-                    </div>
-                  </div>
+                  <DetailCard
+                    icon={<Globe className="h-5 w-5 text-primary" />}
+                    label="Timezone"
+                    value={event.timezone}
+                  />
                 )}
               </div>
             </section>
-            
+
             {/* Tags */}
             {event.tags && event.tags.length > 0 && (
               <section>
                 <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(event.tags) ? event.tags : []).map((tag: string) => (
-                    <span key={tag} className="px-3 py-1 bg-muted text-sm rounded-full">
-                      {tag}
-                    </span>
-                  ))}
+                  {(Array.isArray(event.tags) ? event.tags : []).map(
+                    (tag: string) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 bg-muted text-sm rounded-full"
+                      >
+                        #{tag}
+                      </span>
+                    ),
+                  )}
                 </div>
               </section>
             )}
           </div>
-          
-          {/* Sidebar - Tickets */}
+
+          {/* Sidebar */}
           <div className="space-y-6">
             <div className="sticky top-24 space-y-6">
-              <div className="p-6 rounded-xl border bg-card">
-                <h2 className="text-xl font-semibold mb-4">Tickets</h2>
-                
-                {event.status === 'cancelled' ? (
-                  <div className="text-center py-4">
-                    <p className="text-lg font-medium text-red-500">Event Cancelled</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      This event has been cancelled.
-                    </p>
-                  </div>
-                ) : isPastEvent ? (
-                  <p className="text-muted-foreground">This event has already ended.</p>
-                ) : event.is_free ? (
-                  <div className="text-center py-4">
-                    <p className="text-2xl font-bold text-green-500 mb-2">Free Event</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      No tickets required — just show up!
-                    </p>
-                    {event.registration_deadline && (
-                      <p className="text-xs text-muted-foreground">
-                        Registration closes {formatDate(event.registration_deadline)}
+              <SocialProof event={event} />
+
+              {event.ticket_tiers && event.ticket_tiers.length > 0 ? (
+                <TicketSelector
+                  tiers={event.ticket_tiers}
+                  eventId={event.id}
+                  isPastEvent={isPastEvent}
+                  isCancelled={event.status === 'cancelled'}
+                  onProceedToCheckout={handleProceedToCheckout}
+                />
+              ) : (
+                <div className="p-6 rounded-xl border bg-card">
+                  <h2 className="text-lg font-semibold mb-4">Tickets</h2>
+                  {event.is_free ? (
+                    <div className="text-center py-4">
+                      <p className="text-2xl font-bold text-green-500 mb-2">Free Event</p>
+                      <p className="text-sm text-muted-foreground">
+                        No tickets required - just show up!
                       </p>
-                    )}
-                  </div>
-                ) : isSoldOut ? (
-                  <div className="text-center py-4">
-                    <p className="text-lg font-medium text-red-500">Sold Out</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      All tickets have been sold.
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">
+                      Tickets not yet available. Check back soon.
                     </p>
-                  </div>
-                ) : event.ticket_tiers && event.ticket_tiers.length > 0 ? (
-                  <div className="space-y-4">
-                    {event.ticket_tiers.map((tier) => (
-                      <div
-                        key={tier.id}
-                        onClick={() => tier.available > 0 && setSelectedTier(tier.id)}
-                        className={cn(
-                          'p-4 rounded-lg border cursor-pointer transition-all',
-                          tier.available <= 0 && 'opacity-50 cursor-not-allowed',
-                          selectedTier === tier.id 
-                            ? 'border-primary bg-primary/5' 
-                            : 'hover:border-foreground'
-                        )}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{tier.name}</p>
-                              {tier.required_loyalty_tier && (
-                                <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-600 text-xs rounded-full">
-                                  {tier.required_loyalty_tier}+ only
-                                </span>
-                              )}
-                            </div>
-                            {tier.description && (
-                              <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
-                            )}
-                            {tier.tier_early_access_hours && tier.tier_early_access_hours > 0 && (
-                              <p className="text-xs text-primary mt-1">
-                                {tier.tier_early_access_hours}h early access
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right ml-3">
-                            {tier.is_free ? (
-                              <p className="font-bold text-green-500">Free</p>
-                            ) : (
-                              <>
-                                <p className="font-bold">UGX {(tier.price_ugx || tier.price || 0).toLocaleString()}</p>
-                                {(tier.price_credits ?? 0) > 0 && (
-                                  <p className="text-xs text-muted-foreground">
-                                    or {tier.price_credits?.toLocaleString()} credits
-                                  </p>
-                                )}
-                              </>
-                            )}
-                            {tier.available <= 0 ? (
-                              <span className="text-xs text-red-500">Sold out</span>
-                            ) : tier.available < 50 ? (
-                              <span className="text-xs text-orange-500">{tier.available} left</span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    <Link
-                      href={selectedTier ? `/events/${id}/tickets?tier=${selectedTier}` : '#'}
-                      onClick={(e) => {
-                        if (!selectedTier) {
-                          e.preventDefault();
-                          toast.info('Please select a ticket type first');
-                        }
-                      }}
-                      className={cn(
-                        'flex items-center justify-center gap-2 w-full px-6 py-3 rounded-lg font-medium transition-colors',
-                        selectedTier
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : 'bg-muted text-muted-foreground cursor-not-allowed'
-                      )}
-                    >
-                      <Ticket className="h-5 w-5" />
-                      {selectedTier ? 'Get Tickets' : 'Select a Ticket'}
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground">Tickets not yet available.</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Check back soon for ticket information.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Organizer */}
+                  )}
+                </div>
+              )}
+
+              {!isPastEvent && !isSoldOut && event.status !== 'cancelled' && (
+                <GroupBookingCTA eventId={event.id} />
+              )}
+
               {event.organizer && (
-                <div className="p-4 rounded-lg border">
-                  <p className="text-sm text-muted-foreground mb-2">Organized by</p>
+                <div className="p-4 rounded-xl border">
+                  <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-medium">
+                    Organized by
+                  </p>
                   <div className="flex items-center gap-3">
                     <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-muted">
                       {event.organizer.avatar ? (
@@ -488,7 +445,28 @@ export default function EventDetailPage({
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{event.organizer.name}</p>
+                      <p className="font-semibold">{event.organizer.name}</p>
+                      <p className="text-xs text-muted-foreground">Event Organizer</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback: show organizer_name if no organizer object */}
+              {!event.organizer && event.organizer_name && (
+                <div className="p-4 rounded-xl border">
+                  <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-medium">
+                    Organized by
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-muted">
+                      <div className="h-full w-full flex items-center justify-center text-lg font-bold text-muted-foreground">
+                        {event.organizer_name.charAt(0)}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-semibold">{event.organizer_name}</p>
+                      <p className="text-xs text-muted-foreground">Event Organizer</p>
                     </div>
                   </div>
                 </div>
@@ -498,5 +476,25 @@ export default function EventDetailPage({
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+function DetailCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border">
+      {icon}
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="font-medium text-sm">{value}</p>
+      </div>
+    </div>
+  )
 }

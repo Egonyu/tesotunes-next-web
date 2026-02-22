@@ -1,0 +1,244 @@
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 44s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/165) ...
+  Generating static pages using 7 workers (41/165) 
+  Generating static pages using 7 workers (82/165) 
+API Error: 500 - http://tesotunes-api.test/api/playlists/featured {"message":"An unexpected error occurred.","exception":"Illuminate\\Database\\QueryException","trace":[{"file":"C:\\Users\\egony\\Herd\\tesotunes-api\\vendor\\laravel\\framework\\src\\Illuminate\\Data
+  Generating static pages using 7 workers (123/165) 
+Γ£ô Generating static pages using 7 workers (165/165) in 6.8s
+  Finalizing page optimization ...
+
+Route (app)                              Revalidate  Expire
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /admin
+Γö£ Γùï /admin/albums
+Γö£ ╞Æ /admin/albums/[id]
+Γö£ ╞Æ /admin/albums/[id]/edit
+Γö£ Γùï /admin/albums/new
+Γö£ Γùï /admin/analytics
+Γö£ Γùï /admin/artists
+Γö£ ╞Æ /admin/artists/[id]
+Γö£ ╞Æ /admin/artists/[id]/edit
+Γö£ Γùï /admin/artists/create
+Γö£ Γùï /admin/artists/new
+Γö£ Γùï /admin/audit-logs
+Γö£ Γùï /admin/awards
+Γö£ ╞Æ /admin/awards/[id]
+Γö£ ╞Æ /admin/awards/[id]/edit
+Γö£ Γùï /admin/awards/categories
+Γö£ Γùï /admin/awards/categories/create
+Γö£ Γùï /admin/awards/create
+Γö£ Γùï /admin/awards/nominations
+Γö£ Γùï /admin/campaigns
+Γö£ Γùï /admin/events
+Γö£ ╞Æ /admin/events/[id]
+Γö£ ╞Æ /admin/events/[id]/edit
+Γö£ Γùï /admin/events/create
+Γö£ Γùï /admin/events/new
+Γö£ Γùï /admin/feature-flags
+Γö£ Γùï /admin/forums
+Γö£ Γùï /admin/forums/categories/create
+Γö£ Γùï /admin/podcasts
+Γö£ ╞Æ /admin/podcasts/[id]
+Γö£ ╞Æ /admin/podcasts/[id]/edit
+Γö£ Γùï /admin/podcasts/new
+Γö£ Γùï /admin/polls
+Γö£ Γùï /admin/promotions
+Γö£ Γùï /admin/promotions/analytics
+Γö£ Γùï /admin/promotions/disputes
+Γö£ Γùï /admin/reports
+Γö£ Γùï /admin/roles
+Γö£ Γùï /admin/sacco
+Γö£ ╞Æ /admin/sacco/loans/[id]
+Γö£ ╞Æ /admin/sacco/members/[id]
+Γö£ Γùï /admin/settings
+Γö£ Γùï /admin/songs
+Γö£ ╞Æ /admin/songs/[id]
+Γö£ ╞Æ /admin/songs/[id]/edit
+Γö£ Γùï /admin/songs/new
+Γö£ Γùï /admin/store
+Γö£ Γùï /admin/store/categories
+Γö£ Γùï /admin/store/discounts
+Γö£ Γùï /admin/store/orders
+Γö£ ╞Æ /admin/store/orders/[id]
+Γö£ Γùï /admin/store/products
+Γö£ ╞Æ /admin/store/products/[id]
+Γö£ ╞Æ /admin/store/products/[id]/edit
+Γö£ Γùï /admin/store/products/create
+Γö£ Γùï /admin/store/promotions
+Γö£ Γùï /admin/store/shipping
+Γö£ Γùï /admin/store/shops
+Γö£ Γùï /admin/users
+Γö£ ╞Æ /admin/users/[id]
+Γö£ ╞Æ /admin/users/[id]/edit
+Γö£ Γùï /admin/users/new
+Γö£ Γùï /albums                                      1m      1y
+Γö£ ╞Æ /albums/[slug]
+Γö£ Γùï /api-diagnostics
+Γö£ Γùï /api-test
+Γö£ ╞Æ /api/auth/[...nextauth]
+Γö£ ╞Æ /api/auth/register
+Γö£ Γùï /artist
+Γö£ Γùï /artist/albums
+Γö£ Γùï /artist/albums/create
+Γö£ Γùï /artist/analytics
+Γö£ Γùï /artist/campaigns
+Γö£ ╞Æ /artist/campaigns/[id]/analytics
+Γö£ Γùï /artist/campaigns/create
+Γö£ Γùï /artist/earnings
+Γö£ Γùï /artist/events
+Γö£ ╞Æ /artist/events/[id]
+Γö£ ╞Æ /artist/events/[id]/edit
+Γö£ Γùï /artist/events/create
+Γö£ Γùï /artist/fan-club
+Γö£ Γùï /artist/profile
+Γö£ Γùï /artist/promotions
+Γö£ Γùï /artist/promotions/create
+Γö£ Γùï /artist/promotions/orders
+Γö£ Γùï /artist/referrals
+Γö£ Γùï /artist/settings
+Γö£ Γùï /artist/songs
+Γö£ ╞Æ /artist/songs/[id]
+Γö£ ╞Æ /artist/songs/[id]/edit
+Γö£ Γùï /artist/store
+Γö£ Γùï /artist/upload
+Γö£ Γùï /artist/wallet
+Γö£ Γùï /artist/wallet/topup
+Γö£ Γùï /artists                                     1m      1y
+Γö£ ╞Æ /artists/[slug]
+Γö£ ╞Æ /artists/[slug]/discography
+Γö£ ╞Æ /artists/[slug]/events
+Γö£ Γùï /awards
+Γö£ ╞Æ /awards/[slug]
+Γö£ Γùï /become-artist
+Γö£ Γùï /become-artist/status
+Γö£ Γùï /browse
+Γö£ Γùï /charts
+Γö£ Γùï /credits
+Γö£ Γùï /credits/marketplace
+Γö£ Γùï /edula
+Γö£ ╞Æ /edula/[postId]
+Γö£ Γùï /edula/announcements
+Γö£ Γùï /edula/discover
+Γö£ Γùï /edula/following
+Γö£ Γùï /edula/preferences
+Γö£ Γùï /edula/trending
+Γö£ Γùï /events
+Γö£ ╞Æ /events/[id]
+Γö£ ╞Æ /events/[id]/checkout
+Γö£ ╞Æ /events/[id]/group
+Γö£ ╞Æ /events/[id]/tickets
+Γö£ Γùï /events/check-in
+Γö£ Γùï /fan-clubs
+Γö£ ╞Æ /fan-clubs/[artistSlug]
+Γö£ Γùï /forgot-password
+Γö£ Γùï /forums
+Γö£ ╞Æ /forums/[category]
+Γö£ ╞Æ /forums/[category]/[topic]
+Γö£ Γùï /forums/new
+Γö£ Γùï /genres                                      1m      1y
+Γö£ ╞Æ /genres/[slug]
+Γö£ Γùï /history
+Γö£ ╞Æ /join/[code]
+Γö£ Γùï /library
+Γö£ Γùï /login
+Γö£ Γùï /loyalty
+Γö£ ╞Æ /loyalty/clubs/[slug]
+Γö£ Γùï /loyalty/discover
+Γö£ Γùï /loyalty/rewards
+Γö£ Γùï /loyalty/scan
+Γö£ Γùï /loyalty/wallet
+Γö£ Γùï /messages
+Γö£ Γùï /moods
+Γö£ ╞Æ /moods/[slug]
+Γö£ Γùï /new-releases
+Γö£ Γùï /notifications
+Γö£ Γùï /ojokotau
+Γö£ Γùï /ojokotau/campaigns
+Γö£ ╞Æ /ojokotau/campaigns/[id]
+Γö£ Γùï /ojokotau/campaigns/create
+Γö£ ╞Æ /ojokotau/donate/[campaignId]
+Γö£ Γùï /ojokotau/my-donations
+Γö£ Γùï /playlists                                   1m      1y
+Γö£ ╞Æ /playlists/[slug]
+Γö£ Γùï /podcasts
+Γö£ ╞Æ /podcasts/[id]
+Γö£ ╞Æ /podcasts/[id]/episodes/[episodeId]
+Γö£ Γùï /podcasts/subscriptions
+Γö£ Γùï /polls
+Γö£ ╞Æ /polls/[id]
+Γö£ Γùï /polls/create
+Γö£ Γùï /privacy
+Γö£ Γùï /profile
+Γö£ ╞Æ /promoters/[username]
+Γö£ Γùï /promotions
+Γö£ ╞Æ /promotions/[slug]
+Γö£ Γùï /promotions/purchases
+Γö£ ╞Æ /promotions/purchases/[orderId]
+Γö£ Γùï /queue
+Γö£ Γùï /radio
+Γö£ Γùï /referrals
+Γö£ Γùï /referrals/history
+Γö£ Γùï /referrals/leaderboard
+Γö£ Γùï /referrals/rewards
+Γö£ Γùï /register
+Γö£ Γùï /rewards
+Γö£ Γùï /sacco
+Γö£ Γùï /sacco/analytics
+Γö£ Γùï /sacco/community
+Γö£ Γùï /sacco/community/achievements
+Γö£ Γùï /sacco/community/challenges
+Γö£ Γùï /sacco/community/leaderboards
+Γö£ Γùï /sacco/community/stories
+Γö£ Γùï /sacco/dashboard
+Γö£ Γùï /sacco/join
+Γö£ Γùï /sacco/loans
+Γö£ ╞Æ /sacco/loans/[id]
+Γö£ Γùï /sacco/loans/apply
+Γö£ Γùï /sacco/resources
+Γö£ Γùï /sacco/savings
+Γö£ Γùï /sacco/savings/goals
+Γö£ ╞Æ /sacco/savings/goals/[id]
+Γö£ Γùï /sacco/savings/goals/create
+Γö£ Γùï /sacco/shares
+Γö£ Γùï /search
+Γö£ Γùï /settings
+Γö£ Γùï /settings/accounts
+Γö£ Γùï /settings/appearance
+Γö£ Γùï /settings/data-export
+Γö£ Γùï /settings/delete-account
+Γö£ Γùï /settings/notifications
+Γö£ Γùï /settings/privacy
+Γö£ Γùï /settings/profile
+Γö£ Γùï /settings/security
+Γö£ Γùï /settings/subscription
+Γö£ Γùï /songs                                       1m      1y
+Γö£ ╞Æ /songs/[slug]
+Γö£ Γùï /store
+Γö£ Γùï /store/cart
+Γö£ Γùï /store/checkout
+Γö£ Γùï /store/orders
+Γö£ ╞Æ /store/orders/[orderNumber]
+Γö£ ╞Æ /store/products/[slug]
+Γö£ Γùï /store/promotions
+Γö£ Γùï /store/wishlist
+Γö£ Γùï /terms
+Γö£ Γùï /tickets
+Γö£ ╞Æ /tickets/[id]
+Γö£ ╞Æ /user/[username]
+Γö£ Γùï /wallet
+Γö£ Γùï /wallet/history
+Γöö Γùï /wallet/topup
+
+
+╞Æ Proxy (Middleware)
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

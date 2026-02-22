@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Shield, ArrowLeft, Phone } from "lucide-react";
+import { apiPost, setAuthToken } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,16 +33,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com'}/auth/phone/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneNumber }),
-      });
-      if (res.ok) {
-        setPhoneOtpSent(true);
-      } else {
-        setError('Failed to send OTP. Please check the number and try again.');
-      }
+      await apiPost('/auth/phone/send-otp', { phone: phoneNumber });
+      setPhoneOtpSent(true);
     } catch {
       setError('Failed to send OTP. Please try again.');
     } finally {
@@ -92,12 +85,12 @@ export default function LoginPage() {
           : result.error;
         setError(msg);
       } else {
-        // Sync the auth token to localStorage for API calls
+        // Sync the auth token to memory for API calls
         try {
           const sessionRes = await fetch("/api/auth/session");
           const session = await sessionRes.json();
           if (session?.accessToken) {
-            localStorage.setItem("auth_token", session.accessToken);
+            setAuthToken(session.accessToken);
           }
         } catch (e) {
           console.warn("[Login] Could not sync auth token:", e);
@@ -408,7 +401,7 @@ export default function LoginPage() {
           <Phone className="h-4 w-4" />
           Sign in with Phone Number
         </button>
-        
+
         {showPhoneLogin && (
           <div className="mt-4 space-y-3 p-4 rounded-lg border bg-muted/30">
             {!phoneOtpSent ? (

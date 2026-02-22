@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
-import { 
+import {
   Search,
   Plus,
   ChevronLeft,
@@ -86,26 +86,26 @@ export default function AlbumsPage() {
   const albums = albumsData?.data || [];
   const meta = albumsData?.meta;
   const stats = statsData?.data;
-  
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
-  
+
   const statusStyles: Record<string, string> = {
     released: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   };
-  
+
   const toggleSelect = (id: number) => {
-    setSelectedAlbums(prev => 
+    setSelectedAlbums(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
-  
+
   const toggleSelectAll = () => {
     setSelectedAlbums(
       selectedAlbums.length === albums.length ? [] : albums.map(a => a.id)
@@ -119,7 +119,7 @@ export default function AlbumsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -129,14 +129,14 @@ export default function AlbumsPage() {
           <p className="text-muted-foreground">Manage album releases</p>
         </div>
         <Link
-          href="/admin/albums/create"
+          href="/admin/albums/new"
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Add Album
         </Link>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -156,7 +156,7 @@ export default function AlbumsPage() {
           <p className="text-sm text-muted-foreground">Drafts</p>
         </div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -185,7 +185,7 @@ export default function AlbumsPage() {
           Export
         </button>
       </div>
-      
+
       {/* Bulk Actions */}
       {selectedAlbums.length > 0 && (
         <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
@@ -200,7 +200,7 @@ export default function AlbumsPage() {
           </div>
         </div>
       )}
-      
+
       {/* Table */}
       <div className="border rounded-xl overflow-hidden">
         <table className="w-full">
@@ -295,7 +295,7 @@ export default function AlbumsPage() {
                     >
                       <Edit className="h-4 w-4" />
                     </Link>
-                    <button 
+                    <button
                       onClick={() => deleteMutation.mutate(album.id)}
                       disabled={deleteMutation.isPending}
                       className="p-2 hover:bg-muted rounded-lg text-red-600 disabled:opacity-50"
@@ -309,7 +309,7 @@ export default function AlbumsPage() {
           </tbody>
         </table>
       </div>
-      
+
       {/* Pagination */}
       {meta && (
         <div className="flex items-center justify-between">
@@ -317,7 +317,7 @@ export default function AlbumsPage() {
             Showing {((meta.current_page - 1) * meta.per_page) + 1}-{Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total.toLocaleString()} albums
           </p>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
@@ -353,7 +353,7 @@ export default function AlbumsPage() {
                 </button>
               </>
             )}
-            <button 
+            <button
               onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
               disabled={currentPage === meta.last_page}
               className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"

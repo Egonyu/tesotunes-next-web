@@ -21,7 +21,8 @@ import {
   ChevronDown,
   LogOut,
   Users,
-  Loader2
+  Loader2,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },
   { href: '/artist/events', label: 'Events', icon: Calendar },
+  { href: '/artist/promotions', label: 'Promotions', icon: Megaphone },
   { href: '/artist/settings', label: 'Settings', icon: Settings },
 ];
 

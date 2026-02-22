@@ -5,6 +5,8 @@ import { Gift, Music, Trophy, Users, Store, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
+import { serverFetch } from '@/lib/api';
+
 interface JoinPageProps {
   params: Promise<{ code: string }>;
 }
@@ -23,21 +25,7 @@ interface ReferrerData {
 // Fetch referrer data from API
 async function getReferrer(code: string): Promise<ReferrerData> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com';
-    const response = await fetch(`${apiUrl}/referrals/validate/${code}`, {
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return {
-        valid: false,
-        referrer: null,
-        bonus_credits: 0,
-        message: 'Invalid referral code',
-      };
-    }
-
-    const data = await response.json();
+    const data = await serverFetch<ReferrerData>(`/referrals/validate/${code}`);
     return {
       valid: data.valid ?? true,
       referrer: data.referrer ?? null,

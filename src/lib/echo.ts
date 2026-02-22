@@ -27,11 +27,11 @@ export function getEchoInstance(): Echo<'pusher'> | null {
 
     echoInstance = new Echo({
       broadcaster: 'pusher',
-      key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '6271e2976a0012739055',
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'ap4',
+      key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '',
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
       forceTLS: true,
       enabledTransports: ['ws', 'wss'],
-      authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com'}/broadcasting/auth`,
+      authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tesotunes.com/api'}/broadcasting/auth`,
       auth: {
         headers: {
           'X-XSRF-TOKEN': getAuthToken() || '',

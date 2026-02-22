@@ -7,31 +7,31 @@ import { useMyTickets, type TicketsResponse } from '@/hooks/useEvents';
 import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
-  valid: 'text-green-500 bg-green-500/10',
-  used: 'text-gray-500 bg-gray-500/10',
+  pending: 'text-yellow-500 bg-yellow-500/10',
+  confirmed: 'text-green-500 bg-green-500/10',
+  attended: 'text-blue-500 bg-blue-500/10',
   cancelled: 'text-red-500 bg-red-500/10',
-  expired: 'text-orange-500 bg-orange-500/10',
 };
 
 export default function MyTicketsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const { data: ticketsResponse, isLoading } = useMyTickets({
     page: currentPage,
     per_page: 10,
     status: statusFilter === 'all' ? undefined : statusFilter,
   });
-  
+
   const tickets = ticketsResponse?.data || [];
-  const pagination = ticketsResponse?.pagination;
-  
+  const pagination = ticketsResponse?.meta;
+
   const filteredTickets = tickets.filter(ticket =>
-    ticket.event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (ticket.event?.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     ticket.ticket_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   if (isLoading) {
     return (
       <div className="container py-8 space-y-4">
@@ -41,7 +41,7 @@ export default function MyTicketsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-6">
       {/* Header */}
@@ -51,7 +51,7 @@ export default function MyTicketsPage() {
           View and manage your event tickets
         </p>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search */}
@@ -65,7 +65,7 @@ export default function MyTicketsPage() {
             className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background"
           />
         </div>
-        
+
         {/* Status Filter */}
         <div className="flex items-center gap-2">
           <Filter className="h-5 w-5 text-muted-foreground" />
@@ -75,14 +75,14 @@ export default function MyTicketsPage() {
             className="px-4 py-2 rounded-lg border bg-background"
           >
             <option value="all">All Status</option>
-            <option value="valid">Valid</option>
-            <option value="used">Used</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="attended">Attended</option>
             <option value="cancelled">Cancelled</option>
-            <option value="expired">Expired</option>
           </select>
         </div>
       </div>
-      
+
       {/* Tickets List */}
       {filteredTickets.length === 0 ? (
         <div className="text-center py-16">
@@ -112,19 +112,19 @@ export default function MyTicketsPage() {
                 {/* Event Image */}
                 <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
                   <Image
-                    src={ticket.event.artwork || ticket.event.image || '/images/event-placeholder.jpg'}
-                    alt={ticket.event.title}
+                    src={ticket.event?.artwork || '/images/event-placeholder.jpg'}
+                    alt={ticket.event?.title || 'Event'}
                     fill
                     className="object-cover"
                   />
                 </div>
-                
+
                 {/* Ticket Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div>
-                      <h3 className="font-semibold text-lg mb-1">{ticket.event.title}</h3>
-                      <p className="text-sm text-muted-foreground">{ticket.ticket_tier.name}</p>
+                      <h3 className="font-semibold text-lg mb-1">{ticket.event?.title || 'Event'}</h3>
+                      <p className="text-sm text-muted-foreground capitalize">{ticket.payment_method || 'N/A'}</p>
                     </div>
                     <span
                       className={cn(
@@ -135,26 +135,30 @@ export default function MyTicketsPage() {
                       {ticket.status}
                     </span>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      {new Date(ticket.event.starts_at || ticket.event.date).toLocaleDateString('en', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                      {ticket.event?.starts_at
+                        ? new Date(ticket.event.starts_at).toLocaleDateString('en', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'TBA'}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {ticket.event.time || (ticket.event.starts_at ? new Date(ticket.event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBA')}
+                      {ticket.event?.starts_at
+                        ? new Date(ticket.event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true })
+                        : 'TBA'}
                     </span>
                     <span className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      {ticket.event.venue_name || ticket.event.venue || ticket.event.city || 'TBA'}
+                      {ticket.event?.venue_name || ticket.event?.city || 'TBA'}
                     </span>
                   </div>
-                  
+
                   <div className="mt-3 flex items-center gap-3">
                     <span className="text-xs text-muted-foreground font-mono">
                       #{ticket.ticket_number}
@@ -166,7 +170,7 @@ export default function MyTicketsPage() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* QR Code Preview */}
                 <div className="flex items-center">
                   <QrCode className="h-8 w-8 text-muted-foreground" />
@@ -176,7 +180,7 @@ export default function MyTicketsPage() {
           ))}
         </div>
       )}
-      
+
       {/* Pagination */}
       {pagination && pagination.last_page > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">

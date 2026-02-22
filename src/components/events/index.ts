@@ -1,0 +1,10 @@
+// Event Components barrel export
+export { EventCard } from './EventCard'
+export { EventFilters } from './EventFilters'
+export { TicketSelector } from './TicketSelector'
+export { SocialProof } from './SocialProof'
+export { GroupBookingCTA } from './GroupBookingCTA'
+export { ShareButtons } from './ShareButtons'
+export { PaymentMethodSelector } from './PaymentMethodSelector'
+export { OrderSummary } from './OrderSummary'
+export { DiscountCodeInput } from './DiscountCodeInput'

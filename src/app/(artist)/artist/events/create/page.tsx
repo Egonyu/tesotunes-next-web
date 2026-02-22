@@ -20,7 +20,7 @@ interface TicketTier {
 export default function CreateEventPage() {
   const router = useRouter();
   const createEvent = useCreateEvent();
-  
+
   // Event info
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -35,7 +35,7 @@ export default function CreateEventPage() {
   const [capacity, setCapacity] = useState<string>('');
   const [image, setImage] = useState<File | null>(null);
   const [bannerImage, setBannerImage] = useState<File | null>(null);
-  
+
   // Ticket tiers
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([
     {
@@ -46,7 +46,7 @@ export default function CreateEventPage() {
       max_per_order: 10,
     },
   ]);
-  
+
   const addTicketTier = () => {
     setTicketTiers([
       ...ticketTiers,
@@ -59,38 +59,38 @@ export default function CreateEventPage() {
       },
     ]);
   };
-  
+
   const removeTicketTier = (index: number) => {
     if (ticketTiers.length > 1) {
       setTicketTiers(ticketTiers.filter((_, i) => i !== index));
     }
   };
-  
+
   const updateTicketTier = (index: number, field: keyof TicketTier, value: any) => {
     const updated = [...ticketTiers];
     updated[index] = { ...updated[index], [field]: value };
     setTicketTiers(updated);
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!title || !description || !date || !time || !venue || !location || !city) {
       toast.error('Please fill in all required fields');
       return;
     }
-    
+
     if (ticketTiers.length === 0) {
       toast.error('Please add at least one ticket tier');
       return;
     }
-    
+
     if (ticketTiers.some(t => !t.name || t.price < 0 || t.quantity < 1)) {
       toast.error('Please complete all ticket tier information');
       return;
     }
-    
+
     const eventData: CreateEventRequest = {
       title,
       description,
@@ -107,16 +107,17 @@ export default function CreateEventPage() {
       banner_image: bannerImage || undefined,
       ticket_tiers: ticketTiers,
     };
-    
+
     try {
       const result = await createEvent.mutateAsync(eventData);
       toast.success('Event created successfully!');
-      router.push(`/artist/events/${result.id}`);
+      const eventId = (result.data as Record<string, unknown>)?.id || (result.data as Record<string, unknown>)?.slug || '';
+      router.push(`/artist/events/${eventId}`);
     } catch (error: any) {
       toast.error(error?.message || 'Failed to create event');
     }
   };
-  
+
   return (
     <div className="space-y-6">
       <div>
@@ -125,7 +126,7 @@ export default function CreateEventPage() {
           Set up your event and start selling tickets
         </p>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information */}
         <section className="space-y-4">
@@ -133,7 +134,7 @@ export default function CreateEventPage() {
             <Calendar className="h-5 w-5" />
             Event Information
           </h2>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">
@@ -148,7 +149,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">
                 Description *
@@ -162,7 +163,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Category *
@@ -182,7 +183,7 @@ export default function CreateEventPage() {
                 <option value="other">Other</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Capacity (optional)
@@ -198,11 +199,11 @@ export default function CreateEventPage() {
             </div>
           </div>
         </section>
-        
+
         {/* Date & Time */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Date & Time</h2>
-          
+
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -216,7 +217,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 End Date (optional)
@@ -229,7 +230,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Time *
@@ -244,14 +245,14 @@ export default function CreateEventPage() {
             </div>
           </div>
         </section>
-        
+
         {/* Location */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <MapPin className="h-5 w-5" />
             Location
           </h2>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">
@@ -266,7 +267,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">
                 Street Address *
@@ -280,7 +281,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 City *
@@ -294,7 +295,7 @@ export default function CreateEventPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Country *
@@ -310,14 +311,14 @@ export default function CreateEventPage() {
             </div>
           </div>
         </section>
-        
+
         {/* Images */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <ImageIcon className="h-5 w-5" />
             Images
           </h2>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -333,7 +334,7 @@ export default function CreateEventPage() {
                 Square image recommended (1:1 ratio)
               </p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Banner Image (optional)
@@ -350,7 +351,7 @@ export default function CreateEventPage() {
             </div>
           </div>
         </section>
-        
+
         {/* Ticket Tiers */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -367,7 +368,7 @@ export default function CreateEventPage() {
               Add Tier
             </button>
           </div>
-          
+
           <div className="space-y-4">
             {ticketTiers.map((tier, index) => (
               <div key={index} className="p-4 rounded-lg border bg-card">
@@ -383,7 +384,7 @@ export default function CreateEventPage() {
                     </button>
                   )}
                 </div>
-                
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -398,7 +399,7 @@ export default function CreateEventPage() {
                       className="w-full px-4 py-3 rounded-lg border bg-background"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Price (UGX) *
@@ -413,7 +414,7 @@ export default function CreateEventPage() {
                       className="w-full px-4 py-3 rounded-lg border bg-background"
                     />
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2">
                       Description *
@@ -427,7 +428,7 @@ export default function CreateEventPage() {
                       className="w-full px-4 py-3 rounded-lg border bg-background"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Quantity Available *
@@ -442,7 +443,7 @@ export default function CreateEventPage() {
                       className="w-full px-4 py-3 rounded-lg border bg-background"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Max Per Order *
@@ -462,7 +463,7 @@ export default function CreateEventPage() {
             ))}
           </div>
         </section>
-        
+
         {/* Submit */}
         <div className="flex gap-4">
           <button

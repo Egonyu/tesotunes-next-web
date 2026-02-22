@@ -3,12 +3,18 @@
 import { useRef, useEffect, useCallback } from "react";
 import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
+import { useRecordPlay } from "@/hooks/api";
 
 export function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const crossfadeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCrossfadingRef = useRef(false);
+
+  // Play tracking refs — persist across renders without causing re-renders
+  const playTrackedRef = useRef(false);
+  const playStartTimeRef = useRef(0);
+  const trackedSongIdRef = useRef<number | null>(null);
 
   const {
     currentSong,
@@ -32,6 +38,34 @@ export function AudioPlayer() {
   const crossfadeDuration = settings?.audio?.crossfade_duration ?? 3;
 
   const effectiveVolume = isMuted ? 0 : volume;
+
+  const { mutate: recordPlay } = useRecordPlay();
+
+  // Record a qualified play to the backend (30s+ or 30%+ of duration)
+  const maybeRecordPlay = useCallback(() => {
+    if (playTrackedRef.current || !trackedSongIdRef.current) return;
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const durationPlayed = Math.floor(audio.currentTime - playStartTimeRef.current);
+    const totalDuration = Math.floor(audio.duration) || 0;
+
+    // Backend qualification: 30s+ played OR 30%+ of song completed
+    const isQualified =
+      durationPlayed >= 30 ||
+      (totalDuration > 0 && durationPlayed / totalDuration >= 0.3);
+
+    if (isQualified) {
+      playTrackedRef.current = true;
+      recordPlay({
+        song_id: trackedSongIdRef.current,
+        duration_played: durationPlayed,
+        total_duration: totalDuration > 0 ? totalDuration : undefined,
+        completed: totalDuration > 0 && audio.currentTime >= totalDuration - 1,
+      });
+    }
+  }, [recordPlay]);
 
   // Clean up crossfade timer
   const clearCrossfadeTimer = useCallback(() => {
@@ -123,6 +157,14 @@ export function AudioPlayer() {
   useEffect(() => {
     if (!audioRef.current || !currentSong) return;
 
+    // Record play for previous song before switching
+    maybeRecordPlay();
+
+    // Reset tracking for new song
+    playTrackedRef.current = false;
+    playStartTimeRef.current = 0;
+    trackedSongIdRef.current = currentSong.id;
+
     // Stop any ongoing crossfade
     clearCrossfadeTimer();
     isCrossfadingRef.current = false;
@@ -158,6 +200,9 @@ export function AudioPlayer() {
     const audio = audioRef.current;
     setCurrentTime(audio.currentTime);
 
+    // Try to record play once qualification threshold is met
+    maybeRecordPlay();
+
     // Check if we should begin crossfade
     if (
       crossfadeEnabled &&
@@ -178,11 +223,17 @@ export function AudioPlayer() {
   };
 
   const handleEnded = () => {
+    // Record play on song completion
+    maybeRecordPlay();
+
     // If crossfade already triggered next(), skip
     if (isCrossfadingRef.current) return;
 
     if (repeatMode === "one") {
       if (audioRef.current) {
+        // Reset tracking for repeat plays
+        playTrackedRef.current = false;
+        playStartTimeRef.current = 0;
         audioRef.current.currentTime = 0;
         audioRef.current.play();
       }
@@ -194,10 +245,13 @@ export function AudioPlayer() {
   const handleWaiting = () => setIsLoading(true);
   const handlePlaying = () => setIsLoading(false);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — record any in-progress play
   useEffect(() => {
-    return () => clearCrossfadeTimer();
-  }, [clearCrossfadeTimer]);
+    return () => {
+      clearCrossfadeTimer();
+      maybeRecordPlay();
+    };
+  }, [clearCrossfadeTimer, maybeRecordPlay]);
 
   return (
     <>

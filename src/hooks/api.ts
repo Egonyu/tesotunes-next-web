@@ -43,7 +43,12 @@ export function useNewReleases(limit = 10) {
 
 export function useRecordPlay() {
   return useMutation({
-    mutationFn: (songId: number) => apiPost(`/player/record-play`, { song_id: songId }),
+    mutationFn: (data: {
+      song_id: number;
+      duration_played: number;
+      total_duration?: number;
+      completed?: boolean;
+    }) => apiPost(`/player/record-play`, data),
   });
 }
 

@@ -13,7 +13,7 @@ export default function ProfileSettingsPage() {
   const updateProfile = useUpdateProfileSettings();
   const updateAvatar = useUpdateAvatar();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [avatar, setAvatar] = useState(session?.user?.image || '/images/default-avatar.jpg');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
@@ -36,11 +36,11 @@ export default function ProfileSettingsPage() {
       }));
     }
   }, [settings]);
-  
+
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -61,7 +61,7 @@ export default function ProfileSettingsPage() {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -82,7 +82,7 @@ export default function ProfileSettingsPage() {
       toast.error('Failed to save profile. Please try again.');
     }
   };
-  
+
   return (
     <div className="space-y-8">
       <div>
@@ -91,11 +91,11 @@ export default function ProfileSettingsPage() {
           Customize how others see you on TesoTunes.
         </p>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Avatar */}
         <div className="flex items-center gap-6">
-          <div 
+          <div
             className="relative group cursor-pointer"
             onClick={handleAvatarClick}
           >
@@ -125,11 +125,11 @@ export default function ProfileSettingsPage() {
             </p>
           </div>
         </div>
-        
+
         {/* Basic Info */}
         <div className="space-y-4">
           <h3 className="font-medium border-b pb-2">Basic Information</h3>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-2">Display Name</label>
@@ -141,7 +141,7 @@ export default function ProfileSettingsPage() {
                 placeholder="Your display name"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">Username</label>
               <div className="relative">
@@ -156,7 +156,7 @@ export default function ProfileSettingsPage() {
               </div>
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Bio</label>
             <textarea
@@ -172,11 +172,11 @@ export default function ProfileSettingsPage() {
             </p>
           </div>
         </div>
-        
+
         {/* Social Links */}
         <div className="space-y-4">
           <h3 className="font-medium border-b pb-2">Social Links</h3>
-          
+
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
@@ -190,7 +190,7 @@ export default function ProfileSettingsPage() {
                 placeholder="https://yourwebsite.com"
               />
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#1DA1F2]/10 flex items-center justify-center">
                 <Twitter className="h-5 w-5 text-[#1DA1F2]" />
@@ -203,7 +203,7 @@ export default function ProfileSettingsPage() {
                 placeholder="Twitter username"
               />
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#E4405F]/10 flex items-center justify-center">
                 <Instagram className="h-5 w-5 text-[#E4405F]" />
@@ -216,7 +216,7 @@ export default function ProfileSettingsPage() {
                 placeholder="Instagram username"
               />
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#FF0000]/10 flex items-center justify-center">
                 <Youtube className="h-5 w-5 text-[#FF0000]" />
@@ -229,7 +229,7 @@ export default function ProfileSettingsPage() {
                 placeholder="YouTube channel URL"
               />
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#1DB954]/10 flex items-center justify-center">
                 <Music2 className="h-5 w-5 text-[#1DB954]" />
@@ -244,7 +244,7 @@ export default function ProfileSettingsPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Actions */}
         <div className="flex gap-4 pt-4 border-t">
           <button

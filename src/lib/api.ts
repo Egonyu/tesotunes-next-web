@@ -5,6 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/ap
 // Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 second timeout
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -45,6 +46,21 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+    // --- Handle network-level errors (no response from server) ---
+    if (!error.response) {
+      const message =
+        error.code === "ECONNABORTED"
+          ? "Request timed out. Please check your connection and try again."
+          : error.message === "Network Error"
+            ? "Unable to reach the server. Please check your internet connection."
+            : `Network error: ${error.message}`;
+
+      const networkError = new Error(message) as Error & { isNetworkError: boolean; originalError: AxiosError };
+      networkError.isNetworkError = true;
+      networkError.originalError = error;
+      return Promise.reject(networkError);
+    }
 
     // Retry once on 401 if a token has appeared in memory
     // (handles race condition where TokenSync hasn't synced the token yet)

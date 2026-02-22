@@ -35,6 +35,7 @@ interface Song {
   duration: number;
   duration_seconds?: number;
   plays_count: number | null;
+  play_count: number | null;
   status: string;
   created_at: string;
 }
@@ -331,7 +332,7 @@ export default function SongsPage() {
                   </td>
                   <td className="p-4 text-sm">{song.artist?.name || 'Unknown'}</td>
                   <td className="p-4 text-sm text-muted-foreground">{formatDuration(song.duration_seconds || song.duration || 0)}</td>
-                  <td className="p-4 text-sm">{formatPlays(song.plays_count)}</td>
+                  <td className="p-4 text-sm">{formatPlays(song.play_count ?? song.plays_count)}</td>
                   <td className="p-4">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium',

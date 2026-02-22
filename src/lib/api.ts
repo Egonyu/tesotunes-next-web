@@ -1,16 +1,26 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
+// In development, hit the Laravel API directly.
+// In production (browser), use the Next.js rewrite proxy at /api/* to avoid
+// CORS and leverage same-origin requests.  Server-side code (RSC / serverFetch)
+// still needs the absolute URL.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
+const isServer = typeof window === "undefined";
+const CLIENT_BASE_URL = isServer ? API_URL : (
+  API_URL.includes("localhost") || API_URL.includes(".test")
+    ? API_URL          // Local dev — hit Laravel directly
+    : "/api"           // Production — route through Next.js rewrite proxy
+);
 
 // Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: CLIENT_BASE_URL,
   timeout: 30000, // 30 second timeout
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true, // Important for Sanctum cookies
+  withCredentials: true, // Required for Sanctum cookies in dev (direct API)
 });
 
 // In-memory auth token — never persisted to localStorage (XSS mitigation).
@@ -127,8 +137,10 @@ export async function apiPostForm<T>(
   // Explicitly set Content-Type to multipart/form-data to override the axios
   // instance default ("application/json"). Axios 1.x will auto-append the
   // boundary parameter when it detects FormData as the request body.
+  // Disable timeout for file uploads — large audio files can take several minutes.
   const response = await api.post<T>(url, formData, {
     ...config,
+    timeout: 0, // No timeout for file uploads
     headers: {
       ...config?.headers,
       "Content-Type": "multipart/form-data",

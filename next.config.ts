@@ -42,8 +42,11 @@ const nextConfig: NextConfig = {
 
   // API rewrites for Laravel backend (excluding NextAuth routes)
   async rewrites() {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
+    const rawApiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
+    // Ensure the destination always ends with /api so Laravel receives the
+    // correct prefix regardless of whether the env var includes it or not.
+    const apiBase = rawApiUrl.replace(/\/api\/?$/, "");  // strip trailing /api
     return {
       beforeFiles: [
         // Pin /api/auth/* to the filesystem so the NextAuth route always wins,
@@ -57,7 +60,7 @@ const nextConfig: NextConfig = {
         // Proxy all other /api/* routes to the Laravel backend
         {
           source: "/api/:path((?!auth).*)",
-          destination: `${apiUrl}/:path*`,
+          destination: `${apiBase}/api/:path*`,
         },
       ],
       fallback: [],

@@ -38,9 +38,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Protected paths that should redirect to login on 401
-const PROTECTED_PATHS = ["/library", "/profile", "/settings", "/wallet", "/sacco", "/artist-dashboard", "/admin", "/artist", "/become-artist"];
-
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
@@ -71,33 +68,25 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      // Wait briefly for TokenSync to populate the in-memory token
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait for TokenSync to populate the in-memory token
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       if (_authToken && originalRequest.headers) {
         originalRequest.headers.Authorization = `Bearer ${_authToken}`;
         try {
           return await api(originalRequest);
         } catch (retryError) {
-          // Retry also failed — token is stale, clear it and redirect
+          // Retry also failed — token is stale, clear it.
+          // Do NOT hard-redirect here; let page-level auth guards handle it.
           if (axios.isAxiosError(retryError) && retryError.response?.status === 401) {
             _authToken = null;
-            const currentPath = window.location.pathname;
-            const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
-            if (isProtected) {
-              window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`;
-            }
           }
           return Promise.reject(retryError);
         }
       }
 
-      // No token after waiting — redirect to login if on a protected page
-      const currentPath = window.location.pathname;
-      const isProtected = PROTECTED_PATHS.some(p => currentPath.startsWith(p));
-      if (isProtected) {
-        window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`;
-      }
+      // No token after waiting — don't redirect, just reject.
+      // Page layouts (admin/artist) already handle unauthenticated state.
     }
     return Promise.reject(error);
   }

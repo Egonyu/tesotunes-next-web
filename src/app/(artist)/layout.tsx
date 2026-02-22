@@ -64,7 +64,7 @@ export default function ArtistLayout({ children }: { children: React.ReactNode }
   }
 
   if (!session) {
-    router.push('/login?callbackUrl=/artist');
+    router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
     return null;
   }
 

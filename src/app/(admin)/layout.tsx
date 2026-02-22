@@ -36,7 +36,13 @@ import {
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 
-const ADMIN_ROLES = ['Super Admin', 'Admin', 'admin', 'super_admin'];
+// Case-insensitive role check — backend may send 'admin', 'Admin', 'super_admin', 'Super Admin', 'moderator'
+const ADMIN_ROLES = ['super admin', 'admin', 'super_admin', 'moderator'];
+function isAdminRole(role: string | undefined | null): boolean {
+  if (!role) return false;
+  const lower = role.toLowerCase().trim();
+  return ADMIN_ROLES.includes(lower) || lower.includes('admin');
+}
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -77,11 +83,11 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/login');
-    } else if (status === 'authenticated' && session?.user?.role && !ADMIN_ROLES.includes(session.user.role)) {
+      router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    } else if (status === 'authenticated' && session?.user?.role && !isAdminRole(session.user.role)) {
       router.replace('/');
     }
-  }, [status, session, router]);
+  }, [status, session, router, pathname]);
 
   if (status === 'loading') {
     return (
@@ -91,7 +97,7 @@ export default function AdminLayout({
     );
   }
 
-  if (status === 'unauthenticated' || (session?.user?.role && !ADMIN_ROLES.includes(session.user.role))) {
+  if (status === 'unauthenticated' || (session?.user?.role && !isAdminRole(session.user.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Play,
   Pause,
-  Heart,
   Share2,
   MoreHorizontal,
   User,
@@ -20,10 +18,13 @@ import {
   Shuffle,
   ExternalLink
 } from "lucide-react";
-import { useArtist, useArtistSongs, usePublicArtistAlbums, useFollowArtist, useUnfollowArtist } from "@/hooks/api";
+import { useArtist, useArtistSongs, usePublicArtistAlbums } from "@/hooks/api";
 import { usePlayerStore } from "@/stores";
 import { formatNumber, cn } from "@/lib/utils";
 import type { Song } from "@/types";
+import { FollowButton } from "@/components/social/FollowButton";
+import { LikeButton } from "@/components/social/LikeButton";
+import { CommentSection } from "@/components/social/CommentSection";
 
 // Helper to check if URL is external (for unoptimized loading)
 function isExternalUrl(url: string | undefined | null): boolean {
@@ -40,11 +41,6 @@ export default function ArtistPage() {
   const { data: albumsData, isLoading: albumsLoading } = usePublicArtistAlbums(artist?.id || 0, { enabled: !!artist?.id });
 
   const { play, currentSong, isPlaying, resume, pause } = usePlayerStore();
-  const followMutation = useFollowArtist();
-  const unfollowMutation = useUnfollowArtist();
-
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
 
   const songs: Song[] = songsData?.data || [];
   const albums = albumsData?.data || [];
@@ -107,24 +103,10 @@ export default function ArtistPage() {
     play(shuffled[0], shuffled);
   };
 
-  const handleFollow = async () => {
-    if (!artist.id) return;
-    try {
-      if (isFollowing) {
-        await unfollowMutation.mutateAsync(artist.id);
-        setIsFollowing(false);
-      } else {
-        await followMutation.mutateAsync(artist.id);
-        setIsFollowing(true);
-      }
-    } catch (error) {
-      console.error('Follow error:', error);
-    }
-  };
-
   // Image URLs
   const avatarUrl = artist.avatar_url || artist.profile_image_url;
   const bannerUrl = artist.banner_url || artist.cover_url || artist.cover_image_url;
+
   const avatarIsExternal = isExternalUrl(avatarUrl);
   const bannerIsExternal = isExternalUrl(bannerUrl);
 
@@ -235,33 +217,22 @@ export default function ArtistPage() {
           <Shuffle className="h-6 w-6" />
         </button>
 
-        {/* Follow Button */}
-        <button
-          onClick={handleFollow}
-          disabled={followMutation.isPending || unfollowMutation.isPending}
-          className={cn(
-            "px-6 py-2 rounded-full font-medium transition-colors border",
-            isFollowing
-              ? "border-primary text-primary hover:bg-primary/10"
-              : "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
-          )}
-        >
-          {followMutation.isPending || unfollowMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : isFollowing ? (
-            "Following"
-          ) : (
-            "Follow"
-          )}
-        </button>
+        {/* Follow Button — universal social component */}
+        <FollowButton
+          followableType="artist"
+          followableId={artist.id}
+          initialCount={artist.follower_count || 0}
+          showCount={false}
+        />
 
-        {/* Like Button */}
-        <button
-          onClick={() => setIsLiked(!isLiked)}
-          className="p-3 text-muted-foreground hover:text-foreground"
-        >
-          <Heart className={cn("h-7 w-7", isLiked && "fill-red-500 text-red-500")} />
-        </button>
+        {/* Like Button — universal social component */}
+        <LikeButton
+          likeableType="artist"
+          likeableId={artist.id}
+          variant="inline"
+          showCount={false}
+          iconSize={7}
+        />
 
         {/* Share Button */}
         <button
@@ -476,6 +447,15 @@ export default function ArtistPage() {
           </p>
         </div>
       )}
+
+      {/* Comments Section — universal social component */}
+      <section className="px-6 pb-8">
+        <CommentSection
+          commentableType="artist"
+          commentableId={artist.id}
+          title={`Comments on ${artist.name}`}
+        />
+      </section>
     </div>
   );
 }

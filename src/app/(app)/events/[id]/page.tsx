@@ -9,7 +9,6 @@ import {
   MapPin,
   Clock,
   Users,
-  Heart,
   Bookmark,
   ChevronLeft,
   ExternalLink,
@@ -25,6 +24,9 @@ import { SocialProof } from '@/components/events/SocialProof'
 import { TicketSelector } from '@/components/events/TicketSelector'
 import { GroupBookingCTA } from '@/components/events/GroupBookingCTA'
 import { ShareButtons } from '@/components/events/ShareButtons'
+import { LikeButton } from '@/components/social/LikeButton'
+import { FollowButton } from '@/components/social/FollowButton'
+import { CommentSection } from '@/components/social/CommentSection'
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -61,7 +63,6 @@ export default function EventDetailPage({
   const { id } = use(params)
   const router = useRouter()
   const { data: event, isLoading, error } = useEvent(id)
-  const [isInterested, setIsInterested] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
 
   if (isLoading) {
@@ -107,11 +108,6 @@ export default function EventDetailPage({
       0,
     ) || event.attendee_limit || event.capacity || 0
   const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity
-
-  function handleInterest() {
-    setIsInterested(!isInterested)
-    toast.success(isInterested ? 'Removed from interests' : 'Added to interests')
-  }
 
   function handleBookmark() {
     setIsBookmarked(!isBookmarked)
@@ -222,18 +218,19 @@ export default function EventDetailPage({
           <div className="lg:col-span-2 space-y-8">
             {/* Actions */}
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleInterest}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all text-sm font-medium',
-                  isInterested
-                    ? 'bg-primary/10 border-primary text-primary'
-                    : 'hover:bg-muted',
-                )}
-              >
-                <Heart className={cn('h-4 w-4', isInterested && 'fill-primary')} />
-                {isInterested ? 'Interested' : 'Interested?'}
-              </button>
+              <LikeButton
+                likeableType="event"
+                likeableId={event.id}
+                variant="pill"
+                showCount
+              />
+              <FollowButton
+                followableType="event"
+                followableId={event.id}
+                variant="compact"
+                followLabel="Follow Event"
+                followingLabel="Following"
+              />
               <button
                 onClick={handleBookmark}
                 className={cn(
@@ -474,6 +471,15 @@ export default function EventDetailPage({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Comments Section */}
+      <div className="container py-8">
+        <CommentSection
+          commentableType="event"
+          commentableId={event.id}
+          title={`Comments on ${event.title}`}
+        />
       </div>
     </div>
   )

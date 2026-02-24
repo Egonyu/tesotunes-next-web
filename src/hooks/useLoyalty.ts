@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiPostForm, apiDelete } from "@/lib/api";
 
 // ============================================================================
 // Types
@@ -423,6 +423,126 @@ export function useCreateLoyaltyReward() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
     },
+  });
+}
+
+// ============================================================================
+// Artist Club Update/Delete Hooks
+// ============================================================================
+
+export function useUpdateArtistLoyaltyClub() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      id: number;
+      name?: string;
+      description?: string;
+      logo?: File;
+      is_active?: boolean;
+    }) => {
+      const formData = new FormData();
+      if (data.name) formData.append('name', data.name);
+      if (data.description !== undefined) formData.append('description', data.description || '');
+      if (data.logo) formData.append('logo', data.logo);
+      if (data.is_active !== undefined) formData.append('is_active', data.is_active ? '1' : '0');
+      formData.append('_method', 'PUT');
+
+      return apiPost<{
+        message: string;
+        data: LoyaltyClub;
+      }>(`/artist/fan-clubs/${data.id}`, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
+    },
+  });
+}
+
+export function useUpdateLoyaltyReward() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      reward_id: number;
+      title?: string;
+      description?: string;
+      points_required?: number;
+      quantity_available?: number | null;
+      reward_type?: 'digital' | 'physical' | 'experience' | 'discount';
+      is_active?: boolean;
+      expires_at?: string | null;
+    }) => {
+      const { reward_id, ...rest } = data;
+      return apiPut<{
+        message: string;
+        data: LoyaltyReward;
+      }>(`/artist/fan-clubs/rewards/${reward_id}`, rest);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
+      queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-rewards"] });
+    },
+  });
+}
+
+export function useDeleteLoyaltyReward() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (rewardId: number) =>
+      apiDelete<{ message: string }>(`/artist/fan-clubs/rewards/${rewardId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-club"] });
+      queryClient.invalidateQueries({ queryKey: ["loyalty", "artist-rewards"] });
+    },
+  });
+}
+
+/** Get artist's club rewards list */
+export function useArtistLoyaltyRewards(clubId: number) {
+  return useQuery({
+    queryKey: ["loyalty", "artist-rewards", clubId],
+    queryFn: () => apiGet<{
+      data: LoyaltyReward[];
+    }>(`/artist/fan-clubs/${clubId}/rewards`).then(res => res.data),
+    enabled: !!clubId,
+    staleTime: 30 * 1000,
+  });
+}
+
+/** Analytics for artist's fan club */
+export interface FanClubAnalytics {
+  total_members: number;
+  new_members_this_month: number;
+  total_points_distributed: number;
+  total_rewards_redeemed: number;
+  growth_rate: number;
+  tier_distribution: { tier: string; count: number; percentage: number }[];
+  monthly_growth: { month: string; members: number; points: number }[];
+  top_members: {
+    id: number;
+    user: { id: number; name: string; avatar: string | null };
+    points_balance: number;
+    tier: string;
+    joined_at: string;
+  }[];
+  popular_rewards: {
+    id: number;
+    title: string;
+    redemption_count: number;
+    points_required: number;
+  }[];
+}
+
+export function useArtistClubAnalytics(clubId: number) {
+  return useQuery({
+    queryKey: ["loyalty", "artist-analytics", clubId],
+    queryFn: () => apiGet<{
+      data: FanClubAnalytics;
+    }>(`/artist/fan-clubs/${clubId}/analytics`).then(res => res.data),
+    enabled: !!clubId,
+    staleTime: 2 * 60 * 1000,
   });
 }
 

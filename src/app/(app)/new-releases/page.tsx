@@ -8,13 +8,13 @@ import { apiGet } from '@/lib/api';
 import {
   Play,
   Clock,
-  Heart,
   MoreHorizontal,
   Loader2,
   Disc3,
   Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LikeButton } from '@/components/social/LikeButton';
 import type { Song, PaginatedResponse } from '@/types';
 
 export default function NewReleasesPage() {
@@ -112,9 +112,15 @@ export default function NewReleasesPage() {
               </span>
 
               <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-accent transition-all">
-                  <Heart className="h-4 w-4" />
-                </button>
+                <span className="opacity-0 group-hover:opacity-100 transition-all">
+                  <LikeButton
+                    likeableType="song"
+                    likeableId={song.id}
+                    variant="inline"
+                    showCount={false}
+                    iconSize={4}
+                  />
+                </span>
                 <span className="text-sm text-muted-foreground w-12 text-right">
                   {formatDuration(song.duration_seconds || song.duration || 0)}
                 </span>

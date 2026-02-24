@@ -59,7 +59,11 @@ export default function EdulaPage() {
     media?: File[];
   }) => {
     try {
-      await createPostMutation.mutateAsync({ content: data.content });
+      await createPostMutation.mutateAsync({
+        content: data.content,
+        visibility: data.visibility,
+        media: data.media,
+      });
       toast.success('Post created!');
     } catch {
       toast.error('Failed to create post');

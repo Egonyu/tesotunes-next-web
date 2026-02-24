@@ -3,7 +3,7 @@
 import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   ChevronLeft,
   Heart,
   Share2,
@@ -18,6 +18,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useCampaign, transformCampaign } from '@/hooks/useCampaigns';
 import { useCampaignBackers } from '@/hooks/useCampaigns';
+import { FollowButton } from '@/components/social/FollowButton';
+import { CommentSection } from '@/components/social/CommentSection';
 import type { CampaignBacker } from '@/hooks/useCampaigns';
 
 interface Reward {
@@ -59,18 +61,18 @@ interface Campaign {
   createdAt: string;
 }
 
-export default function CampaignDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
+export default function CampaignDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }>
 }) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState<'story' | 'rewards' | 'updates' | 'backers'>('story');
-  
+
   // API hook
   const { data: campaignData, isLoading } = useCampaign(id);
   const { data: backersData } = useCampaignBackers(id);
-  
+
   // Mock data for fallback
   const mockCampaign: Campaign = {
     id: parseInt(id),
@@ -164,7 +166,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
     ],
     createdAt: '2026-01-10',
   };
-  
+
   // Transform API data to component format
   const campaign: Campaign = useMemo(() => {
     if (campaignData) {
@@ -192,9 +194,9 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
     }
     return mockCampaign;
   }, [campaignData]);
-  
+
   const progress = (campaign.raised / campaign.goal) * 100;
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -202,18 +204,18 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8">
       {/* Back Link */}
-      <Link 
+      <Link
         href="/ojokotau"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Campaigns
       </Link>
-      
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -226,12 +228,12 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
               className="object-cover"
             />
           </div>
-          
+
           {/* Title & Artist */}
           <div>
             <span className="text-sm text-primary font-medium">{campaign.category}</span>
             <h1 className="text-2xl md:text-3xl font-bold mt-1">{campaign.title}</h1>
-            
+
             <div className="flex items-center gap-3 mt-4">
               <Link href={`/artists/${campaign.artist.id}`} className="flex items-center gap-2">
                 <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
@@ -256,10 +258,10 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                 </div>
               </Link>
             </div>
-            
+
             <p className="mt-4 text-muted-foreground">{campaign.description}</p>
           </div>
-          
+
           {/* Tabs */}
           <div className="border-b">
             <div className="flex gap-6">
@@ -285,7 +287,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
               ))}
             </div>
           </div>
-          
+
           {/* Tab Content */}
           <div className="min-h-[300px]">
             {activeTab === 'story' && (
@@ -304,7 +306,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                 })}
               </div>
             )}
-            
+
             {activeTab === 'rewards' && (
               <div className="space-y-4">
                 {campaign.rewards.map((reward) => (
@@ -329,7 +331,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                 ))}
               </div>
             )}
-            
+
             {activeTab === 'updates' && (
               <div className="space-y-4">
                 {campaign.updates.map((update) => (
@@ -405,7 +407,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
             )}
           </div>
         </div>
-        
+
         {/* Sidebar */}
         <div className="space-y-6">
           <div className="sticky top-24">
@@ -417,15 +419,15 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                   raised of {(campaign.goal / 1000000).toFixed(0)}M goal
                 </p>
               </div>
-              
+
               {/* Progress Bar */}
               <div className="h-3 bg-muted rounded-full overflow-hidden mb-4">
-                <div 
+                <div
                   className="h-full bg-primary"
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4 text-center mb-6">
                 <div>
                   <p className="text-xl font-bold">{Math.round(progress)}%</p>
@@ -440,7 +442,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                   <p className="text-xs text-muted-foreground">days left</p>
                 </div>
               </div>
-              
+
               <Link
                 href={`/ojokotau/donate/${campaign.id}`}
                 className="block w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium text-center hover:bg-primary/90"
@@ -448,8 +450,15 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                 <Heart className="h-5 w-5 inline mr-2" />
                 Support This Project
               </Link>
-              
+
               <div className="flex gap-2 mt-3">
+                <FollowButton
+                  followableType="campaign"
+                  followableId={campaign.id}
+                  variant="outline"
+                  followLabel="Follow Campaign"
+                  followingLabel="Following"
+                />
                 <button className="flex-1 py-2 border rounded-lg hover:bg-muted flex items-center justify-center gap-1">
                   <Share2 className="h-4 w-4" />
                   Share
@@ -459,7 +468,7 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
                 </button>
               </div>
             </div>
-            
+
             {/* Reminder */}
             <div className="mt-4 p-4 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30">
               <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
@@ -471,6 +480,15 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Comments Section */}
+      <div className="mt-10">
+        <CommentSection
+          commentableType="campaign"
+          commentableId={campaign.id}
+          title="Discussion"
+        />
       </div>
     </div>
   );

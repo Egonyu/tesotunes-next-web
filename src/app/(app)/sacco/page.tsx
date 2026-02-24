@@ -13,7 +13,6 @@ import {
   Target,
   Award,
   Loader2,
-  AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSaccoMembership } from '@/hooks/useSacco';
@@ -21,7 +20,9 @@ import { useSaccoMembership } from '@/hooks/useSacco';
 export default function SaccoPage() {
   const { data: memberData, isLoading, error } = useSaccoMembership();
 
-  const isMember = !!memberData;
+  // Treat API errors (e.g. missing SACCO tables) as "not a member" state
+  // rather than showing a hard error page
+  const isMember = !error && !!memberData;
 
   const features = [
     {
@@ -81,17 +82,6 @@ export default function SaccoPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-100 text-center">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Unable to load SACCO</h2>
-        <p className="text-muted-foreground mb-4">Please check your connection and try again.</p>
-        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Retry</button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 pb-8">
       {/* Hero Section */}
@@ -106,7 +96,7 @@ export default function SaccoPage() {
             {isMember ? 'Welcome Back, Member!' : 'Join Our Artist SACCO'}
           </h1>
           <p className="text-lg text-emerald-100 max-w-2xl mb-6">
-            {isMember 
+            {isMember
               ? 'Manage your savings, shares, and loans. Build your financial future with fellow artists.'
               : 'A savings and credit cooperative designed exclusively for music artists. Save together, grow together.'}
           </p>
@@ -255,7 +245,7 @@ export default function SaccoPage() {
         <div className="p-8 lg:p-10 rounded-xl bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-900/50 text-center shadow-sm">
           <h2 className="text-2xl font-bold mb-2">Ready to Join?</h2>
           <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-            Becoming a member is easy. Start with a minimum of UGX 50,000 and begin your journey 
+            Becoming a member is easy. Start with a minimum of UGX 50,000 and begin your journey
             to financial growth with fellow artists.
           </p>
           <Link

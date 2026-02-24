@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiDelete, apiPostForm } from "@/lib/api";
 
 // Re-export types from central location
 export type {
@@ -107,8 +107,35 @@ export function useCreatePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { content: string; media_type?: string; media_id?: number; media_url?: string }) =>
-      apiPost<{ data: Post }>('/posts', data),
+    mutationFn: (data: {
+      content: string;
+      visibility?: string;
+      song_id?: number;
+      media?: File[];
+      media_type?: string;
+      media_id?: number;
+      media_url?: string;
+    }) => {
+      // Use FormData when media files are attached
+      if (data.media && data.media.length > 0) {
+        const formData = new FormData();
+        formData.append('content', data.content);
+        if (data.visibility) formData.append('visibility', data.visibility);
+        if (data.song_id) formData.append('song_id', String(data.song_id));
+        data.media.forEach((file) => formData.append('media[]', file));
+        return apiPostForm<{ data: Post }>('/posts', formData);
+      }
+
+      // JSON body for text-only posts
+      return apiPost<{ data: Post }>('/posts', {
+        content: data.content,
+        visibility: data.visibility || 'public',
+        song_id: data.song_id,
+        media_type: data.media_type,
+        media_id: data.media_id,
+        media_url: data.media_url,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },

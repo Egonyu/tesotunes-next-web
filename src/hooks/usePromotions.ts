@@ -206,6 +206,7 @@ export function useReviewPromotion(orderId: number) {
 export function useCreatePromotion() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: promotionKeys.myPromotions(), // Added mutationKey for cache tracking
     mutationFn: (data: CreatePromotionRequest) =>
       api.createPromotion(data),
     onSuccess: () => {

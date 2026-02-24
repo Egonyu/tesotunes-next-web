@@ -3,17 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Play,
-  Heart,
   Share2,
   MoreHorizontal,
   Clock,
   Disc,
-  Calendar,
   Music,
 } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Album, Song } from "@/types";
 import { formatDuration, formatNumber } from "@/lib/utils";
+import { SocialActions } from "@/components/social/SocialActions";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;
@@ -116,9 +115,14 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
         <button className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground hover:scale-105 transition-transform shadow-lg">
           <Play className="h-6 w-6 ml-1" />
         </button>
-        <button className="p-3 text-muted-foreground hover:text-foreground">
-          <Heart className="h-7 w-7" />
-        </button>
+        <SocialActions
+          entityType="album"
+          entityId={album.id}
+          showLike
+          likeVariant="inline"
+          showFollow={false}
+          showComments={false}
+        />
         <button className="p-3 text-muted-foreground hover:text-foreground">
           <Share2 className="h-6 w-6" />
         </button>
@@ -224,6 +228,17 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
             <p className="text-sm max-w-3xl">{album.description}</p>
           </div>
         )}
+      </div>
+
+      {/* Comments Section */}
+      <div className="px-6 pb-8 border-t pt-6">
+        <SocialActions
+          entityType="album"
+          entityId={album.id}
+          showLike={false}
+          showComments
+          commentTitle={`Comments on ${album.title}`}
+        />
       </div>
 
       {/* More from Artist */}

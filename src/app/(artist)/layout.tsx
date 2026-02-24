@@ -22,7 +22,8 @@ import {
   LogOut,
   Users,
   Loader2,
-  Megaphone
+  Megaphone,
+  Crown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
@@ -36,6 +37,7 @@ const navItems = [
   { href: '/artist/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/artist/earnings', label: 'Earnings', icon: Wallet },
   { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/artist/fan-club', label: 'Fan Club', icon: Crown },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },
   { href: '/artist/events', label: 'Events', icon: Calendar },
   { href: '/artist/promotions', label: 'Promotions', icon: Megaphone },

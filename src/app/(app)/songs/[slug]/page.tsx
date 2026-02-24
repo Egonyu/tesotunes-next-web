@@ -3,28 +3,23 @@
 import { use } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Play,
-  Pause,
-  Heart,
   Share2,
-  MoreHorizontal,
   Plus,
-  Download,
   Radio,
   Music,
-  Clock,
   Calendar,
   Disc3,
   User,
-  ListMusic,
   ExternalLink,
-  ChevronDown,
 } from "lucide-react";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet } from "@/lib/api";
 import { formatDuration, formatNumber, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { LikeButton } from "@/components/social/LikeButton";
+import { CommentSection } from "@/components/social/CommentSection";
 
 interface SongDetail {
   id: number;
@@ -107,13 +102,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
     },
   });
 
-  const toggleLike = useMutation({
-    mutationFn: () => apiPost(`/songs/${song?.id}/like`, {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["song", slug] });
-      toast.success("Updated liked songs");
-    },
-  });
+  // Like handled by universal LikeButton component
 
   if (isLoading) {
     return (
@@ -173,13 +162,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
               Play Now
             </button>
             <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => toggleLike.mutate()}
-                className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted"
-              >
-                <Heart className="h-5 w-5" />
-                <span className="text-xs">Like</span>
-              </button>
+              <LikeButton
+                likeableType="song"
+                likeableId={song.id}
+                initialCount={song.like_count}
+                showCount
+              />
               <button className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted">
                 <Plus className="h-5 w-5" />
                 <span className="text-xs">Add</span>
@@ -402,6 +390,15 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           </div>
         </section>
       )}
+
+      {/* Comments */}
+      <section className="mt-12">
+        <CommentSection
+          commentableType="song"
+          commentableId={song.id}
+          title="Comments"
+        />
+      </section>
 
       {/* More from Artist */}
       {song.artist_top_songs && song.artist_top_songs.length > 0 && (

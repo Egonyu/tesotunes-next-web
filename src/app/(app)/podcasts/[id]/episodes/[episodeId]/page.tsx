@@ -3,8 +3,8 @@
 import { use, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  Play, 
+import {
+  Play,
   Pause,
   SkipBack,
   SkipForward,
@@ -15,7 +15,6 @@ import {
   Calendar,
   Share2,
   Download,
-  Heart,
   ListPlus,
   RotateCcw,
   RotateCw,
@@ -24,6 +23,8 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LikeButton } from '@/components/social/LikeButton';
+import { CommentSection } from '@/components/social/CommentSection';
 
 interface Episode {
   id: number;
@@ -48,17 +49,16 @@ interface Episode {
   transcript?: string;
 }
 
-export default function EpisodePlayerPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string; episodeId: string }> 
+export default function EpisodePlayerPage({
+  params
+}: {
+  params: Promise<{ id: string; episodeId: string }>
 }) {
   const { id, episodeId } = use(params);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
@@ -96,7 +96,7 @@ export default function EpisodePlayerPage({
       if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
     };
   }, []);
-  
+
   // Mock data
   const episode: Episode = {
     id: parseInt(episodeId),
@@ -133,11 +133,11 @@ Whether you're just starting out or looking to refine your skills, this episode 
       { title: 'Processing Tips', startTime: 2700 },
       { title: 'Q&A', startTime: 3300 },
     ],
-    transcript: `Welcome back to The Beat Lab. I'm DJ Empress, and today we're going to explore one of my favorite topics - Afrobeats drums. 
+    transcript: `Welcome back to The Beat Lab. I'm DJ Empress, and today we're going to explore one of my favorite topics - Afrobeats drums.
 
 If you've ever wondered what makes Afrobeats so infectious, so impossible not to move to, a lot of that comes down to the drums...`,
   };
-  
+
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -147,24 +147,24 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
     }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   const progressPercent = (currentTime / episode.duration) * 100;
-  
+
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
-  
+
   return (
     <div className="min-h-screen">
       {/* Player Header */}
       <div className="bg-linear-to-b from-primary/20 to-background">
         <div className="container py-8">
-          <Link 
+          <Link
             href={`/podcasts/${id}`}
             className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6"
           >
             <ChevronLeft className="h-4 w-4" />
             Back to Podcast
           </Link>
-          
+
           <div className="flex flex-col md:flex-row gap-8">
             <div className="relative h-64 w-64 rounded-xl overflow-hidden flex-shrink-0 bg-muted mx-auto md:mx-0 shadow-2xl">
               <Image
@@ -174,21 +174,21 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                 className="object-cover"
               />
             </div>
-            
+
             <div className="flex-1 text-center md:text-left">
               <span className="text-sm text-muted-foreground">
                 Episode {episode.number} • {new Date(episode.date).toLocaleDateString()}
               </span>
               <h1 className="text-2xl md:text-3xl font-bold mt-1">{episode.title}</h1>
-              <Link 
+              <Link
                 href={`/podcasts/${id}`}
                 className="text-muted-foreground hover:text-foreground mt-1 inline-block"
               >
                 {episode.podcast.title} by {episode.podcast.host}
               </Link>
-              
+
               <p className="mt-4 text-muted-foreground">{episode.description}</p>
-              
+
               <div className="flex items-center justify-center md:justify-start gap-4 mt-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
@@ -200,13 +200,13 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
           </div>
         </div>
       </div>
-      
+
       {/* Player Controls */}
       <div className="sticky top-16 z-40 bg-background border-y">
         <div className="container py-4">
           {/* Progress Bar */}
           <div className="mb-4">
-            <div 
+            <div
               className="h-2 bg-muted rounded-full cursor-pointer"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -214,7 +214,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                 setCurrentTime(percent * episode.duration);
               }}
             >
-              <div 
+              <div
                 className="h-full bg-primary rounded-full transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -224,7 +224,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
               <span>{formatTime(episode.duration)}</span>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between">
             {/* Left Controls */}
             <div className="flex items-center gap-2">
@@ -234,17 +234,17 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
               >
                 {playbackSpeed}x
               </button>
-              <button 
+              <button
                 onClick={() => setIsMuted(!isMuted)}
                 className="p-2 hover:bg-muted rounded-lg"
               >
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </button>
             </div>
-            
+
             {/* Center Controls */}
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={() => setCurrentTime(Math.max(0, currentTime - 15))}
                 className="p-2 hover:bg-muted rounded-lg relative"
               >
@@ -261,7 +261,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                   <Play className="h-6 w-6 ml-1" fill="currentColor" />
                 )}
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentTime(Math.min(episode.duration, currentTime + 30))}
                 className="p-2 hover:bg-muted rounded-lg relative"
               >
@@ -269,18 +269,16 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                 <span className="absolute text-[9px] font-bold top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">30</span>
               </button>
             </div>
-            
+
             {/* Right Controls */}
             <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setIsLiked(!isLiked)}
-                className={cn(
-                  'p-2 hover:bg-muted rounded-lg',
-                  isLiked && 'text-red-500'
-                )}
-              >
-                <Heart className="h-5 w-5" fill={isLiked ? 'currentColor' : 'none'} />
-              </button>
+              <LikeButton
+                likeableType="podcast_episode"
+                likeableId={parseInt(episodeId)}
+                variant="inline"
+                showCount={false}
+                iconSize={5}
+              />
               <button className="p-2 hover:bg-muted rounded-lg">
                 <ListPlus className="h-5 w-5" />
               </button>
@@ -346,7 +344,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
           )}
         </div>
       </div>
-      
+
       <div className="container py-8">
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Episode Content */}
@@ -358,7 +356,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                 {episode.longDescription}
               </div>
             </div>
-            
+
             {/* Transcript Toggle */}
             {episode.transcript && (
               <div>
@@ -376,7 +374,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
               </div>
             )}
           </div>
-          
+
           {/* Chapters */}
           <div>
             {episode.chapters && episode.chapters.length > 0 && (
@@ -389,7 +387,7 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
                       onClick={() => setCurrentTime(chapter.startTime)}
                       className={cn(
                         'w-full flex items-center justify-between p-3 rounded-lg text-sm hover:bg-muted transition-colors text-left',
-                        currentTime >= chapter.startTime && 
+                        currentTime >= chapter.startTime &&
                         (index === episode.chapters!.length - 1 || currentTime < episode.chapters![index + 1].startTime)
                           ? 'bg-primary/10 text-primary'
                           : ''
@@ -405,6 +403,15 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
               </div>
             )}
           </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="mt-8">
+          <CommentSection
+            commentableType="podcast_episode"
+            commentableId={parseInt(episodeId)}
+            title="Episode Discussion"
+          />
         </div>
       </div>
     </div>

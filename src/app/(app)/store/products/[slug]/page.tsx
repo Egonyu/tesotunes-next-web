@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ShoppingCart,
-  Heart,
   Share2,
   Star,
   Truck,
@@ -20,6 +19,8 @@ import {
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { LikeButton } from "@/components/social/LikeButton";
+import { CommentSection } from "@/components/social/CommentSection";
 
 interface Product {
   id: number;
@@ -244,12 +245,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               )}
             </button>
 
-            <button
-              onClick={() => addToWishlist.mutate()}
-              className="p-3 border rounded-lg hover:bg-muted"
-            >
-              <Heart className="h-5 w-5" />
-            </button>
+            <LikeButton
+              likeableType="product"
+              likeableId={product.id}
+              variant="icon"
+              showCount={false}
+            />
 
             <button className="p-3 border rounded-lg hover:bg-muted">
               <Share2 className="h-5 w-5" />
@@ -298,6 +299,15 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           )}
         </div>
+      </div>
+
+      {/* Reviews / Comments Section */}
+      <div className="mt-12">
+        <CommentSection
+          commentableType="product"
+          commentableId={product.id}
+          title={`Reviews & Comments`}
+        />
       </div>
     </div>
   );

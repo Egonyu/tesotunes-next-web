@@ -3,14 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Play,
-  Heart,
   Share2,
   MoreHorizontal,
   Clock,
   ListMusic,
   Shuffle,
-  Pencil,
-  Trash2,
   Globe,
   Lock,
   User,
@@ -19,6 +16,7 @@ import { serverFetch } from "@/lib/api";
 import type { Playlist, Song } from "@/types";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import PlaylistCollaboration from "@/components/PlaylistCollaboration";
+import { SocialActions } from "@/components/social/SocialActions";
 
 interface PlaylistPageProps {
   params: Promise<{ slug: string }>;
@@ -161,9 +159,17 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
         <button className="flex h-12 w-12 items-center justify-center rounded-full border-2 hover:border-foreground hover:scale-105 transition-all">
           <Shuffle className="h-5 w-5" />
         </button>
-        <button className="p-3 text-muted-foreground hover:text-foreground">
-          <Heart className="h-7 w-7" />
-        </button>
+        <SocialActions
+          entityType="playlist"
+          entityId={playlist.id}
+          showLike
+          likeVariant="inline"
+          showFollow
+          followType="playlist"
+          followVariant="compact"
+          initialFollowerCount={playlist.follower_count || 0}
+          showComments={false}
+        />
         <button className="p-3 text-muted-foreground hover:text-foreground">
           <Share2 className="h-6 w-6" />
         </button>
@@ -266,6 +272,17 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comments Section */}
+      <div className="px-6 pb-8">
+        <SocialActions
+          entityType="playlist"
+          entityId={playlist.id}
+          showLike={false}
+          showComments
+          commentTitle={`Comments on ${playlist.name}`}
+        />
       </div>
     </div>
   );

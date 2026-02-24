@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback } from "react";
 import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
 import { useRecordPlay } from "@/hooks/api";
+import { getAuthToken } from "@/lib/api";
 
 export function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -45,6 +46,9 @@ export function AudioPlayer() {
   const maybeRecordPlay = useCallback(() => {
     if (playTrackedRef.current || !trackedSongIdRef.current) return;
 
+    // Skip recording if user is not authenticated (route requires auth:sanctum)
+    if (!getAuthToken()) return;
+
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -58,12 +62,20 @@ export function AudioPlayer() {
 
     if (isQualified) {
       playTrackedRef.current = true;
-      recordPlay({
-        song_id: trackedSongIdRef.current,
-        duration_played: durationPlayed,
-        total_duration: totalDuration > 0 ? totalDuration : undefined,
-        completed: totalDuration > 0 && audio.currentTime >= totalDuration - 1,
-      });
+      recordPlay(
+        {
+          song_id: trackedSongIdRef.current,
+          duration_played: durationPlayed,
+          total_duration: totalDuration > 0 ? totalDuration : undefined,
+          completed: totalDuration > 0 && audio.currentTime >= totalDuration - 1,
+        },
+        {
+          onError: () => {
+            // Allow retry on next timeupdate if recording failed
+            playTrackedRef.current = false;
+          },
+        }
+      );
     }
   }, [recordPlay]);
 

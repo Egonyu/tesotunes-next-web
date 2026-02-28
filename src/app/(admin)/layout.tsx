@@ -80,16 +80,32 @@ export default function AdminLayout({
   const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // Only redirect AFTER the session check has fully resolved.
+    // This prevents a flash-redirect when the page first loads on Vercel
+    // (cold start) and status briefly reads 'unauthenticated' before the
+    // session cookie is parsed.
+    if (status === 'loading') return;
+
     if (status === 'unauthenticated') {
-      router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
-    } else if (status === 'authenticated' && session?.user?.role && !isAdminRole(session.user.role)) {
-      router.replace('/');
+      // Give a small grace period — on Vercel deployments, the session check
+      // can take a moment. If still unauthenticated after the delay, redirect.
+      const timer = setTimeout(() => {
+        setAuthChecked(true);
+        router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (status === 'authenticated') {
+      setAuthChecked(true);
+      if (session?.user?.role && !isAdminRole(session.user.role)) {
+        router.replace('/');
+      }
     }
   }, [status, session, router, pathname]);
 
-  if (status === 'loading') {
+  if (status === 'loading' || !authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

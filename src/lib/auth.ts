@@ -5,6 +5,10 @@ import { API_URL } from "./api-config";
 // Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
 const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
 
+// Detect production/HTTPS environment
+const isProduction = process.env.NODE_ENV === "production";
+const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+
 /**
  * Safely parse JSON from a fetch response.
  * Returns null if the body is empty or not valid JSON.
@@ -64,10 +68,46 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
 }
 
 export const authConfig: NextAuthOptions = {
+  // Enable debug logging in development (set NEXTAUTH_DEBUG=true on Vercel to enable in production)
+  debug: process.env.NEXTAUTH_DEBUG === "true" || !isProduction,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // Explicit cookie configuration for production HTTPS
+  // This ensures cookies work correctly on Vercel with custom domains
+  useSecureCookies,
+  cookies: useSecureCookies
+    ? {
+        sessionToken: {
+          name: "__Secure-next-auth.session-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: true,
+          },
+        },
+        callbackUrl: {
+          name: "__Secure-next-auth.callback-url",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: true,
+          },
+        },
+        csrfToken: {
+          name: "__Host-next-auth.csrf-token",
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: true,
+          },
+        },
+      }
+    : undefined,
   pages: {
     signIn: "/login",
     signOut: "/logout",

@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  // Standalone mode for optimized Docker deployment
-  output: "standalone",
+  // Standalone mode for Docker deployment — Vercel ignores this, but keep it
+  // so local Docker builds still work.
+  output: process.env.VERCEL ? undefined : "standalone",
 
   // Image optimization configuration
   images: {

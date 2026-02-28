@@ -2,15 +2,51 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Shield, ArrowLeft, Phone } from "lucide-react";
 import { apiPost, setAuthToken } from "@/lib/api";
 
+/**
+ * Sanitize callbackUrl to always be a relative path.
+ * Absolute URLs (https://www.tesotunes.com/admin) are converted to just /admin.
+ * This prevents issues with router.push() doing full-page navigation.
+ */
+function sanitizeCallbackUrl(raw: string | null): string {
+  if (!raw) return "/";
+  try {
+    // If it's an absolute URL on our domain, extract just the pathname
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      const url = new URL(raw);
+      return url.pathname + url.search + url.hash;
+    }
+    // Already a relative path
+    return raw.startsWith("/") ? raw : `/${raw}`;
+  } catch {
+    return "/";
+  }
+}
+
+/**
+ * Wait for the NextAuth session to be established after sign-in.
+ * This avoids a race condition where router.push fires before the session
+ * cookie is fully committed and readable.
+ */
+async function waitForSession(maxAttempts = 5, delayMs = 500): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const session = await getSession();
+    if (session?.user) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,6 +90,11 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid OTP. Please try again.");
       } else {
+        // Wait for session to be established before navigating
+        const sessionReady = await waitForSession();
+        if (!sessionReady) {
+          console.warn("[Login] Session not confirmed after OTP login, navigating anyway");
+        }
         router.push(callbackUrl);
         router.refresh();
       }
@@ -85,15 +126,22 @@ export default function LoginPage() {
           : result.error;
         setError(msg);
       } else {
-        // Sync the auth token to memory for API calls
-        try {
-          const sessionRes = await fetch("/api/auth/session");
-          const session = await sessionRes.json();
-          if (session?.accessToken) {
-            setAuthToken(session.accessToken);
+        // Wait for the session to be confirmed before navigating.
+        // This prevents a race condition on Vercel where the session cookie
+        // might not be readable immediately after signIn resolves.
+        const sessionReady = await waitForSession();
+        if (sessionReady) {
+          // Sync the auth token to memory for API calls
+          try {
+            const session = await getSession();
+            if (session?.accessToken) {
+              setAuthToken(session.accessToken);
+            }
+          } catch (e) {
+            console.warn("[Login] Could not sync auth token:", e);
           }
-        } catch (e) {
-          console.warn("[Login] Could not sync auth token:", e);
+        } else {
+          console.warn("[Login] Session not confirmed after login, navigating anyway");
         }
         router.push(callbackUrl);
         router.refresh();
@@ -127,6 +175,7 @@ export default function LoginPage() {
             : "Invalid verification code"
         );
       } else {
+        await waitForSession();
         router.push(callbackUrl);
         router.refresh();
       }

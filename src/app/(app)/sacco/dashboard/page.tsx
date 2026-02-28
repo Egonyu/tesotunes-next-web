@@ -67,22 +67,23 @@ export default function SaccoDashboardPage() {
   const activeGoals = goals || [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Member #{memberData.member_number} &bull; {memberData.status === 'active' ? '✅ Active' : memberData.status}
+          <p className="text-sm text-muted-foreground">
+            Member #{memberData.member_number} &bull;{' '}
+            <span className={memberData.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600'}>
+              {memberData.status === 'active' ? 'Active' : memberData.status}
+            </span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <StreakCounter currentStreak={memberData.streak?.current_streak || 0} multiplier={memberData.streak?.multiplier || 1} />
-        </div>
+        <StreakCounter currentStreak={memberData.streak?.current_streak || 0} multiplier={memberData.streak?.multiplier || 1} />
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Savings"
           value={`${memberData.savings.balance.toLocaleString()} UGX`}
@@ -132,8 +133,8 @@ export default function SaccoDashboardPage() {
 
       {/* Active Savings Goals */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Active Savings Goals</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold">Active Savings Goals</h3>
           <Link
             href="/sacco/savings/goals/create"
             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
@@ -170,7 +171,7 @@ export default function SaccoDashboardPage() {
         )}
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         {/* Recent Transactions */}
         <div className="rounded-xl border bg-card">
           <div className="flex items-center justify-between p-4 border-b">

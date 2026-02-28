@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { ArrowLeft, Loader2, ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useCreateGoal } from '@/hooks/useSaccoGoals'
 import type { GoalType, GoalCurrency, GoalVisibility, CreateGoalData } from '@/types/sacco'
+import axios from 'axios'
 
 const goalTypes: { value: GoalType; label: string; icon: string; description: string }[] = [
   { value: 'music_video', label: 'Music Video', icon: '🎬', description: 'Fund your next visual masterpiece' },
@@ -29,11 +31,31 @@ const visibilityOptions: { value: GoalVisibility; label: string; icon: string }[
   { value: 'public', label: 'Public', icon: '🌍' },
 ]
 
+function extractErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data
+    if (data?.message) return data.message
+    if (data?.errors) {
+      const messages = Object.values(data.errors).flat()
+      return messages.join('. ')
+    }
+    if (error.response?.status === 401) return 'You must be logged in to create a goal.'
+    if (error.response?.status === 403) return 'You must be a SACCO member to create goals.'
+    if (error.response?.status === 422) return 'Please check your form fields and try again.'
+    if (error.response?.status === 501) return data?.message ?? 'This feature is coming soon.'
+    if (error.response?.status === 500) return 'Server error. Please try again later.'
+    if (!error.response) return 'Network error. Please check your connection.'
+  }
+  if (error instanceof Error) return error.message
+  return 'An unexpected error occurred. Please try again.'
+}
+
 export default function CreateGoalPage() {
   const router = useRouter()
   const createGoal = useCreateGoal()
   const [step, setStep] = useState(1)
   const totalSteps = 3
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<Partial<CreateGoalData>>({
     type: undefined,
@@ -51,6 +73,7 @@ export default function CreateGoalPage() {
 
   const update = (field: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    setErrorMessage(null) // clear error when user edits
   }
 
   const canProceed = () => {
@@ -58,7 +81,7 @@ export default function CreateGoalPage() {
       case 1:
         return !!formData.type
       case 2:
-        return !!formData.title && (formData.target_amount ?? 0) > 0
+        return !!formData.title?.trim() && (formData.target_amount ?? 0) > 0
       case 3:
         return true
       default:
@@ -67,11 +90,15 @@ export default function CreateGoalPage() {
   }
 
   const handleSubmit = async () => {
+    setErrorMessage(null)
     try {
       await createGoal.mutateAsync(formData as CreateGoalData)
+      toast.success('Savings goal created successfully!')
       router.push('/sacco/savings/goals')
-    } catch {
-      // Error handled by mutation
+    } catch (error) {
+      const msg = extractErrorMessage(error)
+      setErrorMessage(msg)
+      toast.error(msg)
     }
   }
 
@@ -79,27 +106,56 @@ export default function CreateGoalPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/sacco/savings/goals" className="p-2 hover:bg-muted rounded-lg">
+        <Link href="/sacco/savings/goals" className="p-2 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-bold">Create Savings Goal</h2>
           <p className="text-sm text-muted-foreground">Step {step} of {totalSteps}</p>
         </div>
       </div>
 
-      {/* Progress */}
-      <div className="flex gap-2">
-        {[...Array(totalSteps)].map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-1.5 rounded-full flex-1 transition-colors',
-              i < step ? 'bg-emerald-500' : 'bg-muted'
-            )}
-          />
+      {/* Progress Steps */}
+      <div className="flex items-center gap-3">
+        {['Goal Type', 'Details', 'Strategy'].map((label, i) => (
+          <div key={label} className="flex-1">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={cn(
+                'h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
+                i + 1 < step
+                  ? 'bg-emerald-500 text-white'
+                  : i + 1 === step
+                    ? 'bg-emerald-500 text-white ring-4 ring-emerald-500/20'
+                    : 'bg-muted text-muted-foreground'
+              )}>
+                {i + 1 < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+              </div>
+              <span className={cn(
+                'text-xs font-medium hidden sm:inline',
+                i + 1 <= step ? 'text-foreground' : 'text-muted-foreground'
+              )}>{label}</span>
+            </div>
+            <div className={cn(
+              'h-1 rounded-full transition-colors',
+              i + 1 <= step ? 'bg-emerald-500' : 'bg-muted'
+            )} />
+          </div>
         ))}
       </div>
+
+      {/* Error Banner */}
+      {errorMessage && (
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800">
+          <AlertCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-rose-700 dark:text-rose-400">Failed to create goal</p>
+            <p className="text-sm text-rose-600 dark:text-rose-300 mt-0.5">{errorMessage}</p>
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="text-rose-400 hover:text-rose-600">
+            <span className="sr-only">Dismiss</span>&times;
+          </button>
+        </div>
+      )}
 
       {/* Step 1: Goal Type */}
       {step === 1 && (
@@ -356,9 +412,9 @@ export default function CreateGoalPage() {
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t">
         <button
-          onClick={() => setStep(Math.max(1, step - 1))}
+          onClick={() => { setStep(Math.max(1, step - 1)); setErrorMessage(null); }}
           disabled={step === 1}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -367,7 +423,7 @@ export default function CreateGoalPage() {
           <button
             onClick={() => setStep(step + 1)}
             disabled={!canProceed()}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:pointer-events-none"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-sm"
           >
             Continue
             <ChevronRight className="h-4 w-4" />
@@ -376,7 +432,7 @@ export default function CreateGoalPage() {
           <button
             onClick={handleSubmit}
             disabled={createGoal.isPending}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm"
           >
             {createGoal.isPending ? (
               <>
@@ -392,12 +448,6 @@ export default function CreateGoalPage() {
           </button>
         )}
       </div>
-
-      {createGoal.isError && (
-        <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-900/10 border border-rose-200 text-sm text-rose-700 dark:text-rose-400">
-          Failed to create goal. Please try again.
-        </div>
-      )}
     </div>
   )
 }

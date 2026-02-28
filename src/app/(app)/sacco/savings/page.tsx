@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { 
-  PiggyBank, 
-  TrendingUp, 
-  ArrowDownRight, 
+import {
+  PiggyBank,
+  TrendingUp,
+  ArrowDownRight,
   ArrowUpRight,
   Calendar,
   Target,
@@ -48,7 +48,7 @@ export default function SavingsPage() {
   const { data: transactionsData } = useSaccoTransactions({ limit: 10 });
   const depositMutation = useSaccoDeposit();
   const withdrawMutation = useSaccoWithdraw();
-  
+
   // Handle deposit
   const handleDeposit = async () => {
     if (!depositAmount || !phoneNumber) return;
@@ -67,7 +67,7 @@ export default function SavingsPage() {
       toast.error(message);
     }
   };
-  
+
   // Handle withdraw
   const handleWithdraw = async () => {
     if (!withdrawAmount || !phoneNumber) return;
@@ -86,7 +86,7 @@ export default function SavingsPage() {
       toast.error(message);
     }
   };
-  
+
   // Use data from hooks with safe defaults
   const balance = savingsData?.balance ?? 0;
   const interestEarned = savingsData?.interest_earned ?? 0;
@@ -94,9 +94,9 @@ export default function SavingsPage() {
   const minimumBalance = 50000;
   const monthlyTarget = 500000;
   const thisMonth = savingsData?.this_month ?? 0;
-  
+
   const savingsGoals: SavingsGoal[] = savingsData?.goals || [];
-  
+
   const transactions = transactionsData?.data || [];
 
   if (isLoading) {
@@ -117,25 +117,25 @@ export default function SavingsPage() {
       </div>
     );
   }
-  
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Savings</h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage your SACCO savings account
           </p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => setShowDepositModal(true)}
             className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
           >
             Deposit
           </button>
-          <button 
+          <button
             onClick={() => setShowWithdrawModal(true)}
             className="px-4 py-2 border rounded-lg font-medium hover:bg-muted"
           >
@@ -143,9 +143,9 @@ export default function SavingsPage() {
           </button>
         </div>
       </div>
-      
+
       {/* Balance Card */}
-      <div className="p-6 rounded-xl bg-linear-to-br from-emerald-600 to-teal-600 text-white">
+      <div className="p-6 rounded-xl bg-linear-to-br from-emerald-600 to-teal-600 text-white shadow-lg">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-emerald-100">Total Savings Balance</p>
@@ -157,7 +157,7 @@ export default function SavingsPage() {
             <PiggyBank className="h-6 w-6" />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20">
           <div>
             <p className="text-emerald-100 text-sm">Interest Rate</p>
@@ -173,7 +173,7 @@ export default function SavingsPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Monthly Target Progress */}
       <div className="p-6 rounded-xl border bg-card">
         <div className="flex items-center justify-between mb-4">
@@ -183,7 +183,7 @@ export default function SavingsPage() {
           </span>
         </div>
         <div className="h-3 bg-muted rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-emerald-500 transition-all"
             style={{ width: `${Math.min((thisMonth / monthlyTarget) * 100, 100)}%` }}
           />
@@ -193,10 +193,10 @@ export default function SavingsPage() {
           <span className="text-muted-foreground">UGX {monthlyTarget.toLocaleString()}</span>
         </div>
       </div>
-      
-      <div className="grid gap-8 lg:grid-cols-2">
+
+      <div className="grid gap-5 lg:grid-cols-2">
         {/* Savings Goals */}
-        <div className="rounded-xl border bg-card">
+        <div className="rounded-xl border bg-card shadow-sm">
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold">Savings Goals</h3>
             <button className="flex items-center gap-1 text-sm text-primary">
@@ -212,7 +212,7 @@ export default function SavingsPage() {
               </div>
             ) : savingsGoals.map((goal) => {
               const progress = (goal.current / goal.target) * 100;
-              
+
               return (
                 <div key={goal.id} className="p-4 rounded-lg border">
                   <div className="flex items-start justify-between mb-3">
@@ -231,14 +231,14 @@ export default function SavingsPage() {
                       {Math.round(progress)}%
                     </span>
                   </div>
-                  
+
                   <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
-                    <div 
+                    <div
                       className="h-full bg-emerald-500"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  
+
                   <div className="flex justify-between text-sm">
                     <span>UGX {goal.current.toLocaleString()}</span>
                     <span className="text-muted-foreground">UGX {goal.target.toLocaleString()}</span>
@@ -248,7 +248,7 @@ export default function SavingsPage() {
             })}
           </div>
         </div>
-        
+
         {/* Transaction History */}
         <div className="rounded-xl border bg-card">
           <div className="flex items-center justify-between p-4 border-b">
@@ -297,7 +297,7 @@ export default function SavingsPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Info Card */}
       <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30">
         <div className="flex items-start gap-3">
@@ -305,7 +305,7 @@ export default function SavingsPage() {
           <div>
             <p className="font-medium text-blue-900 dark:text-blue-100">Interest Policy</p>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              Earn competitive annual interest on your savings, calculated monthly. 
+              Earn competitive annual interest on your savings, calculated monthly.
               Maintain regular deposits to maximize your earnings.
             </p>
           </div>
@@ -318,7 +318,7 @@ export default function SavingsPage() {
           <div className="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-semibold">Deposit to Savings</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowDepositModal(false);
                   setDepositAmount('');
@@ -328,7 +328,7 @@ export default function SavingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Current Balance */}
               <div className="p-4 rounded-lg bg-muted/50 text-center">
@@ -421,10 +421,10 @@ export default function SavingsPage() {
               <button
                 disabled={!depositAmount || parseInt(depositAmount) < 10000 || !phoneNumber || depositMutation.isPending}
                 onClick={() => {
-                  depositMutation.mutate({ 
-                    amount: parseInt(depositAmount), 
+                  depositMutation.mutate({
+                    amount: parseInt(depositAmount),
                     phone_number: phoneNumber,
-                    payment_method: depositMethod 
+                    payment_method: depositMethod
                   });
                 }}
                 className={cn(
@@ -447,7 +447,7 @@ export default function SavingsPage() {
           <div className="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-semibold">Withdraw from Savings</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowWithdrawModal(false);
                   setWithdrawAmount('');
@@ -457,7 +457,7 @@ export default function SavingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Available Balance */}
               <div className="p-4 rounded-lg bg-muted/50">
@@ -564,8 +564,8 @@ export default function SavingsPage() {
               {/* Submit */}
               <button
                 disabled={
-                  !withdrawAmount || 
-                  parseInt(withdrawAmount) < 10000 || 
+                  !withdrawAmount ||
+                  parseInt(withdrawAmount) < 10000 ||
                   parseInt(withdrawAmount) > (savingsData?.balance || 0) - 10000 ||
                   !phoneNumber ||
                   withdrawMutation.isPending
@@ -575,8 +575,8 @@ export default function SavingsPage() {
                 }}
                 className={cn(
                   'w-full py-3 rounded-lg font-medium transition-colors',
-                  !withdrawAmount || 
-                  parseInt(withdrawAmount) < 10000 || 
+                  !withdrawAmount ||
+                  parseInt(withdrawAmount) < 10000 ||
                   parseInt(withdrawAmount) > (savingsData?.balance || 0) - 10000 ||
                   !phoneNumber ||
                   withdrawMutation.isPending

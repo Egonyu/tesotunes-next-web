@@ -28,27 +28,28 @@ const colorMap = {
 
 export function StatCard({ title, value, subtitle, icon, trend, color = 'emerald', className }: StatCardProps) {
   return (
-    <div className={cn('rounded-xl border bg-card p-6 shadow-sm', className)}>
+    <div className={cn('rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-shadow', className)}>
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+          <p className="text-xl font-bold tracking-tight truncate">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-[11px] text-muted-foreground">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className={cn('rounded-lg p-2.5', colorMap[color])}>
+          <div className={cn('rounded-lg p-2 shrink-0', colorMap[color])}>
             {icon}
           </div>
         )}
       </div>
       {trend && (
-        <div className="mt-3 flex items-center gap-1 text-xs">
-          {trend.direction === 'up' && <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />}
-          {trend.direction === 'down' && <TrendingDown className="h-3.5 w-3.5 text-rose-500" />}
-          {trend.direction === 'stable' && <Minus className="h-3.5 w-3.5 text-gray-400" />}
+        <div className="mt-2.5 flex items-center gap-1 text-[11px]">
+          {trend.direction === 'up' && <TrendingUp className="h-3 w-3 text-emerald-500" />}
+          {trend.direction === 'down' && <TrendingDown className="h-3 w-3 text-rose-500" />}
+          {trend.direction === 'stable' && <Minus className="h-3 w-3 text-gray-400" />}
           <span className={cn(
+            'font-medium',
             trend.direction === 'up' && 'text-emerald-600',
             trend.direction === 'down' && 'text-rose-600',
             trend.direction === 'stable' && 'text-gray-500'
@@ -132,7 +133,7 @@ interface StreakCounterProps {
 
 export function StreakCounter({ currentStreak, multiplier = 1 }: StreakCounterProps) {
   return (
-    <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-white shadow-lg">
+    <div className="flex items-center gap-2 rounded-full bg-linear-to-r from-orange-500 to-amber-500 px-4 py-2 text-white shadow-lg">
       <span className="text-lg">🔥</span>
       <div className="flex flex-col">
         <span className="text-sm font-bold leading-tight">{currentStreak} day streak</span>
@@ -188,48 +189,60 @@ const goalTypeLabels: Record<string, string> = {
 export function GoalCard({ goal, onClick }: GoalCardProps) {
   const icon = goalTypeIcons[goal.type] || '🎯'
   const typeLabel = goalTypeLabels[goal.type] || goal.type
-  
+  const pct = Math.min(Math.round(goal.progress.percentage), 100)
+
   return (
     <button
       onClick={onClick}
-      className="w-full rounded-xl border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800"
+      className="w-full rounded-xl border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 group"
     >
-      <div className="flex items-start gap-4">
-        <div className="text-2xl">{icon}</div>
+      <div className="flex items-start gap-3">
+        <div className="text-2xl shrink-0 mt-0.5">{icon}</div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
               {typeLabel}
             </span>
             {goal.status === 'completed' && (
-              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">✓ Completed</span>
+              <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                Done
+              </span>
+            )}
+            {goal.status === 'paused' && (
+              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                Paused
+              </span>
             )}
           </div>
-          <h3 className="font-semibold truncate">{goal.title}</h3>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold">
+          <h3 className="font-semibold truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+            {goal.title}
+          </h3>
+
+          {/* Amount & Progress */}
+          <div className="mt-3 space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-lg font-bold tabular-nums">
                 {goal.current_amount.toLocaleString()}
               </span>
-              <span className="text-sm text-muted-foreground">
-                / {goal.target_amount.toLocaleString()} {goal.currency.toUpperCase()}
+              <span className="text-xs text-muted-foreground">
+                of {goal.target_amount.toLocaleString()} {goal.currency.toUpperCase()}
               </span>
             </div>
-            <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className={cn(
-                  'h-full rounded-full transition-all duration-500',
+                  'h-full rounded-full transition-all duration-700',
                   goal.progress.on_track
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                    ? 'bg-linear-to-r from-emerald-500 to-teal-500'
+                    : 'bg-linear-to-r from-amber-500 to-orange-500'
                 )}
-                style={{ width: `${Math.min(goal.progress.percentage, 100)}%` }}
+                style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{Math.round(goal.progress.percentage)}% saved</span>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span className="font-medium">{pct}% saved</span>
               {goal.progress.days_remaining !== null && goal.progress.days_remaining > 0 && (
-                <span>{goal.progress.days_remaining} days left</span>
+                <span>{goal.progress.days_remaining}d remaining</span>
               )}
             </div>
           </div>
@@ -350,19 +363,19 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
     md: 'w-16 h-16 text-2xl',
     lg: 'w-20 h-20 text-3xl',
   }
-  
+
   return (
     <div className="flex flex-col items-center gap-1.5">
       <div className={cn(
         'rounded-full flex items-center justify-center transition-all',
         sizeClasses[size],
         isUnlocked
-          ? 'bg-gradient-to-br from-amber-400 to-yellow-500 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/30'
+          ? 'bg-linear-to-br from-amber-400 to-yellow-500 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/30'
           : 'bg-gray-100 dark:bg-gray-800 opacity-50 grayscale'
       )}>
         {achievement.icon}
       </div>
-      <span className="text-xs font-medium text-center leading-tight max-w-[80px] line-clamp-2">
+      <span className="text-xs font-medium text-center leading-tight max-w-20 line-clamp-2">
         {achievement.title}
       </span>
       {!isUnlocked && (
@@ -394,23 +407,23 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="text-5xl mb-4">{icon}</div>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-md mb-6">{description}</p>
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-xl border border-dashed bg-muted/20">
+      <div className="text-4xl mb-4 opacity-80">{icon}</div>
+      <h3 className="text-lg font-semibold mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-6">{description}</p>
       {action && (
         typeof action === 'object' && action !== null && 'label' in action ? (
           (action as { label: string; href?: string; onClick?: () => void }).href ? (
             <a
               href={(action as { href: string }).href}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm"
             >
               {(action as { label: string }).label}
             </a>
           ) : (
             <button
               onClick={(action as { onClick?: () => void }).onClick}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm"
             >
               {(action as { label: string }).label}
             </button>
@@ -430,20 +443,20 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
 export function SaccoSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border bg-card p-6">
-            <div className="h-4 w-24 bg-muted rounded mb-3" />
-            <div className="h-8 w-32 bg-muted rounded mb-2" />
+          <div key={i} className="rounded-xl border bg-card p-5">
+            <div className="h-3 w-16 bg-muted rounded mb-3" />
+            <div className="h-6 w-28 bg-muted rounded mb-2" />
             <div className="h-3 w-20 bg-muted rounded" />
           </div>
         ))}
       </div>
       <div className="rounded-xl border bg-card p-6">
-        <div className="h-5 w-48 bg-muted rounded mb-4" />
+        <div className="h-4 w-40 bg-muted rounded mb-4" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-muted rounded-lg" />
+            <div key={i} className="h-16 bg-muted rounded-lg" />
           ))}
         </div>
       </div>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  Coins, 
-  TrendingUp, 
+import {
+  Coins,
+  TrendingUp,
   Users,
   Calendar,
   Plus,
@@ -49,12 +49,12 @@ export default function SharesPage() {
   const { data: sharesResponse, isLoading, error } = useSaccoShares();
   const { data: dividendsData } = useSaccoDividends();
   const buySharesMutation = useBuyShares();
-  
+
   const dividendRate = dividendsData && dividendsData.length > 0 ? dividendsData[0].rate : 8;
   const lastDividend = dividendsData && dividendsData.length > 0 ? dividendsData[0].amount : 0;
   const nextDividendDate = dividendsData && dividendsData.length > 0 && dividendsData[0].paid_at
     ? '' : 'December 2026';
-  
+
   const sharesData = {
     total_shares: sharesResponse?.total_shares ?? 0,
     price_per_share: sharesResponse?.share_value ?? 10000,
@@ -63,7 +63,7 @@ export default function SharesPage() {
     last_dividend: lastDividend,
     next_dividend_date: nextDividendDate,
   };
-  
+
   const transactions: ShareTransaction[] = sharesResponse?.purchases?.map((p) => ({
     id: p.id,
     type: 'buy' as const,
@@ -91,18 +91,18 @@ export default function SharesPage() {
       </div>
     );
   }
-  
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Shares</h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Own a piece of TesoTunes SACCO
           </p>
         </div>
-        <button 
+        <button
           onClick={() => setShowBuyModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
         >
@@ -110,9 +110,9 @@ export default function SharesPage() {
           Buy Shares
         </button>
       </div>
-      
+
       {/* Share Value Card */}
-      <div className="p-6 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white">
+      <div className="p-6 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-lg">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-blue-100">Your Share Value</p>
@@ -124,7 +124,7 @@ export default function SharesPage() {
             <Coins className="h-6 w-6" />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20">
           <div>
             <p className="text-blue-100 text-sm">Total Shares</p>
@@ -140,7 +140,7 @@ export default function SharesPage() {
           </div>
         </div>
       </div>
-      
+
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Dividend Information */}
         <div className="rounded-xl border bg-card p-6">
@@ -148,7 +148,7 @@ export default function SharesPage() {
             <TrendingUp className="h-5 w-5 text-emerald-600" />
             <h3 className="font-semibold">Dividends</h3>
           </div>
-          
+
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground">Last Dividend Received</p>
@@ -157,7 +157,7 @@ export default function SharesPage() {
               </p>
               <p className="text-sm text-muted-foreground">December 2025</p>
             </div>
-            
+
             <div className="flex items-center gap-3 p-4 rounded-lg border">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
@@ -167,24 +167,24 @@ export default function SharesPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30">
               <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                <strong>Projected Dividend:</strong> Based on your {sharesData.total_shares} shares 
-                at {sharesData.dividend_rate}% rate, expected dividend: 
+                <strong>Projected Dividend:</strong> Based on your {sharesData.total_shares} shares
+                at {sharesData.dividend_rate}% rate, expected dividend:
                 UGX {Math.round(sharesData.total_value * sharesData.dividend_rate / 100).toLocaleString()}
               </p>
             </div>
           </div>
         </div>
-        
+
         {/* SACCO Stats */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold">SACCO Statistics</h3>
           </div>
-          
+
           <div className="space-y-4">
             <div className="flex justify-between p-4 rounded-lg bg-muted/50">
               <div>
@@ -197,13 +197,13 @@ export default function SharesPage() {
                 </ul>
               </div>
             </div>
-            
+
             <div>
               <p className="text-sm text-muted-foreground mb-2">Estimated Annual Dividend</p>
               <p className="text-xl font-bold text-emerald-600">UGX {Math.round(sharesData.total_value * sharesData.dividend_rate / 100).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">Based on {sharesData.dividend_rate}% rate and {sharesData.total_shares} shares</p>
             </div>
-            
+
             <div className="p-4 rounded-lg border">
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -221,7 +221,7 @@ export default function SharesPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Transaction History */}
       <div className="rounded-xl border bg-card">
         <div className="p-4 border-b">
@@ -251,7 +251,7 @@ export default function SharesPage() {
                 </div>
                 <div>
                   <p className="font-medium capitalize">
-                    {tx.type === 'buy' ? `Purchased ${tx.shares} shares` : 
+                    {tx.type === 'buy' ? `Purchased ${tx.shares} shares` :
                      tx.type === 'sell' ? `Sold ${tx.shares} shares` :
                      'Dividend received'}
                   </p>
@@ -263,8 +263,8 @@ export default function SharesPage() {
               </div>
               <p className={cn(
                 'font-semibold',
-                tx.type === 'sell' ? 'text-green-600' : 
-                tx.type === 'dividend' ? 'text-purple-600' : 
+                tx.type === 'sell' ? 'text-green-600' :
+                tx.type === 'dividend' ? 'text-purple-600' :
                 'text-blue-600'
               )}>
                 {tx.type === 'sell' || tx.type === 'dividend' ? '+' : '-'}
@@ -281,7 +281,7 @@ export default function SharesPage() {
           <div className="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-semibold">Buy Shares</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowBuyModal(false);
                   setSharesToBuy(1);
@@ -291,7 +291,7 @@ export default function SharesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Current Holdings */}
               <div className="p-4 rounded-lg bg-linear-to-br from-blue-600 to-indigo-600 text-white">
@@ -373,7 +373,7 @@ export default function SharesPage() {
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
                   <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Share purchases are permanent. Shares can only be sold back to the SACCO 
+                    Share purchases are permanent. Shares can only be sold back to the SACCO
                     with board approval.
                   </p>
                 </div>

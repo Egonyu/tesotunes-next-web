@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
 import { toast } from 'sonner';
-import { 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   CreditCard,
   CheckCircle,
   AlertCircle,
@@ -66,7 +66,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <Link 
+        <Link
           href="/sacco/loans"
           className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4"
         >
@@ -92,7 +92,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Loan Summary Card */}
-      <div className="p-6 rounded-xl bg-linear-to-br from-purple-600 to-indigo-600 text-white">
+      <div className="p-6 rounded-xl bg-linear-to-br from-purple-600 to-indigo-600 text-white shadow-lg">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
           <div>
             <p className="text-purple-100 text-sm">Original Amount</p>
@@ -119,7 +119,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
             <span className="font-medium">{paidPayments} payments made</span>
           </div>
           <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-white transition-all"
               style={{ width: `${progressPercent}%` }}
             />
@@ -246,7 +246,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
           {/* Help */}
           <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>Need help?</strong> Contact SACCO support for loan restructuring 
+              <strong>Need help?</strong> Contact SACCO support for loan restructuring
               or payment extension requests.
             </p>
           </div>
@@ -259,7 +259,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
           <div className="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-semibold">Make Loan Payment</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPaymentAmount('');
@@ -269,7 +269,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Balance Info */}
               <div className="p-4 rounded-lg bg-muted/50">
@@ -390,8 +390,8 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
               {/* Submit */}
               <button
                 disabled={
-                  !paymentAmount || 
-                  parseInt(paymentAmount) < 10000 || 
+                  !paymentAmount ||
+                  parseInt(paymentAmount) < 10000 ||
                   parseInt(paymentAmount) > loan.balance ||
                   !phoneNumber ||
                   paymentMutation.isPending
@@ -419,8 +419,8 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
                 }}
                 className={cn(
                   'w-full py-3 rounded-lg font-medium transition-colors',
-                  !paymentAmount || 
-                  parseInt(paymentAmount) < 10000 || 
+                  !paymentAmount ||
+                  parseInt(paymentAmount) < 10000 ||
                   parseInt(paymentAmount) > loan.balance ||
                   !phoneNumber ||
                   paymentMutation.isPending

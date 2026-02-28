@@ -83,7 +83,7 @@ export default function SaccoPage() {
   }
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-emerald-600 via-teal-600 to-cyan-600 p-6 md:p-8 lg:p-10 text-white shadow-lg">
         <div className="absolute inset-0 bg-[url('/images/pattern.svg')] opacity-10" />

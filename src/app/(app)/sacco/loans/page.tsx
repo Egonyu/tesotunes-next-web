@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { 
-  CreditCard, 
+import {
+  CreditCard,
   Clock,
   CheckCircle,
   XCircle,
@@ -28,7 +28,7 @@ export default function LoansPage() {
 
   const loanProducts: SaccoLoanProduct[] = products || [];
   const allLoans: SaccoLoan[] = loans || [];
-  
+
   const getStatusIcon = (status: SaccoLoan['status']) => {
     switch (status) {
       case 'active':
@@ -42,7 +42,7 @@ export default function LoansPage() {
         return <AlertCircle className="h-5 w-5 text-orange-500" />;
     }
   };
-  
+
   const getStatusStyles = (status: SaccoLoan['status']) => {
     switch (status) {
       case 'active':
@@ -56,12 +56,12 @@ export default function LoansPage() {
         return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
     }
   };
-  
+
   const activeLoans = allLoans.filter(l => l.status === 'active');
   const totalBalance = activeLoans.reduce((sum, l) => sum + l.balance, 0);
-  
+
   const isLoading = loadingLoans || loadingProducts;
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -80,18 +80,18 @@ export default function LoansPage() {
       </div>
     );
   }
-  
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Loans</h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage your loans and apply for new ones
           </p>
         </div>
-        <Link 
+        <Link
           href="/sacco/loans/apply"
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
         >
@@ -99,7 +99,7 @@ export default function LoansPage() {
           Apply for Loan
         </Link>
       </div>
-      
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="p-6 rounded-xl border bg-card">
@@ -113,8 +113,8 @@ export default function LoansPage() {
         <div className="p-6 rounded-xl border bg-card">
           <p className="text-sm text-muted-foreground">Next Payment</p>
           <p className="text-3xl font-bold">
-            {activeLoans[0]?.monthly_payment 
-              ? `UGX ${activeLoans[0].monthly_payment.toLocaleString()}` 
+            {activeLoans[0]?.monthly_payment
+              ? `UGX ${activeLoans[0].monthly_payment.toLocaleString()}`
               : '—'
             }
           </p>
@@ -125,7 +125,7 @@ export default function LoansPage() {
           )}
         </div>
       </div>
-      
+
       {/* Loan Products */}
       {loanProducts.length > 0 && (
         <div className="rounded-xl border bg-card">
@@ -147,7 +147,7 @@ export default function LoansPage() {
           </div>
         </div>
       )}
-      
+
       {/* Loan History */}
       <div className="rounded-xl border bg-card">
         <div className="p-4 border-b">
@@ -182,7 +182,7 @@ export default function LoansPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   {loan.status === 'active' ? (
@@ -201,7 +201,7 @@ export default function LoansPage() {
           )}
         </div>
       </div>
-      
+
       {/* Eligibility Info */}
       {membership && (
         <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30">
@@ -210,7 +210,7 @@ export default function LoansPage() {
             <div>
               <p className="font-medium text-blue-900 dark:text-blue-100">Loan Eligibility</p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                You can borrow up to 3x your total savings. Your current savings: UGX {(membership.savings_balance ?? 0).toLocaleString()}, 
+                You can borrow up to 3x your total savings. Your current savings: UGX {(membership.savings_balance ?? 0).toLocaleString()},
                 making you eligible for loans up to UGX {((membership.savings_balance ?? 0) * 3).toLocaleString()}.
               </p>
             </div>

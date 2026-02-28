@@ -77,7 +77,7 @@ export default function TrendingFeedPage() {
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
                 <TrendingUp className="h-4 w-4" />
-                <span>{item.count.toLocaleString()}</span>
+                <span>{(item.count ?? 0).toLocaleString()}</span>
               </div>
               <span className={cn(
                 'text-xs px-2 py-0.5 rounded-full capitalize',

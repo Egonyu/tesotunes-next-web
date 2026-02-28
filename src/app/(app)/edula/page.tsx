@@ -131,9 +131,9 @@ export default function EdulaPage() {
 
       {/* Feed */}
       <div className="space-y-4">
-        {posts.map((post) => (
+        {posts.map((post, idx) => (
           <PostCard
-            key={post.id}
+            key={`${post.id}-${idx}`}
             post={post}
             onLike={handleLike}
             onBookmark={handleBookmark}

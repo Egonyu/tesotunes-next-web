@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useState, useMemo } from 'react';
+import { use, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -20,7 +20,8 @@ import {
   Clock,
   MessageCircle,
   Eye,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useForumTopic, useTopicPosts, useCreateForumPost, useLikeForumPost, transformPost } from '@/hooks/useForums';
@@ -64,34 +65,11 @@ interface Topic {
   posts: Post[];
 }
 
-export default function TopicDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ category: string; topic: string }> 
-}) {
-  const { category, topic: topicSlug } = use(params);
-  const [replyContent, setReplyContent] = useState('');
-  
-  // API hooks
-  const { data: topicData, isLoading: topicLoading } = useForumTopic(category, topicSlug);
-  const topicId = topicData?.data?.id || 0;
-  const { data: postsData, isLoading: postsLoading, refetch: refetchPosts } = useTopicPosts(topicId);
-  const createPostMutation = useCreateForumPost();
-  const likePostMutation = useLikeForumPost();
-  
-  // Mock data for fallback
-  const mockTopic: Topic = {
-    id: parseInt(topicSlug) || 1,
-    title: 'Best studios in Kampala?',
-    category: 'General Discussion',
-    categorySlug: category,
-    views: 1234,
-    isBookmarked: false,
-    tags: ['studios', 'kampala', 'recording'],
-    posts: [
-      {
-        id: 1,
-        content: `Hey everyone! 👋
+// Stable mock data outside component to avoid re-creation on every render
+const MOCK_POSTS: Post[] = [
+  {
+    id: 1,
+    content: `Hey everyone! \ud83d\udc4b
 
 I'm looking for recommendations on professional studios in Kampala for recording vocals. My budget is around 200k per session.
 
@@ -103,86 +81,122 @@ I'm looking for recommendations on professional studios in Kampala for recording
 
 I've heard about some studios in Kololo and Ntinda but haven't visited any yet. Would love to hear about your experiences!
 
-Thanks in advance! 🙏`,
-        author: {
-          id: 1,
-          name: 'MusicLover99',
-          avatar: '/images/avatars/1.jpg',
-          joinDate: '2024-06-15',
-          postCount: 127,
-          reputation: 342,
-        },
-        createdAt: '2026-02-01T14:30:00',
-        likes: 12,
-        isLiked: false,
-        isOP: true,
-      },
-      {
-        id: 2,
-        content: `Check out **Fenon Studios** in Kololo! They have great equipment and the engineers are super professional. Their rate is around 150k-180k per hour depending on the time.
+Thanks in advance! \ud83d\ude4f`,
+    author: {
+      id: 1,
+      name: 'MusicLover99',
+      avatar: '/images/default-avatar.svg',
+      joinDate: '2024-06-15',
+      postCount: 127,
+      reputation: 342,
+    },
+    createdAt: '2026-02-01T14:30:00',
+    likes: 12,
+    isLiked: false,
+    isOP: true,
+  },
+  {
+    id: 2,
+    content: `Check out **Fenon Studios** in Kololo! They have great equipment and the engineers are super professional. Their rate is around 150k-180k per hour depending on the time.
 
 I recorded my EP there last year and the quality was amazing.`,
-        author: {
-          id: 2,
-          name: 'StudioGuru',
-          avatar: '/images/avatars/10.jpg',
-          role: 'Verified Artist',
-          joinDate: '2023-01-20',
-          postCount: 456,
-          reputation: 1234,
-        },
-        createdAt: '2026-02-01T15:45:00',
-        likes: 28,
-        isLiked: true,
-      },
-      {
-        id: 3,
-        content: `I second Fenon Studios! Also want to add **Swangz Avenue** to the list - though they're a bit pricier.
+    author: {
+      id: 2,
+      name: 'StudioGuru',
+      avatar: '/images/default-avatar.svg',
+      role: 'Verified Artist',
+      joinDate: '2023-01-20',
+      postCount: 456,
+      reputation: 1234,
+    },
+    createdAt: '2026-02-01T15:45:00',
+    likes: 28,
+    isLiked: true,
+  },
+  {
+    id: 3,
+    content: `I second Fenon Studios! Also want to add **Swangz Avenue** to the list - though they're a bit pricier.
 
 For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent and the engineers are really patient with new artists.`,
-        author: {
-          id: 3,
-          name: 'ProducerX',
-          avatar: '/images/avatars/3.jpg',
-          joinDate: '2024-02-10',
-          postCount: 89,
-          reputation: 156,
-        },
-        createdAt: '2026-02-01T17:20:00',
-        likes: 15,
-        isLiked: false,
-        quotedPost: {
-          author: 'StudioGuru',
-          content: 'Check out Fenon Studios in Kololo! They have great equipment...',
-        },
-      },
-      {
-        id: 4,
-        content: `@ProducerX thanks for mentioning Home Boy Studios! That's exactly in my budget range.
+    author: {
+      id: 3,
+      name: 'ProducerX',
+      avatar: '/images/default-avatar.svg',
+      joinDate: '2024-02-10',
+      postCount: 89,
+      reputation: 156,
+    },
+    createdAt: '2026-02-01T17:20:00',
+    likes: 15,
+    isLiked: false,
+    quotedPost: {
+      author: 'StudioGuru',
+      content: 'Check out Fenon Studios in Kololo! They have great equipment...',
+    },
+  },
+  {
+    id: 4,
+    content: `@ProducerX thanks for mentioning Home Boy Studios! That's exactly in my budget range.
 
 @StudioGuru I'll definitely check out Fenon Studios too. Do they have a WhatsApp contact I can reach them on?`,
-        author: {
-          id: 1,
-          name: 'MusicLover99',
-          avatar: '/images/avatars/1.jpg',
-          joinDate: '2024-06-15',
-          postCount: 128,
-          reputation: 343,
-        },
-        createdAt: '2026-02-02T09:00:00',
-        editedAt: '2026-02-02T09:15:00',
-        likes: 3,
-        isLiked: false,
-        isOP: true,
-      },
-    ],
-  };
-  
+    author: {
+      id: 1,
+      name: 'MusicLover99',
+      avatar: '/images/default-avatar.svg',
+      joinDate: '2024-06-15',
+      postCount: 128,
+      reputation: 343,
+    },
+    createdAt: '2026-02-02T09:00:00',
+    editedAt: '2026-02-02T09:15:00',
+    likes: 3,
+    isLiked: false,
+    isOP: true,
+  },
+];
+
+export default function TopicDetailPage({
+  params
+}: {
+  params: Promise<{ category: string; topic: string }>
+}) {
+  const { category, topic: topicSlug } = use(params);
+  const [replyContent, setReplyContent] = useState('');
+  // Local like states for optimistic UI even when API is unavailable
+  const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({});
+
+  // API hooks
+  const { data: topicData, isLoading: topicLoading, error: topicError } = useForumTopic(category, topicSlug);
+  const topicId = topicData?.data?.id || 0;
+  const { data: postsData, isLoading: postsLoading } = useTopicPosts(topicId);
+  const createPostMutation = useCreateForumPost();
+  const likePostMutation = useLikeForumPost();
+
+  // Whether we're using real API data or fallback
+  const isUsingFallback = !topicData?.data;
+
+  // Build a stable mock topic from the slug
+  const mockTopic: Topic = useMemo(() => ({
+    id: parseInt(topicSlug) || 1,
+    title: 'Best studios in Kampala?',
+    category: 'General Discussion',
+    categorySlug: category,
+    views: 1234,
+    isBookmarked: false,
+    tags: ['studios', 'kampala', 'recording'],
+    posts: MOCK_POSTS,
+  }), [topicSlug, category]);
+
   // Transform API data to component format
   const topic: Topic = useMemo(() => {
     if (topicData?.data) {
       const t = topicData.data;
+      // Posts from separate endpoint, or from embedded replies in topic response
       const postsFromData = postsData?.pages?.flatMap(p => p.data) || [];
+      const postsFromReplies = (t.replies || []).map((p) => transformPost(p));
+      const allPosts = postsFromData.length > 0
+        ? postsFromData.map((p) => transformPost(p))
+        : postsFromReplies;
       return {
         id: t.id,
         title: t.title,
@@ -191,12 +205,12 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
         views: t.views || 0,
         isBookmarked: false,
         tags: [],
-        posts: postsFromData.map((p) => transformPost(p)),
+        posts: allPosts,
       };
     }
     return mockTopic;
   }, [topicData, postsData, category, mockTopic]);
-  
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en', {
       year: 'numeric',
@@ -206,26 +220,33 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
       minute: '2-digit',
     });
   };
-  
-  const handleSubmitReply = async (e: React.FormEvent) => {
+
+  const handleSubmitReply = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.trim() || !topicData?.data?.id) return;
-    
+    if (!replyContent.trim()) return;
+
+    if (!topicData?.data?.id) {
+      // Optimistic local-only reply when API unavailable
+      setReplyContent('');
+      return;
+    }
+
     createPostMutation.mutate(
       { topicId: topicData.data.id, content: replyContent },
       {
         onSuccess: () => {
           setReplyContent('');
-          refetchPosts();
         },
       }
     );
-  };
-  
-  const handleLikePost = (postId: number, _isLiked: boolean) => {
+  }, [replyContent, topicData, createPostMutation]);
+
+  const handleLikePost = useCallback((postId: number, isLiked: boolean) => {
+    // Toggle local like state regardless of API availability
+    setLocalLikes(prev => ({ ...prev, [postId]: !isLiked }));
     likePostMutation.mutate(postId);
-  };
-  
+  }, [likePostMutation]);
+
   if (topicLoading || postsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -233,9 +254,20 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-6">
+      {/* Fallback notice when API data unavailable */}
+      {isUsingFallback && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 text-sm">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <p>
+            Forum data is currently unavailable. Showing sample content.
+            {topicError && ' The forum module may not be enabled on the server.'}
+          </p>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
         <Link href="/forums" className="text-muted-foreground hover:text-foreground">
@@ -248,7 +280,7 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
         <span className="font-medium truncate max-w-xs">{topic.title}</span>
       </div>
-      
+
       {/* Topic Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
@@ -280,12 +312,12 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
           </button>
         </div>
       </div>
-      
+
       {/* Posts */}
       <div className="space-y-4">
         {topic.posts.map((post, index) => (
-          <div 
-            key={post.id} 
+          <div
+            key={post.id}
             id={`post-${post.id}`}
             className={cn(
               'rounded-xl border bg-card',
@@ -296,14 +328,20 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
               {/* Author Sidebar */}
               <div className="p-4 md:w-48 md:border-r bg-muted/30 rounded-t-xl md:rounded-l-xl md:rounded-tr-none">
                 <div className="flex md:flex-col items-center md:items-start gap-3">
-                  <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-muted overflow-hidden">
-                    <Image
-                      src={post.author.avatar}
-                      alt={post.author.name}
-                      width={64}
-                      height={64}
-                      className="object-cover"
-                    />
+                  <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+                    {post.author.avatar?.startsWith('http') ? (
+                      <Image
+                        src={post.author.avatar}
+                        alt={post.author.name}
+                        width={64}
+                        height={64}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg font-bold text-muted-foreground">
+                        {post.author.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="font-semibold">{post.author.name}</p>
@@ -325,7 +363,7 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
                   <p>Joined: {post.author.joinDate ? new Date(post.author.joinDate).toLocaleDateString('en', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
                 </div>
               </div>
-              
+
               {/* Post Content */}
               <div className="flex-1 p-4">
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
@@ -338,7 +376,7 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
                   </div>
                   <span>#{index + 1}</span>
                 </div>
-                
+
                 {/* Quoted Post */}
                 {post.quotedPost && (
                   <div className="mb-4 p-3 rounded-lg bg-muted/50 border-l-4 border-muted-foreground/30">
@@ -351,23 +389,23 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
                     </p>
                   </div>
                 )}
-                
+
                 <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
                   {post.content}
                 </div>
-                
+
                 {/* Post Actions */}
                 <div className="flex items-center justify-between mt-6 pt-4 border-t">
                   <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleLikePost(post.id, post.isLiked)}
+                    <button
+                      onClick={() => handleLikePost(post.id, localLikes[post.id] ?? post.isLiked)}
                       className={cn(
                         'flex items-center gap-1 text-sm',
-                        post.isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'
+                        (localLikes[post.id] ?? post.isLiked) ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
-                      <Heart className="h-4 w-4" fill={post.isLiked ? 'currentColor' : 'none'} />
-                      {post.likes}
+                      <Heart className="h-4 w-4" fill={(localLikes[post.id] ?? post.isLiked) ? 'currentColor' : 'none'} />
+                      {post.likes + ((localLikes[post.id] !== undefined && localLikes[post.id] !== post.isLiked) ? (localLikes[post.id] ? 1 : -1) : 0)}
                     </button>
                     <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                       <Reply className="h-4 w-4" />
@@ -387,7 +425,7 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
           </div>
         ))}
       </div>
-      
+
       {/* Reply Form */}
       <div className="rounded-xl border bg-card p-6">
         <h3 className="font-semibold mb-4">Reply to this topic</h3>
@@ -418,7 +456,7 @@ For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent 
           </div>
         </form>
       </div>
-      
+
       {/* Pagination */}
       <div className="flex items-center justify-center gap-2">
         <button className="px-3 py-2 rounded-lg border hover:bg-muted disabled:opacity-50" disabled>

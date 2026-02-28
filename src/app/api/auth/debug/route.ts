@@ -12,10 +12,17 @@ import { API_URL } from "@/lib/api-config";
  * TODO: Remove or restrict this endpoint once the login issue is resolved.
  */
 export async function GET(req: NextRequest) {
+  const rawNextAuthUrl = process.env.NEXTAUTH_URL ?? "(not set)";
+  const hasProtocol = rawNextAuthUrl.startsWith("http://") || rawNextAuthUrl.startsWith("https://");
+
   const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    nextauth_url: process.env.NEXTAUTH_URL ?? "(not set)",
+    nextauth_url: rawNextAuthUrl,
+    nextauth_url_has_protocol: hasProtocol,
+    nextauth_url_warning: !hasProtocol && rawNextAuthUrl !== "(not set)"
+      ? "CRITICAL: NEXTAUTH_URL is missing https:// prefix — cookies will not be set!"
+      : null,
     nextauth_secret_set: !!process.env.NEXTAUTH_SECRET,
     nextauth_secret_length: process.env.NEXTAUTH_SECRET?.length ?? 0,
     api_url: API_URL,
@@ -51,13 +58,22 @@ export async function GET(req: NextRequest) {
     diagnostics.session_error = error instanceof Error ? error.message : String(error);
   }
 
-  // Check request cookies
-  const cookieNames = req.cookies.getAll().map((c) => c.name);
-  diagnostics.cookies_present = cookieNames;
+  // Check request cookies — only show well-known cookie names,
+  // filter out values that might have leaked as cookie names (e.g. CSRF tokens)
+  const KNOWN_COOKIE_PATTERNS = [
+    "next-auth", "__Secure-", "__Host-", "_vercel",
+    "XSRF-TOKEN", "session", "csrf",
+  ];
+  const allCookieNames = req.cookies.getAll().map((c) => c.name);
+  const safeCookieNames = allCookieNames.filter((name) =>
+    KNOWN_COOKIE_PATTERNS.some((p) => name.toLowerCase().includes(p.toLowerCase()))
+  );
+  diagnostics.cookies_present = safeCookieNames;
+  diagnostics.cookies_total_count = allCookieNames.length;
   diagnostics.has_session_cookie =
-    cookieNames.some((n) => n.includes("session-token")) || false;
+    allCookieNames.some((n) => n.includes("session-token")) || false;
   diagnostics.has_csrf_cookie =
-    cookieNames.some((n) => n.includes("csrf-token")) || false;
+    allCookieNames.some((n) => n.includes("csrf-token")) || false;
 
   return NextResponse.json(diagnostics, {
     headers: {

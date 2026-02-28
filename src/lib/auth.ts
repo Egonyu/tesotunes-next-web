@@ -7,7 +7,41 @@ const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
 
 // Detect production/HTTPS environment
 const isProduction = process.env.NODE_ENV === "production";
-const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+
+/**
+ * Normalise NEXTAUTH_URL — Vercel sometimes strips the protocol.
+ * If the raw env var is missing `https://`, we prepend it in production.
+ * This ensures cookie flags (Secure, __Secure- prefix) are set correctly.
+ */
+function resolveNextAuthUrl(): string {
+  const raw = process.env.NEXTAUTH_URL ?? "";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  // In production, always default to HTTPS
+  if (isProduction && raw) return `https://${raw}`;
+  return raw;
+}
+
+const resolvedNextAuthUrl = resolveNextAuthUrl();
+const useSecureCookies = resolvedNextAuthUrl.startsWith("https://");
+
+// CRITICAL: If NEXTAUTH_URL was missing the protocol, fix it at the process.env
+// level so NextAuth's internal URL resolution also uses the corrected value.
+// Without this, NextAuth will generate wrong callback URLs and fail to set cookies.
+if (resolvedNextAuthUrl && resolvedNextAuthUrl !== process.env.NEXTAUTH_URL) {
+  console.warn(
+    `[Auth] Auto-correcting NEXTAUTH_URL from "${process.env.NEXTAUTH_URL}" to "${resolvedNextAuthUrl}"`
+  );
+  process.env.NEXTAUTH_URL = resolvedNextAuthUrl;
+}
+
+// Warn loudly at startup if NEXTAUTH_URL is misconfigured
+if (isProduction && !useSecureCookies) {
+  console.error(
+    "[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// — " +
+    "session cookies will NOT be set. " +
+    `Raw value: "${process.env.NEXTAUTH_URL}", resolved: "${resolvedNextAuthUrl}"`
+  );
+}
 
 /**
  * Safely parse JSON from a fetch response.

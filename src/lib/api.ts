@@ -1,13 +1,12 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { API_URL, isServer, isLocalDev } from "./api-config";
 
 // In development, hit the Laravel API directly.
 // In production (browser), use the Next.js rewrite proxy at /api/* to avoid
 // CORS and leverage same-origin requests.  Server-side code (RSC / serverFetch)
 // still needs the absolute URL.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
-const isServer = typeof window === "undefined";
 const CLIENT_BASE_URL = isServer ? API_URL : (
-  API_URL.includes("localhost") || API_URL.includes(".test")
+  isLocalDev
     ? API_URL          // Local dev — hit Laravel directly
     : "/api"           // Production — route through Next.js rewrite proxy
 );

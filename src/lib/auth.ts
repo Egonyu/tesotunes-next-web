@@ -1,8 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-
-// Ensure the fallback has the /api prefix matching Laravel's RouteServiceProvider
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
+import { API_URL } from "./api-config";
 
 // Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
 const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;

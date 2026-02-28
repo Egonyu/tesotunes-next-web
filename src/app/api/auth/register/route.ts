@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com";
+import { API_URL } from "@/lib/api-config";
 
 /**
  * Safely parse JSON from a fetch response.

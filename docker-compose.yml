@@ -12,8 +12,8 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
-      - API_URL=https://api.tesotunes.com
-      - NEXT_PUBLIC_API_URL=https://api.tesotunes.com
+      - API_URL=https://api.tesotunes.com/api
+      - NEXT_PUBLIC_API_URL=https://api.tesotunes.com/api
       - NEXTAUTH_URL=https://tesotunes.com
       - NEXTAUTH_SECRET=your-generated-secret-key-here-change-this-in-production
     restart: unless-stopped

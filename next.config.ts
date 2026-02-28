@@ -44,9 +44,13 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const rawApiUrl =
       process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
-    // Ensure the destination always ends with /api so Laravel receives the
-    // correct prefix regardless of whether the env var includes it or not.
-    const apiBase = rawApiUrl.replace(/\/api\/?$/, "");  // strip trailing /api
+    // Normalise: ensure the raw value ends with /api, then strip it to get the
+    // origin.  This handles both "https://api.tesotunes.com" and
+    // "https://api.tesotunes.com/api" gracefully.
+    const normalised = rawApiUrl.replace(/\/+$/, "").endsWith("/api")
+      ? rawApiUrl.replace(/\/+$/, "")
+      : `${rawApiUrl.replace(/\/+$/, "")}/api`;
+    const apiBase = normalised.replace(/\/api$/, "");  // origin only
     return {
       beforeFiles: [
         // Pin /api/auth/* to the filesystem so the NextAuth route always wins,

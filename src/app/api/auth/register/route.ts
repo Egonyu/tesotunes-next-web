@@ -43,11 +43,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[Register] Calling backend:", {
-      url: `${API_URL}/register`,
-      data: { name: data.name, email: data.email },
-    });
-
     const response = await fetch(`${API_URL}/register`, {
       method: "POST",
       headers: {

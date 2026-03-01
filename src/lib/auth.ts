@@ -91,7 +91,6 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
     const role = user.role as string;
 
     if (role) {
-      console.log("[Auth] Refreshed user role:", role);
       return { role };
     }
     return null;
@@ -201,9 +200,6 @@ export const authConfig: NextAuthOptions = {
         }
 
         try {
-          console.log("[Auth] Attempting login for:", credentials.email);
-          console.log("[Auth] API_URL:", API_URL);
-
           const response = await fetch(`${API_URL}/auth/login`, {
             method: "POST",
             headers: {
@@ -216,16 +212,12 @@ export const authConfig: NextAuthOptions = {
             }),
           });
 
-          console.log("[Auth] Response status:", response.status);
-
           const data = await safeJsonParse(response);
 
           if (!data) {
             console.error("[Auth] Empty or non-JSON response from API");
             return null;
           }
-
-          console.log("[Auth] Response data:", JSON.stringify(data).substring(0, 500));
 
           if (!response.ok) {
             const message = (data.message as string) || "Unknown error";
@@ -251,7 +243,6 @@ export const authConfig: NextAuthOptions = {
             (data.access_token as string);
 
           if (user && token) {
-            console.log("[Auth] Login successful for user:", user.email);
             return {
               id: String(user.id),
               email: user.email as string,

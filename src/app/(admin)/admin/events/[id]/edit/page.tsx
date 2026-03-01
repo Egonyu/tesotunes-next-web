@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPostForm } from '@/lib/api';
 import { toast } from 'sonner';
+import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Calendar, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -82,6 +83,42 @@ interface Artist {
   name: string;
 }
 
+interface EventApiData {
+  title?: string;
+  slug?: string;
+  description?: string;
+  short_description?: string;
+  event_type?: string;
+  venue_name?: string;
+  venue_address?: string;
+  city?: string;
+  country?: string;
+  latitude?: number | string;
+  longitude?: number | string;
+  starts_at?: string;
+  start_date?: string;
+  start_time?: string;
+  ends_at?: string;
+  end_date?: string;
+  end_time?: string;
+  timezone?: string;
+  is_virtual?: boolean;
+  is_online?: boolean;
+  virtual_link?: string;
+  online_url?: string;
+  is_free?: boolean;
+  currency?: string;
+  min_age?: number | string;
+  attendee_limit?: number | string;
+  max_capacity?: number | string;
+  is_featured?: boolean;
+  status?: string;
+  artists?: Array<{ id: string }>;
+  artwork?: string;
+  cover_url?: string;
+  ticket_tiers?: TicketTier[];
+}
+
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -92,7 +129,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const { data: eventData, isLoading } = useQuery({
     queryKey: ['admin', 'event', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/events/${id}`),
+    queryFn: () => apiGet<{ data: EventApiData }>(`/admin/events/${id}`),
   });
 
   const { data: artistsData } = useQuery({
@@ -128,12 +165,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         max_capacity: (e.attendee_limit || e.max_capacity)?.toString() || '',
         is_featured: e.is_featured || false,
         status: e.status || 'draft',
-        artist_ids: e.artists?.map((a: any) => a.id) || [],
+        artist_ids: e.artists?.map((a: { id: string }) => a.id) || [],
         cover_image: null,
         ticket_tiers: e.ticket_tiers || [],
       });
       if (e.artwork || e.cover_url) {
-        setCoverPreview(e.artwork || e.cover_url);
+        setCoverPreview(e.artwork || e.cover_url || null);
       }
     }
   }, [eventData]);
@@ -148,24 +185,22 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       queryClient.invalidateQueries({ queryKey: ['admin', 'event', id] });
       router.push(`/admin/events/${id}`);
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Failed to update event';
+    onError: (error: unknown) => {
+      const msg = getErrorMessage(error, 'Failed to update event');
       toast.error(msg);
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
+      setErrors(getValidationErrors(error));
     },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -220,13 +255,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     data.append('_method', 'PUT');
-    
+
     Object.entries(formData).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
-      
+
       if (key === 'artist_ids') {
         (value as string[]).forEach((artistId, index) => {
           data.append(`artist_ids[${index}]`, artistId);
@@ -241,7 +276,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         data.append(key, String(value));
       }
     });
-    
+
     updateMutation.mutate(data);
   };
 
@@ -288,7 +323,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Event Type</label>
@@ -370,7 +405,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="End Date"
@@ -389,7 +424,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               error={errors.end_time}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Timezone</label>
@@ -451,7 +486,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   error={errors.venue_address}
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   label="City"

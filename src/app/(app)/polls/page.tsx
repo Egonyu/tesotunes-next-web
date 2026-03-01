@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  BarChart3, 
+import {
+  BarChart3,
   Clock,
   Users,
   TrendingUp,
@@ -21,103 +21,44 @@ const categories = ['All', 'Music', 'Artists', 'Industry', 'Community', 'Fun'];
 export default function PollsPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showActive, setShowActive] = useState(true);
-  
+
   // API hooks
   const status = showActive ? 'active' : 'ended';
   const { data: pollsData, isLoading } = usePolls(selectedCategory, status);
   const voteMutation = useVotePoll();
-  
-  // Mock data for fallback
-  const mockPolls: Poll[] = [
-    {
-      id: 1,
-      question: 'Best Ugandan song of 2025?',
-      description: 'Vote for your favorite Ugandan song released in 2025',
-      options: [
-        { id: 1, text: 'Sitya Loss - Eddy Kenzo', votes: 2456, percentage: 35 },
-        { id: 2, text: 'Gyenvude - Sheebah', votes: 1890, percentage: 27 },
-        { id: 3, text: 'Tokigeza - Fik Fameica', votes: 1567, percentage: 22 },
-        { id: 4, text: 'Mulembe - Gravity Omutujju', votes: 1123, percentage: 16 },
-      ],
-      totalVotes: 7036,
-      category: 'Music',
-      creator: { name: 'TesoTunes', avatar: '/images/logo.png', isVerified: true },
-      createdAt: '2026-01-15',
-      endsAt: '2026-02-15',
-      hasVoted: false,
-      status: 'active',
-    },
-    {
-      id: 2,
-      question: 'Which artist should headline the next TesoTunes Festival?',
-      options: [
-        { id: 1, text: 'Eddy Kenzo', votes: 3234, percentage: 42 },
-        { id: 2, text: 'Sheebah Karungi', votes: 2100, percentage: 27 },
-        { id: 3, text: 'Jose Chameleone', votes: 1500, percentage: 20 },
-        { id: 4, text: 'Bebe Cool', votes: 856, percentage: 11 },
-      ],
-      totalVotes: 7690,
-      category: 'Artists',
-      creator: { name: 'EventsUG', avatar: '/images/avatars/2.jpg', isVerified: true },
-      createdAt: '2026-01-20',
-      endsAt: '2026-02-20',
-      hasVoted: true,
-      votedOptionId: 1,
-      status: 'active',
-    },
-    {
-      id: 3,
-      question: 'What genre do you want more of on TesoTunes?',
-      options: [
-        { id: 1, text: 'Afrobeats', votes: 4500, percentage: 38 },
-        { id: 2, text: 'Dancehall', votes: 3200, percentage: 27 },
-        { id: 3, text: 'Hip Hop', votes: 2100, percentage: 18 },
-        { id: 4, text: 'RnB', votes: 1200, percentage: 10 },
-        { id: 5, text: 'Gospel', votes: 800, percentage: 7 },
-      ],
-      totalVotes: 11800,
-      category: 'Music',
-      creator: { name: 'TesoTunes', avatar: '/images/logo.png', isVerified: true },
-      createdAt: '2025-12-01',
-      endsAt: '2026-01-01',
-      hasVoted: true,
-      votedOptionId: 2,
-      status: 'ended',
-    },
-  ];
-  
+
   // Transform API data to component format
   const polls: Poll[] = useMemo(() => {
     if (pollsData && Array.isArray(pollsData)) {
       return pollsData.map((p: Record<string, unknown>) => transformPoll(p));
     }
-    return mockPolls;
+    return [];
   }, [pollsData]);
-  
+
   const filteredPolls = polls.filter(poll => {
     const matchesCategory = selectedCategory === 'All' || poll.category === selectedCategory;
     const matchesStatus = showActive ? poll.status === 'active' : poll.status === 'ended';
     return matchesCategory && matchesStatus;
   });
-  
+
   const handleVote = (pollId: number, optionId: number) => {
     voteMutation.mutate({ pollId: pollId.toString(), optionId });
   };
-  
+
   const getRemainingTime = (endsAt: string) => {
     const end = new Date(endsAt);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
-    
+
     if (diff <= 0) return 'Ended';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (days > 0) return `${days}d ${hours}h left`;
     return `${hours}h left`;
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -125,7 +66,7 @@ export default function PollsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-8">
       {/* Header */}
@@ -144,7 +85,7 @@ export default function PollsPage() {
           Create Poll
         </Link>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex gap-2">
@@ -188,14 +129,14 @@ export default function PollsPage() {
           ))}
         </div>
       </div>
-      
+
       {/* Polls List */}
       <div className="grid gap-6 md:grid-cols-2">
         {filteredPolls.map((poll) => (
           <PollCard key={poll.id} poll={poll} getRemainingTime={getRemainingTime} />
         ))}
       </div>
-      
+
       {filteredPolls.length === 0 && (
         <div className="text-center py-12">
           <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -206,10 +147,10 @@ export default function PollsPage() {
   );
 }
 
-function PollCard({ 
-  poll, 
-  getRemainingTime 
-}: { 
+function PollCard({
+  poll,
+  getRemainingTime
+}: {
   poll: Poll;
   getRemainingTime: (date: string) => string;
 }) {
@@ -244,19 +185,19 @@ function PollCard({
           {poll.status === 'active' ? getRemainingTime(poll.endsAt) : 'Ended'}
         </span>
       </div>
-      
+
       {/* Question */}
       <h3 className="text-lg font-semibold mb-2">{poll.question}</h3>
       {poll.description && (
         <p className="text-sm text-muted-foreground mb-4">{poll.description}</p>
       )}
-      
+
       {/* Options Preview */}
       <div className="space-y-2">
         {poll.options.slice(0, 3).map((option) => (
           <div key={option.id} className="relative">
             <div className="h-10 rounded-lg bg-muted overflow-hidden">
-              <div 
+              <div
                 className={cn(
                   'h-full transition-all',
                   poll.votedOptionId === option.id
@@ -278,7 +219,7 @@ function PollCard({
           </p>
         )}
       </div>
-      
+
       {/* Footer */}
       <div className="flex items-center gap-4 mt-4 pt-4 border-t text-sm text-muted-foreground">
         <span className="flex items-center gap-1">

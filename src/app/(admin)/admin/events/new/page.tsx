@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPostForm } from '@/lib/api';
 import { toast } from 'sonner';
+import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Calendar, Plus, Trash2, Search, Loader2, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
@@ -112,12 +113,10 @@ export default function CreateEventPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       router.push('/admin/events');
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Failed to create event';
+    onError: (error: unknown) => {
+      const msg = getErrorMessage(error, 'Failed to create event');
       toast.error(msg);
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
+      setErrors(getValidationErrors(error));
     },
   });
 

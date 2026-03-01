@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Minus, Calendar, MapPin, DollarSign, Ticket, Loader2, 
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api';
 import { useUpdateEvent, Event, UpdateEventRequest } from '@/hooks/useEvents';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface TicketTierForm {
@@ -154,8 +154,8 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
       } as UpdateEventRequest);
       toast.success('Event updated successfully!');
       router.push(`/artist/events/${id}`);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update event');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to update event'));
     }
   };
 

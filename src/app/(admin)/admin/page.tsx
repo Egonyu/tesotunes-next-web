@@ -89,13 +89,13 @@ export default function AdminDashboardPage() {
       } catch {
         // Fallback: build partial stats from available endpoints
         const [usersRes, songsRes, artistsRes, albumsRes, artistStatsRes] = await Promise.allSettled([
-          apiGet<{ data: any[]; meta?: any }>('/admin/users?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/admin/songs?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/admin/artists?per_page=1'),
-          apiGet<{ data: any[]; meta?: any }>('/admin/albums?per_page=1'),
+          apiGet<{ data: unknown[]; meta?: { total: number } }>('/admin/users?per_page=1'),
+          apiGet<{ data: unknown[]; meta?: { total: number } }>('/admin/songs?per_page=1'),
+          apiGet<{ data: unknown[]; meta?: { total: number } }>('/admin/artists?per_page=1'),
+          apiGet<{ data: unknown[]; meta?: { total: number } }>('/admin/albums?per_page=1'),
           apiGet<{ data: { total: number; verified: number; pending_verification: number } }>('/admin/artists/statistics'),
         ]);
-        const total = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.meta?.total ?? r.value?.data?.length ?? 0) : 0;
+        const total = (r: PromiseSettledResult<{ data?: unknown[]; meta?: { total: number } }>) => r.status === 'fulfilled' ? (r.value?.meta?.total ?? r.value?.data?.length ?? 0) : 0;
         const artistStats = artistStatsRes.status === 'fulfilled' ? artistStatsRes.value?.data : null;
         return {
           data: {
@@ -122,13 +122,13 @@ export default function AdminDashboardPage() {
       } catch {
         // Fallback: get recent users/songs from list endpoints
         const [usersRes, songsRes] = await Promise.allSettled([
-          apiGet<{ data: any[] }>('/admin/users?per_page=5&sort=-created_at'),
-          apiGet<{ data: any[] }>('/admin/songs?per_page=5&sort=-created_at'),
+          apiGet<{ data: Array<{ id: number; full_name?: string; display_name?: string; username?: string; email: string; created_at: string }> }>('/admin/users?per_page=5&sort=-created_at'),
+          apiGet<{ data: Array<{ id: number; title: string; artist?: { name: string }; created_at: string }> }>('/admin/songs?per_page=5&sort=-created_at'),
         ]);
         return {
           data: {
-            users: usersRes.status === 'fulfilled' ? (usersRes.value?.data ?? []).map((u: any) => ({ id: u.id, name: u.full_name || u.display_name || u.username, email: u.email, created_at: u.created_at })) : [],
-            songs: songsRes.status === 'fulfilled' ? (songsRes.value?.data ?? []).map((s: any) => ({ id: s.id, title: s.title, artist: s.artist, created_at: s.created_at })) : [],
+            users: usersRes.status === 'fulfilled' ? (usersRes.value?.data ?? []).map((u) => ({ id: u.id, name: u.full_name || u.display_name || u.username, email: u.email, created_at: u.created_at })) : [],
+            songs: songsRes.status === 'fulfilled' ? (songsRes.value?.data ?? []).map((s) => ({ id: s.id, title: s.title, artist: s.artist, created_at: s.created_at })) : [],
             albums: [],
           } as RecentActivity,
         };

@@ -62,10 +62,10 @@ export default function AdminStoreDiscountsPage() {
           <h1 className="text-2xl font-bold">Discount Codes</h1>
           <p className="text-muted-foreground">Create and manage promotional discount codes</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90">
+        <Link href="/admin/store/discounts/create" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90">
           <Plus className="h-4 w-4" />
           Create Discount
-        </button>
+        </Link>
       </div>
 
       <div className="rounded-xl border overflow-hidden">

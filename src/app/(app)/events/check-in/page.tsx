@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { CheckCircle, XCircle, ScanLine, Loader2, Info, QrCode } from 'lucide-react';
 import { useCheckInTicket, useValidateTicket } from '@/hooks/useEvents';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function QRScannerPage() {
@@ -65,8 +65,8 @@ export default function QRScannerPage() {
       toast.success(result.message || 'Ticket checked in successfully!');
       setScanResult(null);
       setManualCode('');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to check in ticket');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to check in ticket'));
     }
   };
 

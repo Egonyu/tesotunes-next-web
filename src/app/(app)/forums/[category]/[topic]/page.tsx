@@ -65,96 +65,6 @@ interface Topic {
   posts: Post[];
 }
 
-// Stable mock data outside component to avoid re-creation on every render
-const MOCK_POSTS: Post[] = [
-  {
-    id: 1,
-    content: `Hey everyone! \ud83d\udc4b
-
-I'm looking for recommendations on professional studios in Kampala for recording vocals. My budget is around 200k per session.
-
-**What I'm looking for:**
-- Good quality microphones (preferably Neumann or similar)
-- Experienced sound engineer
-- Comfortable booth
-- Flexible scheduling
-
-I've heard about some studios in Kololo and Ntinda but haven't visited any yet. Would love to hear about your experiences!
-
-Thanks in advance! \ud83d\ude4f`,
-    author: {
-      id: 1,
-      name: 'MusicLover99',
-      avatar: '/images/default-avatar.svg',
-      joinDate: '2024-06-15',
-      postCount: 127,
-      reputation: 342,
-    },
-    createdAt: '2026-02-01T14:30:00',
-    likes: 12,
-    isLiked: false,
-    isOP: true,
-  },
-  {
-    id: 2,
-    content: `Check out **Fenon Studios** in Kololo! They have great equipment and the engineers are super professional. Their rate is around 150k-180k per hour depending on the time.
-
-I recorded my EP there last year and the quality was amazing.`,
-    author: {
-      id: 2,
-      name: 'StudioGuru',
-      avatar: '/images/default-avatar.svg',
-      role: 'Verified Artist',
-      joinDate: '2023-01-20',
-      postCount: 456,
-      reputation: 1234,
-    },
-    createdAt: '2026-02-01T15:45:00',
-    likes: 28,
-    isLiked: true,
-  },
-  {
-    id: 3,
-    content: `I second Fenon Studios! Also want to add **Swangz Avenue** to the list - though they're a bit pricier.
-
-For budget options, check out **Home Boy Studios** in Ntinda. Quality is decent and the engineers are really patient with new artists.`,
-    author: {
-      id: 3,
-      name: 'ProducerX',
-      avatar: '/images/default-avatar.svg',
-      joinDate: '2024-02-10',
-      postCount: 89,
-      reputation: 156,
-    },
-    createdAt: '2026-02-01T17:20:00',
-    likes: 15,
-    isLiked: false,
-    quotedPost: {
-      author: 'StudioGuru',
-      content: 'Check out Fenon Studios in Kololo! They have great equipment...',
-    },
-  },
-  {
-    id: 4,
-    content: `@ProducerX thanks for mentioning Home Boy Studios! That's exactly in my budget range.
-
-@StudioGuru I'll definitely check out Fenon Studios too. Do they have a WhatsApp contact I can reach them on?`,
-    author: {
-      id: 1,
-      name: 'MusicLover99',
-      avatar: '/images/default-avatar.svg',
-      joinDate: '2024-06-15',
-      postCount: 128,
-      reputation: 343,
-    },
-    createdAt: '2026-02-02T09:00:00',
-    editedAt: '2026-02-02T09:15:00',
-    likes: 3,
-    isLiked: false,
-    isOP: true,
-  },
-];
-
 export default function TopicDetailPage({
   params
 }: {
@@ -172,23 +82,8 @@ export default function TopicDetailPage({
   const createPostMutation = useCreateForumPost();
   const likePostMutation = useLikeForumPost();
 
-  // Whether we're using real API data or fallback
-  const isUsingFallback = !topicData?.data;
-
-  // Build a stable mock topic from the slug
-  const mockTopic: Topic = useMemo(() => ({
-    id: parseInt(topicSlug) || 1,
-    title: 'Best studios in Kampala?',
-    category: 'General Discussion',
-    categorySlug: category,
-    views: 1234,
-    isBookmarked: false,
-    tags: ['studios', 'kampala', 'recording'],
-    posts: MOCK_POSTS,
-  }), [topicSlug, category]);
-
   // Transform API data to component format
-  const topic: Topic = useMemo(() => {
+  const topic: Topic | null = useMemo(() => {
     if (topicData?.data) {
       const t = topicData.data;
       // Posts from separate endpoint, or from embedded replies in topic response
@@ -208,8 +103,8 @@ export default function TopicDetailPage({
         posts: allPosts,
       };
     }
-    return mockTopic;
-  }, [topicData, postsData, category, mockTopic]);
+    return null;
+  }, [topicData, postsData, category]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en', {
@@ -255,19 +150,24 @@ export default function TopicDetailPage({
     );
   }
 
+  if (topicError || !topic) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Link href="/forums" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Forums
+        </Link>
+        <div className="text-center py-12">
+          <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Topic not found</p>
+          <p className="text-muted-foreground">This topic may have been removed or doesn&apos;t exist.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-8 space-y-6">
-      {/* Fallback notice when API data unavailable */}
-      {isUsingFallback && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 text-sm">
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <p>
-            Forum data is currently unavailable. Showing sample content.
-            {topicError && ' The forum module may not be enabled on the server.'}
-          </p>
-        </div>
-      )}
-
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
         <Link href="/forums" className="text-muted-foreground hover:text-foreground">

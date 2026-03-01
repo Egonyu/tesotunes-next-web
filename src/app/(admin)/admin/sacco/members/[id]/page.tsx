@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
-import { 
+import { useQuery } from '@tanstack/react-query';
+import {
   ChevronLeft,
   User,
   Mail,
@@ -16,9 +17,11 @@ import {
   MoreVertical,
   Ban,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiGet } from '@/lib/api';
 
 interface Transaction {
   id: number;
@@ -33,49 +36,79 @@ export default function AdminMemberDetailPage({ params }: { params: Promise<{ id
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'loans' | 'shares'>('overview');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
-  // Mock member data
-  const member = {
-    id: parseInt(resolvedParams.id),
-    name: 'Eddy Kenzo',
-    email: 'kenzo@email.com',
-    phone: '+256 700 987654',
-    memberNumber: 'TTS-2023-0001',
-    memberSince: '2023-01-15',
-    status: 'active' as const,
+  const id = resolvedParams.id;
+
+  const { data: memberData, isLoading, error } = useQuery({
+    queryKey: ['admin', 'sacco', 'members', id],
+    queryFn: () => apiGet<{ data: Record<string, unknown> }>(`/admin/sacco/members/${id}`),
+  });
+
+  const { data: txData } = useQuery({
+    queryKey: ['admin', 'sacco', 'members', id, 'transactions'],
+    queryFn: () => apiGet<{ data: Transaction[] }>(`/admin/sacco/members/${id}/transactions`),
+  });
+
+  const { data: loansData } = useQuery({
+    queryKey: ['admin', 'sacco', 'members', id, 'loans'],
+    queryFn: () => apiGet<{ data: Record<string, unknown>[] }>(`/admin/sacco/members/${id}/loans`),
+  });
+
+  const raw = (memberData?.data ?? memberData) as Record<string, unknown> | undefined;
+  const member = raw ? {
+    id: raw.id as number,
+    name: (raw.name as string) || (raw.full_name as string) || 'Unknown',
+    email: (raw.email as string) || '',
+    phone: (raw.phone as string) || (raw.phone_number as string) || '',
+    memberNumber: (raw.member_number as string) || `TTS-${id}`,
+    memberSince: (raw.member_since as string) || (raw.created_at as string) || '',
+    status: (raw.status as string) || 'active',
     savings: {
-      balance: 5000000,
-      thisMonth: 500000,
-      interestEarned: 450000,
+      balance: ((raw.savings as Record<string, unknown>)?.balance as number) ?? (raw.savings_balance as number) ?? 0,
+      thisMonth: ((raw.savings as Record<string, unknown>)?.this_month as number) ?? 0,
+      interestEarned: ((raw.savings as Record<string, unknown>)?.interest_earned as number) ?? 0,
     },
     shares: {
-      count: 50,
-      value: 500000,
-      dividendsEarned: 50000,
+      count: ((raw.shares as Record<string, unknown>)?.count as number) ?? (raw.shares_count as number) ?? 0,
+      value: ((raw.shares as Record<string, unknown>)?.value as number) ?? (raw.shares_value as number) ?? 0,
+      dividendsEarned: ((raw.shares as Record<string, unknown>)?.dividends_earned as number) ?? 0,
     },
     loans: {
-      active: 0,
-      total: 3,
-      totalBorrowed: 8000000,
-      totalRepaid: 8000000,
+      active: ((raw.loans as Record<string, unknown>)?.active as number) ?? (raw.active_loans as number) ?? 0,
+      total: ((raw.loans as Record<string, unknown>)?.total as number) ?? (raw.total_loans as number) ?? 0,
+      totalBorrowed: ((raw.loans as Record<string, unknown>)?.total_borrowed as number) ?? 0,
+      totalRepaid: ((raw.loans as Record<string, unknown>)?.total_repaid as number) ?? 0,
     },
-    riskProfile: 'Low',
-    lastActivity: '2026-02-07',
-  };
+    riskProfile: (raw.risk_profile as string) || 'N/A',
+    lastActivity: (raw.last_activity as string) || (raw.updated_at as string) || '',
+  } : null;
 
-  const transactions: Transaction[] = [
-    { id: 1, type: 'deposit', amount: 200000, description: 'Monthly savings', date: '2026-02-05' },
-    { id: 2, type: 'loan_payment', amount: 150000, description: 'Loan repayment #6', date: '2026-02-01' },
-    { id: 3, type: 'share_purchase', amount: 100000, description: 'Purchased 10 shares', date: '2026-01-20' },
-    { id: 4, type: 'deposit', amount: 300000, description: 'Performance bonus deposit', date: '2026-01-15' },
-    { id: 5, type: 'dividend', amount: 50000, description: 'Annual dividend 2025', date: '2025-12-31' },
-    { id: 6, type: 'withdrawal', amount: 500000, description: 'Emergency withdrawal', date: '2025-12-20' },
-  ];
+  const transactions: Transaction[] = (txData?.data ?? []) as Transaction[];
+  const loanHistory = ((loansData?.data ?? []) as Record<string, unknown>[]).map(l => ({
+    id: l.id as number,
+    type: (l.type as string) || (l.loan_type as string) || 'Standard Loan',
+    amount: (l.amount as number) || 0,
+    status: (l.status as string) || 'pending',
+    startDate: (l.start_date as string) || (l.created_at as string) || '',
+    endDate: (l.end_date as string) || (l.due_date as string) || '',
+  }));
 
-  const loanHistory = [
-    { id: 1, type: 'Standard Loan', amount: 3000000, status: 'completed', startDate: '2023-06-01', endDate: '2024-06-01' },
-    { id: 2, type: 'Emergency Loan', amount: 500000, status: 'completed', startDate: '2024-03-01', endDate: '2024-05-31' },
-    { id: 3, type: 'Development Loan', amount: 4500000, status: 'completed', startDate: '2024-09-01', endDate: '2025-09-01' },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !member) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground">
+        <AlertCircle className="h-12 w-12 mb-4 text-destructive" />
+        <p className="text-lg font-medium">Failed to load member details</p>
+        <Link href="/admin/sacco" className="mt-4 text-primary hover:underline">Back to SACCO</Link>
+      </div>
+    );
+  }
 
   const getTransactionColor = (type: string) => {
     switch (type) {
@@ -113,7 +146,7 @@ export default function AdminMemberDetailPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link 
+        <Link
           href="/admin/sacco"
           className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4"
         >

@@ -70,112 +70,18 @@ export default function CampaignDetailPage({
   const [activeTab, setActiveTab] = useState<'story' | 'rewards' | 'updates' | 'backers'>('story');
 
   // API hook
-  const { data: campaignData, isLoading } = useCampaign(id);
+  const { data: campaignData, isLoading, error } = useCampaign(id);
   const { data: backersData } = useCampaignBackers(id);
 
-  // Mock data for fallback
-  const mockCampaign: Campaign = {
-    id: parseInt(id),
-    title: 'Help Me Record My Debut Album',
-    artist: {
-      id: 1,
-      name: 'Sarah Nakato',
-      avatar: '/images/artists/sarah.jpg',
-      isVerified: true,
-      followers: 12500,
-    },
-    cover: '/images/campaigns/album.jpg',
-    goal: 15000000,
-    raised: 11250000,
-    backers: 234,
-    daysLeft: 21,
-    category: 'Albums',
-    description: 'I\'m raising funds to record my debut album featuring 12 original tracks that blend traditional Ugandan sounds with modern Afrobeats.',
-    story: `## My Journey
-
-I've been making music for the past 5 years, performing at local venues and building a dedicated fanbase. Now, I'm ready to take the next big step - recording my debut album.
-
-### Why I Need Your Help
-
-Recording a professional album requires quality studio time, mixing, mastering, and promotion. Here's how the funds will be used:
-
-- **Studio Recording**: UGX 6,000,000
-- **Mixing & Mastering**: UGX 4,000,000
-- **Album Artwork & Design**: UGX 1,500,000
-- **Music Videos (2)**: UGX 2,500,000
-- **Marketing & Promotion**: UGX 1,000,000
-
-### What Makes This Album Special
-
-This album tells the story of growing up in Teso region and finding my voice through music. It features collaborations with amazing local musicians and producers.
-
-Every contribution, no matter how small, brings me closer to sharing this dream with the world. Thank you for believing in me! 🙏`,
-    rewards: [
-      {
-        id: 1,
-        title: 'Early Bird Access',
-        minAmount: 10000,
-        description: 'Get early access to the album before official release + a thank you shoutout on social media.',
-        claimedCount: 145,
-      },
-      {
-        id: 2,
-        title: 'Digital Album + Bonus Tracks',
-        minAmount: 25000,
-        description: 'Digital download of the full album with 3 exclusive bonus tracks not available anywhere else.',
-        claimedCount: 67,
-      },
-      {
-        id: 3,
-        title: 'Signed Physical CD',
-        minAmount: 50000,
-        description: 'Physical CD signed by Sarah Nakato, shipped to your address + all previous rewards.',
-        claimedCount: 18,
-        limitCount: 50,
-      },
-      {
-        id: 4,
-        title: 'Private Virtual Concert',
-        minAmount: 200000,
-        description: 'Join an exclusive virtual concert for top backers with Q&A session.',
-        claimedCount: 3,
-        limitCount: 10,
-      },
-      {
-        id: 5,
-        title: 'Featured in Album Credits',
-        minAmount: 500000,
-        description: 'Your name featured in the official album credits + all previous rewards.',
-        claimedCount: 1,
-        limitCount: 5,
-      },
-    ],
-    updates: [
-      {
-        id: 1,
-        title: 'We hit 75%! 🎉',
-        content: 'Thank you all so much! We\'ve reached 75% of our goal. The first recording sessions are scheduled for next week.',
-        date: '2026-02-01',
-      },
-      {
-        id: 2,
-        title: 'Studio Update',
-        content: 'Just finished recording 3 tracks! Here\'s a sneak peek of what\'s coming...',
-        date: '2026-01-25',
-      },
-    ],
-    createdAt: '2026-01-10',
-  };
-
   // Transform API data to component format
-  const campaign: Campaign = useMemo(() => {
+  const campaign: Campaign | null = useMemo(() => {
     if (campaignData) {
       const transformed = transformCampaign(campaignData as Record<string, unknown>);
       const rawData = campaignData as Record<string, unknown>;
       const rawArtist = rawData.artist as Record<string, unknown> | undefined;
       return {
         ...transformed,
-        artist: { ...transformed.artist, id: transformed.artist.id || 1, followers: (rawArtist?.followers as number) || 0 },
+        artist: { ...transformed.artist, id: transformed.artist.id || 0, followers: (rawArtist?.followers as number) || 0 },
         rewards: (rawData.rewards as Record<string, unknown>[] | undefined)?.map((r: Record<string, unknown>) => ({
           id: r.id as number,
           title: r.title as string,
@@ -183,19 +89,17 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
           description: r.description as string,
           claimedCount: (r.claimed_count as number) || 0,
           limitCount: r.limit_count as number | undefined,
-        })) || mockCampaign.rewards,
+        })) || [],
         updates: (rawData.updates as Record<string, unknown>[] | undefined)?.map((u: Record<string, unknown>) => ({
           id: u.id as number,
           title: u.title as string,
           content: u.content as string,
           date: u.date as string || u.created_at as string,
-        })) || mockCampaign.updates,
+        })) || [],
       } as Campaign;
     }
-    return mockCampaign;
+    return null;
   }, [campaignData]);
-
-  const progress = (campaign.raised / campaign.goal) * 100;
 
   if (isLoading) {
     return (
@@ -204,6 +108,24 @@ Every contribution, no matter how small, brings me closer to sharing this dream 
       </div>
     );
   }
+
+  if (error || !campaign) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Link href="/ojokotau" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Ojokotau
+        </Link>
+        <div className="text-center py-12">
+          <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Campaign not found</p>
+          <p className="text-muted-foreground">This campaign may have been removed or doesn&apos;t exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = (campaign.raised / campaign.goal) * 100;
 
   return (
     <div className="container py-8">

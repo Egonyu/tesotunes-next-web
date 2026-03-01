@@ -7,6 +7,7 @@ import { apiGet, apiPostForm } from '@/lib/api';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Eye, EyeOff, Upload, X } from 'lucide-react';
 import Image from 'next/image';
+import { getValidationErrors } from '@/lib/utils';
 
 interface UserFormData {
   name: string;
@@ -55,6 +56,24 @@ interface Artist {
   name: string;
 }
 
+interface UserApiData {
+  full_name?: string;
+  display_name?: string;
+  name?: string;
+  email?: string;
+  username?: string;
+  phone?: string;
+  country?: string;
+  city?: string;
+  bio?: string;
+  role?: string;
+  status?: string;
+  email_verified_at?: string;
+  is_artist?: boolean;
+  artist_id?: string;
+  avatar_url?: string;
+}
+
 export default function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -66,7 +85,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/users/${id}`),
+    queryFn: () => apiGet<{ data: UserApiData }>(`/admin/users/${id}`),
   });
 
   const { data: rolesData } = useQuery({
@@ -114,29 +133,20 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
       router.push(`/admin/users/${id}`);
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        const serverErrors = error.response.data.errors;
-        const mapped: Record<string, string> = {};
-        for (const [key, val] of Object.entries(serverErrors)) {
-          mapped[key] = Array.isArray(val) ? val[0] : String(val);
-        }
-        setErrors(mapped);
-      } else {
-        setErrors({ _form: error.response?.data?.message || 'Failed to update user. Please try again.' });
-      }
+    onError: (error: unknown) => {
+      setErrors(getValidationErrors(error));
     },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -156,7 +166,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     data.append('_method', 'PUT');
     data.append('full_name', formData.name);
@@ -181,7 +191,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     if (formData.avatar) {
       data.append('avatar', formData.avatar);
     }
-    
+
     updateMutation.mutate(data);
   };
 
@@ -234,7 +244,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="Username"
@@ -304,7 +314,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               error={errors.city}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Bio</label>
             <textarea

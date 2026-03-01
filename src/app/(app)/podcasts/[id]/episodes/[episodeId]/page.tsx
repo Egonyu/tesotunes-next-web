@@ -25,6 +25,8 @@ import {
 import { cn } from '@/lib/utils';
 import { LikeButton } from '@/components/social/LikeButton';
 import { CommentSection } from '@/components/social/CommentSection';
+import { useEpisode, usePodcast } from '@/hooks/usePodcasts';
+import { Loader2 as Spinner } from 'lucide-react';
 
 interface Episode {
   id: number;
@@ -97,46 +99,31 @@ export default function EpisodePlayerPage({
     };
   }, []);
 
-  // Mock data
-  const episode: Episode = {
-    id: parseInt(episodeId),
-    number: 87,
-    title: 'Mastering Afrobeats Drums',
-    description: 'Learn how to create authentic Afrobeats drum patterns that move the crowd.',
-    longDescription: `In this episode, we dive deep into the world of Afrobeats drum production. DJ Empress breaks down the essential elements that make Afrobeats drums so distinctive and irresistible.
+  // API hooks
+  const { data: episodeData, isLoading: episodeLoading } = useEpisode(id, episodeId);
+  const { data: podcastData, isLoading: podcastLoading } = usePodcast(id);
 
-We cover:
-• The history and evolution of Afrobeats rhythms
-• Essential drum sounds and how to choose them
-• Programming patterns that groove
-• Swing and timing techniques
-• Layering and processing tips
-• Common mistakes to avoid
+  const isLoading = episodeLoading || podcastLoading;
 
-Whether you're just starting out or looking to refine your skills, this episode has something for every producer interested in the Afrobeats sound.`,
-    duration: 3600,
+  const episode: Episode | null = episodeData && podcastData ? {
+    id: episodeData.id,
+    number: episodeData.episode_number || 0,
+    title: episodeData.title,
+    description: episodeData.description,
+    longDescription: episodeData.description || '',
+    duration: episodeData.duration_seconds || 0,
     currentTime: 0,
-    date: '2026-02-03',
-    plays: 2340,
+    date: episodeData.published_at || '',
+    plays: episodeData.listen_count || 0,
     podcast: {
-      id: parseInt(id),
-      title: 'The Beat Lab',
-      host: 'DJ Empress',
-      cover: '/images/podcasts/beat-lab.jpg',
+      id: podcastData.id,
+      title: podcastData.title,
+      host: podcastData.host_name,
+      cover: podcastData.cover_url || '/images/default-podcast.jpg',
     },
-    chapters: [
-      { title: 'Introduction', startTime: 0 },
-      { title: 'History of Afrobeats Drums', startTime: 180 },
-      { title: 'Essential Sounds', startTime: 540 },
-      { title: 'Pattern Programming', startTime: 1200 },
-      { title: 'Swing & Timing', startTime: 2100 },
-      { title: 'Processing Tips', startTime: 2700 },
-      { title: 'Q&A', startTime: 3300 },
-    ],
-    transcript: `Welcome back to The Beat Lab. I'm DJ Empress, and today we're going to explore one of my favorite topics - Afrobeats drums.
-
-If you've ever wondered what makes Afrobeats so infectious, so impossible not to move to, a lot of that comes down to the drums...`,
-  };
+    chapters: undefined,
+    transcript: undefined,
+  } : null;
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -148,9 +135,33 @@ If you've ever wondered what makes Afrobeats so infectious, so impossible not to
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const progressPercent = (currentTime / episode.duration) * 100;
-
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Spinner className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!episode) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Link href={`/podcasts/${id}`} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Podcast
+        </Link>
+        <div className="text-center py-12">
+          <Play className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Episode not found</p>
+          <p className="text-muted-foreground">This episode may have been removed or doesn&apos;t exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const progressPercent = episode.duration > 0 ? (currentTime / episode.duration) * 100 : 0;
 
   return (
     <div className="min-h-screen">

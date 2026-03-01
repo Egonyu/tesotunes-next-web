@@ -7,6 +7,7 @@ import { apiGet, apiPost } from '@/lib/api';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Mic } from 'lucide-react';
 import Image from 'next/image';
+import { getValidationErrors } from '@/lib/utils';
 
 interface PodcastFormData {
   title: string;
@@ -55,6 +56,28 @@ interface Category {
   name: string;
 }
 
+interface PodcastApiData {
+  title?: string;
+  slug?: string;
+  description?: string;
+  short_description?: string;
+  host_name?: string;
+  host_bio?: string;
+  category?: { id: string };
+  category_id?: string;
+  language?: string;
+  website?: string;
+  email?: string;
+  spotify_url?: string;
+  apple_podcasts_url?: string;
+  google_podcasts_url?: string;
+  rss_feed_url?: string;
+  is_explicit?: boolean;
+  is_featured?: boolean;
+  status?: string;
+  cover_url?: string;
+}
+
 export default function EditPodcastPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -65,7 +88,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
 
   const { data: podcastData, isLoading } = useQuery({
     queryKey: ['admin', 'podcast', id],
-    queryFn: () => apiGet<{ data: any }>(`/admin/podcasts/${id}`),
+    queryFn: () => apiGet<{ data: PodcastApiData }>(`/admin/podcasts/${id}`),
   });
 
   const { data: categoriesData } = useQuery({
@@ -113,22 +136,20 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
       queryClient.invalidateQueries({ queryKey: ['admin', 'podcast', id] });
       router.push(`/admin/podcasts/${id}`);
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
+    onError: (error: unknown) => {
+      setErrors(getValidationErrors(error));
     },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -148,10 +169,10 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     data.append('_method', 'PUT');
-    
+
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
         if (typeof value === 'boolean') {
@@ -163,7 +184,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
         }
       }
     });
-    
+
     updateMutation.mutate(data);
   };
 
@@ -210,7 +231,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Short Description</label>
             <textarea
@@ -286,7 +307,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
               error={errors.email}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Host Bio</label>
             <textarea
@@ -362,7 +383,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
               error={errors.rss_feed_url}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="Spotify"
@@ -381,7 +402,7 @@ export default function EditPodcastPage({ params }: { params: Promise<{ id: stri
               error={errors.apple_podcasts_url}
             />
           </div>
-          
+
           <FormField
             label="Google Podcasts"
             name="google_podcasts_url"

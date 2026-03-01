@@ -6,6 +6,7 @@ import { Plus, Minus, Image as ImageIcon, Calendar, MapPin, DollarSign, Ticket }
 import { useCreateEvent, CreateEventRequest } from '@/hooks/useEvents';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 
 interface TicketTier {
   name: string;
@@ -66,7 +67,7 @@ export default function CreateEventPage() {
     }
   };
 
-  const updateTicketTier = (index: number, field: keyof TicketTier, value: any) => {
+  const updateTicketTier = (index: number, field: keyof TicketTier, value: TicketTier[keyof TicketTier]) => {
     const updated = [...ticketTiers];
     updated[index] = { ...updated[index], [field]: value };
     setTicketTiers(updated);
@@ -113,8 +114,8 @@ export default function CreateEventPage() {
       toast.success('Event created successfully!');
       const eventId = (result.data as Record<string, unknown>)?.id || (result.data as Record<string, unknown>)?.slug || '';
       router.push(`/artist/events/${eventId}`);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to create event');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to create event'));
     }
   };
 

@@ -57,8 +57,6 @@ export default function RegisterPage() {
         }
       }
 
-      console.log("Registration response:", { status: response.status, result });
-
       if (!response.ok) {
         if (!result) {
           setErrors({ general: ["Registration service unavailable. Please try again later."] });

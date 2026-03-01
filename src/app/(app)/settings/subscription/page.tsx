@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Crown, Zap, Music2, Star, CreditCard, X, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import {
   useSubscriptionPlans,
   useMySubscription,
@@ -21,19 +21,19 @@ export default function SubscriptionPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
-  
+
   const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
   const { data: currentSubscription } = useMySubscription();
   const subscribe = useSubscribe();
   const cancelSubscription = useCancelSubscription();
   const reactivateSubscription = useReactivateSubscription();
-  
+
   const handleSubscribe = async (planId: number) => {
     if (paymentMethod !== 'wallet' && !phoneNumber) {
       toast.error('Please enter your phone number');
       return;
     }
-    
+
     const subscribeData: SubscribeRequest = {
       plan_id: planId,
       billing_cycle: billingCycle,
@@ -41,17 +41,17 @@ export default function SubscriptionPage() {
       phone: paymentMethod !== 'wallet' ? phoneNumber : undefined,
       auto_renew: true,
     };
-    
+
     try {
       const result = await subscribe.mutateAsync(subscribeData);
       toast.success(result.message || 'Subscription activated successfully!');
       setSelectedPlanId(null);
       setPhoneNumber('');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to subscribe');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to subscribe'));
     }
   };
-  
+
   const handleCancel = async () => {
     try {
       const result = await cancelSubscription.mutateAsync({
@@ -61,20 +61,20 @@ export default function SubscriptionPage() {
       toast.success(result.message || 'Subscription cancelled successfully');
       setShowCancelModal(false);
       setCancelReason('');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to cancel subscription');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to cancel subscription'));
     }
   };
-  
+
   const handleReactivate = async () => {
     try {
       await reactivateSubscription.mutateAsync();
       toast.success('Subscription reactivated successfully!');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to reactivate subscription');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to reactivate subscription'));
     }
   };
-  
+
   if (plansLoading) {
     return (
       <div className="space-y-8">
@@ -87,7 +87,7 @@ export default function SubscriptionPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-8">
       <div>
@@ -96,7 +96,7 @@ export default function SubscriptionPage() {
           Manage your subscription and billing preferences.
         </p>
       </div>
-      
+
       {/* Current Plan */}
       {currentSubscription && (
         <div className="p-4 rounded-lg border bg-card">
@@ -118,7 +118,7 @@ export default function SubscriptionPage() {
               {currentSubscription.status}
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Billing Cycle</p>
@@ -131,7 +131,7 @@ export default function SubscriptionPage() {
               </p>
             </div>
           </div>
-          
+
           {currentSubscription.cancel_at_period_end && (
             <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
               <p className="text-sm text-orange-500">
@@ -147,7 +147,7 @@ export default function SubscriptionPage() {
               </button>
             </div>
           )}
-          
+
           {currentSubscription.status === 'active' && !currentSubscription.cancel_at_period_end && (
             <button
               onClick={() => setShowCancelModal(true)}
@@ -158,7 +158,7 @@ export default function SubscriptionPage() {
           )}
         </div>
       )}
-      
+
       {/* Billing Toggle */}
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-4 p-1 rounded-lg bg-muted">
@@ -187,7 +187,7 @@ export default function SubscriptionPage() {
           </button>
         </div>
       </div>
-      
+
       {/* Plans */}
       <div className="grid gap-6 md:grid-cols-3">
         {plans?.map((plan) => {
@@ -196,7 +196,7 @@ export default function SubscriptionPage() {
           const price = billingCycle === 'yearly'
             ? plan.price_yearly
             : plan.price_monthly;
-          
+
           return (
             <div
               key={plan.id}
@@ -211,7 +211,7 @@ export default function SubscriptionPage() {
                   Most Popular
                 </span>
               )}
-              
+
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-4">
                   <Icon className="h-6 w-6 text-primary" />
@@ -221,7 +221,7 @@ export default function SubscriptionPage() {
                   {plan.description}
                 </p>
               </div>
-              
+
               <div className="text-center mb-6">
                 <span className="text-3xl font-bold">
                   {price === 0 ? 'Free' : `UGX ${price.toLocaleString()}`}
@@ -232,7 +232,7 @@ export default function SubscriptionPage() {
                   </span>
                 )}
               </div>
-              
+
               <ul className="space-y-3 mb-6">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -241,7 +241,7 @@ export default function SubscriptionPage() {
                   </li>
                 ))}
               </ul>
-              
+
               {isCurrentPlan ? (
                 <button
                   disabled
@@ -266,7 +266,7 @@ export default function SubscriptionPage() {
           );
         })}
       </div>
-      
+
       {/* Payment Modal */}
       {selectedPlanId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -277,7 +277,7 @@ export default function SubscriptionPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">Payment Method</label>
               <div className="space-y-2">
@@ -319,7 +319,7 @@ export default function SubscriptionPage() {
                 </button>
               </div>
             </div>
-            
+
             {paymentMethod !== 'wallet' && (
               <div>
                 <label className="block text-sm font-medium mb-2">Phone Number</label>
@@ -332,7 +332,7 @@ export default function SubscriptionPage() {
                 />
               </div>
             )}
-            
+
             <button
               onClick={() => handleSubscribe(selectedPlanId)}
               disabled={subscribe.isPending}
@@ -348,7 +348,7 @@ export default function SubscriptionPage() {
           </div>
         </div>
       )}
-      
+
       {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -362,7 +362,7 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">
                 Reason for cancelling (optional)
@@ -375,7 +375,7 @@ export default function SubscriptionPage() {
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCancelModal(false)}

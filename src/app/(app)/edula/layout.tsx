@@ -30,18 +30,7 @@ const feedNav = [
   { href: '/edula/announcements', label: 'Announcements', icon: Megaphone },
 ];
 
-// Mock data for right sidebar (replaced when API is live)
-const mockSuggestedUsers = [
-  { id: 1, name: 'Sheebah Karungi', username: '@sheebah', avatar: '', isVerified: true, followers: 250_000, isFollowing: false },
-  { id: 2, name: 'Fik Fameica', username: '@fikfameica', avatar: '', isVerified: true, followers: 180_000, isFollowing: false },
-  { id: 3, name: 'Vinka', username: '@vinkaofficial', avatar: '', isVerified: true, followers: 120_000, isFollowing: false },
-];
 
-const mockTrending = [
-  { tag: '#AfrobeatsRising', posts: 12_500, category: 'Music' },
-  { tag: '#TesoTunesFest2026', posts: 8_200, category: 'Events' },
-  { tag: '#NewMusicFriday', posts: 5_600, category: 'Music' },
-];
 
 export default function EdulaLayout({
   children,
@@ -68,7 +57,7 @@ export default function EdulaLayout({
         isFollowing: u.is_following,
       }));
     }
-    return mockSuggestedUsers;
+    return [];
   }, [suggestedData]);
 
   const trendingTopics = useMemo(() => {
@@ -82,7 +71,7 @@ export default function EdulaLayout({
           category: item.subtitle || 'Trending',
         }));
     }
-    return mockTrending;
+    return [];
   }, [trendingData]);
 
   const handleFollow = (userId: number, isFollowing: boolean) => {

@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  MessageCircle, 
+import {
+  MessageCircle,
   Users,
   TrendingUp,
   Clock,
@@ -48,95 +48,20 @@ interface TrendingTopic {
   };
 }
 
-// Mock data for fallback
-const mockCategories: ForumCategory[] = [
-  {
-    id: 1,
-    slug: 'general',
-    name: 'General Discussion',
-    description: 'Talk about anything music-related',
-    icon: '💬',
-    color: 'bg-blue-500',
-    topicCount: 1245,
-    postCount: 15678,
-    lastPost: { topic: 'Best studios in Kampala?', author: 'MusicLover99', avatar: '/images/avatars/1.jpg', date: '2026-02-06T10:30:00' },
-  },
-  {
-    id: 2,
-    slug: 'production',
-    name: 'Music Production',
-    description: 'Discuss production techniques, DAWs, and plugins',
-    icon: '🎛️',
-    color: 'bg-purple-500',
-    topicCount: 892,
-    postCount: 12340,
-    lastPost: { topic: 'FL Studio vs Ableton for Afrobeats', author: 'BeatMaker', avatar: '/images/avatars/2.jpg', date: '2026-02-06T09:15:00' },
-  },
-  {
-    id: 3,
-    slug: 'collaboration',
-    name: 'Collaboration',
-    description: 'Find artists, producers, and collaborators',
-    icon: '🤝',
-    color: 'bg-green-500',
-    topicCount: 567,
-    postCount: 4532,
-    lastPost: { topic: 'Looking for a vocalist for dancehall track', author: 'ProducerX', avatar: '/images/avatars/3.jpg', date: '2026-02-06T08:45:00' },
-  },
-  {
-    id: 4,
-    slug: 'gear',
-    name: 'Gear & Equipment',
-    description: 'Discuss instruments, mics, and studio gear',
-    icon: '🎸',
-    color: 'bg-orange-500',
-    topicCount: 423,
-    postCount: 5678,
-    lastPost: { topic: 'Affordable condenser mics under $200', author: 'GearHead', avatar: '/images/avatars/4.jpg', date: '2026-02-05T22:30:00' },
-  },
-  {
-    id: 5,
-    slug: 'marketing',
-    name: 'Marketing & Promotion',
-    description: 'Tips for promoting your music and building an audience',
-    icon: '📈',
-    color: 'bg-pink-500',
-    topicCount: 334,
-    postCount: 4123,
-    lastPost: { topic: 'TikTok strategies that work in 2026', author: 'MarketingPro', avatar: '/images/avatars/5.jpg', date: '2026-02-05T20:15:00' },
-  },
-  {
-    id: 6,
-    slug: 'feedback',
-    name: 'Track Feedback',
-    description: 'Share your tracks and get constructive feedback',
-    icon: '🎧',
-    color: 'bg-teal-500',
-    topicCount: 678,
-    postCount: 8901,
-    lastPost: { topic: 'New single - need mixing feedback', author: 'NewArtist', avatar: '/images/avatars/6.jpg', date: '2026-02-05T18:00:00' },
-  },
-];
-
-const mockTrendingTopics: TrendingTopic[] = [
-  { id: 1, title: 'How to get your music on Spotify playlists', category: 'Marketing & Promotion', categorySlug: 'marketing', replies: 234, views: 5678, author: { name: 'PlaylistGuru', avatar: '/images/avatars/7.jpg' } },
-  { id: 2, title: 'Best free VST plugins for 2026', category: 'Music Production', categorySlug: 'production', replies: 189, views: 4532, author: { name: 'PluginMaster', avatar: '/images/avatars/8.jpg' } },
-  { id: 3, title: 'Copyright basics every artist should know', category: 'General Discussion', categorySlug: 'general', replies: 156, views: 3890, author: { name: 'LegalEagle', avatar: '/images/avatars/9.jpg' } },
-];
 
 export default function ForumsPage() {
   // API hooks
   const { data: categoriesData, isLoading: categoriesLoading } = useForumCategories();
   const { data: trendingData, isLoading: trendingLoading } = useTrendingTopics(5);
-  
+
   // Transform API data or use mock
   const categories: ForumCategory[] = useMemo(() => {
     if (categoriesData?.data) {
       return categoriesData.data.map(transformCategory);
     }
-    return mockCategories;
+    return [];
   }, [categoriesData]);
-  
+
   const trendingTopics: TrendingTopic[] = useMemo(() => {
     if (trendingData?.data) {
       return trendingData.data.map(topic => {
@@ -156,22 +81,22 @@ export default function ForumsPage() {
         };
       });
     }
-    return mockTrendingTopics;
+    return [];
   }, [trendingData]);
-  
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHrs / 24);
-    
+
     if (diffHrs < 1) return 'Just now';
     if (diffHrs < 24) return `${diffHrs}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-  
+
   if (categoriesLoading) {
     return (
       <div className="container py-8 flex items-center justify-center">
@@ -179,7 +104,7 @@ export default function ForumsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-8">
       {/* Header */}
@@ -208,7 +133,7 @@ export default function ForumsPage() {
           </Link>
         </div>
       </div>
-      
+
       {/* Trending Topics */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -248,7 +173,7 @@ export default function ForumsPage() {
           ))}
         </div>
       </section>
-      
+
       {/* Categories */}
       <section>
         <h2 className="text-lg font-semibold mb-4">Categories</h2>
@@ -262,12 +187,12 @@ export default function ForumsPage() {
               <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center text-2xl', category.color)}>
                 {category.icon}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold">{category.name}</h3>
                 <p className="text-sm text-muted-foreground">{category.description}</p>
               </div>
-              
+
               <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
                 <div className="text-center">
                   <p className="font-semibold text-foreground">{category.topicCount.toLocaleString()}</p>
@@ -278,7 +203,7 @@ export default function ForumsPage() {
                   <p className="text-xs">Posts</p>
                 </div>
               </div>
-              
+
               {category.lastPost && (
                 <div className="hidden lg:block w-64">
                   <div className="flex items-center gap-2">
@@ -300,13 +225,13 @@ export default function ForumsPage() {
                   </div>
                 </div>
               )}
-              
+
               <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </Link>
           ))}
         </div>
       </section>
-      
+
       {/* Stats */}
       <section className="grid gap-4 md:grid-cols-4">
         <div className="p-4 rounded-xl border bg-card text-center">

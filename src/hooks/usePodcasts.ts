@@ -112,6 +112,15 @@ export function usePodcastEpisodes(podcastId: string | number, page: number = 1)
   });
 }
 
+export function useEpisode(podcastId: string | number, episodeId: string | number) {
+  return useQuery({
+    queryKey: ['podcast', String(podcastId), 'episode', String(episodeId)],
+    queryFn: () => apiGet<Episode | { data: Episode }>(`/podcasts/${podcastId}/episodes/${episodeId}`)
+      .then(res => 'data' in res && res.data ? res.data as Episode : res as Episode),
+    enabled: !!podcastId && !!episodeId,
+  });
+}
+
 // ============================================================================
 // Subscription Hooks
 // ============================================================================

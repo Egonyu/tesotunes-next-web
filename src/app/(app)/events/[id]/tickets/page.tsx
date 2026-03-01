@@ -4,12 +4,13 @@ import { use, useState, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  ChevronLeft, 
-  Minus, 
+import { getErrorMessage } from '@/lib/utils';
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  ChevronLeft,
+  Minus,
   Plus,
   CreditCard,
   Smartphone,
@@ -37,38 +38,38 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const preselectedTier = searchParams.get('tier');
-  
+
   const [selectedTier, setSelectedTier] = useState<number | null>(
     preselectedTier ? parseInt(preselectedTier) : null
   );
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'airtel_money' | 'credits'>('mtn_momo');
   const [phoneNumber, setPhoneNumber] = useState('');
-  
+
   const { data: event, isLoading } = useEvent(eventId);
   const purchaseTickets = usePurchaseTickets();
   const validatePhone = useValidatePhone();
-  
+
   const selectedTicket = event?.ticket_tiers?.find(t => t.id === selectedTier);
   const isCreditsPayment = paymentMethod === 'credits';
   const unitPrice = isCreditsPayment ? (selectedTicket?.price_credits || 0) : (selectedTicket?.price_ugx || selectedTicket?.price || 0);
   const subtotal = selectedTicket ? unitPrice * quantity : 0;
   const serviceFee = isCreditsPayment ? 0 : Math.round(subtotal * 0.05);
   const total = subtotal + serviceFee;
-  
+
   const handlePurchase = async () => {
     if (!selectedTicket || !session?.user) {
       toast.error('Please log in to purchase tickets');
       return;
     }
-    
+
     // Validate phone for mobile money
     const needsPhone = paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money';
     if (needsPhone && !phoneNumber) {
       toast.error('Please enter your phone number');
       return;
     }
-    
+
     // Validate phone number format
     if (needsPhone) {
       try {
@@ -82,7 +83,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
         return;
       }
     }
-    
+
     const purchaseData: PurchaseTicketRequest = {
       event_id: parseInt(eventId),
       ticket_tier_id: selectedTicket.id,
@@ -93,20 +94,20 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       holder_email: session.user.email || '',
       holder_phone: phoneNumber || undefined,
     };
-    
+
     try {
       const result = await purchaseTickets.mutateAsync(purchaseData);
       toast.success(result.message || 'Tickets purchased successfully!');
-      
+
       // Redirect to tickets page
       setTimeout(() => {
         router.push('/tickets');
       }, 1500);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to purchase tickets');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to purchase tickets'));
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="container py-8 max-w-4xl space-y-8">
@@ -115,7 +116,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       </div>
     );
   }
-  
+
   if (!event) {
     return (
       <div className="container py-8 max-w-4xl">
@@ -128,18 +129,18 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 max-w-4xl">
       {/* Back Link */}
-      <Link 
+      <Link
         href={`/events/${eventId}`}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to event
       </Link>
-      
+
       {/* Event Summary */}
       <div className="flex gap-4 p-4 rounded-xl border bg-card mb-8">
         <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
@@ -168,7 +169,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
           </div>
         </div>
       </div>
-      
+
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Ticket Selection */}
         <div className="lg:col-span-3 space-y-6">
@@ -182,8 +183,8 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                   className={cn(
                     'p-4 rounded-lg border cursor-pointer transition-all',
                     tier.available === 0 && 'opacity-50 cursor-not-allowed',
-                    selectedTier === tier.id 
-                      ? 'border-primary bg-primary/5' 
+                    selectedTier === tier.id
+                      ? 'border-primary bg-primary/5'
                       : 'hover:border-foreground'
                   )}
                 >
@@ -215,7 +216,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
               ))}
             </div>
           </section>
-          
+
           {/* Quantity */}
           {selectedTicket && (
             <section>
@@ -244,7 +245,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
               </div>
             </section>
           )}
-          
+
           {/* Payment Method */}
           {selectedTicket && (
             <section>
@@ -268,7 +269,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* MTN MoMo */}
                 <div
                   onClick={() => setPaymentMethod('mtn_momo')}
@@ -287,7 +288,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Airtel Money */}
                 <div
                   onClick={() => setPaymentMethod('airtel_money')}
@@ -306,7 +307,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Credits */}
                 {selectedTicket && (selectedTicket.price_credits ?? 0) > 0 && (
                   <div
@@ -328,7 +329,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                   </div>
                 )}
               </div>
-              
+
               {/* Phone Number Input for Mobile Money */}
               {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
                 <div className="mt-4">
@@ -350,12 +351,12 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
             </section>
           )}
         </div>
-        
+
         {/* Order Summary */}
         <div className="lg:col-span-2">
           <div className="sticky top-24 p-6 rounded-xl border bg-card">
             <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-            
+
             {selectedTicket ? (
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
@@ -372,7 +373,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                   <span>Total</span>
                   <span>{isCreditsPayment ? `${total.toLocaleString()} credits` : `UGX ${total.toLocaleString()}`}</span>
                 </div>
-                
+
                 <button
                   onClick={handlePurchase}
                   disabled={purchaseTickets.isPending || ((paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && !phoneNumber)}
@@ -392,7 +393,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     </>
                   )}
                 </button>
-                
+
                 <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
                   <Shield className="h-4 w-4" />
                   Secure payment powered by ZengaPay
@@ -410,13 +411,13 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
   );
 }
 
-export default function TicketsPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
+export default function TicketsPage({
+  params
+}: {
+  params: Promise<{ id: string }>
 }) {
   const { id } = use(params);
-  
+
   return (
     <Suspense fallback={
       <div className="container py-8 max-w-4xl space-y-8">

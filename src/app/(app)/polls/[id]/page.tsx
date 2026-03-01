@@ -3,7 +3,7 @@
 import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   ChevronLeft,
   Clock,
   Users,
@@ -45,76 +45,56 @@ interface Poll {
   comments: number;
 }
 
-export default function PollDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
+export default function PollDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }>
 }) {
   const { id } = use(params);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  
+
   // API hooks
-  const { data: pollData, isLoading } = usePoll(id);
+  const { data: pollData, isLoading, error } = usePoll(id);
   const voteMutation = useVotePoll();
-  
-  // Mock data for fallback
-  const mockPoll: Poll = {
-    id: parseInt(id),
-    question: 'Best Ugandan song of 2025?',
-    description: 'Cast your vote for the most impactful Ugandan song released in 2025. This poll will help determine the TesoTunes Song of the Year award winner.',
-    options: [
-      { id: 1, text: 'Sitya Loss - Eddy Kenzo', votes: 2456, percentage: 35 },
-      { id: 2, text: 'Gyenvude - Sheebah Karungi', votes: 1890, percentage: 27 },
-      { id: 3, text: 'Tokigeza - Fik Fameica', votes: 1567, percentage: 22 },
-      { id: 4, text: 'Mulembe - Gravity Omutujju', votes: 1123, percentage: 16 },
-    ],
-    totalVotes: 7036,
-    category: 'Music',
-    creator: { id: 1, name: 'TesoTunes', avatar: '/images/logo.png', isVerified: true },
-    createdAt: '2026-01-15',
-    endsAt: '2026-02-15',
-    hasVoted: false,
-    status: 'active',
-    comments: 234,
-  };
-  
+
   // Transform API data
-  const poll: Poll = useMemo(() => {
+  const poll: Poll | null = useMemo(() => {
     if (pollData) {
       const transformed = transformPoll(pollData as Record<string, unknown>);
       return {
         ...transformed,
-        creator: { ...transformed.creator, id: 1 },
+        creator: { ...transformed.creator, id: (pollData as Record<string, unknown>).creator_id as number || 0 },
         comments: (pollData as Record<string, unknown>).comments_count as number || 0,
       } as Poll;
     }
-    return mockPoll;
+    return null;
   }, [pollData]);
-  
+
   const getRemainingTime = () => {
+    if (!poll) return '';
     const end = new Date(poll.endsAt);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
-    
+
     if (diff <= 0) return 'Poll has ended';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) return `${days} days, ${hours} hours remaining`;
     if (hours > 0) return `${hours} hours, ${minutes} minutes remaining`;
     return `${minutes} minutes remaining`;
   };
-  
+
   const handleVote = () => {
-    if (!selectedOption || poll.hasVoted) return;
-    
+    if (!poll || !selectedOption || poll.hasVoted) return;
+
     voteMutation.mutate({ pollId: id, optionId: selectedOption });
   };
-  
-  const showResults = poll.hasVoted || poll.status === 'ended' || voteMutation.isSuccess;
-  
+
+  const showResults = poll?.hasVoted || poll?.status === 'ended' || voteMutation.isSuccess;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -122,18 +102,34 @@ export default function PollDetailPage({
       </div>
     );
   }
-  
+
+  if (error || !poll) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Link href="/polls" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Polls
+        </Link>
+        <div className="text-center py-12">
+          <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Poll not found</p>
+          <p className="text-muted-foreground">This poll may have been removed or doesn&apos;t exist.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-8 max-w-3xl">
       {/* Back Link */}
-      <Link 
+      <Link
         href="/polls"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Polls
       </Link>
-      
+
       {/* Poll Card */}
       <div className="rounded-xl border bg-card overflow-hidden">
         {/* Header */}
@@ -165,10 +161,10 @@ export default function PollDetailPage({
               {poll.category}
             </span>
           </div>
-          
+
           <h1 className="text-2xl font-bold mb-2">{poll.question}</h1>
           <p className="text-muted-foreground">{poll.description}</p>
-          
+
           <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
@@ -180,13 +176,13 @@ export default function PollDetailPage({
             </span>
           </div>
         </div>
-        
+
         {/* Options */}
         <div className="p-6">
           <div className="space-y-3">
             {poll.options.map((option) => {
               const isSelected = selectedOption === option.id || poll.votedOptionId === option.id;
-              
+
               return (
                 <button
                   key={option.id}
@@ -201,7 +197,7 @@ export default function PollDetailPage({
                   )}
                 >
                   {showResults && (
-                    <div 
+                    <div
                       className={cn(
                         'absolute inset-0 rounded-lg transition-all',
                         isSelected ? 'bg-primary/20' : 'bg-muted'
@@ -243,7 +239,7 @@ export default function PollDetailPage({
               );
             })}
           </div>
-          
+
           {/* Vote Button */}
           {!showResults && poll.status === 'active' && (
             <button
@@ -259,7 +255,7 @@ export default function PollDetailPage({
               {voteMutation.isPending ? 'Submitting Vote...' : 'Submit Vote'}
             </button>
           )}
-          
+
           {showResults && (
             <div className="mt-6 p-4 rounded-lg bg-muted/50 text-center">
               <BarChart3 className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
@@ -272,7 +268,7 @@ export default function PollDetailPage({
             </div>
           )}
         </div>
-        
+
         {/* Actions */}
         <div className="flex items-center justify-between p-4 border-t bg-muted/30">
           <div className="flex items-center gap-4">

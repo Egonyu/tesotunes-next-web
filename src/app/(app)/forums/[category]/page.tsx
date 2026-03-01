@@ -3,8 +3,8 @@
 import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  MessageCircle, 
+import {
+  MessageCircle,
   Eye,
   Clock,
   ChevronLeft,
@@ -52,58 +52,20 @@ const categoryInfo: Record<string, { name: string; icon: string; color: string; 
   feedback: { name: 'Track Feedback', icon: '🎧', color: 'bg-teal-500', description: 'Share your tracks and get feedback' },
 };
 
-// Mock data for fallback
-const mockTopics: Topic[] = [
-  {
-    id: 1,
-    title: 'Best studios in Kampala?',
-    excerpt: 'Looking for recommendations on professional studios in Kampala for recording vocals. Budget is around 200k per session.',
-    author: { name: 'MusicLover99', avatar: '/images/avatars/1.jpg' },
-    replies: 45,
-    views: 1234,
-    lastReply: { author: 'StudioGuru', avatar: '/images/avatars/10.jpg', date: '2026-02-06T10:30:00' },
-    createdAt: '2026-02-01',
-    isPinned: true,
-    tags: ['studios', 'kampala', 'recording'],
-  },
-  {
-    id: 2,
-    title: 'How do you deal with creative block?',
-    excerpt: 'I\'ve been struggling to finish any tracks lately. What are your strategies for overcoming creative block?',
-    author: { name: 'BlockedArtist', avatar: '/images/avatars/2.jpg' },
-    replies: 89,
-    views: 2567,
-    lastReply: { author: 'InspiredOne', avatar: '/images/avatars/11.jpg', date: '2026-02-06T09:15:00' },
-    createdAt: '2026-01-28',
-    isHot: true,
-    tags: ['creativity', 'tips', 'mental-health'],
-  },
-  {
-    id: 3,
-    title: 'Official: Community Guidelines Update 2026',
-    excerpt: 'We\'ve updated our community guidelines. Please read through the changes and feel free to ask questions.',
-    author: { name: 'Admin', avatar: '/images/avatars/admin.jpg', role: 'Admin' },
-    replies: 12,
-    views: 5678,
-    lastReply: { author: 'CuriousMember', avatar: '/images/avatars/12.jpg', date: '2026-02-05T22:00:00' },
-    createdAt: '2026-01-15',
-    isPinned: true,
-    isLocked: true,
-  },
-];
 
-export default function ForumCategoryPage({ 
-  params 
-}: { 
-  params: Promise<{ category: string }> 
+
+export default function ForumCategoryPage({
+  params
+}: {
+  params: Promise<{ category: string }>
 }) {
   const { category } = use(params);
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'unanswered'>('latest');
-  
+
   // API hooks
   const { data: categoryData } = useForumCategory(category);
   const { data: topicsData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useForumTopics(category, sortBy);
-  
+
   const info = useMemo(() => {
     if (categoryData?.data) {
       return {
@@ -113,18 +75,18 @@ export default function ForumCategoryPage({
         description: categoryData.data.description,
       };
     }
-    return categoryInfo[category] || { 
-      name: category.charAt(0).toUpperCase() + category.slice(1), 
-      icon: '💬', 
+    return categoryInfo[category] || {
+      name: category.charAt(0).toUpperCase() + category.slice(1),
+      icon: '💬',
       color: 'bg-gray-500',
-      description: 'Forum category' 
+      description: 'Forum category'
     };
   }, [categoryData, category]);
-  
+
   // Transform API data or use mock
   const topics: Topic[] = useMemo(() => {
     if (topicsData?.pages) {
-      return topicsData.pages.flatMap(page => 
+      return topicsData.pages.flatMap(page =>
         page.data.map(topic => {
           const t = transformTopic(topic);
           return {
@@ -144,25 +106,25 @@ export default function ForumCategoryPage({
         })
       );
     }
-    return mockTopics;
+    return [];
   }, [topicsData]);
-  
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHrs / 24);
-    
+
     if (diffHrs < 1) return 'Just now';
     if (diffHrs < 24) return `${diffHrs}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-  
+
   const pinnedTopics = topics.filter(t => t.isPinned);
   const regularTopics = topics.filter(t => !t.isPinned);
-  
+
   if (isLoading) {
     return (
       <div className="container py-8 flex items-center justify-center">
@@ -170,7 +132,7 @@ export default function ForumCategoryPage({
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-6">
       {/* Breadcrumb */}
@@ -181,7 +143,7 @@ export default function ForumCategoryPage({
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
         <span className="font-medium">{info.name}</span>
       </div>
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -201,7 +163,7 @@ export default function ForumCategoryPage({
           New Topic
         </Link>
       </div>
-      
+
       {/* Filters */}
       <div className="flex items-center gap-4 border-b pb-4">
         <button
@@ -232,7 +194,7 @@ export default function ForumCategoryPage({
           Unanswered
         </button>
       </div>
-      
+
       {/* Pinned Topics */}
       {pinnedTopics.length > 0 && (
         <div className="space-y-2">
@@ -247,7 +209,7 @@ export default function ForumCategoryPage({
           </div>
         </div>
       )}
-      
+
       {/* Regular Topics */}
       <div className="space-y-2">
         {pinnedTopics.length > 0 && (
@@ -259,7 +221,7 @@ export default function ForumCategoryPage({
           ))}
         </div>
       </div>
-      
+
       {/* Pagination */}
       <div className="flex items-center justify-center gap-2 pt-4">
         <button className="px-3 py-2 rounded-lg border hover:bg-muted disabled:opacity-50" disabled>
@@ -278,13 +240,13 @@ export default function ForumCategoryPage({
   );
 }
 
-function TopicRow({ 
-  topic, 
-  category, 
-  formatTimeAgo 
-}: { 
-  topic: Topic; 
-  category: string; 
+function TopicRow({
+  topic,
+  category,
+  formatTimeAgo
+}: {
+  topic: Topic;
+  category: string;
   formatTimeAgo: (date: string) => string;
 }) {
   return (
@@ -301,7 +263,7 @@ function TopicRow({
           className="object-cover"
         />
       </div>
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           {topic.isPinned && <Pin className="h-4 w-4 text-primary" />}
@@ -322,7 +284,7 @@ function TopicRow({
           ))}
         </div>
       </div>
-      
+
       <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
         <div className="text-center">
           <p className="font-semibold text-foreground flex items-center gap-1">
@@ -337,7 +299,7 @@ function TopicRow({
           </p>
         </div>
       </div>
-      
+
       {topic.lastReply && (
         <div className="hidden lg:flex items-center gap-2 w-48">
           <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0">

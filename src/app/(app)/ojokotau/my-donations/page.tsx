@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   ChevronLeft,
   Heart,
   Calendar,
@@ -33,53 +33,7 @@ interface Donation {
 export default function MyDonationsPage() {
   // API hook
   const { data: donationsData, isLoading } = useMyDonations();
-  
-  // Mock data for fallback
-  const mockDonations: Donation[] = [
-    {
-      id: 1,
-      campaign: {
-        id: 1,
-        title: 'Help Me Record My Debut Album',
-        artist: 'Sarah Nakato',
-        cover: '/images/campaigns/album.jpg',
-        status: 'active',
-      },
-      amount: 50000,
-      reward: 'Signed Physical CD',
-      date: '2026-02-01',
-      message: 'Can\'t wait to hear the album! Good luck! 🎵',
-      isAnonymous: false,
-    },
-    {
-      id: 2,
-      campaign: {
-        id: 2,
-        title: 'Music Video for "Sunrise"',
-        artist: 'MC Thunder',
-        cover: '/images/campaigns/video.jpg',
-        status: 'funded',
-      },
-      amount: 25000,
-      reward: 'Digital Album + Bonus Tracks',
-      date: '2026-01-15',
-      isAnonymous: false,
-    },
-    {
-      id: 3,
-      campaign: {
-        id: 3,
-        title: 'Support Local Talent Festival',
-        artist: 'TesoTunes Foundation',
-        cover: '/images/campaigns/festival.jpg',
-        status: 'ended',
-      },
-      amount: 100000,
-      date: '2025-12-20',
-      isAnonymous: true,
-    },
-  ];
-  
+
   // Transform API data to component format
   const donations: Donation[] = useMemo(() => {
     if (donationsData && Array.isArray(donationsData)) {
@@ -103,12 +57,12 @@ export default function MyDonationsPage() {
         };
       });
     }
-    return mockDonations;
+    return [];
   }, [donationsData]);
-  
+
   const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);
   const totalCampaigns = donations.length;
-  
+
   const getStatusStyles = (status: Donation['campaign']['status']) => {
     switch (status) {
       case 'active':
@@ -119,7 +73,7 @@ export default function MyDonationsPage() {
         return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -127,25 +81,25 @@ export default function MyDonationsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 max-w-4xl">
       {/* Back Link */}
-      <Link 
+      <Link
         href="/ojokotau"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Ojokotau
       </Link>
-      
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold">My Donations</h1>
         <p className="text-muted-foreground">
           Track your contributions to artists and campaigns
         </p>
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="p-6 rounded-xl border bg-card text-center">
@@ -159,7 +113,7 @@ export default function MyDonationsPage() {
           <p className="text-sm text-muted-foreground">Campaigns Supported</p>
         </div>
       </div>
-      
+
       {/* Donations List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -169,7 +123,7 @@ export default function MyDonationsPage() {
             Filter
           </button>
         </div>
-        
+
         {donations.map((donation) => (
           <Link
             key={donation.id}
@@ -185,7 +139,7 @@ export default function MyDonationsPage() {
                 className="object-cover h-full w-full"
               />
             </div>
-            
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-medium truncate">{donation.campaign.title}</h3>
@@ -197,7 +151,7 @@ export default function MyDonationsPage() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">{donation.campaign.artist}</p>
-              
+
               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                 <span>{new Date(donation.date).toLocaleDateString()}</span>
                 {donation.reward && (
@@ -209,14 +163,14 @@ export default function MyDonationsPage() {
                   <span className="text-muted-foreground italic">Anonymous</span>
                 )}
               </div>
-              
+
               {donation.message && (
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-1 italic">
                   "{donation.message}"
                 </p>
               )}
             </div>
-            
+
             <div className="text-right flex-shrink-0">
               <p className="font-semibold">UGX {donation.amount.toLocaleString()}</p>
               <ChevronRight className="h-5 w-5 text-muted-foreground mt-1 ml-auto" />
@@ -224,7 +178,7 @@ export default function MyDonationsPage() {
           </Link>
         ))}
       </div>
-      
+
       {donations.length === 0 && (
         <div className="text-center py-12">
           <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

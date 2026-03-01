@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  Heart, 
+import {
+  Heart,
   TrendingUp,
   Clock,
   Users,
@@ -21,95 +21,30 @@ const categories = ['All', 'Albums', 'Videos', 'Tours', 'Equipment', 'Medical', 
 
 export default function OjokotauPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
-  
+
   // API hooks
   const { data: campaignsData, isLoading } = useCampaigns(selectedCategory);
   const { data: featuredData } = useFeaturedCampaigns();
-  
-  // Mock data for fallback
-  const mockFeaturedCampaigns: Campaign[] = [
-    {
-      id: 1,
-      title: 'Help Me Record My Debut Album',
-      artist: { name: 'Sarah Nakato', avatar: '/images/artists/sarah.jpg', isVerified: true },
-      cover: '/images/campaigns/album.jpg',
-      goal: 15000000,
-      raised: 11250000,
-      backers: 234,
-      daysLeft: 21,
-      category: 'Albums',
-      isFeatured: true,
-    },
-    {
-      id: 2,
-      title: 'Music Video for "Sunrise"',
-      artist: { name: 'MC Thunder', avatar: '/images/artists/thunder.jpg', isVerified: true },
-      cover: '/images/campaigns/video.jpg',
-      goal: 8000000,
-      raised: 5600000,
-      backers: 156,
-      daysLeft: 14,
-      category: 'Videos',
-      isFeatured: true,
-    },
-  ];
-  
-  const mockCampaigns: Campaign[] = [
-    ...mockFeaturedCampaigns,
-    {
-      id: 3,
-      title: 'East Africa Tour Fund',
-      artist: { name: 'The Beats Collective', avatar: '/images/artists/beats.jpg', isVerified: false },
-      cover: '/images/campaigns/tour.jpg',
-      goal: 25000000,
-      raised: 7500000,
-      backers: 89,
-      daysLeft: 45,
-      category: 'Tours',
-    },
-    {
-      id: 4,
-      title: 'Studio Equipment Upgrade',
-      artist: { name: 'Producer Jay', avatar: '/images/artists/jay.jpg', isVerified: true },
-      cover: '/images/campaigns/studio.jpg',
-      goal: 5000000,
-      raised: 4250000,
-      backers: 67,
-      daysLeft: 7,
-      category: 'Equipment',
-    },
-    {
-      id: 5,
-      title: 'Help Fund My Music Education',
-      artist: { name: 'Young Talent', avatar: '/images/artists/talent.jpg', isVerified: false },
-      cover: '/images/campaigns/education.jpg',
-      goal: 3000000,
-      raised: 1200000,
-      backers: 45,
-      daysLeft: 30,
-      category: 'Education',
-    },
-  ];
-  
+
   // Transform API data to component format
   const featuredCampaigns: Campaign[] = useMemo(() => {
     if (featuredData && Array.isArray(featuredData)) {
       return featuredData.map((c: Record<string, unknown>) => transformCampaign(c));
     }
-    return mockFeaturedCampaigns;
+    return [];
   }, [featuredData]);
-  
+
   const campaigns: Campaign[] = useMemo(() => {
     if (campaignsData && Array.isArray(campaignsData)) {
       return campaignsData.map((c: Record<string, unknown>) => transformCampaign(c));
     }
-    return mockCampaigns;
+    return [];
   }, [campaignsData]);
-  
-  const filteredCampaigns = campaigns.filter(c => 
+
+  const filteredCampaigns = campaigns.filter(c =>
     selectedCategory === 'All' || c.category === selectedCategory
   );
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -117,7 +52,7 @@ export default function OjokotauPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8 space-y-8">
       {/* Header */}
@@ -130,11 +65,11 @@ export default function OjokotauPage() {
           Support Artists You Love
         </h1>
         <p className="text-muted-foreground">
-          Help Ugandan artists fund their dreams. From albums to music videos, 
+          Help Ugandan artists fund their dreams. From albums to music videos,
           your contribution makes a difference.
         </p>
       </div>
-      
+
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-card text-center">
@@ -154,7 +89,7 @@ export default function OjokotauPage() {
           <p className="text-sm text-muted-foreground">Funded Projects</p>
         </div>
       </div>
-      
+
       {/* Featured Campaigns */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -198,16 +133,16 @@ export default function OjokotauPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="p-4">
                 {/* Progress Bar */}
                 <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
-                  <div 
+                  <div
                     className="h-full bg-primary"
                     style={{ width: `${Math.min((campaign.raised / campaign.goal) * 100, 100)}%` }}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between text-sm">
                   <div>
                     <p className="font-semibold">UGX {campaign.raised.toLocaleString()}</p>
@@ -227,7 +162,7 @@ export default function OjokotauPage() {
           ))}
         </div>
       </section>
-      
+
       {/* Category Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {categories.map((category) => (
@@ -245,26 +180,26 @@ export default function OjokotauPage() {
           </button>
         ))}
       </div>
-      
+
       {/* All Campaigns */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">All Campaigns</h2>
-          <Link 
+          <Link
             href="/ojokotau/campaigns"
             className="text-sm text-primary flex items-center"
           >
             View all <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
-        
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredCampaigns.map((campaign) => (
             <CampaignCard key={campaign.id} campaign={campaign} />
           ))}
         </div>
       </section>
-      
+
       {/* CTA */}
       <div className="text-center p-8 rounded-xl bg-linear-to-r from-primary/10 to-purple-500/10 border">
         <h3 className="text-xl font-bold mb-2">Are you an artist?</h3>
@@ -285,7 +220,7 @@ export default function OjokotauPage() {
 
 function CampaignCard({ campaign }: { campaign: Campaign }) {
   const progress = (campaign.raised / campaign.goal) * 100;
-  
+
   return (
     <Link
       href={`/ojokotau/campaigns/${campaign.id}`}
@@ -304,7 +239,7 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
           </span>
         </div>
       </div>
-      
+
       <div className="p-4">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-6 w-6 rounded-full bg-muted overflow-hidden">
@@ -318,17 +253,17 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
           </div>
           <span className="text-sm text-muted-foreground">{campaign.artist.name}</span>
         </div>
-        
+
         <h3 className="font-semibold line-clamp-2 mb-3">{campaign.title}</h3>
-        
+
         {/* Progress Bar */}
         <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-2">
-          <div 
+          <div
             className="h-full bg-primary"
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
-        
+
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium">{Math.round(progress)}% funded</span>
           <span className="text-muted-foreground flex items-center gap-1">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import {
   Search,
   Plus,
@@ -396,11 +397,9 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
       toast.success('Poll created successfully');
       onCreated();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const msg =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Failed to create poll';
+        getErrorMessage(error, 'Failed to create poll');
       toast.error(msg);
     },
   });

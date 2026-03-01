@@ -59,3 +59,36 @@ export function slugify(text: string): string {
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+/**
+ * Extract a human-readable message from an unknown error.
+ * Works with AxiosError, Error, and plain strings.
+ */
+export function getErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (error instanceof Error) {
+    // Axios errors carry response data
+    const axiosData = (error as unknown as { response?: { data?: { message?: string } } }).response?.data;
+    if (axiosData?.message) return axiosData.message;
+    return error.message || fallback;
+  }
+  if (typeof error === 'string') return error;
+  return fallback;
+}
+
+/**
+ * Extract validation errors from an Axios error response.
+ */
+export function getValidationErrors(error: unknown): Record<string, string> {
+  const axiosError = error as Record<string, unknown> & { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+  const serverErrors = axiosError?.response?.data?.errors;
+  if (serverErrors) {
+    const mapped: Record<string, string> = {};
+    for (const [key, val] of Object.entries(serverErrors)) {
+      mapped[key] = Array.isArray(val) ? val[0] : String(val);
+    }
+    return mapped;
+  }
+  const message = axiosError?.response?.data?.message;
+  if (message) return { _form: message };
+  return { _form: getErrorMessage(error) };
+}

@@ -21,7 +21,7 @@ import {
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
-import type { DisputeResolution } from "@/types/promotions";
+import type { DisputeResolution, PromotionOrder } from "@/types/promotions";
 
 export default function AdminDisputesPage() {
   const [status, setStatus] = useState("open");
@@ -107,7 +107,7 @@ export default function AdminDisputesPage() {
       ) : (
         <>
           <div className="space-y-4">
-            {data.data.map((order: any) => (
+            {data.data.map((order: PromotionOrder) => (
               <div
                 key={order.id}
                 className="bg-card border rounded-lg p-4 space-y-3"

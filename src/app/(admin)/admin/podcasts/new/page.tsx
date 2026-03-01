@@ -7,6 +7,7 @@ import { apiGet, apiPost } from '@/lib/api';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { Upload, X, Mic } from 'lucide-react';
 import Image from 'next/image';
+import { getValidationErrors } from '@/lib/utils';
 
 interface PodcastFormData {
   title: string;
@@ -77,22 +78,20 @@ export default function CreatePodcastPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'podcasts'] });
       router.push('/admin/podcasts');
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
+    onError: (error: unknown) => {
+      setErrors(getValidationErrors(error));
     },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     // Auto-generate slug
     if (name === 'title') {
       const slug = value.toLowerCase()
@@ -101,7 +100,7 @@ export default function CreatePodcastPage() {
         .replace(/-+/g, '-');
       setFormData(prev => ({ ...prev, slug }));
     }
-    
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -121,7 +120,7 @@ export default function CreatePodcastPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
@@ -134,7 +133,7 @@ export default function CreatePodcastPage() {
         }
       }
     });
-    
+
     createMutation.mutate(data);
   };
 
@@ -173,7 +172,7 @@ export default function CreatePodcastPage() {
               placeholder="the-music-hour"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Short Description</label>
             <textarea
@@ -254,7 +253,7 @@ export default function CreatePodcastPage() {
               placeholder="podcast@example.com"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Host Bio</label>
             <textarea
@@ -334,7 +333,7 @@ export default function CreatePodcastPage() {
               placeholder="https://example.com/feed.xml"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="Spotify"
@@ -355,7 +354,7 @@ export default function CreatePodcastPage() {
               placeholder="https://podcasts.apple.com/..."
             />
           </div>
-          
+
           <FormField
             label="Google Podcasts"
             name="google_podcasts_url"

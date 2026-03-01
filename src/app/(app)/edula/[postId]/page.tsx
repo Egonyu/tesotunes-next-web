@@ -44,67 +44,7 @@ interface CommentData {
   replies?: CommentData[];
 }
 
-// Mock data for fallback
-const mockPost: PostCardData = {
-  id: 1,
-  author: {
-    id: 1,
-    name: 'Eddy Kenzo',
-    username: '@eddykenzo',
-    avatar: '/images/artists/kenzo.jpg',
-    isVerified: true,
-  },
-  content: 'Just dropped a new track! 🔥 This one is for all my fans who\'ve been waiting. "Midnight Dreams" available now on TesoTunes. Let me know what you think! 🎵\n\nProduced by @producerjay | Mixed by @studioguru\n\n#NewMusic #MidnightDreams #Afrobeats',
-  createdAt: '2026-02-20T10:30:00',
-  likes: 2456,
-  comments: 345,
-  reposts: 567,
-  isLiked: false,
-  isReposted: false,
-  isBookmarked: false,
-};
 
-const mockComments: CommentData[] = [
-  {
-    id: 1,
-    author: {
-      name: 'Sarah Nakato',
-      username: '@sarahnakato',
-      avatar: '/images/artists/sarah.jpg',
-      isVerified: true,
-    },
-    content: 'Fire! 🔥🔥🔥 This is exactly what we needed!',
-    createdAt: '2026-02-06T11:00:00',
-    likes: 234,
-    isLiked: false,
-  },
-  {
-    id: 2,
-    author: {
-      name: 'Music Lover',
-      username: '@musiclover99',
-      avatar: '/images/avatars/1.jpg',
-      isVerified: false,
-    },
-    content: 'Been waiting for this! The production is incredible. @producerjay always delivers 💯',
-    createdAt: '2026-02-06T10:45:00',
-    likes: 89,
-    isLiked: true,
-  },
-  {
-    id: 3,
-    author: {
-      name: 'DJ Empress',
-      username: '@djempress',
-      avatar: '/images/artists/empress.jpg',
-      isVerified: true,
-    },
-    content: 'Playing this on my next set for sure! 🎧',
-    createdAt: '2026-02-06T10:40:00',
-    likes: 156,
-    isLiked: false,
-  },
-];
 
 export default function PostDetailPage({
   params
@@ -126,7 +66,7 @@ export default function PostDetailPage({
   const likeComment = useLikeComment();
 
   // Transform API data or use mock
-  const post: PostCardData = useMemo(() => {
+  const post: PostCardData | null = useMemo(() => {
     if (postData?.data) {
       const p = postData.data;
       return {
@@ -148,7 +88,7 @@ export default function PostDetailPage({
         isBookmarked: p.is_bookmarked,
       };
     }
-    return { ...mockPost, id: postIdNum };
+    return null;
   }, [postData, postIdNum]);
 
   const comments: CommentData[] = useMemo(() => {
@@ -169,10 +109,11 @@ export default function PostDetailPage({
         }))
       );
     }
-    return mockComments;
+    return [];
   }, [commentsData]);
 
   const handleToggleLike = () => {
+    if (!post) return;
     if (post.isLiked) {
       unlikePost.mutate(post.id);
     } else {
@@ -181,6 +122,7 @@ export default function PostDetailPage({
   };
 
   const handleToggleBookmark = () => {
+    if (!post) return;
     if (post.isBookmarked) {
       unbookmarkPost.mutate(post.id);
     } else {
@@ -190,7 +132,7 @@ export default function PostDetailPage({
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!post || !newComment.trim()) return;
 
     createComment.mutate({
       postId: post.id,
@@ -218,6 +160,22 @@ export default function PostDetailPage({
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="space-y-4 py-8">
+        <Link href="/edula" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Feed
+        </Link>
+        <div className="text-center py-12">
+          <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Post not found</p>
+          <p className="text-muted-foreground">This post may have been removed or doesn&apos;t exist.</p>
+        </div>
       </div>
     );
   }

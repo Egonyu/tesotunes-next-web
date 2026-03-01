@@ -128,10 +128,14 @@ export interface OrderVerification {
 export interface OrderDispute {
   is_disputed: boolean;
   dispute_reason: string | null;
+  reason?: string | null;
   disputed_at: string | null;
+  created_at?: string | null;
   resolved_at: string | null;
   resolution: DisputeResolution | null;
   resolution_notes: string | null;
+  admin_notes?: string | null;
+  evidence_url?: string | null;
 }
 
 export interface PromotionOrder {

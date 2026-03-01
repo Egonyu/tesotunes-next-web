@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
+import { setAuthToken } from '@/lib/api';
 
 // Case-insensitive role check — backend may send 'admin', 'Admin', 'super_admin', 'Super Admin', 'moderator'
 const ADMIN_ROLES = ['super admin', 'admin', 'super_admin', 'moderator'];
@@ -119,6 +120,13 @@ export default function AdminLayout({
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Sync the auth token BEFORE rendering children so that react-query calls
+  // in admin pages (dashboard stats, artist details, etc.) already have
+  // the Bearer token available on first render — prevents 401 race conditions.
+  if (session?.accessToken) {
+    setAuthToken(session.accessToken);
   }
 
   return (

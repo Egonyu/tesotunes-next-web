@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api';
-import { 
+import {
   Users,
   Music,
   Disc3,
@@ -88,19 +88,21 @@ export default function AdminDashboardPage() {
         return res;
       } catch {
         // Fallback: build partial stats from available endpoints
-        const [usersRes, songsRes, artistsRes, albumsRes] = await Promise.allSettled([
+        const [usersRes, songsRes, artistsRes, albumsRes, artistStatsRes] = await Promise.allSettled([
           apiGet<{ data: any[]; meta?: any }>('/admin/users?per_page=1'),
           apiGet<{ data: any[]; meta?: any }>('/admin/songs?per_page=1'),
           apiGet<{ data: any[]; meta?: any }>('/admin/artists?per_page=1'),
           apiGet<{ data: any[]; meta?: any }>('/admin/albums?per_page=1'),
+          apiGet<{ data: { total: number; verified: number; pending_verification: number } }>('/admin/artists/statistics'),
         ]);
         const total = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.meta?.total ?? r.value?.data?.length ?? 0) : 0;
+        const artistStats = artistStatsRes.status === 'fulfilled' ? artistStatsRes.value?.data : null;
         return {
           data: {
             users: { total: total(usersRes), new_today: 0, new_this_week: 0, change_percentage: 0, active_users: 0, premium_users: 0 },
             songs: { total: total(songsRes), published: 0, pending_review: 0, draft: 0, total_plays: 0, plays_today: 0, change_percentage: 0 },
             albums: { total: total(albumsRes), released: 0, upcoming: 0 },
-            artists: { total: total(artistsRes), verified: 0, pending_verification: 0 },
+            artists: { total: artistStats?.total ?? total(artistsRes), verified: artistStats?.verified ?? 0, pending_verification: artistStats?.pending_verification ?? 0 },
             revenue: { total: 0, this_month: 0, last_month: 0, change_percentage: 0, currency: 'UGX' },
             activity: { total_plays: 0, plays_today: 0, plays_this_week: 0, total_downloads: 0, downloads_today: 0, downloads_this_week: 0 },
           } as DashboardStats,
@@ -140,35 +142,35 @@ export default function AdminDashboardPage() {
   const activity = activityData?.data;
 
   const statCards = stats ? [
-    { 
-      label: 'Total Users', 
-      value: formatNumber(stats.users?.total), 
-      change: stats.users?.change_percentage ?? 0, 
-      icon: Users, 
+    {
+      label: 'Total Users',
+      value: formatNumber(stats.users?.total),
+      change: stats.users?.change_percentage ?? 0,
+      icon: Users,
       color: 'bg-blue-500',
       subtext: `${stats.users?.new_today ?? 0} new today`
     },
-    { 
-      label: 'Total Songs', 
-      value: formatNumber(stats.songs?.total), 
-      change: stats.songs?.change_percentage ?? 0, 
-      icon: Music, 
+    {
+      label: 'Total Songs',
+      value: formatNumber(stats.songs?.total),
+      change: stats.songs?.change_percentage ?? 0,
+      icon: Music,
       color: 'bg-purple-500',
       subtext: `${stats.songs?.pending_review ?? 0} pending review`
     },
-    { 
-      label: 'Revenue (MTD)', 
-      value: formatCurrency(stats.revenue?.this_month, stats.revenue?.currency), 
-      change: stats.revenue?.change_percentage ?? 0, 
-      icon: DollarSign, 
+    {
+      label: 'Revenue (MTD)',
+      value: formatCurrency(stats.revenue?.this_month, stats.revenue?.currency),
+      change: stats.revenue?.change_percentage ?? 0,
+      icon: DollarSign,
       color: 'bg-green-500',
       subtext: 'vs last month'
     },
-    { 
-      label: 'Active Streams', 
-      value: formatNumber(stats.activity?.plays_today), 
-      change: 0, 
-      icon: Play, 
+    {
+      label: 'Active Streams',
+      value: formatNumber(stats.activity?.plays_today),
+      change: 0,
+      icon: Play,
       color: 'bg-orange-500',
       subtext: `${formatNumber(stats.activity?.plays_this_week)} this week`
     },
@@ -194,7 +196,7 @@ export default function AdminDashboardPage() {
       time: formatDate(a.created_at),
     })),
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 10) : [];
-  
+
   if (statsLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -220,7 +222,7 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -228,13 +230,13 @@ export default function AdminDashboardPage() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Welcome back! Here's what's happening.</p>
       </div>
-      
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           const isPositive = stat.change >= 0;
-          
+
           return (
             <div key={stat.label} className="p-6 rounded-xl border bg-card">
               <div className="flex items-center justify-between mb-4">
@@ -258,7 +260,7 @@ export default function AdminDashboardPage() {
           );
         })}
       </div>
-      
+
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Stats Overview */}
@@ -269,7 +271,7 @@ export default function AdminDashboardPage() {
               <p className="text-sm text-muted-foreground">Current content statistics</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-2xl font-bold">{stats?.songs?.published ?? 0}</p>
@@ -304,7 +306,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Pending Actions */}
         <div className="p-6 rounded-xl border bg-card">
           <div className="flex items-center justify-between mb-4">
@@ -341,7 +343,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -381,7 +383,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
-        
+
         {/* Quick Actions */}
         <div className="p-6 rounded-xl border bg-card">
           <h2 className="font-semibold mb-4">Quick Actions</h2>

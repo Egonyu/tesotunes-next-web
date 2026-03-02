@@ -11,7 +11,7 @@ import { PageHeader, FormField, FormSection, FormActions } from '@/components/ad
 import { toast } from 'sonner';
 
 interface Genre {
-  id: string;
+  id: number;
   name: string;
 }
 
@@ -30,10 +30,8 @@ interface Artist {
   name: string;
   slug: string;
   bio: string;
-  short_bio: string;
-  country: string;
-  city: string;
   website: string;
+  website_url: string;
   spotify_url: string;
   apple_music_url: string;
   youtube_url: string;
@@ -44,11 +42,12 @@ interface Artist {
   status: string;
   is_verified: boolean;
   is_featured: boolean;
+  is_trusted: boolean;
   profile_url: string;
   cover_url: string;
+  avatar_url: string;
+  primary_genre_id: number | null;
   genres: { id: string; name: string }[];
-  meta_title: string;
-  meta_description: string;
   user_id?: number;
   user?: UserProfile;
 }
@@ -57,10 +56,7 @@ interface ArtistFormData {
   name: string;
   slug: string;
   bio: string;
-  short_bio: string;
   genre_ids: string[];
-  country: string;
-  city: string;
   website: string;
   spotify_url: string;
   apple_music_url: string;
@@ -71,11 +67,8 @@ interface ArtistFormData {
   tiktok_url: string;
   status: string;
   is_verified: boolean;
-  is_featured: boolean;
   profile_image: File | null;
   cover_image: File | null;
-  meta_title: string;
-  meta_description: string;
 }
 
 interface UserFormData {
@@ -96,10 +89,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     name: '',
     slug: '',
     bio: '',
-    short_bio: '',
     genre_ids: [],
-    country: '',
-    city: '',
     website: '',
     spotify_url: '',
     apple_music_url: '',
@@ -110,11 +100,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     tiktok_url: '',
     status: 'active',
     is_verified: false,
-    is_featured: false,
     profile_image: null,
     cover_image: null,
-    meta_title: '',
-    meta_description: '',
   });
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -130,14 +117,14 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
   });
   const [userErrors, setUserErrors] = useState<Record<string, string>>({});
 
-  const { data: artist, isLoading: artistLoading } = useQuery({
+  const { data: artist, isLoading: artistLoading, isError: artistError, error: artistFetchError } = useQuery({
     queryKey: ['admin', 'artist', id],
     queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
   });
 
   const { data: genres } = useQuery({
-    queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryKey: ['genres', 'list'],
+    queryFn: () => apiGet<{ data: Genre[] }>('/genres'),
   });
 
   // Populate form when artist data loads
@@ -148,11 +135,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         name: a.name || '',
         slug: a.slug || '',
         bio: a.bio || '',
-        short_bio: a.short_bio || '',
         genre_ids: a.genres?.map(g => g.id) || [],
-        country: a.country || '',
-        city: a.city || '',
-        website: a.website || '',
+        website: a.website || a.website_url || '',
         spotify_url: a.spotify_url || '',
         apple_music_url: a.apple_music_url || '',
         youtube_url: a.youtube_url || '',
@@ -162,11 +146,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
         tiktok_url: a.tiktok_url || '',
         status: a.status || 'active',
         is_verified: !!a.is_verified,
-        is_featured: !!a.is_featured,
         profile_image: null,
         cover_image: null,
-        meta_title: a.meta_title || '',
-        meta_description: a.meta_description || '',
       });
       if (a.profile_url) setProfilePreview(a.profile_url);
       if (a.cover_url) setCoverPreview(a.cover_url);
@@ -195,15 +176,17 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
       router.push(`/admin/artists/${id}`);
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
-      if (error.response?.data?.errors) {
+    onError: (error: unknown) => {
+      const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } }; message?: string };
+      if (axiosError.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
-        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
+        Object.entries(axiosError.response.data.errors).forEach(([key, messages]) => {
           newErrors[key] = messages[0];
         });
         setErrors(newErrors);
       }
-      toast.error(error.response?.data?.message || 'Failed to update artist');
+      const msg = axiosError.response?.data?.message || axiosError.message || 'Failed to update artist';
+      toast.error(msg);
     },
   });
 
@@ -231,15 +214,16 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       setUserFormData(prev => ({ ...prev, new_password: '', new_password_confirmation: '' }));
       setUserErrors({});
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
-      if (error.response?.data?.errors) {
+    onError: (error: unknown) => {
+      const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } }; message?: string };
+      if (axiosError.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
-        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
+        Object.entries(axiosError.response.data.errors).forEach(([key, messages]) => {
           newErrors[key] = messages[0];
         });
         setUserErrors(newErrors);
       } else {
-        toast.error(error.response?.data?.message || 'Failed to update user account');
+        toast.error(axiosError.response?.data?.message || axiosError.message || 'Failed to update user account');
       }
     },
   });
@@ -298,13 +282,15 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     e.preventDefault();
 
     const data = new FormData();
+    // Only send fields the backend update() actually processes
     data.append('name', formData.name);
     data.append('slug', formData.slug);
     data.append('bio', formData.bio);
-    data.append('short_bio', formData.short_bio);
-    data.append('country', formData.country);
-    data.append('city', formData.city);
     data.append('website', formData.website);
+    data.append('status', formData.status);
+    data.append('is_verified', formData.is_verified ? '1' : '0');
+
+    // Social links
     data.append('spotify_url', formData.spotify_url);
     data.append('apple_music_url', formData.apple_music_url);
     data.append('youtube_url', formData.youtube_url);
@@ -312,12 +298,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     data.append('twitter_url', formData.twitter_url);
     data.append('facebook_url', formData.facebook_url);
     data.append('tiktok_url', formData.tiktok_url);
-    data.append('status', formData.status);
-    data.append('is_verified', formData.is_verified ? '1' : '0');
-    data.append('is_featured', formData.is_featured ? '1' : '0');
-    data.append('meta_title', formData.meta_title);
-    data.append('meta_description', formData.meta_description);
 
+    // Genre — backend takes genre_ids[] and uses first as primary_genre_id
     formData.genre_ids.forEach(gid => data.append('genre_ids[]', gid));
 
     if (formData.profile_image) data.append('profile_image', formData.profile_image);
@@ -346,11 +328,15 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  if (!artist?.data) {
+  if (!artist?.data || artistError) {
+    const errMsg = artistError
+      ? (artistFetchError as { message?: string })?.message || 'Could not load artist data'
+      : 'Artist not found';
     return (
       <div className="text-center py-12">
         <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h2 className="text-xl font-semibold">Artist not found</h2>
+        <h2 className="text-xl font-semibold">{errMsg}</h2>
+        <p className="text-sm text-muted-foreground mt-1">Check that you are logged in and the artist ID is valid.</p>
         <Link href="/admin/artists" className="text-primary hover:underline mt-2 inline-block">
           Back to artists
         </Link>
@@ -414,17 +400,6 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                 </FormField>
               </div>
 
-              <FormField label="Short Bio" error={errors.short_bio}>
-                <input
-                  type="text"
-                  value={formData.short_bio}
-                  onChange={(e) => updateField('short_bio', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="One-line description (max 160 chars)"
-                  maxLength={160}
-                />
-              </FormField>
-
               <FormField label="Full Bio" error={errors.bio}>
                 <textarea
                   value={formData.bio}
@@ -434,29 +409,6 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   placeholder="Full artist biography..."
                 />
               </FormField>
-            </FormSection>
-
-            <FormSection title="Location">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Country" error={errors.country}>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => updateField('country', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="Uganda"
-                  />
-                </FormField>
-                <FormField label="City" error={errors.city}>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => updateField('city', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="Kampala"
-                  />
-                </FormField>
-              </div>
             </FormSection>
 
             <FormSection title="Social Links">
@@ -525,27 +477,6 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   />
                 </FormField>
               </div>
-            </FormSection>
-
-            <FormSection title="SEO">
-              <FormField label="Meta Title" error={errors.meta_title}>
-                <input
-                  type="text"
-                  value={formData.meta_title}
-                  onChange={(e) => updateField('meta_title', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="SEO title"
-                />
-              </FormField>
-              <FormField label="Meta Description" error={errors.meta_description}>
-                <textarea
-                  value={formData.meta_description}
-                  onChange={(e) => updateField('meta_description', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  rows={2}
-                  placeholder="SEO description"
-                />
-              </FormField>
             </FormSection>
 
             {/* User Account Section */}
@@ -773,12 +704,13 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   <label key={genre.id} className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={formData.genre_ids.includes(genre.id)}
+                      checked={formData.genre_ids.includes(String(genre.id))}
                       onChange={(e) => {
+                        const gid = String(genre.id);
                         if (e.target.checked) {
-                          updateField('genre_ids', [...formData.genre_ids, genre.id]);
+                          updateField('genre_ids', [...formData.genre_ids, gid]);
                         } else {
-                          updateField('genre_ids', formData.genre_ids.filter(gid => gid !== genre.id));
+                          updateField('genre_ids', formData.genre_ids.filter(id => id !== gid));
                         }
                       }}
                       className="rounded border-gray-300"
@@ -786,6 +718,9 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                     <span className="text-sm">{genre.name}</span>
                   </label>
                 ))}
+                {(!genres?.data || genres.data.length === 0) && (
+                  <p className="text-sm text-muted-foreground">Loading genres...</p>
+                )}
               </div>
             </FormSection>
 
@@ -812,15 +747,9 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   />
                   <span className="text-sm">Verified Artist</span>
                 </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_featured}
-                    onChange={(e) => updateField('is_featured', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Featured Artist</span>
-                </label>
+                <p className="text-xs text-muted-foreground">
+                  Featured status is managed via the artist detail page toggle.
+                </p>
               </div>
             </FormSection>
           </div>

@@ -38,6 +38,7 @@ export function useFeed(type: 'for-you' | 'following' = 'for-you') {
     queryFn: ({ pageParam = 1 }) =>
       apiGet<FeedResponse>(`/feed/${type}`, { params: { page: pageParam } }),
     getNextPageParam: (lastPage) =>
+      lastPage?.meta?.current_page != null && lastPage?.meta?.last_page != null &&
       lastPage.meta.current_page < lastPage.meta.last_page
         ? lastPage.meta.current_page + 1
         : undefined,
@@ -91,6 +92,7 @@ export function usePostComments(postId: number) {
         { params: { page: pageParam } }
       ),
     getNextPageParam: (lastPage) =>
+      lastPage?.meta?.current_page != null && lastPage?.meta?.last_page != null &&
       lastPage.meta.current_page < lastPage.meta.last_page
         ? lastPage.meta.current_page + 1
         : undefined,

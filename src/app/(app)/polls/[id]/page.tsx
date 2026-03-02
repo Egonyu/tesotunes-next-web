@@ -10,7 +10,6 @@ import {
   Share2,
   Flag,
   CheckCircle,
-  MessageCircle,
   BarChart3,
   Loader2
 } from 'lucide-react';
@@ -51,6 +50,7 @@ export default function PollDetailPage({
 }) {
   const { id } = use(params);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [localVote, setLocalVote] = useState<{ optionId: number; success: boolean } | null>(null);
 
   // API hooks
   const { data: pollData, isLoading, error } = usePoll(id);
@@ -69,9 +69,33 @@ export default function PollDetailPage({
     return null;
   }, [pollData]);
 
+  // Apply optimistic vote updates
+  const displayPoll: Poll | null = useMemo(() => {
+    if (!poll) return null;
+    if (!localVote?.success) return poll;
+
+    const updatedOptions = poll.options.map(opt => ({
+      ...opt,
+      votes: opt.id === localVote.optionId ? opt.votes + 1 : opt.votes,
+    }));
+    const newTotal = updatedOptions.reduce((sum, o) => sum + o.votes, 0);
+    const withPercentages = updatedOptions.map(opt => ({
+      ...opt,
+      percentage: newTotal > 0 ? Math.round((opt.votes / newTotal) * 100) : 0,
+    }));
+
+    return {
+      ...poll,
+      options: withPercentages,
+      totalVotes: newTotal,
+      hasVoted: true,
+      votedOptionId: localVote.optionId,
+    };
+  }, [poll, localVote]);
+
   const getRemainingTime = () => {
-    if (!poll) return '';
-    const end = new Date(poll.endsAt);
+    if (!displayPoll) return '';
+    const end = new Date(displayPoll.endsAt);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
 
@@ -87,12 +111,19 @@ export default function PollDetailPage({
   };
 
   const handleVote = () => {
-    if (!poll || !selectedOption || poll.hasVoted) return;
+    if (!poll || !selectedOption || poll.hasVoted || localVote?.success) return;
 
-    voteMutation.mutate({ pollId: id, optionId: selectedOption });
+    voteMutation.mutate(
+      { pollId: id, optionId: selectedOption },
+      {
+        onSuccess: () => {
+          setLocalVote({ optionId: selectedOption, success: true });
+        },
+      }
+    );
   };
 
-  const showResults = poll?.hasVoted || poll?.status === 'closed' || voteMutation.isSuccess;
+  const showResults = displayPoll?.hasVoted || displayPoll?.status === 'closed' || localVote?.success;
 
   if (isLoading) {
     return (
@@ -102,7 +133,7 @@ export default function PollDetailPage({
     );
   }
 
-  if (error || !poll) {
+  if (error || !displayPoll) {
     return (
       <div className="container py-8 max-w-3xl">
         <Link href="/polls" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6">
@@ -137,8 +168,8 @@ export default function PollDetailPage({
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
                 <Image
-                  src={poll.creator.avatar}
-                  alt={poll.creator.name}
+                  src={displayPoll.creator.avatar}
+                  alt={displayPoll.creator.name}
                   width={40}
                   height={40}
                   className="object-cover"
@@ -146,20 +177,20 @@ export default function PollDetailPage({
               </div>
               <div>
                 <div className="flex items-center gap-1">
-                  <span className="font-medium">{poll.creator.name}</span>
-                  {poll.creator.isVerified && (
+                  <span className="font-medium">{displayPoll.creator.name}</span>
+                  {displayPoll.creator.isVerified && (
                     <CheckCircle className="h-4 w-4 text-primary fill-primary" />
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Created {new Date(poll.createdAt).toLocaleDateString()}
+                  Created {new Date(displayPoll.createdAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold mb-2">{poll.question}</h1>
-          <p className="text-muted-foreground">{poll.description}</p>
+          <h1 className="text-2xl font-bold mb-2">{displayPoll.question}</h1>
+          <p className="text-muted-foreground">{displayPoll.description}</p>
 
           <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -168,7 +199,7 @@ export default function PollDetailPage({
             </span>
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {poll.totalVotes.toLocaleString()} votes
+              {displayPoll.totalVotes.toLocaleString()} votes
             </span>
           </div>
         </div>
@@ -176,14 +207,14 @@ export default function PollDetailPage({
         {/* Options */}
         <div className="p-6">
           <div className="space-y-3">
-            {poll.options.map((option) => {
-              const isSelected = selectedOption === option.id || poll.votedOptionId === option.id;
+            {displayPoll.options.map((option) => {
+              const isSelected = selectedOption === option.id || displayPoll.votedOptionId === option.id;
 
               return (
                 <button
                   key={option.id}
                   onClick={() => !showResults && setSelectedOption(option.id)}
-                  disabled={showResults}
+                  disabled={!!showResults}
                   className={cn(
                     'w-full relative rounded-lg border transition-all text-left',
                     showResults
@@ -237,7 +268,7 @@ export default function PollDetailPage({
           </div>
 
           {/* Vote Button */}
-          {!showResults && poll.status === 'active' && (
+          {!showResults && displayPoll.status === 'active' && (
             <button
               onClick={handleVote}
               disabled={!selectedOption || voteMutation.isPending}
@@ -254,12 +285,15 @@ export default function PollDetailPage({
 
           {showResults && (
             <div className="mt-6 p-4 rounded-lg bg-muted/50 text-center">
-              <BarChart3 className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {poll.hasVoted || voteMutation.isSuccess
+              <CheckCircle className="h-6 w-6 mx-auto mb-2 text-primary" />
+              <p className="text-sm font-medium">
+                {displayPoll.hasVoted || localVote?.success
                   ? 'Thank you for voting!'
                   : 'This poll has closed'
                 }
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {displayPoll.totalVotes.toLocaleString()} total votes
               </p>
             </div>
           )}
@@ -267,11 +301,7 @@ export default function PollDetailPage({
 
         {/* Actions */}
         <div className="flex items-center justify-between p-4 border-t bg-muted/30">
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-              <MessageCircle className="h-4 w-4" />
-              {poll.comments} comments
-            </button>
+          <div className="flex items-center gap-2">
             <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <Share2 className="h-4 w-4" />
               Share

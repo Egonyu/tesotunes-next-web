@@ -28,8 +28,11 @@ export default function ArtistProfilePage() {
     country: '',
     city: '',
     website_url: '',
+    spotify: '',
+    apple_music: '',
     instagram: '',
     twitter: '',
+    facebook: '',
     youtube: '',
     tiktok: '',
   });
@@ -46,8 +49,11 @@ export default function ArtistProfilePage() {
         country: profile.country || '',
         city: profile.city || '',
         website_url: profile.website_url || '',
+        spotify: socialLinks.spotify || '',
+        apple_music: socialLinks.apple_music || '',
         instagram: socialLinks.instagram || '',
         twitter: socialLinks.twitter || '',
+        facebook: socialLinks.facebook || '',
         youtube: socialLinks.youtube || '',
         tiktok: socialLinks.tiktok || '',
       });
@@ -60,15 +66,18 @@ export default function ArtistProfilePage() {
 
   const handleSave = async () => {
     try {
+      // Note: country/city are NOT in backend validation or Artist $fillable.
+      // They are display-only. Only send fields the backend accepts.
       await updateProfile.mutateAsync({
         stage_name: formData.stage_name,
         bio: formData.bio,
-        country: formData.country,
-        city: formData.city,
         website_url: formData.website_url,
         social_links: {
+          spotify: formData.spotify,
+          apple_music: formData.apple_music,
           instagram: formData.instagram,
           twitter: formData.twitter,
+          facebook: formData.facebook,
           youtube: formData.youtube,
           tiktok: formData.tiktok,
         },
@@ -203,28 +212,18 @@ export default function ArtistProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1.5">Country</label>
-              {isEditing ? (
-                <input
-                  type="text" value={formData.country}
-                  onChange={(e) => setFormData({...formData, country: e.target.value})}
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
-                />
-              ) : (
-                <p className="text-muted-foreground">{profile?.country || '—'}</p>
+              <p className="text-muted-foreground">{profile?.country || '—'}</p>
+              {isEditing && (
+                <p className="text-xs text-muted-foreground mt-1">Managed via account settings</p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">City</label>
-              {isEditing ? (
-                <input
-                  type="text" value={formData.city}
-                  onChange={(e) => setFormData({...formData, city: e.target.value})}
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
-                />
-              ) : (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />{profile?.city || '—'}
-                </div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <MapPin className="h-4 w-4" />{profile?.city || '—'}
+              </div>
+              {isEditing && (
+                <p className="text-xs text-muted-foreground mt-1">Managed via account settings</p>
               )}
             </div>
           </div>
@@ -235,10 +234,13 @@ export default function ArtistProfilePage() {
 
           {[
             { key: 'website_url', label: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com' },
-            { key: 'twitter', label: 'Twitter / X', icon: Twitter, placeholder: '@username' },
-            { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: '@username' },
+            { key: 'spotify', label: 'Spotify', icon: Music2, placeholder: 'https://open.spotify.com/artist/...' },
+            { key: 'apple_music', label: 'Apple Music', icon: Music2, placeholder: 'https://music.apple.com/artist/...' },
+            { key: 'twitter', label: 'Twitter / X', icon: Twitter, placeholder: '@username or URL' },
+            { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: '@username or URL' },
+            { key: 'facebook', label: 'Facebook', icon: LinkIcon, placeholder: 'https://facebook.com/...' },
             { key: 'youtube', label: 'YouTube', icon: Youtube, placeholder: 'Channel URL' },
-            { key: 'tiktok', label: 'TikTok', icon: Music2, placeholder: '@username' },
+            { key: 'tiktok', label: 'TikTok', icon: Music2, placeholder: '@username or URL' },
           ].map(({ key, label, icon: Icon, placeholder }) => (
             <div key={key}>
               <label className="block text-sm font-medium mb-1.5">{label}</label>

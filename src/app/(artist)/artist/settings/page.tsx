@@ -27,8 +27,11 @@ export default function ArtistSettingsPage() {
     country: '',
     city: '',
     website_url: '',
+    spotify: '',
+    apple_music: '',
     instagram: '',
     twitter: '',
+    facebook: '',
     youtube: '',
     tiktok: '',
     payout_phone_number: '',
@@ -45,8 +48,11 @@ export default function ArtistSettingsPage() {
         country: profile.country || '',
         city: profile.city || '',
         website_url: profile.website_url || '',
+        spotify: socialLinks.spotify || '',
+        apple_music: socialLinks.apple_music || '',
         instagram: socialLinks.instagram || '',
         twitter: socialLinks.twitter || '',
+        facebook: socialLinks.facebook || '',
         youtube: socialLinks.youtube || '',
         tiktok: socialLinks.tiktok || '',
         payout_phone_number: profile.payout_phone_number || '',
@@ -57,15 +63,18 @@ export default function ArtistSettingsPage() {
   
   const handleSave = async () => {
     try {
+      // Note: country/city are NOT in backend validation or Artist $fillable.
+      // Only send fields the backend accepts.
       await updateProfile.mutateAsync({
         stage_name: formData.stage_name,
         bio: formData.bio,
-        country: formData.country,
-        city: formData.city,
         website_url: formData.website_url,
         social_links: {
+          spotify: formData.spotify,
+          apple_music: formData.apple_music,
           instagram: formData.instagram,
           twitter: formData.twitter,
+          facebook: formData.facebook,
           youtube: formData.youtube,
           tiktok: formData.tiktok,
         },
@@ -203,23 +212,13 @@ export default function ArtistSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Country</label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    placeholder="Uganda"
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                  />
+                  <p className="px-4 py-2 text-muted-foreground">{formData.country || '—'}</p>
+                  <p className="text-xs text-muted-foreground">Managed via account settings</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Kampala"
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                  />
+                  <p className="px-4 py-2 text-muted-foreground">{formData.city || '—'}</p>
+                  <p className="text-xs text-muted-foreground">Managed via account settings</p>
                 </div>
               </div>
               
@@ -227,6 +226,26 @@ export default function ArtistSettingsPage() {
               <div>
                 <h3 className="font-medium mb-4">Social Links</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Spotify</label>
+                    <input
+                      type="url"
+                      value={formData.spotify}
+                      onChange={(e) => setFormData({ ...formData, spotify: e.target.value })}
+                      placeholder="https://open.spotify.com/artist/..."
+                      className="w-full px-4 py-2 border rounded-lg bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Apple Music</label>
+                    <input
+                      type="url"
+                      value={formData.apple_music}
+                      onChange={(e) => setFormData({ ...formData, apple_music: e.target.value })}
+                      placeholder="https://music.apple.com/artist/..."
+                      className="w-full px-4 py-2 border rounded-lg bg-background"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Instagram</label>
                     <input
@@ -244,6 +263,16 @@ export default function ArtistSettingsPage() {
                       value={formData.twitter}
                       onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
                       placeholder="https://twitter.com/username"
+                      className="w-full px-4 py-2 border rounded-lg bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Facebook</label>
+                    <input
+                      type="url"
+                      value={formData.facebook}
+                      onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+                      placeholder="https://facebook.com/..."
                       className="w-full px-4 py-2 border rounded-lg bg-background"
                     />
                   </div>

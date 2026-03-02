@@ -17,7 +17,6 @@ export interface Poll {
   description?: string;
   options: PollOption[];
   totalVotes: number;
-  category: string;
   creator: {
     name: string;
     avatar: string;
@@ -27,20 +26,22 @@ export interface Poll {
   endsAt: string;
   hasVoted: boolean;
   votedOptionId?: number;
-  status: 'active' | 'ended';
+  status: 'active' | 'closed';
 }
 
 // Transform API response to component format
+// Works with both PollResource (public) and raw Poll model (admin)
 export function transformPoll(data: Record<string, unknown>): Poll {
-  const options = (data.options as Array<Record<string, unknown>> || []).map((opt: Record<string, unknown>, index: number) => ({
+  const rawOptions = data.options as Array<Record<string, unknown>> || [];
+  const options = rawOptions.map((opt: Record<string, unknown>, index: number) => ({
     id: (opt.id as number) || index + 1,
     text: (opt.text as string) || (opt.option_text as string) || '',
     votes: (opt.votes as number) || (opt.vote_count as number) || 0,
     percentage: (opt.percentage as number) || 0,
   }));
 
-  const totalVotes = options.reduce((sum, opt) => sum + opt.votes, 0);
-  
+  const totalVotes = (data.total_votes as number) || options.reduce((sum, opt) => sum + opt.votes, 0);
+
   // Calculate percentages if not provided
   options.forEach(opt => {
     if (opt.percentage === 0 && totalVotes > 0) {
@@ -48,70 +49,64 @@ export function transformPoll(data: Record<string, unknown>): Poll {
     }
   });
 
+  // Creator can come from "creator" (PollResource) or "user" (admin raw model)
   const creator = data.creator as Record<string, unknown> || data.user as Record<string, unknown> || {};
-  
+
+  // user_vote from PollResource is an array of voted option IDs
+  const userVote = data.user_vote as number[] | undefined;
+
   return {
     id: data.id as number,
-    question: (data.question as string) || (data.title as string) || '',
+    question: (data.title as string) || (data.question as string) || '',
     description: data.description as string | undefined,
     options,
     totalVotes,
-    category: (data.category as string) || 'General',
     creator: {
-      name: (creator.name as string) || 'Anonymous',
+      name: (creator.name as string) || (creator.display_name as string) || 'Anonymous',
       avatar: (creator.avatar as string) || (creator.profile_image as string) || '/images/avatar-placeholder.png',
       isVerified: (creator.is_verified as boolean) || false,
     },
     createdAt: (data.created_at as string) || new Date().toISOString(),
-    endsAt: (data.ends_at as string) || (data.end_date as string) || new Date().toISOString(),
+    endsAt: (data.ends_at as string) || new Date().toISOString(),
     hasVoted: (data.has_voted as boolean) || false,
-    votedOptionId: data.voted_option_id as number | undefined,
-    status: (data.status as 'active' | 'ended') || ((data.is_active as boolean) ? 'active' : 'ended'),
+    votedOptionId: userVote?.[0] ?? (data.voted_option_id as number | undefined),
+    status: (data.status as 'active' | 'closed') || ((data.is_active as boolean) ? 'active' : 'closed'),
   };
 }
 
 // Get all polls with optional filters
-export function usePolls(category?: string, status?: 'active' | 'ended') {
+export function usePolls(status?: 'active' | 'closed') {
   return useQuery({
-    queryKey: ['polls', category, status],
+    queryKey: ['polls', status],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (category && category !== 'All') params.append('category', category);
       if (status) params.append('status', status);
-      
-      const response = await apiGet<{ data?: unknown }>(`/polls?${params.toString()}`);
-      return response.data || response;
+
+      // PollResource::collection returns { data: [...], links: {...}, meta: {...} }
+      const response = await apiGet<{ data?: unknown[] }>(`/polls?${params.toString()}`);
+      return response.data || [];
     },
   });
 }
 
-// Get a single poll
+// Get a single poll (public endpoint is /polls/{id}/results)
 export function usePoll(pollId: string) {
   return useQuery({
     queryKey: ['poll', pollId],
     queryFn: async () => {
-      const response = await apiGet<{ data?: unknown }>(`/polls/${pollId}`);
+      // Public single-poll endpoint uses PollResource
+      const response = await apiGet<{ data?: unknown }>(`/polls/${pollId}/results`);
       return response.data || response;
     },
     enabled: !!pollId,
   });
 }
 
-// Get trending/featured polls
-export function useTrendingPolls() {
-  return useQuery({
-    queryKey: ['polls', 'trending'],
-    queryFn: async () => {
-      const response = await apiGet<{ data?: unknown }>('/polls/trending');
-      return response.data || response;
-    },
-  });
-}
 
 // Create a new poll
 export function useCreatePoll() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: {
       title: string;
@@ -132,7 +127,7 @@ export function useCreatePoll() {
 // Vote on a poll
 export function useVotePoll() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ pollId, optionId }: { pollId: string; optionId: number }) => {
       const response = await apiPost<{ data?: unknown }>(`/polls/${pollId}/vote`, { option_id: optionId });
@@ -145,20 +140,11 @@ export function useVotePoll() {
   });
 }
 
-// Share a poll
-export function useSharePoll() {
-  return useMutation({
-    mutationFn: async (pollId: string) => {
-      const response = await apiPost<{ data?: unknown }>(`/polls/${pollId}/share`, {});
-      return response.data || response;
-    },
-  });
-}
 
 // Delete a poll (for poll creator)
 export function useDeletePoll() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (pollId: string) => {
       const response = await apiDelete<{ data?: unknown }>(`/polls/${pollId}`);
@@ -170,13 +156,4 @@ export function useDeletePoll() {
   });
 }
 
-// Get poll categories
-export function usePollCategories() {
-  return useQuery({
-    queryKey: ['poll-categories'],
-    queryFn: async () => {
-      const response = await apiGet<{ data?: unknown }>('/polls/categories');
-      return response.data || response;
-    },
-  });
-}
+

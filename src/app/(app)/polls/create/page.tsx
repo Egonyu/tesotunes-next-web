@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
+import {
   ChevronLeft,
   Plus,
   Trash2,
@@ -18,46 +18,43 @@ interface PollOption {
   text: string;
 }
 
-const categories = ['Music', 'Artists', 'Industry', 'Community', 'Fun'];
-
 export default function CreatePollPage() {
   const router = useRouter();
   const [question, setQuestion] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Music');
   const [duration, setDuration] = useState(7);
   const [options, setOptions] = useState<PollOption[]>([
     { id: '1', text: '' },
     { id: '2', text: '' },
   ]);
   const [allowMultiple, setAllowMultiple] = useState(false);
-  
+
   // API hook
   const createPollMutation = useCreatePoll();
-  
+
   const addOption = () => {
     if (options.length >= 6) return;
     setOptions([...options, { id: Date.now().toString(), text: '' }]);
   };
-  
+
   const removeOption = (id: string) => {
     if (options.length <= 2) return;
     setOptions(options.filter(o => o.id !== id));
   };
-  
+
   const updateOption = (id: string, text: string) => {
     setOptions(options.map(o => o.id === id ? { ...o, text } : o));
   };
-  
+
   const isValid = question.trim() && options.filter(o => o.text.trim()).length >= 2;
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-    
+
     const endsAt = new Date();
     endsAt.setDate(endsAt.getDate() + duration);
-    
+
     createPollMutation.mutate(
       {
         title: question,
@@ -73,25 +70,25 @@ export default function CreatePollPage() {
       }
     );
   };
-  
+
   return (
     <div className="container py-8 max-w-2xl">
       {/* Back Link */}
-      <Link 
+      <Link
         href="/polls"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Polls
       </Link>
-      
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Create a Poll</h1>
         <p className="text-muted-foreground">
           Ask the community and gather opinions
         </p>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Question */}
         <div>
@@ -111,7 +108,7 @@ export default function CreatePollPage() {
             {question.length}/200 characters
           </p>
         </div>
-        
+
         {/* Description */}
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -126,7 +123,7 @@ export default function CreatePollPage() {
             className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
           />
         </div>
-        
+
         {/* Options */}
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -168,29 +165,7 @@ export default function CreatePollPage() {
             </button>
           )}
         </div>
-        
-        {/* Category */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Category</label>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCategory(cat)}
-                className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                  category === cat
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted hover:bg-muted/80'
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-        
+
         {/* Duration */}
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -209,7 +184,7 @@ export default function CreatePollPage() {
             <option value={30}>30 days</option>
           </select>
         </div>
-        
+
         {/* Settings */}
         <div className="p-4 rounded-lg bg-muted/50">
           <label className="flex items-center gap-3 cursor-pointer">
@@ -227,7 +202,7 @@ export default function CreatePollPage() {
             </div>
           </label>
         </div>
-        
+
         {/* Info */}
         <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30">
           <div className="flex items-start gap-3">
@@ -242,7 +217,7 @@ export default function CreatePollPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Submit */}
         <div className="flex gap-3">
           <Link

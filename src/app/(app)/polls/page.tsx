@@ -16,29 +16,24 @@ import {
 import { cn } from '@/lib/utils';
 import { usePolls, useVotePoll, transformPoll, Poll } from '@/hooks/usePolls';
 
-const categories = ['All', 'Music', 'Artists', 'Industry', 'Community', 'Fun'];
-
 export default function PollsPage() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [showActive, setShowActive] = useState(true);
 
   // API hooks
-  const status = showActive ? 'active' : 'ended';
-  const { data: pollsData, isLoading } = usePolls(selectedCategory, status);
+  const status = showActive ? 'active' : 'closed';
+  const { data: pollsData, isLoading } = usePolls(status);
   const voteMutation = useVotePoll();
 
   // Transform API data to component format
   const polls: Poll[] = useMemo(() => {
     if (pollsData && Array.isArray(pollsData)) {
-      return pollsData.map((p: Record<string, unknown>) => transformPoll(p));
+      return pollsData.map((p: unknown) => transformPoll(p as Record<string, unknown>));
     }
     return [];
   }, [pollsData]);
 
   const filteredPolls = polls.filter(poll => {
-    const matchesCategory = selectedCategory === 'All' || poll.category === selectedCategory;
-    const matchesStatus = showActive ? poll.status === 'active' : poll.status === 'ended';
-    return matchesCategory && matchesStatus;
+    return showActive ? poll.status === 'active' : poll.status === 'closed';
   });
 
   const handleVote = (pollId: number, optionId: number) => {
@@ -50,7 +45,7 @@ export default function PollsPage() {
     const now = new Date();
     const diff = end.getTime() - now.getTime();
 
-    if (diff <= 0) return 'Ended';
+    if (diff <= 0) return 'Closed';
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -87,47 +82,29 @@ export default function PollsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowActive(true)}
-            className={cn(
-              'px-4 py-2 rounded-lg font-medium transition-colors',
-              showActive
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'
-            )}
-          >
-            Active
-          </button>
-          <button
-            onClick={() => setShowActive(false)}
-            className={cn(
-              'px-4 py-2 rounded-lg font-medium transition-colors',
-              !showActive
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'
-            )}
-          >
-            Ended
-          </button>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={cn(
-                'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
-                selectedCategory === category
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-muted/50 hover:bg-muted'
-              )}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowActive(true)}
+          className={cn(
+            'px-4 py-2 rounded-lg font-medium transition-colors',
+            showActive
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          )}
+        >
+          Active
+        </button>
+        <button
+          onClick={() => setShowActive(false)}
+          className={cn(
+            'px-4 py-2 rounded-lg font-medium transition-colors',
+            !showActive
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          )}
+        >
+          Closed
+        </button>
       </div>
 
       {/* Polls List */}
@@ -182,7 +159,7 @@ function PollCard({
             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
             : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
         )}>
-          {poll.status === 'active' ? getRemainingTime(poll.endsAt) : 'Ended'}
+          {poll.status === 'active' ? getRemainingTime(poll.endsAt) : 'Closed'}
         </span>
       </div>
 
@@ -226,7 +203,6 @@ function PollCard({
           <Users className="h-4 w-4" />
           {poll.totalVotes.toLocaleString()} votes
         </span>
-        <span className="px-2 py-0.5 bg-muted rounded text-xs">{poll.category}</span>
         {poll.hasVoted && (
           <span className="flex items-center gap-1 text-primary">
             <CheckCircle className="h-4 w-4" />

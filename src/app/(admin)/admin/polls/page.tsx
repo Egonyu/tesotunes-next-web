@@ -32,27 +32,27 @@ interface PollOption {
 
 interface AdminPoll {
   id: number;
-  question: string;
+  title: string;
   description?: string;
   options: PollOption[];
   total_votes: number;
-  category: string;
-  status: 'active' | 'ended';
-  creator: {
+  status: 'active' | 'draft' | 'closed';
+  user: {
     id: number;
     name: string;
     avatar?: string;
   };
   created_at: string;
+  starts_at: string;
   ends_at: string;
 }
 
 interface PollStats {
   total_polls: number;
   active_polls: number;
-  ended_polls: number;
+  closed_polls: number;
   total_votes: number;
-  avg_votes_per_poll: number;
+  recent_polls_30d: number;
 }
 
 export default function AdminPollsPage() {
@@ -98,7 +98,7 @@ export default function AdminPollsPage() {
   // End poll early
   const endPollMutation = useMutation({
     mutationFn: (id: number) =>
-      apiPost(`/admin/polls/${id}/end`, {}),
+      apiPost(`/admin/polls/${id}/close`, {}),
     onSuccess: () => {
       toast.success('Poll ended successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'polls'] });
@@ -124,7 +124,7 @@ export default function AdminPollsPage() {
     },
     {
       label: 'Ended',
-      value: stats?.ended_polls ?? 0,
+      value: stats?.closed_polls ?? 0,
       icon: Clock,
       color: 'text-gray-500',
     },
@@ -215,7 +215,7 @@ export default function AdminPollsPage() {
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
-              <option value="ended">Ended</option>
+              <option value="closed">Closed</option>
             </select>
           </div>
 
@@ -225,10 +225,7 @@ export default function AdminPollsPage() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-4 text-sm font-medium">
-                    Question
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium">
-                    Category
+                    Title
                   </th>
                   <th className="text-left p-4 text-sm font-medium">
                     Options
@@ -248,7 +245,7 @@ export default function AdminPollsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center">
+                    <td colSpan={6} className="p-8 text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </td>
                   </tr>
@@ -261,14 +258,13 @@ export default function AdminPollsPage() {
                       <td className="p-4">
                         <div>
                           <p className="font-medium line-clamp-1">
-                            {poll.question}
+                            {poll.title}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            by {poll.creator.name}
+                            by {poll.user?.name || 'Unknown'}
                           </p>
                         </div>
                       </td>
-                      <td className="p-4 text-sm">{poll.category}</td>
                       <td className="p-4 text-sm">
                         {poll.options.length} options
                       </td>
@@ -281,10 +277,12 @@ export default function AdminPollsPage() {
                             'px-2 py-1 rounded-full text-xs font-medium',
                             poll.status === 'active'
                               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                              : poll.status === 'draft'
+                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                           )}
                         >
-                          {poll.status === 'active' ? 'Active' : 'Ended'}
+                          {poll.status === 'active' ? 'Active' : poll.status === 'draft' ? 'Draft' : 'Closed'}
                         </span>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
@@ -325,7 +323,7 @@ export default function AdminPollsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="p-8 text-center text-muted-foreground"
                     >
                       <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -373,32 +371,32 @@ export default function AdminPollsPage() {
 
 function CreatePollForm({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({
-    question: '',
+    title: '',
     description: '',
     options: ['', ''],
-    category: 'General',
     ends_at: '',
+    allow_multiple_votes: false,
   });
 
   const createMutation = useMutation({
     mutationFn: (data: typeof form) =>
       apiPost('/admin/polls', {
-        question: data.question,
+        title: data.title,
         description: data.description || undefined,
         options: data.options.filter((o) => o.trim()),
-        category: data.category,
         ends_at: data.ends_at
           ? new Date(data.ends_at).toISOString()
           : undefined,
+        allow_multiple_votes: data.allow_multiple_votes,
       }),
     onSuccess: () => {
       toast.success('Poll created successfully');
       setForm({
-        question: '',
+        title: '',
         description: '',
         options: ['', ''],
-        category: 'General',
         ends_at: '',
+        allow_multiple_votes: false,
       });
       onCreated();
     },
@@ -441,8 +439,8 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
       toast.error('At least 2 options are required');
       return;
     }
-    if (!form.question.trim()) {
-      toast.error('Question is required');
+    if (!form.title.trim()) {
+      toast.error('Title is required');
       return;
     }
     if (!form.ends_at) {
@@ -452,29 +450,20 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
     createMutation.mutate(form);
   };
 
-  const categories = [
-    'General',
-    'Music',
-    'Artists',
-    'Events',
-    'Features',
-    'Community',
-  ];
-
   return (
     <div className="rounded-xl border bg-card p-6 max-w-2xl">
       <h2 className="text-lg font-semibold mb-4">Create New Poll</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Question */}
+        {/* Title */}
         <div>
           <label className="block text-sm font-medium mb-1.5">
-            Question *
+            Title / Question *
           </label>
           <input
             type="text"
-            value={form.question}
+            value={form.title}
             onChange={(e) =>
-              setForm((prev) => ({ ...prev, question: e.target.value }))
+              setForm((prev) => ({ ...prev, title: e.target.value }))
             }
             placeholder="What would you like to ask?"
             className="w-full px-4 py-2.5 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
@@ -539,26 +528,8 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
           )}
         </div>
 
-        {/* Category & End Date */}
+        {/* End Date & Settings */}
         <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Category
-            </label>
-            <select
-              value={form.category}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, category: e.target.value }))
-              }
-              className="w-full px-4 py-2.5 rounded-lg border bg-background text-sm"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">
               End Date *
@@ -572,6 +543,19 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
               className="w-full px-4 py-2.5 rounded-lg border bg-background text-sm"
               required
             />
+          </div>
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.allow_multiple_votes}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, allow_multiple_votes: e.target.checked }))
+                }
+                className="rounded border-gray-300"
+              />
+              Allow multiple votes
+            </label>
           </div>
         </div>
 

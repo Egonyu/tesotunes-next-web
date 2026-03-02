@@ -30,7 +30,6 @@ interface Poll {
   description: string;
   options: PollOption[];
   totalVotes: number;
-  category: string;
   creator: {
     id: number;
     name: string;
@@ -41,7 +40,7 @@ interface Poll {
   endsAt: string;
   hasVoted: boolean;
   votedOptionId?: number;
-  status: 'active' | 'ended';
+  status: 'active' | 'closed';
   comments: number;
 }
 
@@ -76,7 +75,7 @@ export default function PollDetailPage({
     const now = new Date();
     const diff = end.getTime() - now.getTime();
 
-    if (diff <= 0) return 'Poll has ended';
+    if (diff <= 0) return 'Poll has closed';
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -93,7 +92,7 @@ export default function PollDetailPage({
     voteMutation.mutate({ pollId: id, optionId: selectedOption });
   };
 
-  const showResults = poll?.hasVoted || poll?.status === 'ended' || voteMutation.isSuccess;
+  const showResults = poll?.hasVoted || poll?.status === 'closed' || voteMutation.isSuccess;
 
   if (isLoading) {
     return (
@@ -157,9 +156,6 @@ export default function PollDetailPage({
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded">
-              {poll.category}
-            </span>
           </div>
 
           <h1 className="text-2xl font-bold mb-2">{poll.question}</h1>
@@ -262,7 +258,7 @@ export default function PollDetailPage({
               <p className="text-sm text-muted-foreground">
                 {poll.hasVoted || voteMutation.isSuccess
                   ? 'Thank you for voting!'
-                  : 'This poll has ended'
+                  : 'This poll has closed'
                 }
               </p>
             </div>

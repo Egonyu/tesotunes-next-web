@@ -19,7 +19,6 @@ const mockPoll: Poll = {
     { id: 4, text: "Mulembe - Gravity Omutujju", votes: 1123, percentage: 16 },
   ],
   totalVotes: 7036,
-  category: "Music",
   creator: { name: "TesoTunes", avatar: "/images/logo.png", isVerified: true },
   createdAt: "2026-01-15",
   endsAt: "2026-03-15",
@@ -29,7 +28,7 @@ const mockPoll: Poll = {
 
 export function CommunityPoll() {
   const { data: session } = useSession();
-  const { data: pollsData, isLoading } = usePolls(undefined, "active");
+  const { data: pollsData, isLoading } = usePolls("active");
   const voteMutation = useVotePoll();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [localVoted, setLocalVoted] = useState(false);
@@ -37,20 +36,13 @@ export function CommunityPoll() {
   // Get the most recent active poll, or fallback to mock
   const poll: Poll = useMemo(() => {
     if (pollsData && Array.isArray(pollsData) && pollsData.length > 0) {
-      return transformPoll(pollsData[0] as Record<string, unknown>);
-    }
-    // Check if pollsData is a paginated response
-    if (pollsData && typeof pollsData === "object" && "data" in (pollsData as Record<string, unknown>)) {
-      const items = (pollsData as Record<string, unknown>).data;
-      if (Array.isArray(items) && items.length > 0) {
-        return transformPoll(items[0] as Record<string, unknown>);
-      }
+      return transformPoll(pollsData[0] as unknown as Record<string, unknown>);
     }
     return mockPoll;
   }, [pollsData]);
 
   const hasVoted = poll.hasVoted || localVoted;
-  const showResults = hasVoted || poll.status === "ended";
+  const showResults = hasVoted || poll.status === "closed";
 
   // Optimistic local state for after voting
   const displayOptions = useMemo(() => {
@@ -70,7 +62,7 @@ export function CommunityPoll() {
   const totalVotes = displayOptions.reduce((sum, o) => sum + o.votes, 0);
 
   const handleVote = (optionId: number) => {
-    if (hasVoted || poll.status === "ended") return;
+    if (hasVoted || poll.status === "closed") return;
 
     if (!session) {
       // Not logged in — just select visually
@@ -116,7 +108,7 @@ export function CommunityPoll() {
                 : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
             )}
           >
-            {poll.status === "active" ? "Active" : "Ended"}
+            {poll.status === "active" ? "Active" : "Closed"}
           </span>
         </div>
 
@@ -136,7 +128,7 @@ export function CommunityPoll() {
             <button
               key={option.id}
               onClick={() => handleVote(option.id)}
-              disabled={hasVoted || poll.status === "ended" || voteMutation.isPending}
+              disabled={hasVoted || poll.status === "closed" || voteMutation.isPending}
               className={cn(
                 "relative w-full text-left rounded-lg overflow-hidden transition-all",
                 "border",
@@ -196,11 +188,6 @@ export function CommunityPoll() {
           {totalVotes.toLocaleString()} votes
         </span>
         <div className="flex items-center gap-3">
-          {poll.category && (
-            <span className="px-2 py-0.5 rounded bg-muted text-xs font-medium">
-              {poll.category}
-            </span>
-          )}
           <Link
             href="/polls"
             className="text-primary hover:underline flex items-center gap-0.5 text-xs font-medium"

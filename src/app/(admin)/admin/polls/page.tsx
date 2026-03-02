@@ -385,9 +385,7 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
       apiPost('/admin/polls', {
         question: data.question,
         description: data.description || undefined,
-        options: data.options
-          .filter((o) => o.trim())
-          .map((text) => ({ text })),
+        options: data.options.filter((o) => o.trim()),
         category: data.category,
         ends_at: data.ends_at
           ? new Date(data.ends_at).toISOString()
@@ -395,6 +393,13 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
       }),
     onSuccess: () => {
       toast.success('Poll created successfully');
+      setForm({
+        question: '',
+        description: '',
+        options: ['', ''],
+        category: 'General',
+        ends_at: '',
+      });
       onCreated();
     },
     onError: (error: unknown) => {

@@ -4,135 +4,130 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiGet, apiPostForm } from '@/lib/api';
-import { Upload, X, Plus, Music } from 'lucide-react';
+import { Upload, X, Music, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { toast } from 'sonner';
+import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 
-interface Artist {
-  id: string;
-  name: string;
-}
+// -------------------------------------------------------------------
+// Types — matching the Laravel backend contract (CLAUDE.md §Song Upload)
+// -------------------------------------------------------------------
 
-interface Album {
-  id: string;
+interface AlbumOption {
+  id: number;
   title: string;
 }
 
-interface Genre {
-  id: string;
+interface GenreOption {
+  id: number;
   name: string;
+  slug?: string;
 }
 
-interface SongFormData {
+/** Form state mirrors backend validation rules exactly */
+interface SongFormState {
   title: string;
-  slug: string;
-  artist_id: string;
-  featured_artists: string[];
+  audio: File | null;
+  cover: File | null;
   album_id: string;
+  genre_id: string;
   genre_ids: string[];
-  duration: string;
-  release_date: string;
-  track_number: string;
-  disc_number: string;
-  explicit: boolean;
+  featured_artists: string;
   lyrics: string;
+  release_date: string;
+  price: string;
+  is_explicit: boolean;
   description: string;
+  composer: string;
+  producer: string;
+  is_downloadable: boolean;
+  is_free: boolean;
   status: string;
-  is_featured: boolean;
-  audio_file: File | null;
-  cover_image: File | null;
-  credits: { role: string; name: string }[];
-  isrc: string;
-  bpm: string;
-  key: string;
-  meta_title: string;
-  meta_description: string;
 }
+
+const INITIAL_FORM: SongFormState = {
+  title: '',
+  audio: null,
+  cover: null,
+  album_id: '',
+  genre_id: '',
+  genre_ids: [],
+  featured_artists: '',
+  lyrics: '',
+  release_date: '',
+  price: '',
+  is_explicit: false,
+  description: '',
+  composer: '',
+  producer: '',
+  is_downloadable: true,
+  is_free: true,
+  status: 'draft',
+};
 
 export default function CreateSongPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<SongFormData>({
-    title: '',
-    slug: '',
-    artist_id: '',
-    featured_artists: [],
-    album_id: '',
-    genre_ids: [],
-    duration: '',
-    release_date: '',
-    track_number: '1',
-    disc_number: '1',
-    explicit: false,
-    lyrics: '',
-    description: '',
-    status: 'draft',
-    is_featured: false,
-    audio_file: null,
-    cover_image: null,
-    credits: [],
-    isrc: '',
-    bpm: '',
-    key: '',
-    meta_title: '',
-    meta_description: '',
-  });
+  const [form, setForm] = useState<SongFormState>(INITIAL_FORM);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [creditInput, setCreditInput] = useState({ role: '', name: '' });
 
-  const { data: artists } = useQuery({
-    queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
-  });
+  // ---- Data queries ----
 
-  const { data: albums } = useQuery({
+  const { data: albumsRes } = useQuery({
     queryKey: ['admin', 'albums', 'list'],
-    queryFn: () => apiGet<{ data: Album[] }>('/admin/albums?per_page=1000'),
+    queryFn: () => apiGet<{ data: AlbumOption[] }>('/admin/albums?per_page=500'),
   });
 
-  const { data: genres } = useQuery({
-    queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+  const { data: genresRes } = useQuery({
+    queryKey: ['genres'],
+    queryFn: () => apiGet<{ data: GenreOption[] }>('/genres'),
   });
+
+  const albums = albumsRes?.data ?? [];
+  const genres = genresRes?.data ?? [];
+
+  // ---- Mutation ----
 
   const createMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiPostForm('/admin/songs', data);
-    },
+    mutationFn: (data: FormData) => apiPostForm('/admin/songs', data),
     onSuccess: () => {
       toast.success('Song created successfully!');
       router.push('/admin/songs');
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
-      if (error.response?.data?.errors) {
-        const newErrors: Record<string, string> = {};
-        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
-          newErrors[key] = messages[0];
-        });
-        setErrors(newErrors);
-        toast.error('Please fix the errors below');
+    onError: (error: unknown) => {
+      const validationErrors = getValidationErrors(error);
+      if (validationErrors && !validationErrors._form) {
+        setErrors(validationErrors);
+        toast.error('Please fix the validation errors below');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to create song. Please try again.');
+        toast.error(getErrorMessage(error, 'Failed to create song. Please try again.'));
       }
     },
   });
 
-  const updateField = (field: keyof SongFormData, value: unknown) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (field === 'title' && typeof value === 'string') {
-      setFormData(prev => ({
-        ...prev,
-        slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      }));
+  // ---- Helpers ----
+
+  const updateField = <K extends keyof SongFormState>(field: K, value: SongFormState[K]) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
     }
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData(prev => ({ ...prev, cover_image: file }));
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Cover image must be under 10MB');
+        return;
+      }
+      updateField('cover', file);
       const reader = new FileReader();
       reader.onload = () => setCoverPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -142,73 +137,63 @@ export default function CreateSongPage() {
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData(prev => ({ ...prev, audio_file: file }));
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error('Audio file must be under 100MB');
+        return;
+      }
+      updateField('audio', file);
       setAudioFileName(file.name);
     }
   };
 
-  const addCredit = () => {
-    if (creditInput.role.trim() && creditInput.name.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        credits: [...prev.credits, { ...creditInput }],
-      }));
-      setCreditInput({ role: '', name: '' });
-    }
-  };
-
-  const removeCredit = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      credits: prev.credits.filter((_, i) => i !== index),
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Client-side validation
+    setErrors({});
+
+    // Client-side validation — only title + audio are required by backend
     const validationErrors: Record<string, string> = {};
-    if (!formData.title.trim()) validationErrors.title = 'Title is required';
-    if (!formData.artist_id) validationErrors.artist_id = 'Artist is required';
-    if (!formData.audio_file) validationErrors.audio_file = 'Audio file is required';
-    
+    if (!form.title.trim()) validationErrors.title = 'Title is required';
+    if (!form.audio) validationErrors.audio = 'Audio file is required';
+
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       toast.error('Please fill in all required fields');
       return;
     }
-    
+
+    // Build FormData with field names matching backend contract exactly:
+    //   audio (not audio_file), cover (not cover_image), is_explicit (not explicit)
     const data = new FormData();
-    // Required fields
-    data.append('title', formData.title);
-    data.append('artist_id', formData.artist_id);
-    data.append('status', formData.status);
-    data.append('explicit', formData.explicit ? '1' : '0');
-    data.append('is_featured', formData.is_featured ? '1' : '0');
-    
-    // Optional fields - only send when they have values
-    if (formData.slug) data.append('slug', formData.slug);
-    if (formData.album_id) data.append('album_id', formData.album_id);
-    if (formData.duration) data.append('duration', formData.duration);
-    if (formData.release_date) data.append('release_date', formData.release_date);
-    if (formData.track_number) data.append('track_number', formData.track_number);
-    if (formData.disc_number) data.append('disc_number', formData.disc_number);
-    if (formData.lyrics) data.append('lyrics', formData.lyrics);
-    if (formData.description) data.append('description', formData.description);
-    if (formData.isrc) data.append('isrc', formData.isrc);
-    if (formData.bpm) data.append('bpm', formData.bpm);
-    if (formData.key) data.append('key', formData.key);
-    if (formData.meta_title) data.append('meta_title', formData.meta_title);
-    if (formData.meta_description) data.append('meta_description', formData.meta_description);
-    
-    formData.genre_ids.forEach(id => data.append('genre_ids[]', id));
-    formData.featured_artists.forEach(id => data.append('featured_artists[]', id));
-    if (formData.credits.length > 0) data.append('credits', JSON.stringify(formData.credits));
-    
-    if (formData.audio_file) data.append('audio_file', formData.audio_file);
-    if (formData.cover_image) data.append('cover_image', formData.cover_image);
-    
+
+    // Required
+    data.append('title', form.title.trim());
+    data.append('audio', form.audio!);
+
+    // Optional file
+    if (form.cover) data.append('cover', form.cover);
+
+    // Optional text fields — only send when they have values
+    if (form.album_id) data.append('album_id', form.album_id);
+    if (form.genre_id) data.append('genre_id', form.genre_id);
+    if (form.genre_ids.length > 0) {
+      form.genre_ids.forEach(id => data.append('genre_ids[]', id));
+    }
+    if (form.featured_artists.trim()) data.append('featured_artists', form.featured_artists.trim());
+    if (form.lyrics.trim()) data.append('lyrics', form.lyrics.trim());
+    if (form.release_date) data.append('release_date', form.release_date);
+    if (form.price) data.append('price', form.price);
+    if (form.description.trim()) data.append('description', form.description.trim());
+    if (form.composer.trim()) data.append('composer', form.composer.trim());
+    if (form.producer.trim()) data.append('producer', form.producer.trim());
+
+    // Booleans
+    data.append('is_explicit', form.is_explicit ? '1' : '0');
+    data.append('is_downloadable', form.is_downloadable ? '1' : '0');
+    data.append('is_free', form.is_free ? '1' : '0');
+
+    // Status (admin can set directly)
+    if (form.status) data.append('status', form.status);
+
     createMutation.mutate(data);
   };
 
@@ -216,7 +201,7 @@ export default function CreateSongPage() {
     <div className="space-y-6">
       <PageHeader
         title="Add New Song"
-        description="Upload and configure a new song"
+        description="Upload and publish a new song to the platform"
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Songs', href: '/admin/songs' },
@@ -227,57 +212,57 @@ export default function CreateSongPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {/* ============ Main Content (left 2/3) ============ */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Basic Info */}
             <FormSection title="Basic Information">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  label="Title"
-                  required
-                  error={errors.title}
-                  className="col-span-2"
-                >
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="Enter song title"
-                  />
-                </FormField>
-
-                <FormField label="Slug" error={errors.slug}>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => updateField('slug', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="song-url-slug"
-                  />
-                </FormField>
-
-                <FormField label="ISRC" error={errors.isrc}>
-                  <input
-                    type="text"
-                    value={formData.isrc}
-                    onChange={(e) => updateField('isrc', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="USRC12345678"
-                  />
-                </FormField>
-              </div>
+              <FormField label="Title" required error={errors.title}>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                  placeholder="Enter song title"
+                  maxLength={255}
+                />
+              </FormField>
 
               <FormField label="Description" error={errors.description}>
                 <textarea
-                  value={formData.description}
+                  value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                   rows={3}
-                  placeholder="Brief description of the song"
+                  placeholder="Brief description of the song (max 2000 characters)"
+                  maxLength={2000}
                 />
               </FormField>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Composer" error={errors.composer}>
+                  <input
+                    type="text"
+                    value={form.composer}
+                    onChange={(e) => updateField('composer', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                    placeholder="Song composer"
+                    maxLength={255}
+                  />
+                </FormField>
+                <FormField label="Producer" error={errors.producer}>
+                  <input
+                    type="text"
+                    value={form.producer}
+                    onChange={(e) => updateField('producer', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                    placeholder="Song producer"
+                    maxLength={255}
+                  />
+                </FormField>
+              </div>
             </FormSection>
 
+            {/* Audio File */}
             <FormSection title="Audio File">
               <div className="border-2 border-dashed rounded-xl p-8 text-center">
                 {audioFileName ? (
@@ -285,13 +270,16 @@ export default function CreateSongPage() {
                     <Music className="h-8 w-8 text-primary" />
                     <div>
                       <p className="font-medium">{audioFileName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {form.audio ? `${(form.audio.size / (1024 * 1024)).toFixed(1)} MB` : ''}
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
-                          setFormData(prev => ({ ...prev, audio_file: null }));
+                          updateField('audio', null);
                           setAudioFileName(null);
                         }}
-                        className="text-sm text-red-600 hover:underline"
+                        className="text-sm text-red-600 hover:underline mt-1"
                       >
                         Remove
                       </button>
@@ -304,25 +292,26 @@ export default function CreateSongPage() {
                       Click to upload audio file
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      MP3, WAV, FLAC up to 100MB
+                      MP3, WAV, FLAC, AAC, M4A, OGG — max 100MB
                     </p>
                     <input
                       type="file"
-                      accept="audio/*"
+                      accept=".mp3,.wav,.flac,.aac,.m4a,.ogg,audio/*"
                       onChange={handleAudioUpload}
                       className="hidden"
                     />
                   </label>
                 )}
               </div>
-              {errors.audio_file && (
-                <p className="text-sm text-red-600 mt-1">{errors.audio_file}</p>
+              {errors.audio && (
+                <p className="text-sm text-red-600 mt-1">{errors.audio}</p>
               )}
             </FormSection>
 
+            {/* Lyrics */}
             <FormSection title="Lyrics">
               <textarea
-                value={formData.lyrics}
+                value={form.lyrics}
                 onChange={(e) => updateField('lyrics', e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary font-mono text-sm"
                 rows={10}
@@ -330,77 +319,27 @@ export default function CreateSongPage() {
               />
             </FormSection>
 
-            <FormSection title="Credits">
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={creditInput.role}
-                    onChange={(e) => setCreditInput(prev => ({ ...prev, role: e.target.value }))}
-                    className="flex-1 px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Role (e.g., Producer)"
-                  />
-                  <input
-                    type="text"
-                    value={creditInput.name}
-                    onChange={(e) => setCreditInput(prev => ({ ...prev, name: e.target.value }))}
-                    className="flex-1 px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Name"
-                  />
-                  <button
-                    type="button"
-                    onClick={addCredit}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {formData.credits.length > 0 && (
-                  <div className="space-y-2">
-                    {formData.credits.map((credit, index) => (
-                      <div key={index} className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-                        <span className="font-medium">{credit.role}:</span>
-                        <span className="flex-1">{credit.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeCredit(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FormSection>
-
-            <FormSection title="SEO">
-              <FormField label="Meta Title" error={errors.meta_title}>
+            {/* Featured Artists */}
+            <FormSection title="Featured Artists">
+              <FormField label="Featured Artists" error={errors.featured_artists}>
                 <input
                   type="text"
-                  value={formData.meta_title}
-                  onChange={(e) => updateField('meta_title', e.target.value)}
+                  value={form.featured_artists}
+                  onChange={(e) => updateField('featured_artists', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="SEO title"
+                  placeholder="Comma-separated names (e.g., Artist A, Artist B)"
                 />
-              </FormField>
-              <FormField label="Meta Description" error={errors.meta_description}>
-                <textarea
-                  value={formData.meta_description}
-                  onChange={(e) => updateField('meta_description', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  rows={2}
-                  placeholder="SEO description"
-                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter featured artist names separated by commas
+                </p>
               </FormField>
             </FormSection>
           </div>
 
-          {/* Sidebar */}
+          {/* ============ Sidebar (right 1/3) ============ */}
           <div className="space-y-6">
-            <FormSection title="Cover Image">
+            {/* Cover Image */}
+            <FormSection title="Cover Art">
               <div className="border-2 border-dashed rounded-xl overflow-hidden aspect-square">
                 {coverPreview ? (
                   <div className="relative w-full h-full group">
@@ -414,7 +353,7 @@ export default function CreateSongPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setFormData(prev => ({ ...prev, cover_image: null }));
+                          updateField('cover', null);
                           setCoverPreview(null);
                         }}
                         className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700"
@@ -429,154 +368,138 @@ export default function CreateSongPage() {
                     <p className="text-sm text-muted-foreground text-center">
                       Upload cover art
                     </p>
+                    <p className="text-xs text-muted-foreground text-center mt-1">
+                      JPEG, PNG, WebP — max 10MB
+                    </p>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
                       onChange={handleCoverUpload}
                       className="hidden"
                     />
                   </label>
                 )}
               </div>
+              {errors.cover && (
+                <p className="text-sm text-red-600 mt-1">{errors.cover}</p>
+              )}
             </FormSection>
 
-            <FormSection title="Artist & Album">
-              <FormField label="Primary Artist" required error={errors.artist_id}>
-                <select
-                  value={formData.artist_id}
-                  onChange={(e) => updateField('artist_id', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select artist</option>
-                  {artists?.data?.map(artist => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
+            {/* Album */}
+            <FormSection title="Album">
               <FormField label="Album" error={errors.album_id}>
                 <select
-                  value={formData.album_id}
+                  value={form.album_id}
                   onChange={(e) => updateField('album_id', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Single (No Album)</option>
-                  {albums?.data?.map(album => (
+                  {albums.map(album => (
                     <option key={album.id} value={album.id}>
                       {album.title}
                     </option>
                   ))}
                 </select>
               </FormField>
+            </FormSection>
 
-              <FormField label="Featured Artists" error={errors.featured_artists}>
+            {/* Genre */}
+            <FormSection title="Genre">
+              <FormField label="Primary Genre" error={errors.genre_id}>
                 <select
-                  multiple
-                  value={formData.featured_artists}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                    updateField('featured_artists', selected);
-                  }}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary h-24"
+                  value={form.genre_id}
+                  onChange={(e) => updateField('genre_id', e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
-                  {artists?.data?.filter(a => a.id !== formData.artist_id).map(artist => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.name}
+                  <option value="">Select genre</option>
+                  {genres.map(genre => (
+                    <option key={genre.id} value={String(genre.id)}>
+                      {genre.name}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple</p>
+              </FormField>
+
+              <FormField label="Additional Genres" error={errors.genre_ids}>
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                  {genres.map(genre => (
+                    <label key={genre.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={form.genre_ids.includes(String(genre.id))}
+                        onChange={(e) => {
+                          const gid = String(genre.id);
+                          if (e.target.checked) {
+                            updateField('genre_ids', [...form.genre_ids, gid]);
+                          } else {
+                            updateField('genre_ids', form.genre_ids.filter(id => id !== gid));
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm">{genre.name}</span>
+                    </label>
+                  ))}
+                  {genres.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-2">Loading genres...</p>
+                  )}
+                </div>
               </FormField>
             </FormSection>
 
-            <FormSection title="Track Details">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Track #" error={errors.track_number}>
+            {/* Pricing */}
+            <FormSection title="Pricing">
+              <div className="space-y-3">
+                <label className="flex items-center gap-2">
                   <input
-                    type="number"
-                    value={formData.track_number}
-                    onChange={(e) => updateField('track_number', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    min="1"
+                    type="checkbox"
+                    checked={form.is_free}
+                    onChange={(e) => updateField('is_free', e.target.checked)}
+                    className="rounded border-gray-300"
                   />
-                </FormField>
-                <FormField label="Disc #" error={errors.disc_number}>
+                  <span className="text-sm">Free song</span>
+                </label>
+
+                {!form.is_free && (
+                  <FormField label="Price (UGX)" error={errors.price}>
+                    <input
+                      type="number"
+                      value={form.price}
+                      onChange={(e) => updateField('price', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                      placeholder="0"
+                      min="0"
+                      step="100"
+                    />
+                  </FormField>
+                )}
+
+                <label className="flex items-center gap-2">
                   <input
-                    type="number"
-                    value={formData.disc_number}
-                    onChange={(e) => updateField('disc_number', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    min="1"
+                    type="checkbox"
+                    checked={form.is_downloadable}
+                    onChange={(e) => updateField('is_downloadable', e.target.checked)}
+                    className="rounded border-gray-300"
                   />
-                </FormField>
-                <FormField label="BPM" error={errors.bpm}>
-                  <input
-                    type="number"
-                    value={formData.bpm}
-                    onChange={(e) => updateField('bpm', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    placeholder="120"
-                  />
-                </FormField>
-                <FormField label="Key" error={errors.key}>
-                  <input
-                    type="text"
-                    value={formData.key}
-                    onChange={(e) => updateField('key', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Am"
-                  />
-                </FormField>
+                  <span className="text-sm">Allow downloads</span>
+                </label>
               </div>
+            </FormSection>
 
-              <FormField label="Duration (seconds)" error={errors.duration}>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => updateField('duration', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background"
-                  placeholder="180"
-                />
-              </FormField>
-
+            {/* Release & Status */}
+            <FormSection title="Release & Status">
               <FormField label="Release Date" error={errors.release_date}>
                 <input
                   type="date"
-                  value={formData.release_date}
+                  value={form.release_date}
                   onChange={(e) => updateField('release_date', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
               </FormField>
-            </FormSection>
 
-            <FormSection title="Genres">
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {genres?.data?.map(genre => (
-                  <label key={genre.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.genre_ids.includes(genre.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          updateField('genre_ids', [...formData.genre_ids, genre.id]);
-                        } else {
-                          updateField('genre_ids', formData.genre_ids.filter(id => id !== genre.id));
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">{genre.name}</span>
-                  </label>
-                ))}
-              </div>
-            </FormSection>
-
-            <FormSection title="Status & Visibility">
               <FormField label="Status" error={errors.status}>
                 <select
-                  value={formData.status}
+                  value={form.status}
                   onChange={(e) => updateField('status', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
@@ -586,35 +509,34 @@ export default function CreateSongPage() {
                 </select>
               </FormField>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.explicit}
-                    onChange={(e) => updateField('explicit', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Explicit Content</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_featured}
-                    onChange={(e) => updateField('is_featured', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Featured Song</span>
-                </label>
-              </div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.is_explicit}
+                  onChange={(e) => updateField('is_explicit', e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm">Explicit Content</span>
+              </label>
             </FormSection>
           </div>
         </div>
 
+        {/* Submit */}
         <FormActions
           cancelHref="/admin/songs"
           isSubmitting={createMutation.isPending}
-          submitLabel="Create Song"
+          submitLabel={createMutation.isPending ? 'Uploading...' : 'Create Song'}
         />
+
+        {createMutation.isPending && (
+          <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-muted">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">
+              Uploading audio file... This may take a moment for large files.
+            </p>
+          </div>
+        )}
       </form>
     </div>
   );

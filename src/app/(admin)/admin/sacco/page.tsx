@@ -4,18 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api';
-import { 
+import {
   Search,
   Users,
   Wallet,
   TrendingUp,
   FileText,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   CheckCircle,
   XCircle,
-  Clock,
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -72,6 +69,35 @@ interface DashboardStats {
   };
 }
 
+interface SaccoReportData {
+  summary: {
+    total_share_capital: number;
+    total_savings: number;
+    outstanding_loans: number;
+    default_rate: number;
+    share_capital_growth: number;
+    savings_growth: number;
+    loan_to_capital_ratio: number;
+  };
+  monthly_savings: Array<{
+    month: string;
+    deposits: number;
+    withdrawals: number;
+  }>;
+  monthly_loans: Array<{
+    month: string;
+    disbursed: number;
+    repaid: number;
+    count: number;
+  }>;
+  kpis: {
+    loan_recovery_rate: number;
+    avg_loan_to_savings: number;
+    avg_interest_earned: number;
+    member_retention: number;
+  };
+}
+
 export default function SACCOPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'loans' | 'reports'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,6 +132,13 @@ export default function SACCOPage() {
     }),
   });
 
+  // Fetch reports data
+  const { data: reportsData, isLoading: loadingReports } = useQuery({
+    queryKey: ['sacco-reports'],
+    queryFn: () => apiGet<{ data: SaccoReportData }>('/admin/sacco/reports'),
+    enabled: activeTab === 'reports',
+  });
+
   // Approve member mutation
   const approveMemberMutation = useMutation({
     mutationFn: (memberId: number) => apiPost(`/admin/sacco/members/${memberId}/approve`, {}),
@@ -126,7 +159,7 @@ export default function SACCOPage() {
 
   // Reject loan mutation
   const rejectLoanMutation = useMutation({
-    mutationFn: ({ loanId, reason }: { loanId: number; reason: string }) => 
+    mutationFn: ({ loanId, reason }: { loanId: number; reason: string }) =>
       apiPost(`/admin/sacco/loans/${loanId}/reject`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
@@ -137,10 +170,35 @@ export default function SACCOPage() {
   const stats = dashboardData?.data;
   const members = membersData?.data?.data || [];
   const loans = loansData?.data?.data || [];
+  const reports = reportsData?.data;
 
   const pendingMembers = members.filter(m => m.status === 'pending_approval');
   const pendingLoans = loans.filter(l => l.status === 'pending_approval');
-  
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000000) return `UGX ${(amount / 1000000000).toFixed(1)}B`;
+    if (amount >= 1000000) return `UGX ${(amount / 1000000).toFixed(0)}M`;
+    return `UGX ${amount.toLocaleString()}`;
+  };
+
+  const handleDownloadReport = async (reportType: string, format: 'pdf' | 'excel') => {
+    try {
+      const response = await apiGet<Blob>(`/admin/sacco/reports/download`, {
+        params: { type: reportType, format },
+        responseType: 'blob',
+      });
+      const blob = response instanceof Blob ? response : new Blob([JSON.stringify(response)]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sacco-${reportType}-${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // Silently fail — API may not support report downloads yet
+    }
+  };
+
   const statusStyles = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
@@ -148,7 +206,7 @@ export default function SACCOPage() {
     approved: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -158,7 +216,7 @@ export default function SACCOPage() {
           <p className="text-muted-foreground">Artist Savings & Credit Cooperative</p>
         </div>
       </div>
-      
+
       {/* Tabs */}
       <div className="flex gap-2 border-b">
         {(['overview', 'members', 'loans', 'reports'] as const).map((tab) => (
@@ -176,7 +234,7 @@ export default function SACCOPage() {
           </button>
         ))}
       </div>
-      
+
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -217,7 +275,7 @@ export default function SACCOPage() {
               </div>
             </div>
           )}
-          
+
           {/* Pending Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Pending Memberships */}
@@ -231,7 +289,7 @@ export default function SACCOPage() {
                       <p className="text-sm text-muted-foreground">{member.user?.email}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => approveMemberMutation.mutate(member.id)}
                         disabled={approveMemberMutation.isPending}
                         className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
@@ -249,7 +307,7 @@ export default function SACCOPage() {
                 )}
               </div>
             </div>
-            
+
             {/* Pending Loans */}
             <div className="p-6 rounded-xl border bg-card">
               <h2 className="font-semibold mb-4">Pending Loan Applications</h2>
@@ -263,7 +321,7 @@ export default function SACCOPage() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => approveLoanMutation.mutate(loan.id)}
                         disabled={approveLoanMutation.isPending}
                         className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
@@ -287,7 +345,7 @@ export default function SACCOPage() {
           </div>
         </div>
       )}
-      
+
       {/* Members Tab */}
       {activeTab === 'members' && (
         <div className="space-y-4">
@@ -302,7 +360,7 @@ export default function SACCOPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
               />
             </div>
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border rounded-lg bg-background"
@@ -313,7 +371,7 @@ export default function SACCOPage() {
               <option value="suspended">Suspended</option>
             </select>
           </div>
-          
+
           {loadingMembers ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -360,7 +418,7 @@ export default function SACCOPage() {
                             <Eye className="h-4 w-4" />
                           </Link>
                           {member.status === 'pending_approval' && (
-                            <button 
+                            <button
                               onClick={() => approveMemberMutation.mutate(member.id)}
                               disabled={approveMemberMutation.isPending}
                               className="p-2 hover:bg-green-100 rounded-lg text-green-600"
@@ -385,7 +443,7 @@ export default function SACCOPage() {
           )}
         </div>
       )}
-      
+
       {/* Loans Tab */}
       {activeTab === 'loans' && (
         <div className="space-y-4">
@@ -400,7 +458,7 @@ export default function SACCOPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
               />
             </div>
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border rounded-lg bg-background"
@@ -412,7 +470,7 @@ export default function SACCOPage() {
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          
+
           {loadingLoans ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -457,14 +515,14 @@ export default function SACCOPage() {
                           </Link>
                           {loan.status === 'pending_approval' && (
                             <>
-                              <button 
+                              <button
                                 onClick={() => approveLoanMutation.mutate(loan.id)}
                                 disabled={approveLoanMutation.isPending}
                                 className="p-2 hover:bg-green-100 rounded-lg text-green-600 disabled:opacity-50"
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </button>
-                              <button 
+                              <button
                                 onClick={() => rejectLoanMutation.mutate({ loanId: loan.id, reason: 'Rejected by admin' })}
                                 disabled={rejectLoanMutation.isPending}
                                 className="p-2 hover:bg-red-100 rounded-lg text-red-600 disabled:opacity-50"
@@ -490,141 +548,165 @@ export default function SACCOPage() {
           )}
         </div>
       )}
-      
+
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          {/* Report Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border bg-card">
-              <p className="text-sm text-muted-foreground">Total Share Capital</p>
-              <p className="text-2xl font-bold">UGX 234M</p>
-              <p className="text-xs text-green-600 mt-1">+12% from last year</p>
+          {loadingReports ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <p className="text-sm text-muted-foreground">Total Savings</p>
-              <p className="text-2xl font-bold">UGX 2.5B</p>
-              <p className="text-xs text-green-600 mt-1">+18% from last year</p>
-            </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <p className="text-sm text-muted-foreground">Outstanding Loans</p>
-              <p className="text-2xl font-bold">UGX 850M</p>
-              <p className="text-xs text-muted-foreground mt-1">34% of total capital</p>
-            </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <p className="text-sm text-muted-foreground">Default Rate</p>
-              <p className="text-2xl font-bold">2.3%</p>
-              <p className="text-xs text-green-600 mt-1">Below 5% target</p>
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Report Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl border bg-card">
+                  <p className="text-sm text-muted-foreground">Total Share Capital</p>
+                  <p className="text-2xl font-bold">{formatCurrency(reports?.summary?.total_share_capital || 0)}</p>
+                  {reports?.summary?.share_capital_growth !== undefined && (
+                    <p className={cn('text-xs mt-1', reports.summary.share_capital_growth >= 0 ? 'text-green-600' : 'text-red-600')}>
+                      {reports.summary.share_capital_growth >= 0 ? '+' : ''}{reports.summary.share_capital_growth.toFixed(1)}% from last year
+                    </p>
+                  )}
+                </div>
+                <div className="p-4 rounded-xl border bg-card">
+                  <p className="text-sm text-muted-foreground">Total Savings</p>
+                  <p className="text-2xl font-bold">{formatCurrency(reports?.summary?.total_savings || 0)}</p>
+                  {reports?.summary?.savings_growth !== undefined && (
+                    <p className={cn('text-xs mt-1', reports.summary.savings_growth >= 0 ? 'text-green-600' : 'text-red-600')}>
+                      {reports.summary.savings_growth >= 0 ? '+' : ''}{reports.summary.savings_growth.toFixed(1)}% from last year
+                    </p>
+                  )}
+                </div>
+                <div className="p-4 rounded-xl border bg-card">
+                  <p className="text-sm text-muted-foreground">Outstanding Loans</p>
+                  <p className="text-2xl font-bold">{formatCurrency(reports?.summary?.outstanding_loans || 0)}</p>
+                  {reports?.summary?.loan_to_capital_ratio !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {reports.summary.loan_to_capital_ratio.toFixed(0)}% of total capital
+                    </p>
+                  )}
+                </div>
+                <div className="p-4 rounded-xl border bg-card">
+                  <p className="text-sm text-muted-foreground">Default Rate</p>
+                  <p className="text-2xl font-bold">{(reports?.summary?.default_rate || 0).toFixed(1)}%</p>
+                  <p className={cn('text-xs mt-1', (reports?.summary?.default_rate || 0) < 5 ? 'text-green-600' : 'text-red-600')}>
+                    {(reports?.summary?.default_rate || 0) < 5 ? 'Below' : 'Above'} 5% target
+                  </p>
+                </div>
+              </div>
 
-          {/* Available Reports */}
-          <div className="rounded-xl border bg-card">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Generate Reports</h3>
-              <p className="text-sm text-muted-foreground">Download financial reports for the SACCO</p>
-            </div>
-            <div className="divide-y">
-              {[
-                { name: 'Membership Report', description: 'All member details, shares, and savings', icon: Users },
-                { name: 'Loan Performance Report', description: 'Active loans, repayment history, defaults', icon: FileText },
-                { name: 'Savings Summary', description: 'Deposits, withdrawals, interest earned', icon: Wallet },
-                { name: 'Share Register', description: 'Complete share ownership records', icon: TrendingUp },
-                { name: 'Financial Statements', description: 'Income, expenses, balance sheet', icon: FileText },
-              ].map((report) => (
-                <div key={report.name} className="flex items-center justify-between p-4 hover:bg-muted/50">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <report.icon className="h-5 w-5 text-primary" />
+              {/* Available Reports */}
+              <div className="rounded-xl border bg-card">
+                <div className="p-4 border-b">
+                  <h3 className="font-semibold">Generate Reports</h3>
+                  <p className="text-sm text-muted-foreground">Download financial reports for the SACCO</p>
+                </div>
+                <div className="divide-y">
+                  {[
+                    { name: 'Membership Report', type: 'membership', description: 'All member details, shares, and savings', icon: Users },
+                    { name: 'Loan Performance Report', type: 'loan-performance', description: 'Active loans, repayment history, defaults', icon: FileText },
+                    { name: 'Savings Summary', type: 'savings', description: 'Deposits, withdrawals, interest earned', icon: Wallet },
+                    { name: 'Share Register', type: 'share-register', description: 'Complete share ownership records', icon: TrendingUp },
+                    { name: 'Financial Statements', type: 'financial-statements', description: 'Income, expenses, balance sheet', icon: FileText },
+                  ].map((report) => (
+                    <div key={report.name} className="flex items-center justify-between p-4 hover:bg-muted/50">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <report.icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{report.name}</p>
+                          <p className="text-sm text-muted-foreground">{report.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDownloadReport(report.type, 'pdf')}
+                          className="px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+                        >
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReport(report.type, 'excel')}
+                          className="px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+                        >
+                          Excel
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{report.name}</p>
-                      <p className="text-sm text-muted-foreground">{report.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="px-3 py-1.5 text-sm border rounded-lg hover:bg-muted">
-                      PDF
-                    </button>
-                    <button className="px-3 py-1.5 text-sm border rounded-lg hover:bg-muted">
-                      Excel
-                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Monthly Trends */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rounded-xl border bg-card p-6">
+                  <h3 className="font-semibold mb-4">Monthly Savings Trend</h3>
+                  <div className="space-y-3">
+                    {(reports?.monthly_savings || []).length > 0 ? (
+                      reports!.monthly_savings.map((row) => (
+                        <div key={row.month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="font-medium">{row.month}</span>
+                          <div className="flex gap-6">
+                            <span className="text-green-600">+{(row.deposits / 1000000).toFixed(0)}M</span>
+                            <span className="text-red-600">-{(row.withdrawals / 1000000).toFixed(0)}M</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">No savings data available</p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Monthly Trends */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold mb-4">Monthly Savings Trend</h3>
-              <div className="space-y-3">
-                {[
-                  { month: 'February 2026', deposits: 45000000, withdrawals: 12000000 },
-                  { month: 'January 2026', deposits: 52000000, withdrawals: 18000000 },
-                  { month: 'December 2025', deposits: 38000000, withdrawals: 25000000 },
-                  { month: 'November 2025', deposits: 41000000, withdrawals: 15000000 },
-                  { month: 'October 2025', deposits: 47000000, withdrawals: 20000000 },
-                ].map((row) => (
-                  <div key={row.month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="font-medium">{row.month}</span>
-                    <div className="flex gap-6">
-                      <span className="text-green-600">+{(row.deposits / 1000000).toFixed(0)}M</span>
-                      <span className="text-red-600">-{(row.withdrawals / 1000000).toFixed(0)}M</span>
-                    </div>
+                <div className="rounded-xl border bg-card p-6">
+                  <h3 className="font-semibold mb-4">Loan Disbursement Trend</h3>
+                  <div className="space-y-3">
+                    {(reports?.monthly_loans || []).length > 0 ? (
+                      reports!.monthly_loans.map((row) => (
+                        <div key={row.month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <span className="font-medium">{row.month}</span>
+                            <span className="text-sm text-muted-foreground ml-2">({row.count} loans)</span>
+                          </div>
+                          <div className="flex gap-6">
+                            <span className="text-blue-600">+{(row.disbursed / 1000000).toFixed(0)}M</span>
+                            <span className="text-green-600">↩{(row.repaid / 1000000).toFixed(0)}M</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">No loan data available</p>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
 
-            <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold mb-4">Loan Disbursement Trend</h3>
-              <div className="space-y-3">
-                {[
-                  { month: 'February 2026', disbursed: 65000000, repaid: 42000000, count: 8 },
-                  { month: 'January 2026', disbursed: 85000000, repaid: 55000000, count: 12 },
-                  { month: 'December 2025', disbursed: 45000000, repaid: 48000000, count: 5 },
-                  { month: 'November 2025', disbursed: 72000000, repaid: 38000000, count: 9 },
-                  { month: 'October 2025', disbursed: 58000000, repaid: 45000000, count: 7 },
-                ].map((row) => (
-                  <div key={row.month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <span className="font-medium">{row.month}</span>
-                      <span className="text-sm text-muted-foreground ml-2">({row.count} loans)</span>
-                    </div>
-                    <div className="flex gap-6">
-                      <span className="text-blue-600">+{(row.disbursed / 1000000).toFixed(0)}M</span>
-                      <span className="text-green-600">↩{(row.repaid / 1000000).toFixed(0)}M</span>
-                    </div>
+              {/* Key Performance Indicators */}
+              <div className="p-6 rounded-xl border bg-card">
+                <h3 className="font-semibold mb-4">Key Performance Indicators</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-green-600">{(reports?.kpis?.loan_recovery_rate || 0).toFixed(1)}%</p>
+                    <p className="text-sm text-muted-foreground">Loan Recovery Rate</p>
                   </div>
-                ))}
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-blue-600">{(reports?.kpis?.avg_loan_to_savings || 0).toFixed(1)}x</p>
+                    <p className="text-sm text-muted-foreground">Avg. Loan to Savings</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-purple-600">{(reports?.kpis?.avg_interest_earned || 0).toFixed(1)}%</p>
+                    <p className="text-sm text-muted-foreground">Avg. Interest Earned</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{(reports?.kpis?.member_retention || 0).toFixed(0)}%</p>
+                    <p className="text-sm text-muted-foreground">Member Retention</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="p-6 rounded-xl border bg-card">
-            <h3 className="font-semibold mb-4">Key Performance Indicators</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">95.2%</p>
-                <p className="text-sm text-muted-foreground">Loan Recovery Rate</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">3.2x</p>
-                <p className="text-sm text-muted-foreground">Avg. Loan to Savings</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-purple-600">8.5%</p>
-                <p className="text-sm text-muted-foreground">Avg. Interest Earned</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-emerald-600">92%</p>
-                <p className="text-sm text-muted-foreground">Member Retention</p>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       )}
     </div>

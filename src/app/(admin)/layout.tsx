@@ -32,6 +32,7 @@ import {
   BarChart3,
   Trophy,
   Loader2,
+  Tags,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
@@ -51,6 +52,7 @@ const navItems = [
   { href: '/admin/songs', label: 'Songs', icon: Music },
   { href: '/admin/albums', label: 'Albums', icon: Disc3 },
   { href: '/admin/artists', label: 'Artists', icon: Mic2 },
+  { href: '/admin/genres', label: 'Genres', icon: Tags },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },
   { href: '/admin/store', label: 'Store', icon: ShoppingBag },
   { href: '/admin/store/promotions', label: 'Promotions', icon: Percent },

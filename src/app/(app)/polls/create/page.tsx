@@ -60,11 +60,11 @@ export default function CreatePollPage() {
     
     createPollMutation.mutate(
       {
-        question,
+        title: question,
         description: description || undefined,
         options: options.filter(o => o.text.trim()).map(o => o.text),
-        category,
-        endsAt: endsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        allow_multiple_votes: allowMultiple,
       },
       {
         onSuccess: () => {

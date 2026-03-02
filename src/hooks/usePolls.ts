@@ -114,13 +114,13 @@ export function useCreatePoll() {
   
   return useMutation({
     mutationFn: async (data: {
-      question: string;
+      title: string;
       description?: string;
       options: string[];
-      category: string;
-      endsAt: string;
+      ends_at: string;
+      allow_multiple_votes?: boolean;
     }) => {
-      const response = await apiPost<{ data?: unknown }>('/polls', data);
+      const response = await apiPost<{ data?: unknown }>('/admin/polls', data);
       return response.data || response;
     },
     onSuccess: () => {

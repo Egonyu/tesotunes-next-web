@@ -282,6 +282,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const e = event.data;
+  const eventTypeKey = e.event_type ?? 'other';
   const totalTickets = e.ticket_tiers?.reduce((sum, t) => sum + t.quantity, 0) || e.max_capacity || 0;
   const ticketsSold = e.ticket_tiers?.reduce((sum, t) => sum + (t.sold ?? t.quantity_sold ?? 0), 0) || e.stats.tickets_sold;
   const soldPercentage = totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0;
@@ -290,7 +291,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     <div className="space-y-6">
       <PageHeader
         title={e.title}
-        description={eventTypeLabels[e.event_type] || e.event_type}
+        description={eventTypeLabels[eventTypeKey] || eventTypeKey}
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Events', href: '/admin/events' },
@@ -565,7 +566,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Type</dt>
-                <dd className="font-medium">{eventTypeLabels[e.event_type]}</dd>
+                <dd className="font-medium">{eventTypeLabels[eventTypeKey] || eventTypeKey}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Start</dt>

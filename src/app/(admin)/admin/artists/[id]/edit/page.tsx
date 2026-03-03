@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPostForm, apiPut } from '@/lib/api';
+import { apiGet, apiPostForm, apiPut } from '@/lib/api';
 import { Upload, X, User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -248,65 +248,52 @@ export default function EditArtistPage({
   // ===========================================================================
   const updateArtistMutation = useMutation({
     mutationFn: async (fd: ArtistFormData) => {
-      const hasFiles = profileFile instanceof File || coverFile instanceof File;
+      const formData = new FormData();
+      formData.append('name', fd.name);
+      formData.append('slug', fd.slug);
+      formData.append('status', fd.status);
+      formData.append('is_verified', fd.is_verified ? '1' : '0');
 
-      // Helper: convert empty strings to null for URL fields so the backend
-      // nullable|url validation doesn't reject them.
-      const urlOrNull = (v: string) => (v.trim() ? v.trim() : null);
-
-      if (hasFiles) {
-        // --- Multipart request (with file uploads) ---
-        const formData = new FormData();
-        formData.append('name', fd.name);
-        formData.append('slug', fd.slug);
-        if (fd.bio) formData.append('bio', fd.bio);
-        if (fd.website.trim()) formData.append('website', fd.website.trim());
-        formData.append('status', fd.status);
-        formData.append('is_verified', fd.is_verified ? '1' : '0');
-
-        // Only append non-empty social URLs
-        const socialFields = [
-          'spotify_url', 'apple_music_url', 'youtube_url',
-          'instagram_url', 'twitter_url', 'facebook_url', 'tiktok_url',
-        ] as const;
-        for (const key of socialFields) {
-          if (fd[key].trim()) formData.append(key, fd[key].trim());
-        }
-
-        fd.genre_ids.forEach((gid, i) =>
-          formData.append(`genre_ids[${i}]`, String(gid)),
-        );
-        if (profileFile instanceof File) {
-          formData.append('profile_image', profileFile);
-        }
-        if (coverFile instanceof File) {
-          formData.append('cover_image', coverFile);
-        }
-        return apiPostForm<{ success: boolean; message: string; data?: Artist }>(
-          `/admin/artists/${id}`,
-          formData,
-        );
+      if (fd.bio.trim()) {
+        formData.append('bio', fd.bio.trim());
       }
 
-      // --- JSON-only request (no files) ---
-      return apiPost<{ success: boolean; message: string; data?: Artist }>(
+      if (fd.website.trim()) {
+        formData.append('website', fd.website.trim());
+      }
+
+      const socialFields = [
+        'spotify_url',
+        'apple_music_url',
+        'youtube_url',
+        'instagram_url',
+        'twitter_url',
+        'facebook_url',
+        'tiktok_url',
+      ] as const;
+
+      for (const key of socialFields) {
+        const value = fd[key].trim();
+        if (value) {
+          formData.append(key, value);
+        }
+      }
+
+      fd.genre_ids.forEach((genreId, index) => {
+        formData.append(`genre_ids[${index}]`, String(genreId));
+      });
+
+      if (profileFile instanceof File) {
+        formData.append('profile_image', profileFile);
+      }
+
+      if (coverFile instanceof File) {
+        formData.append('cover_image', coverFile);
+      }
+
+      return apiPostForm<{ success: boolean; message: string; data?: Artist }>(
         `/admin/artists/${id}`,
-        {
-          name: fd.name,
-          slug: fd.slug,
-          bio: fd.bio || null,
-          website: urlOrNull(fd.website),
-          status: fd.status,
-          is_verified: fd.is_verified,
-          spotify_url: urlOrNull(fd.spotify_url),
-          apple_music_url: urlOrNull(fd.apple_music_url),
-          youtube_url: urlOrNull(fd.youtube_url),
-          instagram_url: urlOrNull(fd.instagram_url),
-          twitter_url: urlOrNull(fd.twitter_url),
-          facebook_url: urlOrNull(fd.facebook_url),
-          tiktok_url: urlOrNull(fd.tiktok_url),
-          genre_ids: fd.genre_ids.map(Number),
-        },
+        formData,
       );
     },
     onSuccess: (response) => {

@@ -18,9 +18,9 @@ const LOCAL_DEFAULT_API_URL = "http://tesotunes-api.test/api";
 const PROD_DEFAULT_API_URL = "https://api.tesotunes.com/api";
 
 const rawCandidates = [
-  process.env.API_URL,
-  process.env.BACKEND_API_URL,
   process.env.NEXT_PUBLIC_API_URL,
+  process.env.BACKEND_API_URL,
+  process.env.API_URL,
 ].filter((value): value is string => Boolean(value && value.trim()));
 
 function normalizeApiUrl(value: string): string | null {
@@ -36,7 +36,7 @@ function normalizeApiUrl(value: string): string | null {
     return null;
   }
 
-  if ((parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") && !parsed.port && !isProduction) {
+  if ((parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") && !parsed.port) {
     return null;
   }
 

@@ -75,6 +75,7 @@ type ApiError = {
 
 type UpdateSongVariables = {
   includeFiles: boolean;
+  fallbackFromInvalidUpload?: boolean;
 };
 
 const EMPTY_FORM: SongFormState = {
@@ -258,11 +259,21 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
         { timeout: 0 }
       );
     },
-    onSuccess: (response) => {
-      toast.success(response.message || 'Song updated successfully');
+    onSuccess: (response, variables) => {
+      if (variables.fallbackFromInvalidUpload) {
+        toast.success('Song metadata updated. File replacement was skipped because the previous upload handle expired. Reselect files and save again if needed.');
+      } else {
+        toast.success(response.message || 'Song updated successfully');
+      }
+
       setErrors({});
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+
+      if (variables.fallbackFromInvalidUpload) {
+        return;
+      }
+
       router.push(`/admin/songs/${id}`);
     },
     onError: (error, variables) => {
@@ -277,8 +288,8 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
       if (invalidUpload && variables.includeFiles && (coverFile || audioFile)) {
         setCoverFile(null);
         setAudioFile(null);
-        toast.warning('File upload handle expired. Saved metadata without file replacement; reselect files and save again if needed.');
-        updateMutation.mutate({ includeFiles: false });
+        toast.warning('File upload handle expired. Retrying save without file replacement.');
+        updateMutation.mutate({ includeFiles: false, fallbackFromInvalidUpload: true });
         return;
       }
 

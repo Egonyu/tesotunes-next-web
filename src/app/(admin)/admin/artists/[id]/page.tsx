@@ -37,6 +37,18 @@ type Artist = {
   updated_at: string;
 };
 
+type ArtistSong = {
+  id: number;
+  title: string;
+  status?: string;
+  is_featured?: boolean;
+  play_count?: number;
+  like_count?: number;
+  download_count?: number;
+  release_date?: string | null;
+  created_at?: string;
+};
+
 function compactNumber(value: number | null | undefined): string {
   if (!value) return '0';
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -55,7 +67,13 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
     queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
   });
 
+  const { data: songsRes, isLoading: songsLoading } = useQuery({
+    queryKey: ['admin', 'artist', id, 'songs'],
+    queryFn: () => apiGet<{ data: ArtistSong[]; meta?: { total?: number } }>(`/admin/songs?artist_id=${id}&per_page=20&sort=-created_at`),
+  });
+
   const artist = data?.data;
+  const artistSongs = songsRes?.data ?? [];
 
   const deleteMutation = useMutation({
     mutationFn: () => apiDelete<{ message?: string }>(`/admin/artists/${id}`),
@@ -202,6 +220,74 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           <div className="rounded-xl border bg-card p-6">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bio</h3>
             <p className="text-sm leading-6 text-foreground/90">{artist.bio || 'No bio provided.'}</p>
+          </div>
+
+          <div className="rounded-xl border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Artist Songs</h3>
+              <Link
+                href={`/admin/songs?artist_id=${artist.id}`}
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                Manage all songs <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {songsLoading ? (
+              <div className="space-y-2">
+                <div className="h-10 rounded bg-muted animate-pulse" />
+                <div className="h-10 rounded bg-muted animate-pulse" />
+                <div className="h-10 rounded bg-muted animate-pulse" />
+              </div>
+            ) : artistSongs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No songs found for this artist.</p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Title</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
+                      <th className="px-3 py-2 text-left font-medium">Stats</th>
+                      <th className="px-3 py-2 text-left font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {artistSongs.map((song) => (
+                      <tr key={song.id} className="hover:bg-muted/30">
+                        <td className="px-3 py-2">
+                          <div className="font-medium">{song.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {song.release_date || song.created_at?.split('T')[0] || '—'}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={song.status || 'draft'} />
+                            {song.is_featured ? <span className="text-xs text-amber-600">Featured</span> : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          <div>Plays: {compactNumber(song.play_count)}</div>
+                          <div>Likes: {compactNumber(song.like_count)}</div>
+                          <div>Downloads: {compactNumber(song.download_count)}</div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Link href={`/admin/songs/${song.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted">
+                              <Eye className="h-3 w-3" /> View
+                            </Link>
+                            <Link href={`/admin/songs/${song.id}/edit`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted">
+                              <Edit className="h-3 w-3" /> Edit
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 

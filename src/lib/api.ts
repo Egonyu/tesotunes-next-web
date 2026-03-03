@@ -41,6 +41,14 @@ export function getAuthToken(): string | null {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      const headers = config.headers as Record<string, string | undefined> | undefined;
+      if (headers) {
+        delete headers["Content-Type"];
+        delete headers["content-type"];
+      }
+    }
+
     if (_authToken) {
       config.headers.Authorization = `Bearer ${_authToken}`;
     }
@@ -171,22 +179,8 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  // Do NOT set Content-Type manually for FormData — the browser must generate
-  // the multipart boundary string automatically. Axios 1.x detects FormData
-  // and removes any explicit Content-Type so the browser XHR layer sets
-  // "multipart/form-data; boundary=----..." correctly.
-  // Disable timeout for file uploads — large audio files can take several minutes.
-  const mergedHeaders: Record<string, string> = {
-    ...((config?.headers as Record<string, string> | undefined) ?? {}),
-  };
-
-  // Remove any JSON Content-Type so browser can set multipart boundary.
-  delete mergedHeaders["Content-Type"];
-  delete mergedHeaders["content-type"];
-
   const response = await api.post<T>(url, formData, {
     ...config,
-    headers: mergedHeaders,
     timeout: 0, // No timeout for file uploads
   });
   return response.data;

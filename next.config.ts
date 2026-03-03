@@ -46,8 +46,16 @@ const nextConfig: NextConfig = {
 
   // API rewrites for Laravel backend (excluding NextAuth routes)
   async rewrites() {
+    const isHostedDeployment =
+      process.env.VERCEL === '1' ||
+      process.env.VERCEL === 'true' ||
+      process.env.APP_ENV === 'production';
+
     const rawApiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "https://api.tesotunes.com/api";
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.BACKEND_API_URL ||
+      process.env.API_URL ||
+      (isHostedDeployment ? 'https://api.tesotunes.com/api' : 'http://tesotunes-api.test/api');
     // Normalise: ensure the raw value ends with /api, then strip it to get the
     // origin.  This handles both "https://api.tesotunes.com" and
     // "https://api.tesotunes.com/api" gracefully.

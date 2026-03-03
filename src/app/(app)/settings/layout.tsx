@@ -1,9 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
-import { User, CreditCard, Bell, Shield, Palette, LogOut, Lock } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
+import { User, CreditCard, Bell, Shield, Palette, LogOut, Lock, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsNav = [
@@ -22,6 +23,32 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { status } = useSession();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+
+    if (status === 'unauthenticated') {
+      const timer = setTimeout(() => {
+        setAuthChecked(true);
+        router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+
+    setAuthChecked(true);
+  }, [status, router, pathname]);
+
+  if (status === 'loading' || !authChecked || status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl py-8">

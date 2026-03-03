@@ -17,6 +17,12 @@ const isProduction = process.env.NODE_ENV === "production";
 const LOCAL_DEFAULT_API_URL = "http://tesotunes-api.test/api";
 const PROD_DEFAULT_API_URL = "https://api.tesotunes.com/api";
 
+const isHostedDeployment =
+  process.env.VERCEL === "1" ||
+  process.env.VERCEL === "true" ||
+  process.env.APP_ENV === "production" ||
+  process.env.NODE_ENV === "test";
+
 const rawCandidates = [
   process.env.NEXT_PUBLIC_API_URL,
   process.env.BACKEND_API_URL,
@@ -48,7 +54,9 @@ const resolvedFromEnv = rawCandidates
   .map(normalizeApiUrl)
   .find((value): value is string => Boolean(value));
 
-const resolvedDefault = isProduction ? PROD_DEFAULT_API_URL : LOCAL_DEFAULT_API_URL;
+const resolvedDefault = isHostedDeployment
+  ? PROD_DEFAULT_API_URL
+  : LOCAL_DEFAULT_API_URL;
 const raw = resolvedFromEnv || resolvedDefault;
 
 /**

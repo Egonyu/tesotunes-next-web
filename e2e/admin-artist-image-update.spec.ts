@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const ARTIST_ID = '11';
+const ARTIST_ID = process.env.E2E_ARTIST_ID || '11';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@tesotunes.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'password';
 
@@ -35,6 +35,11 @@ test.describe('Admin artist image update', () => {
 
     await page.goto(`/admin/artists/${ARTIST_ID}/edit`);
     await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible();
+
+    const beforeCoverSrcRaw = await page.locator('img[alt="Cover preview"]').first().getAttribute('src').catch(() => null);
+    const beforeProfileSrcRaw = await page.locator('img[alt="Profile preview"]').first().getAttribute('src').catch(() => null);
+    const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
+    const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
     const fileInputs = page.locator('input[type="file"]');
     await expect(fileInputs).toHaveCount(2);
@@ -73,6 +78,13 @@ test.describe('Admin artist image update', () => {
     expect(updatePayload.data?.cover_url).toContain('/storage/artists/covers/');
     expect(updatePayload.data?.profile_url).toContain('?v=');
     expect(updatePayload.data?.cover_url).toContain('?v=');
+
+    if (beforeCoverSrc) {
+      expect(updatePayload.data?.cover_url).not.toBe(beforeCoverSrc);
+    }
+    if (beforeProfileSrc) {
+      expect(updatePayload.data?.profile_url).not.toBe(beforeProfileSrc);
+    }
 
     const artistName = updatePayload.data?.name || 'Artist';
 

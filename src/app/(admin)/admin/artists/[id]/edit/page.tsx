@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPut, apiPostForm } from '@/lib/api';
+import { apiGet, apiPost, apiPostForm, apiPut } from '@/lib/api';
 import { Upload, X, User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -73,8 +73,6 @@ interface ArtistFormData {
   tiktok_url: string;
   status: string;
   is_verified: boolean;
-  profile_image: File | null;
-  cover_image: File | null;
 }
 
 interface UserFormData {
@@ -156,9 +154,10 @@ export default function EditArtistPage({
     tiktok_url: '',
     status: 'active',
     is_verified: false,
-    profile_image: null,
-    cover_image: null,
   });
+  // File uploads are kept in SEPARATE state to avoid serialization issues
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -210,14 +209,18 @@ export default function EditArtistPage({
       tiktok_url: artist.tiktok_url || '',
       status: artist.status || 'active',
       is_verified: !!artist.is_verified,
-      profile_image: null,
-      cover_image: null,
     });
+    setProfileFile(null);
+    setCoverFile(null);
     if (artist.profile_url || artist.avatar_url) {
       setProfilePreview(artist.profile_url || artist.avatar_url || null);
+    } else {
+      setProfilePreview(null);
     }
     if (artist.cover_url) {
       setCoverPreview(artist.cover_url);
+    } else {
+      setCoverPreview(null);
     }
     if (artist.user) {
       setUserFormData({
@@ -240,71 +243,105 @@ export default function EditArtistPage({
   //   *_url      -> social_links.*
   //   genre_ids  -> primary_genre_id (first element)
   //
-  // Strategy: Use plain JSON POST when no file uploads (most common case).
-  // Only use multipart/form-data (apiPostForm) when files are attached.
+  // When files are selected, sends multipart/form-data via apiPostForm.
+  // Otherwise, sends JSON via apiPost.
   // ===========================================================================
   const updateArtistMutation = useMutation({
     mutationFn: async (fd: ArtistFormData) => {
-      const hasFiles = !!fd.profile_image || !!fd.cover_image;
+      const hasFiles = profileFile instanceof File || coverFile instanceof File;
+
+      // Helper: convert empty strings to null for URL fields so the backend
+      // nullable|url validation doesn't reject them.
+      const urlOrNull = (v: string) => (v.trim() ? v.trim() : null);
 
       if (hasFiles) {
-        const data = new FormData();
-        data.append('name', fd.name);
-        data.append('slug', fd.slug);
-        data.append('bio', fd.bio);
-        data.append('website', fd.website);
-        data.append('status', fd.status);
-        data.append('is_verified', fd.is_verified ? '1' : '0');
-        data.append('spotify_url', fd.spotify_url);
-        data.append('apple_music_url', fd.apple_music_url);
-        data.append('youtube_url', fd.youtube_url);
-        data.append('instagram_url', fd.instagram_url);
-        data.append('twitter_url', fd.twitter_url);
-        data.append('facebook_url', fd.facebook_url);
-        data.append('tiktok_url', fd.tiktok_url);
-        fd.genre_ids.forEach((gid) => data.append('genre_ids[]', gid));
-        if (fd.profile_image) data.append('profile_image', fd.profile_image);
-        if (fd.cover_image) data.append('cover_image', fd.cover_image);
-        return apiPostForm<{ success: boolean; message: string }>(
+        // --- Multipart request (with file uploads) ---
+        const formData = new FormData();
+        formData.append('name', fd.name);
+        formData.append('slug', fd.slug);
+        if (fd.bio) formData.append('bio', fd.bio);
+        if (fd.website.trim()) formData.append('website', fd.website.trim());
+        formData.append('status', fd.status);
+        formData.append('is_verified', fd.is_verified ? '1' : '0');
+
+        // Only append non-empty social URLs
+        const socialFields = [
+          'spotify_url', 'apple_music_url', 'youtube_url',
+          'instagram_url', 'twitter_url', 'facebook_url', 'tiktok_url',
+        ] as const;
+        for (const key of socialFields) {
+          if (fd[key].trim()) formData.append(key, fd[key].trim());
+        }
+
+        fd.genre_ids.forEach((gid, i) =>
+          formData.append(`genre_ids[${i}]`, String(gid)),
+        );
+        if (profileFile instanceof File) {
+          formData.append('profile_image', profileFile);
+        }
+        if (coverFile instanceof File) {
+          formData.append('cover_image', coverFile);
+        }
+        return apiPostForm<{ success: boolean; message: string; data?: Artist }>(
           `/admin/artists/${id}`,
-          data,
+          formData,
         );
       }
 
-      // No files — use plain JSON POST for reliability
-      const payload = {
-        name: fd.name,
-        slug: fd.slug,
-        bio: fd.bio,
-        website: fd.website,
-        status: fd.status,
-        is_verified: fd.is_verified,
-        spotify_url: fd.spotify_url,
-        apple_music_url: fd.apple_music_url,
-        youtube_url: fd.youtube_url,
-        instagram_url: fd.instagram_url,
-        twitter_url: fd.twitter_url,
-        facebook_url: fd.facebook_url,
-        tiktok_url: fd.tiktok_url,
-        genre_ids: fd.genre_ids.map(Number),
-      };
-      return apiPost<{ success: boolean; message: string }>(
+      // --- JSON-only request (no files) ---
+      return apiPost<{ success: boolean; message: string; data?: Artist }>(
         `/admin/artists/${id}`,
-        payload,
+        {
+          name: fd.name,
+          slug: fd.slug,
+          bio: fd.bio || null,
+          website: urlOrNull(fd.website),
+          status: fd.status,
+          is_verified: fd.is_verified,
+          spotify_url: urlOrNull(fd.spotify_url),
+          apple_music_url: urlOrNull(fd.apple_music_url),
+          youtube_url: urlOrNull(fd.youtube_url),
+          instagram_url: urlOrNull(fd.instagram_url),
+          twitter_url: urlOrNull(fd.twitter_url),
+          facebook_url: urlOrNull(fd.facebook_url),
+          tiktok_url: urlOrNull(fd.tiktok_url),
+          genre_ids: fd.genre_ids.map(Number),
+        },
       );
     },
     onSuccess: (response) => {
-      toast.success(
-        (response as { message?: string })?.message ||
-          'Artist updated successfully',
-      );
+      toast.success(response?.message || 'Artist updated successfully');
+      setProfileFile(null);
+      setCoverFile(null);
+
+      // If the backend returned the updated artist data, populate the query
+      // cache immediately so the show page (and this page) reflect changes
+      // without waiting for a background refetch.
+      if (response?.data) {
+        queryClient.setQueryData(['admin', 'artist', id], { data: response.data });
+
+        // Also update image previews immediately from the fresh URLs
+        const d = response.data;
+        if (d.profile_url || d.avatar_url) {
+          setProfilePreview(d.profile_url || d.avatar_url || null);
+        }
+        if (d.cover_url) {
+          setCoverPreview(d.cover_url);
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
     onError: (error: unknown) => {
       const { fieldErrors, message } = extractErrors(error);
       setErrors(fieldErrors);
-      toast.error(message);
+      // Show field-specific errors in toast if present so user sees exactly
+      // which fields failed validation (e.g., "website: not a valid URL")
+      const fieldSummary = Object.entries(fieldErrors)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+      toast.error(fieldSummary || message);
     },
   });
 
@@ -379,7 +416,7 @@ export default function EditArtistPage({
   const handleProfileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      updateField('profile_image', file);
+      setProfileFile(file);
       const reader = new FileReader();
       reader.onload = () => setProfilePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -389,7 +426,7 @@ export default function EditArtistPage({
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      updateField('cover_image', file);
+      setCoverFile(file);
       const reader = new FileReader();
       reader.onload = () => setCoverPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -626,7 +663,7 @@ export default function EditArtistPage({
                       <button
                         type="button"
                         onClick={() => {
-                          updateField('profile_image', null);
+                          setProfileFile(null);
                           setProfilePreview(null);
                         }}
                         className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700"
@@ -676,7 +713,7 @@ export default function EditArtistPage({
                       <button
                         type="button"
                         onClick={() => {
-                          updateField('cover_image', null);
+                          setCoverFile(null);
                           setCoverPreview(null);
                         }}
                         className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700"

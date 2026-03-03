@@ -31,18 +31,32 @@ interface Event {
   country?: string;
   image: string;
   artwork?: string;
+  banner?: string;
   date: string;
   starts_at?: string;
   ticketsSold: number;
   tickets_sold?: number;
   capacity: number;
   attendee_limit?: number;
+  attendee_count?: number;
   revenue: number | null;
+  ticket_price?: string | null;
+  is_free?: boolean;
+  currency?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled' | 'draft' | 'published' | 'postponed';
+  event_type?: string | null;
+  category?: string | null;
+  is_featured?: boolean;
+  organizer?: {
+    id: number;
+    name: string;
+    avatar: string;
+  };
 }
 
 interface EventStats {
   upcoming_count: number;
+  total_events: number;
   tickets_sold_30d: number;
   revenue_30d: number;
   avg_attendance: number;
@@ -144,8 +158,8 @@ export default function EventsPage() {
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="h-5 w-5 text-primary" />
           </div>
-          <p className="text-2xl font-bold">{formatRevenue(stats?.revenue_30d)}</p>
-          <p className="text-sm text-muted-foreground">Revenue (30d)</p>
+          <p className="text-2xl font-bold">{stats?.total_events?.toLocaleString() ?? '—'}</p>
+          <p className="text-sm text-muted-foreground">Total Events</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <div className="flex items-center gap-2 mb-2">
@@ -258,7 +272,7 @@ export default function EventsPage() {
 
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">
-                      {formatRevenue(event.revenue)} revenue
+                      {event.is_free ? 'Free Event' : event.ticket_price ? `${formatRevenue(Number(event.ticket_price))} ticket` : formatRevenue(event.revenue)}
                     </p>
                     <div className="flex items-center gap-1">
                       <Link

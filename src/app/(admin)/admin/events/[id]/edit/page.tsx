@@ -259,8 +259,17 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     const data = new FormData();
     data.append('_method', 'PUT');
 
+    // Map frontend field names to backend field names
+    const fieldMap: Record<string, string> = {
+      is_online: 'is_virtual',
+      online_url: 'virtual_link',
+      max_capacity: 'attendee_limit',
+    };
+
     Object.entries(formData).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
+
+      const backendKey = fieldMap[key] || key;
 
       if (key === 'artist_ids') {
         (value as string[]).forEach((artistId, index) => {
@@ -269,12 +278,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       } else if (key === 'ticket_tiers') {
         data.append('ticket_tiers', JSON.stringify(value));
       } else if (typeof value === 'boolean') {
-        data.append(key, value ? '1' : '0');
+        data.append(backendKey, value ? '1' : '0');
       } else if (value instanceof File) {
-        data.append(key, value);
-      } else {
-        data.append(key, String(value));
+        data.append(backendKey, value);
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        data.append(backendKey, value);
       }
+      // Skip empty strings to avoid validation errors
     });
 
     updateMutation.mutate(data);

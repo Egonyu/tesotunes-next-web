@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, apiPostForm } from '@/lib/api';
 import { Upload, X, Plus, User } from 'lucide-react';
 import Image from 'next/image';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Genre {
   id: string;
@@ -14,6 +15,9 @@ interface Genre {
 }
 
 interface ArtistFormData {
+  email: string;
+  password: string;
+  phone: string;
   name: string;
   slug: string;
   bio: string;
@@ -30,6 +34,7 @@ interface ArtistFormData {
   facebook_url: string;
   tiktok_url: string;
   status: string;
+  is_active: boolean;
   is_verified: boolean;
   is_featured: boolean;
   profile_image: File | null;
@@ -38,9 +43,32 @@ interface ArtistFormData {
   meta_description: string;
 }
 
+interface CreateUserResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    id?: number;
+    user?: {
+      id?: number;
+    };
+  };
+}
+
+interface AdminUserWithArtistResponse {
+  data?: {
+    id?: number;
+    artist?: {
+      id?: number;
+    };
+  };
+}
+
 export default function CreateArtistPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<ArtistFormData>({
+    email: '',
+    password: '',
+    phone: '',
     name: '',
     slug: '',
     bio: '',
@@ -57,6 +85,7 @@ export default function CreateArtistPage() {
     facebook_url: '',
     tiktok_url: '',
     status: 'active',
+    is_active: true,
     is_verified: false,
     is_featured: false,
     profile_image: null,
@@ -74,21 +103,90 @@ export default function CreateArtistPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiPost('/admin/artists', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+    mutationFn: async () => {
+      const createUserResponse = await apiPost<CreateUserResponse>('/admin/users', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone || null,
+        role: 'artist',
+        country: formData.country || 'UG',
+        is_active: formData.is_active,
       });
+
+      const userId =
+        createUserResponse?.data?.id ||
+        createUserResponse?.data?.user?.id;
+
+      if (!userId) {
+        throw new Error('Artist user created but user ID was not returned by API.');
+      }
+
+      const userDetail = await apiGet<AdminUserWithArtistResponse>(`/admin/users/${userId}`);
+      const artistId = userDetail?.data?.artist?.id;
+
+      if (!artistId) {
+        throw new Error('Artist user created, but linked artist profile was not found.');
+      }
+
+      const payload = new FormData();
+      payload.append('name', formData.name);
+      payload.append('slug', formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+      payload.append('status', formData.status);
+      payload.append('is_verified', formData.is_verified ? '1' : '0');
+
+      if (formData.bio.trim()) payload.append('bio', formData.bio.trim());
+      if (formData.website.trim()) payload.append('website', formData.website.trim());
+
+      const socialFields = [
+        'spotify_url',
+        'apple_music_url',
+        'youtube_url',
+        'instagram_url',
+        'twitter_url',
+        'facebook_url',
+        'tiktok_url',
+      ] as const;
+
+      for (const key of socialFields) {
+        const value = formData[key]?.trim();
+        if (value) payload.append(key, value);
+      }
+
+      formData.genre_ids.forEach((genreId, index) => {
+        payload.append(`genre_ids[${index}]`, String(genreId));
+      });
+
+      if (formData.profile_image instanceof File) {
+        payload.append('profile_image', formData.profile_image);
+      }
+
+      if (formData.cover_image instanceof File) {
+        payload.append('cover_image', formData.cover_image);
+      }
+
+      await apiPostForm(`/admin/artists/${artistId}`, payload);
+
+      return { userId, artistId };
     },
-    onSuccess: () => {
-      router.push('/admin/artists');
+    onSuccess: ({ artistId }) => {
+      toast.success('Artist created successfully');
+      router.push(`/admin/artists/${artistId}`);
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]> } } }) => {
+    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string; error?: string } }; message?: string }) => {
+      const newErrors: Record<string, string> = {};
       if (error.response?.data?.errors) {
-        const newErrors: Record<string, string> = {};
         Object.entries(error.response.data.errors).forEach(([key, messages]) => {
           newErrors[key] = messages[0];
         });
-        setErrors(newErrors);
+      }
+      setErrors(newErrors);
+
+      const isDev = process.env.NODE_ENV !== 'production';
+      const rawMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to create artist';
+      toast.error(rawMessage);
+      if (isDev) {
+        console.error('[CreateArtistPage][RAW_ERROR]', error);
       }
     },
   });
@@ -125,34 +223,19 @@ export default function CreateArtistPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const data = new FormData();
-    data.append('name', formData.name);
-    data.append('slug', formData.slug);
-    data.append('bio', formData.bio);
-    data.append('short_bio', formData.short_bio);
-    data.append('country', formData.country);
-    data.append('city', formData.city);
-    data.append('website', formData.website);
-    data.append('spotify_url', formData.spotify_url);
-    data.append('apple_music_url', formData.apple_music_url);
-    data.append('youtube_url', formData.youtube_url);
-    data.append('instagram_url', formData.instagram_url);
-    data.append('twitter_url', formData.twitter_url);
-    data.append('facebook_url', formData.facebook_url);
-    data.append('tiktok_url', formData.tiktok_url);
-    data.append('status', formData.status);
-    data.append('is_verified', formData.is_verified ? '1' : '0');
-    data.append('is_featured', formData.is_featured ? '1' : '0');
-    data.append('meta_title', formData.meta_title);
-    data.append('meta_description', formData.meta_description);
-    
-    formData.genre_ids.forEach(id => data.append('genre_ids[]', id));
-    
-    if (formData.profile_image) data.append('profile_image', formData.profile_image);
-    if (formData.cover_image) data.append('cover_image', formData.cover_image);
-    
-    createMutation.mutate(data);
+
+    const nextErrors: Record<string, string> = {};
+    if (!formData.name.trim()) nextErrors.name = 'Name is required';
+    if (!formData.email.trim()) nextErrors.email = 'Email is required';
+    if (!formData.password.trim()) nextErrors.password = 'Password is required';
+    if (formData.password && formData.password.length < 8) nextErrors.password = 'Password must be at least 8 characters';
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    createMutation.mutate();
   };
 
   return (
@@ -169,11 +252,50 @@ export default function CreateArtistPage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          Creates an artist in two steps: <strong>/api/admin/users</strong> (artist role), then immediately updates the linked profile via <strong>/api/admin/artists/{'{id}'}</strong>.
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             <FormSection title="Basic Information">
               <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  label="Email"
+                  required
+                  error={errors.email}
+                  className="col-span-2"
+                >
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField('email', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                    placeholder="artist@example.com"
+                  />
+                </FormField>
+
+                <FormField label="Password" required error={errors.password}>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => updateField('password', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                    placeholder="Minimum 8 characters"
+                  />
+                </FormField>
+
+                <FormField label="Phone" error={errors.phone}>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => updateField('phone', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                    placeholder="+256..."
+                  />
+                </FormField>
+
                 <FormField
                   label="Artist Name"
                   required
@@ -391,7 +513,7 @@ export default function CreateArtistPage() {
             </FormSection>
 
             <FormSection title="Cover Image">
-              <div className="border-2 border-dashed rounded-xl overflow-hidden aspect-[16/9]">
+              <div className="border-2 border-dashed rounded-xl overflow-hidden aspect-video">
                 {coverPreview ? (
                   <div className="relative w-full h-full group">
                     <Image
@@ -459,7 +581,11 @@ export default function CreateArtistPage() {
               <FormField label="Status" error={errors.status}>
                 <select
                   value={formData.status}
-                  onChange={(e) => updateField('status', e.target.value)}
+                  onChange={(e) => {
+                    const status = e.target.value;
+                    updateField('status', status);
+                    updateField('is_active', status === 'active');
+                  }}
                   className="w-null px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
                   <option value="active">Active</option>

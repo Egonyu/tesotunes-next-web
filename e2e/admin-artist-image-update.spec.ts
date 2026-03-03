@@ -1,0 +1,102 @@
+import { test, expect } from '@playwright/test';
+
+const ARTIST_ID = '11';
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@tesotunes.com';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'password';
+
+const RED_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8z8AARQABywGf3n6vWQAAAABJRU5ErkJggg==';
+const GREEN_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAgMDAwB77gM8f8w8uQAAAABJRU5ErkJggg==';
+
+function extractRealImageUrl(rawSrc: string | null, currentPageUrl: string): string {
+  if (!rawSrc) return '';
+
+  const absolute = new URL(rawSrc, currentPageUrl);
+  if (!absolute.pathname.startsWith('/_next/image')) {
+    return absolute.toString();
+  }
+
+  const encoded = absolute.searchParams.get('url') || '';
+  return decodeURIComponent(encoded);
+}
+
+test.describe('Admin artist image update', () => {
+  test('updates profile and cover images and reflects new URLs', async ({ page }) => {
+    await page.goto('/login');
+
+    const email = page.locator('input#email, input[name="email"]').first();
+    const password = page.locator('input#password, input[name="password"]').first();
+    await email.fill(ADMIN_EMAIL);
+    await password.fill(ADMIN_PASSWORD);
+
+    await page.locator('button[type="submit"]').first().click();
+    await page.waitForLoadState('networkidle');
+
+    await page.goto(`/admin/artists/${ARTIST_ID}/edit`);
+    await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible();
+
+    const fileInputs = page.locator('input[type="file"]');
+    await expect(fileInputs).toHaveCount(2);
+
+    await fileInputs.nth(0).setInputFiles({
+      name: `profile-${Date.now()}.png`,
+      mimeType: 'image/png',
+      buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
+    });
+
+    await fileInputs.nth(1).setInputFiles({
+      name: `cover-${Date.now()}.png`,
+      mimeType: 'image/png',
+      buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),
+    });
+
+    const updateResponsePromise = page.waitForResponse((response) => {
+      const req = response.request();
+      return (
+        req.method() === 'POST' &&
+        response.url().includes(`/api/admin/artists/${ARTIST_ID}`) &&
+        response.status() === 200
+      );
+    });
+
+    await page.getByRole('button', { name: 'Save Artist Profile' }).click();
+
+    const updateResponse = await updateResponsePromise;
+    const updatePayload = (await updateResponse.json()) as {
+      success: boolean;
+      data?: { name?: string; profile_url?: string; cover_url?: string };
+    };
+
+    expect(updatePayload.success).toBeTruthy();
+    expect(updatePayload.data?.profile_url).toContain('/storage/artists/avatars/');
+    expect(updatePayload.data?.cover_url).toContain('/storage/artists/covers/');
+    expect(updatePayload.data?.profile_url).toContain('?v=');
+    expect(updatePayload.data?.cover_url).toContain('?v=');
+
+    const artistName = updatePayload.data?.name || 'Artist';
+
+    await page.goto(`/admin/artists/${ARTIST_ID}`);
+    await page.waitForLoadState('networkidle');
+
+    const coverImg = page.locator(`img[alt="${artistName} cover"]`).first();
+    const avatarImg = page.locator(`img[alt="${artistName}"]`).first();
+
+    await expect(coverImg).toBeVisible();
+    await expect(avatarImg).toBeVisible();
+
+    const coverSrc = await coverImg.getAttribute('src');
+    const avatarSrc = await avatarImg.getAttribute('src');
+
+    const realCoverUrl = extractRealImageUrl(coverSrc, page.url());
+    const realAvatarUrl = extractRealImageUrl(avatarSrc, page.url());
+
+    expect(realCoverUrl).toContain('/storage/artists/covers/');
+    expect(realAvatarUrl).toContain('/storage/artists/avatars/');
+    expect(realCoverUrl).toContain('?v=');
+    expect(realAvatarUrl).toContain('?v=');
+
+    expect(realCoverUrl).toContain(updatePayload.data?.cover_url || '');
+    expect(realAvatarUrl).toContain(updatePayload.data?.profile_url || '');
+  });
+});

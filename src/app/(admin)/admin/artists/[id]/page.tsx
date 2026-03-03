@@ -51,8 +51,8 @@ interface Artist {
   status: string;
   is_verified: boolean;
   is_featured: boolean;
-  profile_url: string;
-  cover_url: string;
+  profile_url: string | null;
+  cover_url: string | null;
   followers: number;
   monthly_listeners: number;
   total_plays: number;
@@ -189,7 +189,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Hero Section */}
       <div className="relative rounded-xl overflow-hidden">
-        <div className="h-48 md:h-64 bg-linear-to-r from-purple-600 to-pink-600">
+        <div className="relative h-48 md:h-64">
           {a.cover_url && (
             <Image
               src={a.cover_url}
@@ -202,17 +202,13 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-linear-to-t from-black/80 to-transparent">
           <div className="flex items-end gap-6">
             <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl shrink-0">
-              {a.profile_url ? (
+              {a.profile_url && (
                 <Image
                   src={a.profile_url}
                   alt={a.name}
                   fill
                   className="object-cover"
                 />
-              ) : (
-                <div className="w-full h-full bg-muted flex items-center justify-center">
-                  <User className="h-12 w-12 text-muted-foreground" />
-                </div>
               )}
             </div>
             <div className="flex-1 pb-2">
@@ -303,12 +299,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                       {index + 1}
                     </span>
                     <div className="relative w-10 h-10 rounded overflow-hidden shrink-0">
-                      {song.cover_url ? (
+                      {song.cover_url && (
                         <Image src={song.cover_url} alt={song.title} fill className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <Music className="h-4 w-4 text-muted-foreground" />
-                        </div>
                       )}
                       <button className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <Play className="h-4 w-4 text-white" fill="white" />
@@ -347,12 +339,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                 {a.recent_albums!.map(album => (
                   <Link key={album.id} href={`/admin/albums/${album.id}`} className="group">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
-                      {album.cover_url ? (
+                      {album.cover_url && (
                         <Image src={album.cover_url} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <Disc className="h-8 w-8 text-muted-foreground" />
-                        </div>
                       )}
                     </div>
                     <h4 className="font-medium text-sm truncate group-hover:text-primary">{album.title}</h4>

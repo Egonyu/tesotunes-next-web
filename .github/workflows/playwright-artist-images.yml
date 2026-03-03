@@ -1,0 +1,54 @@
+name: Playwright Artist Images
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [staging]
+
+jobs:
+  playwright-artist-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start app
+        run: npm run start -- -p 3000 &
+
+      - name: Wait for app
+        run: npx wait-on http://127.0.0.1:3000
+
+      - name: Run artist image E2E
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx playwright test e2e/admin-artist-image-update.spec.ts --project=chromium --workers=1
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-artist-images
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore

@@ -14,48 +14,103 @@ import {
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 
 interface Artist {
-  id: string;
+  id: number;
   name: string;
   slug: string;
-  image_url: string;
+  image_url?: string;
+  avatar?: string;
 }
 
 interface TicketTier {
-  id: string;
+  id: number;
   name: string;
   price: number;
+  price_ugx?: number;
   quantity: number;
-  sold: number;
+  quantity_total?: number;
+  quantity_sold?: number;
+  sold?: number;
+  available?: number;
   description: string;
+  is_free?: boolean;
+  is_active?: boolean;
 }
 
-interface EventDetail {
-  id: string;
+// Matches the actual backend EventResource response
+interface EventApiResponse {
+  id: number;
+  uuid: string;
   title: string;
   slug: string;
-  description: string;
-  short_description: string;
-  event_type: string;
-  venue_name: string;
-  venue_address: string;
-  city: string;
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
+  description: string | null;
+  category: string | null;
+  event_type: string | null;
+  status: string;
+  artwork: string | null;
+  banner: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  doors_open_at: string | null;
+  timezone: string;
+  is_virtual: boolean;
+  virtual_link?: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  city: string | null;
+  country: string | null;
+  is_free: boolean;
+  ticket_price: string | null;
+  currency: string;
+  attendee_limit: number | null;
+  tickets_sold: number;
+  ticket_tiers: TicketTier[];
+  is_featured: boolean;
+  is_published: boolean;
+  attendee_count: number;
+  rating_average: number | null;
+  review_count: number;
+  organizer?: {
+    id: number;
+    name: string;
+    avatar: string;
+  };
+  artists?: Artist[];
+  tags: unknown;
+  published_at: string | null;
+  registration_deadline: string | null;
+  created_at: string;
+  updated_at: string;
+  links: {
+    self: string;
+    registrations: string;
+  };
+}
+
+// Normalized view for the page to consume
+interface EventDetail {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  event_type: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  city: string | null;
+  country: string | null;
   start_date: string;
   start_time: string;
-  end_date: string;
-  end_time: string;
+  end_date: string | null;
+  end_time: string | null;
   timezone: string;
   is_online: boolean;
-  online_url: string;
+  online_url: string | null;
   is_free: boolean;
   currency: string;
   min_age: number | null;
   max_capacity: number | null;
   is_featured: boolean;
   status: string;
-  cover_url: string;
+  cover_url: string | null;
   artists: Artist[];
   ticket_tiers: TicketTier[];
   stats: {
@@ -65,8 +120,61 @@ interface EventDetail {
     interested: number;
     going: number;
   };
+  organizer?: {
+    id: number;
+    name: string;
+    avatar: string;
+  };
   created_at: string;
   updated_at: string;
+}
+
+/** Normalize backend response into page-friendly shape */
+function normalizeEvent(raw: EventApiResponse): EventDetail {
+  const startsAt = raw.starts_at ? new Date(raw.starts_at) : null;
+  const endsAt = raw.ends_at ? new Date(raw.ends_at) : null;
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    slug: raw.slug,
+    description: raw.description,
+    event_type: raw.event_type ?? raw.category,
+    venue_name: raw.venue_name,
+    venue_address: raw.venue_address,
+    city: raw.city,
+    country: raw.country,
+    start_date: startsAt ? startsAt.toISOString().split('T')[0] : '',
+    start_time: startsAt ? startsAt.toTimeString().substring(0, 5) : '',
+    end_date: endsAt ? endsAt.toISOString().split('T')[0] : null,
+    end_time: endsAt ? endsAt.toTimeString().substring(0, 5) : null,
+    timezone: raw.timezone || 'Africa/Kampala',
+    is_online: raw.is_virtual,
+    online_url: raw.virtual_link ?? null,
+    is_free: raw.is_free,
+    currency: raw.currency || 'UGX',
+    min_age: null,
+    max_capacity: raw.attendee_limit,
+    is_featured: raw.is_featured,
+    status: raw.status,
+    cover_url: raw.artwork ?? raw.banner,
+    artists: raw.artists ?? [],
+    ticket_tiers: (raw.ticket_tiers ?? []).map(t => ({
+      ...t,
+      quantity: t.quantity_total ?? t.quantity,
+      sold: t.quantity_sold ?? 0,
+    })),
+    stats: {
+      tickets_sold: raw.tickets_sold ?? 0,
+      revenue: 0,
+      page_views: 0,
+      interested: raw.attendee_count ?? 0,
+      going: 0,
+    },
+    organizer: raw.organizer,
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+  };
 }
 
 function formatNumber(num: number): string {
@@ -120,7 +228,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['admin', 'event', id],
-    queryFn: () => apiGet<{ data: EventDetail }>(`/admin/events/${id}`),
+    queryFn: async () => {
+      const res = await apiGet<{ data: EventApiResponse }>(`/admin/events/${id}`);
+      return { data: normalizeEvent(res.data) };
+    },
   });
 
   const deleteMutation = useMutation({
@@ -172,7 +283,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const e = event.data;
   const totalTickets = e.ticket_tiers?.reduce((sum, t) => sum + t.quantity, 0) || e.max_capacity || 0;
-  const ticketsSold = e.ticket_tiers?.reduce((sum, t) => sum + t.sold, 0) || e.stats.tickets_sold;
+  const ticketsSold = e.ticket_tiers?.reduce((sum, t) => sum + (t.sold ?? t.quantity_sold ?? 0), 0) || e.stats.tickets_sold;
   const soldPercentage = totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0;
 
   return (
@@ -326,7 +437,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <div className="text-right">
                       <p className="font-bold">{formatCurrency(tier.price, e.currency)}</p>
                       <p className="text-sm text-muted-foreground">
-                        {tier.sold} / {tier.quantity} sold
+                        {tier.sold ?? tier.quantity_sold ?? 0} / {tier.quantity} sold
                       </p>
                     </div>
                   </div>
@@ -349,9 +460,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                   >
                     <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                      {artist.image_url ? (
+                      {(artist.image_url || artist.avatar) ? (
                         <Image
-                          src={artist.image_url}
+                          src={artist.image_url || artist.avatar || ''}
                           alt={artist.name}
                           fill
                           className="object-cover"

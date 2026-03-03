@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
+import {
   User,
   Bell,
   Shield,
@@ -20,7 +20,7 @@ export default function ArtistSettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const { data: profile, isLoading, error } = useArtistProfile();
   const updateProfile = useUpdateArtistProfile();
-  
+
   const [formData, setFormData] = useState({
     stage_name: '',
     bio: '',
@@ -37,7 +37,7 @@ export default function ArtistSettingsPage() {
     payout_phone_number: '',
     auto_publish: false,
   });
-  
+
   // Populate form when profile loads
   useEffect(() => {
     if (profile) {
@@ -60,7 +60,7 @@ export default function ArtistSettingsPage() {
       });
     }
   }, [profile]);
-  
+
   const handleSave = async () => {
     try {
       // Note: country/city are NOT in backend validation or Artist $fillable.
@@ -86,7 +86,7 @@ export default function ArtistSettingsPage() {
       toast.error('Failed to save settings');
     }
   };
-  
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -94,7 +94,7 @@ export default function ArtistSettingsPage() {
     { id: 'payout', label: 'Payout', icon: CreditCard },
     { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -102,14 +102,14 @@ export default function ArtistSettingsPage() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-100 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-destructive">Failed to load settings</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
           Retry
@@ -117,7 +117,7 @@ export default function ArtistSettingsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,7 +125,7 @@ export default function ArtistSettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-muted-foreground">Manage your artist account</p>
       </div>
-      
+
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Tabs */}
         <nav className="lg:w-56 flex lg:flex-col gap-1 overflow-x-auto">
@@ -148,14 +148,14 @@ export default function ArtistSettingsPage() {
             );
           })}
         </nav>
-        
+
         {/* Content */}
         <div className="flex-1 p-6 rounded-xl border bg-card">
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Profile Settings</h2>
-              
+
               {/* Avatar */}
               <div className="flex items-center gap-6">
                 <div className="relative">
@@ -175,7 +175,7 @@ export default function ArtistSettingsPage() {
                   <p className="text-sm text-muted-foreground">JPG, PNG. Max 2MB</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Stage Name *</label>
@@ -197,7 +197,7 @@ export default function ArtistSettingsPage() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Bio</label>
                 <textarea
@@ -208,7 +208,7 @@ export default function ArtistSettingsPage() {
                   className="w-full px-4 py-2 border rounded-lg bg-background resize-none"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Country</label>
@@ -221,7 +221,7 @@ export default function ArtistSettingsPage() {
                   <p className="text-xs text-muted-foreground">Managed via account settings</p>
                 </div>
               </div>
-              
+
               {/* Social Links */}
               <div>
                 <h3 className="font-medium mb-4">Social Links</h3>
@@ -300,12 +300,12 @@ export default function ArtistSettingsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Notification Preferences</h2>
-              
+
               <div className="space-y-4">
                 {[
                   { id: 'new-follower', label: 'New followers', description: 'When someone follows you', enabled: true },
@@ -320,7 +320,7 @@ export default function ArtistSettingsPage() {
                       <p className="font-medium">{item.label}</p>
                       <p className="text-sm text-muted-foreground">{item.description}</p>
                     </div>
-                    <button 
+                    <button
                       className={cn(
                         "relative h-6 w-11 rounded-full transition-colors",
                         item.enabled ? "bg-primary" : "bg-muted"
@@ -336,12 +336,12 @@ export default function ArtistSettingsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Payout Tab */}
           {activeTab === 'payout' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Payout Settings</h2>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Payout Phone Number (Mobile Money)</label>
                 <input
@@ -352,13 +352,13 @@ export default function ArtistSettingsPage() {
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
               </div>
-              
+
               <div className="flex items-center justify-between py-4 border-b">
                 <div>
                   <p className="font-medium">Auto-Publish Songs</p>
                   <p className="text-sm text-muted-foreground">Automatically publish songs after review</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setFormData({ ...formData, auto_publish: !formData.auto_publish })}
                   className={cn(
                     "relative h-6 w-11 rounded-full transition-colors",
@@ -373,12 +373,12 @@ export default function ArtistSettingsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Security Settings</h2>
-              
+
               <div>
                 <h3 className="font-medium mb-4">Change Password</h3>
                 <div className="space-y-4">
@@ -408,7 +408,7 @@ export default function ArtistSettingsPage() {
                   </button>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between py-4 border-b">
                 <div>
                   <p className="font-medium">Two-Factor Authentication</p>
@@ -418,12 +418,12 @@ export default function ArtistSettingsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Appearance Tab */}
           {activeTab === 'appearance' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Appearance Settings</h2>
-              
+
               <div>
                 <h3 className="font-medium mb-4">Artist Page Theme</h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -448,10 +448,10 @@ export default function ArtistSettingsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Save Button */}
           <div className="flex justify-end mt-8 pt-6 border-t">
-            <button 
+            <button
               onClick={handleSave}
               disabled={updateProfile.isPending}
               className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"

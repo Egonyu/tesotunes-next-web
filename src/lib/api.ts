@@ -22,6 +22,8 @@ export const api: AxiosInstance = axios.create({
   withCredentials: true, // Required for Sanctum cookies in dev (direct API)
 });
 
+const isDevEnv = process.env.NODE_ENV !== "production";
+
 // In-memory auth token — never persisted to localStorage (XSS mitigation).
 // Populated on mount by TokenSync from the httpOnly NextAuth JWT cookie.
 let _authToken: string | null = null;
@@ -42,6 +44,16 @@ api.interceptors.request.use(
     if (_authToken) {
       config.headers.Authorization = `Bearer ${_authToken}`;
     }
+
+    if (isLocalDev && typeof window !== "undefined") {
+      console.debug("[API][REQ]", {
+        method: config.method,
+        baseURL: config.baseURL,
+        url: config.url,
+        params: config.params,
+      });
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -49,12 +61,38 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isLocalDev && typeof window !== "undefined") {
+      console.debug("[API][RES]", {
+        status: response.status,
+        method: response.config.method,
+        url: response.config.url,
+        data: response.data,
+      });
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
+    if (isDevEnv && typeof window !== "undefined") {
+      console.warn("[API][ERR]", {
+        code: error.code,
+        message: error.message,
+        method: originalRequest?.method,
+        baseURL: originalRequest?.baseURL,
+        url: originalRequest?.url,
+        status: error.response?.status,
+        responseData: error.response?.data,
+      });
+    }
+
     // --- Handle network-level errors (no response from server) ---
     if (!error.response) {
+      if (isDevEnv) {
+        return Promise.reject(error);
+      }
+
       const message =
         error.code === "ECONNABORTED"
           ? "Request timed out. Please check your connection and try again."
@@ -133,17 +171,23 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  // Explicitly set Content-Type to multipart/form-data to override the axios
-  // instance default ("application/json"). Axios 1.x will auto-append the
-  // boundary parameter when it detects FormData as the request body.
+  // Do NOT set Content-Type manually for FormData — the browser must generate
+  // the multipart boundary string automatically. Axios 1.x detects FormData
+  // and removes any explicit Content-Type so the browser XHR layer sets
+  // "multipart/form-data; boundary=----..." correctly.
   // Disable timeout for file uploads — large audio files can take several minutes.
+  const mergedHeaders: Record<string, string> = {
+    ...((config?.headers as Record<string, string> | undefined) ?? {}),
+  };
+
+  // Remove any JSON Content-Type so browser can set multipart boundary.
+  delete mergedHeaders["Content-Type"];
+  delete mergedHeaders["content-type"];
+
   const response = await api.post<T>(url, formData, {
     ...config,
+    headers: mergedHeaders,
     timeout: 0, // No timeout for file uploads
-    headers: {
-      ...config?.headers,
-      "Content-Type": "multipart/form-data",
-    },
   });
   return response.data;
 }

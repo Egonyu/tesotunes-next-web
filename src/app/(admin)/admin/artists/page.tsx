@@ -207,17 +207,13 @@ export default function ArtistsPage() {
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="relative h-14 w-14 rounded-full overflow-hidden bg-muted">
-                  {artist.avatar_url ? (
+                  {artist.avatar_url && (
                     <Image
                       src={artist.avatar_url}
                       alt={artist.name}
                       fill
                       className="object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-primary/5 text-lg font-bold">
-                      {artist.name.charAt(0)}
-                    </div>
                   )}
                 </div>
                 <div>

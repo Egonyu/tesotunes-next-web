@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
 
   // Image optimization configuration
   images: {
+    // In local dev, tesotunes-api.test resolves to 127.0.0.1 (private IP).
+    // Next.js Image optimization blocks private IPs, so skip it in dev.
+    unoptimized: process.env.NODE_ENV === "development",
     remotePatterns: [
       {
         protocol: "http",

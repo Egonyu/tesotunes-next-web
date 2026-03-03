@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api';
+import { normalizeCountryCode } from '@/lib/country';
 import { Upload, X, User, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
@@ -108,7 +109,7 @@ export default function CreateUserPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     data.append('name', formData.name);
     data.append('email', formData.email);
@@ -116,7 +117,8 @@ export default function CreateUserPage() {
     data.append('password', formData.password);
     data.append('password_confirmation', formData.password_confirmation);
     data.append('phone', formData.phone);
-    data.append('country', formData.country);
+    const normalizedCountry = normalizeCountryCode(formData.country);
+    data.append('country', normalizedCountry);
     data.append('city', formData.city);
     data.append('bio', formData.bio);
     data.append('role', formData.role);
@@ -126,9 +128,9 @@ export default function CreateUserPage() {
     if (formData.is_artist && formData.artist_id) {
       data.append('artist_id', formData.artist_id);
     }
-    
+
     if (formData.avatar) data.append('avatar', formData.avatar);
-    
+
     createMutation.mutate(data);
   };
 
@@ -241,8 +243,9 @@ export default function CreateUserPage() {
                     type="text"
                     value={formData.country}
                     onChange={(e) => updateField('country', e.target.value)}
+                    onBlur={(e) => updateField('country', normalizeCountryCode(e.target.value))}
                     className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="Uganda"
+                    placeholder="UG or Uganda"
                   />
                 </FormField>
                 <FormField label="City" error={errors.city}>

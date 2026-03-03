@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { usePlayerStore, useUIStore } from "@/stores";
 
 const mainTabs = [
@@ -190,6 +192,17 @@ export function MobileBottomNav() {
   const isArtist = userRole.toLowerCase().includes("artist");
   const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) => userRole.toLowerCase().includes(r.toLowerCase()));
 
+  const { data: artistStatus } = useQuery({
+    queryKey: ["artist", "application-status", "mobile-nav"],
+    queryFn: () => apiGet<{ data?: { status?: string; is_artist?: boolean } }>("/artist/application-status"),
+    enabled: !!session?.user && !isAdmin,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
+  const hasArtistAccess = isArtist || isArtistByStatus;
+
   const closeMenu = () => setMenuOpen(false);
 
   const artistMenuItems = [
@@ -202,7 +215,7 @@ export function MobileBottomNav() {
   ];
 
   // Side action buttons (right-side vertical stack)
-  const sideActions = isArtist
+  const sideActions = hasArtistAccess
     ? [
         { href: "/artist/upload", label: "Upload Song", icon: Upload },
         { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
@@ -247,7 +260,7 @@ export function MobileBottomNav() {
             {/* Menu Content */}
             <div className="max-h-[60vh] overflow-y-auto px-4 pb-4 space-y-4">
               {/* Artist Section */}
-              {isArtist && (
+              {hasArtistAccess && (
                 <div>
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
                     Artist Studio
@@ -303,7 +316,7 @@ export function MobileBottomNav() {
                 <div className="grid grid-cols-1 gap-0.5">
                   {session ? (
                     <>
-                      {!isArtist && !isAdmin && (
+                      {!hasArtistAccess && !isAdmin && (
                         <Link
                           href="/become-artist"
                           onClick={closeMenu}

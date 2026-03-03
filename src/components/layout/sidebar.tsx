@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const mainNavItems = [
@@ -116,6 +118,17 @@ export function Sidebar() {
   const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) =>
     userRole.toLowerCase().includes(r.toLowerCase())
   );
+
+  const { data: artistStatus } = useQuery({
+    queryKey: ["artist", "application-status", "sidebar"],
+    queryFn: () => apiGet<{ data?: { status?: string; is_artist?: boolean } }>("/artist/application-status"),
+    enabled: !!session?.user && !isAdmin,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
+  const hasArtistAccess = isArtist || isArtistByStatus;
 
   return (
     <aside
@@ -216,7 +229,7 @@ export function Sidebar() {
         {session?.user ? (
           <div className={cn("space-y-1", sidebarCollapsed && "space-y-2")}>
             {/* Become an Artist CTA — hidden for artists & admins */}
-            {!isArtist && !isAdmin && (
+            {!hasArtistAccess && !isAdmin && (
               <Link
                 href="/become-artist"
                 className={cn(
@@ -231,7 +244,7 @@ export function Sidebar() {
             )}
 
             {/* Artist Studio link — only for artists */}
-            {isArtist && (
+            {hasArtistAccess && (
               <Link
                 href="/artist"
                 className={cn(

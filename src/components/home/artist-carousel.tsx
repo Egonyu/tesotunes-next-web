@@ -77,7 +77,10 @@ export function ArtistCarousel() {
         className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {artists.map((artist) => (
+        {artists.map((artist) => {
+          const imageSrc = artist.avatar_url || artist.profile_image_url || artist.cover_image_url || artist.cover_url;
+
+          return (
           <Link
             key={artist.id}
             href={`/artists/${artist.slug || artist.id}`}
@@ -85,11 +88,12 @@ export function ArtistCarousel() {
           >
             {/* Artist Image */}
             <div className="relative aspect-square mb-3 overflow-hidden rounded-full bg-muted">
-              {artist.profile_image_url ? (
+              {imageSrc ? (
                 <Image
-                  src={artist.profile_image_url}
+                  src={imageSrc}
                   alt={artist.name}
                   fill
+                  unoptimized
                   className="object-cover transition-transform group-hover/card:scale-105"
                 />
               ) : (
@@ -115,7 +119,7 @@ export function ArtistCarousel() {
               {formatNumber(artist.total_plays || 0)} plays
             </p>
           </Link>
-        ))}
+        )})}
       </div>
     </div>
   );

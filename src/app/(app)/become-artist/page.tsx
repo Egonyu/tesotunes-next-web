@@ -26,6 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { normalizeCountryCode } from "@/lib/country";
 import { setAuthToken } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -206,7 +207,7 @@ export default function BecomeArtistPage() {
         primary_genre: formData.primary_genre ?? "",
         secondary_genres: formData.secondary_genres,
         career_start_year: formData.career_start_year,
-        country: formData.country,
+        country: normalizeCountryCode(formData.country),
         city: formData.city,
         website_url: formData.website_url,
         social_links: formData.social_links,

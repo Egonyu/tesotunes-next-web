@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api';
+import { normalizeCountryCode } from '@/lib/country';
 import { PageHeader, FormActions, FormField, FormSection } from '@/components/admin';
 import { toast } from 'sonner';
 
@@ -95,7 +96,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       username: user.username || '',
       phone: user.phone || '',
       role: user.role || 'user',
-      country: user.country || '',
+      country: normalizeCountryCode(user.country),
       city: user.city || '',
       bio: user.bio || '',
       is_active: user.is_active ?? true,
@@ -112,7 +113,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         username: payload.username.trim(),
         phone: payload.phone.trim(),
         role: payload.role,
-        country: payload.country.trim() || null,
+        country: normalizeCountryCode(payload.country) || null,
         city: payload.city.trim() || null,
         bio: payload.bio.trim() || null,
         is_active: payload.is_active,
@@ -229,9 +230,10 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               <input
                 value={formData.country}
                 maxLength={2}
-                onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value.toUpperCase() }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value }))}
+                onBlur={(e) => setFormData((prev) => ({ ...prev, country: normalizeCountryCode(e.target.value) }))}
                 className="w-full rounded-lg border px-4 py-2 bg-background"
-                placeholder="UG"
+                placeholder="UG or Uganda"
               />
             </FormField>
 

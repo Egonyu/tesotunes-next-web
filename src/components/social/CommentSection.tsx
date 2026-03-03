@@ -15,6 +15,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -56,7 +57,10 @@ export function CommentSection({
   readOnly = false,
   className,
 }: CommentSectionProps) {
+  const { status } = useSession();
   const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'popular'>('latest');
+  const isAuthenticated = status === 'authenticated';
+  const isReadOnly = readOnly || status === 'unauthenticated';
 
   const {
     data,
@@ -74,14 +78,20 @@ export function CommentSection({
   const handleSubmit = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
+      if (!isAuthenticated) {
+        toast.error('Please sign in to post a comment');
+        return;
+      }
+
       try {
         await createComment.mutateAsync({ content });
         toast.success('Comment posted');
-      } catch {
-        toast.error('Failed to post comment');
+      } catch (error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err?.response?.data?.message || 'Failed to post comment');
       }
     },
-    [createComment]
+    [createComment, isAuthenticated]
   );
 
   return (
@@ -111,12 +121,16 @@ export function CommentSection({
       </div>
 
       {/* Compose box */}
-      {!readOnly && (
+      {!isReadOnly && (
         <CommentComposer
           onSubmit={handleSubmit}
           isPending={createComment.isPending}
           placeholder="Write a comment..."
         />
+      )}
+
+      {status === 'unauthenticated' && (
+        <p className="text-sm text-muted-foreground">Sign in to join the conversation.</p>
       )}
 
       {/* Comment list */}
@@ -138,7 +152,7 @@ export function CommentSection({
               commentableId={commentableId}
               depth={0}
               maxReplyDepth={maxReplyDepth}
-              readOnly={readOnly}
+              readOnly={isReadOnly}
             />
           ))}
         </div>

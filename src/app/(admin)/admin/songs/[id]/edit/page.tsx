@@ -1,306 +1,362 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPostForm } from '@/lib/api';
-import { Upload, X, Plus, Music } from 'lucide-react';
-import Image from 'next/image';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Loader2, Music, Upload, Image as ImageIcon, FileAudio } from 'lucide-react';
+import { apiGet, apiPost } from '@/lib/api';
+import { PageHeader, FormActions, FormField, FormSection } from '@/components/admin';
 import { toast } from 'sonner';
 
-interface Artist {
-  id: string;
-  name: string;
-}
+type ArtistOption = { id: number; name: string };
+type AlbumOption = { id: number; title: string };
+type GenreOption = { id: number; name: string };
 
-interface Album {
-  id: string;
+type SongDetail = {
+  id: number;
   title: string;
-}
+  slug?: string | null;
+  description?: string | null;
+  lyrics?: string | null;
+  status?: 'draft' | 'pending' | 'published' | 'rejected' | string;
+  is_featured?: boolean;
+  is_explicit?: boolean;
+  cover_url?: string | null;
+  audio_file_url?: string | null;
+  artist_id?: number | null;
+  album_id?: number | null;
+  release_date?: string | null;
+  track_number?: number | null;
+  disc_number?: number | null;
+  duration_seconds?: number | null;
+  genre_ids?: number[];
+  genres?: Array<{ id: number | string; name: string }>;
+  featured_artists?: Array<number | string | { id: number | string }>;
+  isrc?: string | null;
+  bpm?: number | null;
+  key?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+};
 
-interface Genre {
-  id: string;
-  name: string;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  duration: number;
-  explicit: boolean;
-  lyrics: string;
-  isrc: string;
-  bpm: number;
-  key: string;
-  track_number: number;
-  disc_number: number;
-  release_date: string;
-  status: string;
-  is_featured: boolean;
-  cover_url: string;
-  artist: { id: string; name: string };
-  featured_artists: { id: string; name: string }[];
-  album?: { id: string; title: string };
-  genres: { id: string; name: string }[];
-  credits: { role: string; name: string }[];
-  meta_title: string;
-  meta_description: string;
-}
-
-interface SongFormData {
+type SongFormState = {
   title: string;
   slug: string;
   artist_id: string;
-  featured_artists: string[];
   album_id: string;
-  genre_ids: string[];
-  duration: string;
+  status: 'draft' | 'pending' | 'published' | 'rejected';
+  explicit: boolean;
+  is_featured: boolean;
   release_date: string;
   track_number: string;
   disc_number: string;
-  explicit: boolean;
-  lyrics: string;
-  description: string;
-  status: string;
-  is_featured: boolean;
-  audio_file: File | null;
-  cover_image: File | null;
-  credits: { role: string; name: string }[];
+  duration: string;
+  genre_ids: string[];
+  featured_artists: string[];
   isrc: string;
   bpm: string;
   key: string;
+  description: string;
+  lyrics: string;
   meta_title: string;
   meta_description: string;
+};
+
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+      errors?: Record<string, string[]>;
+    };
+  };
+  message?: string;
+};
+
+type UpdateSongVariables = {
+  includeFiles: boolean;
+};
+
+const EMPTY_FORM: SongFormState = {
+  title: '',
+  slug: '',
+  artist_id: '',
+  album_id: '',
+  status: 'draft',
+  explicit: false,
+  is_featured: false,
+  release_date: '',
+  track_number: '',
+  disc_number: '',
+  duration: '',
+  genre_ids: [],
+  featured_artists: [],
+  isrc: '',
+  bpm: '',
+  key: '',
+  description: '',
+  lyrics: '',
+  meta_title: '',
+  meta_description: '',
+};
+
+function extractFieldErrors(error: unknown): { message: string; fields: Record<string, string> } {
+  const e = error as ApiError;
+  const fields: Record<string, string> = {};
+  const all = e.response?.data?.errors;
+
+  if (all) {
+    for (const [key, value] of Object.entries(all)) {
+      fields[key] = value[0];
+    }
+  }
+
+  return {
+    message: e.response?.data?.message || e.message || 'Failed to update song',
+    fields,
+  };
+}
+
+function normalizeFeaturedArtists(input: SongDetail['featured_artists']): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => {
+      if (typeof entry === 'number' || typeof entry === 'string') return String(entry);
+      if (entry && typeof entry === 'object' && 'id' in entry) return String(entry.id);
+      return '';
+    })
+    .filter(Boolean);
+}
+
+function toDateInput(dateLike?: string | null): string {
+  if (!dateLike) return '';
+  return dateLike.includes('T') ? dateLike.split('T')[0] : dateLike;
+}
+
+function hasInvalidUploadError(message?: string): boolean {
+  if (!message) return false;
+  return /uploaded file is invalid|invalid upload|path must not be empty/i.test(message);
 }
 
 export default function EditSongPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  
-  const [formData, setFormData] = useState<SongFormData>({
-    title: '',
-    slug: '',
-    artist_id: '',
-    featured_artists: [],
-    album_id: '',
-    genre_ids: [],
-    duration: '',
-    release_date: '',
-    track_number: '1',
-    disc_number: '1',
-    explicit: false,
-    lyrics: '',
-    description: '',
-    status: 'draft',
-    is_featured: false,
-    audio_file: null,
-    cover_image: null,
-    credits: [],
-    isrc: '',
-    bpm: '',
-    key: '',
-    meta_title: '',
-    meta_description: '',
-  });
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [audioFileName, setAudioFileName] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<SongFormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [creditInput, setCreditInput] = useState({ role: '', name: '' });
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
-  const { data: song, isLoading: songLoading } = useQuery({
+  const { data: songRes, isLoading: songLoading } = useQuery({
     queryKey: ['admin', 'song', id],
-    queryFn: () => apiGet<{ data: Song }>(`/admin/songs/${id}`),
+    queryFn: () => apiGet<{ data: SongDetail }>(`/admin/songs/${id}`),
   });
 
-  const { data: artists } = useQuery({
-    queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?per_page=1000'),
+  const { data: artistsRes } = useQuery({
+    queryKey: ['admin', 'artists', 'song-edit'],
+    queryFn: () => apiGet<{ data: ArtistOption[] }>('/admin/artists?per_page=1000'),
   });
 
-  const { data: albums } = useQuery({
-    queryKey: ['admin', 'albums', 'list'],
-    queryFn: () => apiGet<{ data: Album[] }>('/admin/albums?per_page=1000'),
+  const { data: albumsRes } = useQuery({
+    queryKey: ['admin', 'albums', 'song-edit'],
+    queryFn: () => apiGet<{ data: AlbumOption[] }>('/admin/albums?per_page=1000'),
   });
 
-  const { data: genres } = useQuery({
-    queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+  const { data: genresRes } = useQuery({
+    queryKey: ['admin', 'genres', 'song-edit'],
+    queryFn: () => apiGet<{ data: GenreOption[] }>('/admin/genres'),
   });
 
-  // Populate form when song data loads
+  const song = songRes?.data;
+  const artists = artistsRes?.data ?? [];
+  const albums = albumsRes?.data ?? [];
+  const genres = genresRes?.data ?? [];
+
   useEffect(() => {
-    if (song?.data) {
-      const s = song.data;
-      setFormData({
-        title: s.title || '',
-        slug: s.slug || '',
-        artist_id: s.artist?.id || '',
-        featured_artists: s.featured_artists?.map(a => a.id) || [],
-        album_id: s.album?.id || '',
-        genre_ids: s.genres?.map(g => g.id) || [],
-        duration: s.duration?.toString() || '',
-        release_date: s.release_date?.split('T')[0] || '',
-        track_number: s.track_number?.toString() || '1',
-        disc_number: s.disc_number?.toString() || '1',
-        explicit: !!s.explicit,
-        lyrics: s.lyrics || '',
-        description: s.description || '',
-        status: s.status || 'draft',
-        is_featured: !!s.is_featured,
-        audio_file: null,
-        cover_image: null,
-        credits: s.credits || [],
-        isrc: s.isrc || '',
-        bpm: s.bpm?.toString() || '',
-        key: s.key || '',
-        meta_title: s.meta_title || '',
-        meta_description: s.meta_description || '',
-      });
-      if (s.cover_url) {
-        setCoverPreview(s.cover_url);
-      }
-    }
+    if (!song) return;
+
+    const genreIds = song.genre_ids?.length
+      ? song.genre_ids.map(String)
+      : (song.genres ?? []).map((genre) => String(genre.id));
+
+    setFormData({
+      title: song.title || '',
+      slug: song.slug || '',
+      artist_id: song.artist_id ? String(song.artist_id) : '',
+      album_id: song.album_id ? String(song.album_id) : '',
+      status: (song.status as SongFormState['status']) || 'draft',
+      explicit: !!song.is_explicit,
+      is_featured: !!song.is_featured,
+      release_date: toDateInput(song.release_date),
+      track_number: song.track_number ? String(song.track_number) : '',
+      disc_number: song.disc_number ? String(song.disc_number) : '',
+      duration: song.duration_seconds ? String(song.duration_seconds) : '',
+      genre_ids: genreIds,
+      featured_artists: normalizeFeaturedArtists(song.featured_artists),
+      isrc: song.isrc || '',
+      bpm: song.bpm ? String(song.bpm) : '',
+      key: song.key || '',
+      description: song.description || '',
+      lyrics: song.lyrics || '',
+      meta_title: song.meta_title || '',
+      meta_description: song.meta_description || '',
+    });
+
+    setCoverPreview(song.cover_url || null);
+    setCoverFile(null);
+    setAudioFile(null);
+    setErrors({});
   }, [song]);
 
+  const featuredArtistOptions = useMemo(
+    () => artists.filter((artist) => String(artist.id) !== formData.artist_id),
+    [artists, formData.artist_id]
+  );
+
+  const safeCoverPreview = useMemo(() => {
+    const value = coverPreview?.trim();
+    return value ? value : null;
+  }, [coverPreview]);
+
   const updateMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiPostForm(`/admin/songs/${id}`, data);
+    mutationFn: async (variables: UpdateSongVariables) => {
+      const payload = new FormData();
+      payload.append('_method', 'PUT');
+      payload.append('title', formData.title.trim());
+      payload.append('artist_id', formData.artist_id);
+      payload.append('status', formData.status);
+      payload.append('explicit', formData.explicit ? '1' : '0');
+      payload.append('is_featured', formData.is_featured ? '1' : '0');
+
+      if (formData.slug.trim()) payload.append('slug', formData.slug.trim());
+      if (formData.album_id) payload.append('album_id', formData.album_id);
+      if (formData.release_date) payload.append('release_date', formData.release_date);
+      if (formData.track_number) payload.append('track_number', formData.track_number);
+      if (formData.disc_number) payload.append('disc_number', formData.disc_number);
+      if (formData.duration) payload.append('duration', formData.duration);
+      if (formData.isrc.trim()) payload.append('isrc', formData.isrc.trim());
+      if (formData.bpm) payload.append('bpm', formData.bpm);
+      if (formData.key.trim()) payload.append('key', formData.key.trim());
+      if (formData.description.trim()) payload.append('description', formData.description.trim());
+      if (formData.lyrics.trim()) payload.append('lyrics', formData.lyrics.trim());
+      if (formData.meta_title.trim()) payload.append('meta_title', formData.meta_title.trim());
+      if (formData.meta_description.trim()) payload.append('meta_description', formData.meta_description.trim());
+
+      formData.genre_ids.forEach((genreId) => payload.append('genre_ids[]', genreId));
+      formData.featured_artists.forEach((artistId) => payload.append('featured_artists[]', artistId));
+
+      if (variables.includeFiles) {
+        if (coverFile) payload.append('cover_image', coverFile);
+        if (audioFile) payload.append('audio_file', audioFile);
+      }
+
+      return apiPost<{ success: boolean; message?: string; data?: SongDetail }, FormData>(
+        `/admin/songs/${id}`,
+        payload,
+        { timeout: 0 }
+      );
     },
-    onSuccess: () => {
-      toast.success('Song updated successfully!');
+    onSuccess: (response) => {
+      toast.success(response.message || 'Song updated successfully');
+      setErrors({});
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
       router.push(`/admin/songs/${id}`);
     },
-    onError: (error: { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
-      if (error.response?.data?.errors) {
-        const newErrors: Record<string, string> = {};
-        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
-          newErrors[key] = messages[0];
-        });
-        setErrors(newErrors);
-        toast.error('Please fix the errors below');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to update song. Please try again.');
+    onError: (error, variables) => {
+      const parsed = extractFieldErrors(error);
+
+      const invalidUpload = [
+        parsed.message,
+        parsed.fields.audio_file,
+        parsed.fields.cover_image,
+      ].some((entry) => hasInvalidUploadError(entry));
+
+      if (invalidUpload && variables.includeFiles && (coverFile || audioFile)) {
+        setCoverFile(null);
+        setAudioFile(null);
+        toast.warning('File upload handle expired. Saved metadata without file replacement; reselect files and save again if needed.');
+        updateMutation.mutate({ includeFiles: false });
+        return;
       }
+
+      setErrors(parsed.fields);
+      toast.error(Object.values(parsed.fields)[0] || parsed.message);
     },
   });
 
-  const updateField = (field: keyof SongFormData, value: unknown) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, cover_image: file }));
-      const reader = new FileReader();
-      reader.onload = () => setCoverPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, audio_file: file }));
-      setAudioFileName(file.name);
-    }
-  };
-
-  const addCredit = () => {
-    if (creditInput.role.trim() && creditInput.name.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        credits: [...prev.credits, { ...creditInput }],
-      }));
-      setCreditInput({ role: '', name: '' });
-    }
-  };
-
-  const removeCredit = (index: number) => {
-    setFormData(prev => ({
+  const toggleGenre = (genreId: string) => {
+    setFormData((prev) => ({
       ...prev,
-      credits: prev.credits.filter((_, i) => i !== index),
+      genre_ids: prev.genre_ids.includes(genreId)
+        ? prev.genre_ids.filter((idValue) => idValue !== genreId)
+        : [...prev.genre_ids, genreId],
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Client-side validation
-    const validationErrors: Record<string, string> = {};
-    if (!formData.title.trim()) validationErrors.title = 'Title is required';
-    if (!formData.artist_id) validationErrors.artist_id = 'Artist is required';
-    
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      toast.error('Please fill in all required fields');
+  const handleCoverChange = (file?: File) => {
+    if (!file) return;
+    if (file.size <= 0) {
+      toast.error('Selected cover image is empty. Please choose a valid file');
       return;
     }
-    
-    const data = new FormData();
-    data.append('_method', 'PUT');
-    // Required fields
-    data.append('title', formData.title);
-    data.append('artist_id', formData.artist_id);
-    data.append('status', formData.status);
-    data.append('explicit', formData.explicit ? '1' : '0');
-    data.append('is_featured', formData.is_featured ? '1' : '0');
-    
-    // Optional fields - only send when they have values
-    if (formData.slug) data.append('slug', formData.slug);
-    if (formData.album_id) data.append('album_id', formData.album_id);
-    if (formData.duration) data.append('duration', formData.duration);
-    if (formData.release_date) data.append('release_date', formData.release_date);
-    if (formData.track_number) data.append('track_number', formData.track_number);
-    if (formData.disc_number) data.append('disc_number', formData.disc_number);
-    if (formData.lyrics) data.append('lyrics', formData.lyrics);
-    if (formData.description) data.append('description', formData.description);
-    if (formData.isrc) data.append('isrc', formData.isrc);
-    if (formData.bpm) data.append('bpm', formData.bpm);
-    if (formData.key) data.append('key', formData.key);
-    if (formData.meta_title) data.append('meta_title', formData.meta_title);
-    if (formData.meta_description) data.append('meta_description', formData.meta_description);
-    
-    formData.genre_ids.forEach(id => data.append('genre_ids[]', id));
-    formData.featured_artists.forEach(id => data.append('featured_artists[]', id));
-    if (formData.credits.length > 0) data.append('credits', JSON.stringify(formData.credits));
-    
-    if (formData.audio_file) data.append('audio_file', formData.audio_file);
-    if (formData.cover_image) data.append('cover_image', formData.cover_image);
-    
-    updateMutation.mutate(data);
+    if (!file.type.startsWith('image/')) {
+      toast.error('Cover image must be an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Cover image must be less than 10MB');
+      return;
+    }
+
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const handleAudioChange = (file?: File) => {
+    if (!file) return;
+    if (file.size <= 0) {
+      toast.error('Selected audio file is empty. Please choose a valid file');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Audio file must be less than 50MB');
+      return;
+    }
+
+    setAudioFile(file);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const nextErrors: Record<string, string> = {};
+    if (!formData.title.trim()) nextErrors.title = 'Title is required';
+    if (!formData.artist_id) nextErrors.artist_id = 'Artist is required';
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+
+    updateMutation.mutate({ includeFiles: true });
   };
 
   if (songLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />
-            ))}
-          </div>
-          <div className="space-y-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-muted rounded-xl animate-pulse" />
-            ))}
-          </div>
-        </div>
+        <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+        <div className="h-120 rounded-xl bg-muted animate-pulse" />
       </div>
     );
   }
 
-  if (!song?.data) {
+  if (!song) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h2 className="text-xl font-semibold">Song not found</h2>
         <Link href="/admin/songs" className="text-primary hover:underline mt-2 inline-block">
@@ -313,12 +369,12 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Edit: ${song.data.title}`}
-        description="Update song information"
+        title={`Edit: ${song.title}`}
+        description="Update song metadata, media and publishing settings"
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Songs', href: '/admin/songs' },
-          { label: song.data.title, href: `/admin/songs/${id}` },
+          { label: song.title, href: `/admin/songs/${id}` },
           { label: 'Edit' },
         ]}
         backHref={`/admin/songs/${id}`}
@@ -326,390 +382,289 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            <FormSection title="Basic Information">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  label="Title"
-                  required
-                  error={errors.title}
-                  className="col-span-2"
-                >
+            <FormSection title="Core Details" description="Fields map directly to SongsApiController::update validation">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Title" required error={errors.title}>
                   <input
-                    type="text"
                     value={formData.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="Enter song title"
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                    placeholder="Song title"
                   />
                 </FormField>
 
                 <FormField label="Slug" error={errors.slug}>
                   <input
-                    type="text"
                     value={formData.slug}
-                    onChange={(e) => updateField('slug', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="song-url-slug"
+                    onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                    placeholder="auto-generated-if-empty"
+                  />
+                </FormField>
+
+                <FormField label="Artist" required error={errors.artist_id}>
+                  <select
+                    value={formData.artist_id}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, artist_id: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  >
+                    <option value="">Select artist</option>
+                    {artists.map((artist) => (
+                      <option key={artist.id} value={String(artist.id)}>
+                        {artist.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Album" error={errors.album_id}>
+                  <select
+                    value={formData.album_id}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, album_id: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  >
+                    <option value="">No album</option>
+                    {albums.map((album) => (
+                      <option key={album.id} value={String(album.id)}>
+                        {album.title}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Status" error={errors.status}>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as SongFormState['status'] }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="pending">Pending</option>
+                    <option value="published">Published</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </FormField>
+
+                <FormField label="Release Date" error={errors.release_date}>
+                  <input
+                    type="date"
+                    value={formData.release_date}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, release_date: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={formData.explicit}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, explicit: e.target.checked }))}
+                  />
+                  Explicit content
+                </label>
+
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_featured}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, is_featured: e.target.checked }))}
+                  />
+                  Featured song
+                </label>
+              </div>
+            </FormSection>
+
+            <FormSection title="Catalog Metadata">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField label="Track #" error={errors.track_number}>
+                  <input
+                    type="number"
+                    min={1}
+                    value={formData.track_number}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, track_number: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+
+                <FormField label="Disc #" error={errors.disc_number}>
+                  <input
+                    type="number"
+                    min={1}
+                    value={formData.disc_number}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, disc_number: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+
+                <FormField label="Duration (seconds or mm:ss)" error={errors.duration}>
+                  <input
+                    value={formData.duration}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                    placeholder="245 or 04:05"
                   />
                 </FormField>
 
                 <FormField label="ISRC" error={errors.isrc}>
                   <input
-                    type="text"
                     value={formData.isrc}
-                    onChange={(e) => updateField('isrc', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                    placeholder="USRC12345678"
+                    onChange={(e) => setFormData((prev) => ({ ...prev, isrc: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+
+                <FormField label="BPM" error={errors.bpm}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={formData.bpm}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, bpm: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+
+                <FormField label="Key" error={errors.key}>
+                  <input
+                    value={formData.key}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, key: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                    placeholder="C#, Fm"
                   />
                 </FormField>
               </div>
-
-              <FormField label="Description" error={errors.description}>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  rows={3}
-                  placeholder="Brief description of the song"
-                />
-              </FormField>
             </FormSection>
 
-            <FormSection title="Audio File">
-              <div className="border-2 border-dashed rounded-xl p-8 text-center">
-                {audioFileName ? (
-                  <div className="flex items-center justify-center gap-4">
-                    <Music className="h-8 w-8 text-primary" />
-                    <div>
-                      <p className="font-medium">{audioFileName}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, audio_file: null }));
-                          setAudioFileName(null);
-                        }}
-                        className="text-sm text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Click to upload new audio file
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      MP3, WAV, FLAC up to 100MB (leave empty to keep current)
-                    </p>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={handleAudioUpload}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-            </FormSection>
+            <FormSection title="Genres & Contributors">
+              <FormField label="Genres" error={errors.genre_ids || errors['genre_ids.0']}>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 rounded-lg border p-3">
+                  {genres.map((genre) => {
+                    const genreId = String(genre.id);
+                    const checked = formData.genre_ids.includes(genreId);
 
-            <FormSection title="Lyrics">
-              <textarea
-                value={formData.lyrics}
-                onChange={(e) => updateField('lyrics', e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary font-mono text-sm"
-                rows={10}
-                placeholder="Enter song lyrics..."
-              />
-            </FormSection>
-
-            <FormSection title="Credits">
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={creditInput.role}
-                    onChange={(e) => setCreditInput(prev => ({ ...prev, role: e.target.value }))}
-                    className="flex-1 px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Role (e.g., Producer)"
-                  />
-                  <input
-                    type="text"
-                    value={creditInput.name}
-                    onChange={(e) => setCreditInput(prev => ({ ...prev, name: e.target.value }))}
-                    className="flex-1 px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Name"
-                  />
-                  <button
-                    type="button"
-                    onClick={addCredit}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {formData.credits.length > 0 && (
-                  <div className="space-y-2">
-                    {formData.credits.map((credit, index) => (
-                      <div key={index} className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-                        <span className="font-medium">{credit.role}:</span>
-                        <span className="flex-1">{credit.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeCredit(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FormSection>
-
-            <FormSection title="SEO">
-              <FormField label="Meta Title" error={errors.meta_title}>
-                <input
-                  type="text"
-                  value={formData.meta_title}
-                  onChange={(e) => updateField('meta_title', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="SEO title"
-                />
-              </FormField>
-              <FormField label="Meta Description" error={errors.meta_description}>
-                <textarea
-                  value={formData.meta_description}
-                  onChange={(e) => updateField('meta_description', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  rows={2}
-                  placeholder="SEO description"
-                />
-              </FormField>
-            </FormSection>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <FormSection title="Cover Image">
-              <div className="border-2 border-dashed rounded-xl overflow-hidden aspect-square">
-                {coverPreview ? (
-                  <div className="relative w-full h-full group">
-                    <Image
-                      src={coverPreview}
-                      alt="Cover preview"
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <label className="p-2 bg-white text-black rounded-full hover:bg-gray-200 cursor-pointer">
-                        <Upload className="h-4 w-4" />
+                    return (
+                      <label key={genre.id} className="flex items-center gap-2 text-sm">
                         <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleCoverUpload}
-                          className="hidden"
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleGenre(genreId)}
                         />
+                        {genre.name}
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, cover_image: null }));
-                          setCoverPreview(null);
-                        }}
-                        className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center h-full cursor-pointer p-6">
-                    <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Upload cover art
-                    </p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleCoverUpload}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-            </FormSection>
-
-            <FormSection title="Artist & Album">
-              <FormField label="Primary Artist" required error={errors.artist_id}>
-                <select
-                  value={formData.artist_id}
-                  onChange={(e) => updateField('artist_id', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select artist</option>
-                  {artists?.data?.map(artist => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </option>
-                  ))}
-                </select>
+                    );
+                  })}
+                </div>
               </FormField>
 
-              <FormField label="Album" error={errors.album_id}>
-                <select
-                  value={formData.album_id}
-                  onChange={(e) => updateField('album_id', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Single (No Album)</option>
-                  {albums?.data?.map(album => (
-                    <option key={album.id} value={album.id}>
-                      {album.title}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField label="Featured Artists" error={errors.featured_artists}>
+              <FormField label="Featured Artists" error={errors.featured_artists || errors['featured_artists.0']}>
                 <select
                   multiple
                   value={formData.featured_artists}
                   onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                    updateField('featured_artists', selected);
+                    const values = Array.from(e.target.selectedOptions).map((opt) => opt.value);
+                    setFormData((prev) => ({ ...prev, featured_artists: values }));
                   }}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary h-24"
+                  className="w-full min-h-30 rounded-lg border px-4 py-2 bg-background"
                 >
-                  {artists?.data?.filter(a => a.id !== formData.artist_id).map(artist => (
-                    <option key={artist.id} value={artist.id}>
+                  {featuredArtistOptions.map((artist) => (
+                    <option key={artist.id} value={String(artist.id)}>
                       {artist.name}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple</p>
               </FormField>
             </FormSection>
 
-            <FormSection title="Track Details">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Track #" error={errors.track_number}>
-                  <input
-                    type="number"
-                    value={formData.track_number}
-                    onChange={(e) => updateField('track_number', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    min="1"
-                  />
-                </FormField>
-                <FormField label="Disc #" error={errors.disc_number}>
-                  <input
-                    type="number"
-                    value={formData.disc_number}
-                    onChange={(e) => updateField('disc_number', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    min="1"
-                  />
-                </FormField>
-                <FormField label="BPM" error={errors.bpm}>
-                  <input
-                    type="number"
-                    value={formData.bpm}
-                    onChange={(e) => updateField('bpm', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    placeholder="120"
-                  />
-                </FormField>
-                <FormField label="Key" error={errors.key}>
-                  <input
-                    type="text"
-                    value={formData.key}
-                    onChange={(e) => updateField('key', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background"
-                    placeholder="Am"
-                  />
-                </FormField>
-              </div>
-
-              <FormField label="Duration (seconds)" error={errors.duration}>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => updateField('duration', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background"
-                  placeholder="180"
+            <FormSection title="Description & Lyrics">
+              <FormField label="Description" error={errors.description}>
+                <textarea
+                  rows={4}
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full rounded-lg border px-4 py-2 bg-background"
+                  placeholder="Short summary for admins and moderation"
                 />
               </FormField>
 
-              <FormField label="Release Date" error={errors.release_date}>
-                <input
-                  type="date"
-                  value={formData.release_date}
-                  onChange={(e) => updateField('release_date', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background"
+              <FormField label="Lyrics" error={errors.lyrics}>
+                <textarea
+                  rows={8}
+                  value={formData.lyrics}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, lyrics: e.target.value }))}
+                  className="w-full rounded-lg border px-4 py-2 bg-background"
+                  placeholder="Song lyrics"
                 />
               </FormField>
             </FormSection>
 
-            <FormSection title="Genres">
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {genres?.data?.map(genre => (
-                  <label key={genre.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.genre_ids.includes(genre.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          updateField('genre_ids', [...formData.genre_ids, genre.id]);
-                        } else {
-                          updateField('genre_ids', formData.genre_ids.filter(id => id !== genre.id));
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">{genre.name}</span>
-                  </label>
-                ))}
+            <FormSection title="SEO Metadata">
+              <div className="grid grid-cols-1 gap-4">
+                <FormField label="Meta Title" error={errors.meta_title}>
+                  <input
+                    value={formData.meta_title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, meta_title: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+                <FormField label="Meta Description" error={errors.meta_description}>
+                  <textarea
+                    rows={3}
+                    value={formData.meta_description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, meta_description: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+              </div>
+            </FormSection>
+          </div>
+
+          <div className="space-y-6">
+            <FormSection title="Cover Image" description="Uploads map to cover_image">
+              <div className="space-y-3">
+                <div className="relative h-48 rounded-xl border overflow-hidden bg-muted">
+                  {safeCoverPreview ? (
+                    <img src={safeCoverPreview} alt="Song cover preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+
+                <label className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted cursor-pointer">
+                  <Upload className="h-4 w-4" />
+                  Upload cover image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleCoverChange(e.target.files?.[0])}
+                  />
+                </label>
+                {errors.cover_image && <p className="text-sm text-red-500">{errors.cover_image}</p>}
               </div>
             </FormSection>
 
-            <FormSection title="Status & Visibility">
-              <FormField label="Status" error={errors.status}>
-                <select
-                  value={formData.status}
-                  onChange={(e) => updateField('status', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="pending">Pending Review</option>
-                  <option value="published">Published</option>
-                </select>
-              </FormField>
+            <FormSection title="Audio File" description="Optional replacement, field name: audio_file">
+              <div className="space-y-3">
+                {song.audio_file_url && (
+                  <audio controls className="w-full" src={song.audio_file_url} />
+                )}
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
+                <label className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted cursor-pointer">
+                  <FileAudio className="h-4 w-4" />
+                  {audioFile ? audioFile.name : 'Replace audio file'}
                   <input
-                    type="checkbox"
-                    checked={formData.explicit}
-                    onChange={(e) => updateField('explicit', e.target.checked)}
-                    className="rounded border-gray-300"
+                    type="file"
+                    accept=".mp3,.wav,.flac,.aac,.m4a,.ogg,audio/*"
+                    className="hidden"
+                    onChange={(e) => handleAudioChange(e.target.files?.[0])}
                   />
-                  <span className="text-sm">Explicit Content</span>
                 </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_featured}
-                    onChange={(e) => updateField('is_featured', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Featured Song</span>
-                </label>
+                {errors.audio_file && <p className="text-sm text-red-500">{errors.audio_file}</p>}
               </div>
             </FormSection>
           </div>
@@ -718,7 +673,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
         <FormActions
           cancelHref={`/admin/songs/${id}`}
           isSubmitting={updateMutation.isPending}
-          submitLabel="Save Changes"
+          submitLabel={updateMutation.isPending ? 'Saving…' : 'Save Song Changes'}
         />
       </form>
     </div>

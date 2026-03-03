@@ -1,75 +1,47 @@
 'use client';
 
-import { use } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
-import Image from 'next/image';
+import { use, useState } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
-import {
-  Edit, Trash2, User, Music, Disc, Eye, ArrowUpRight,
-  MapPin, Globe, CheckCircle, Heart, Users, Headphones,
-  ExternalLink, Play, Tag
-} from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiDelete, apiGet, apiPost } from '@/lib/api';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
+import { CheckCircle, Edit, ExternalLink, Eye, Globe, MapPin, Music, Trash2, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Song {
-  id: string;
-  title: string;
-  slug: string;
-  plays: number;
-  cover_url: string;
-}
-
-interface Album {
-  id: string;
-  title: string;
-  slug: string;
-  cover_url: string;
-  release_date: string;
-  album_type: string;
-}
-
-interface Artist {
-  id: string;
+type Artist = {
+  id: number;
   name: string;
   slug: string;
-  bio: string;
-  short_bio: string;
-  country: string;
-  city: string;
-  website: string;
-  spotify_url: string;
-  apple_music_url: string;
-  youtube_url: string;
-  instagram_url: string;
-  twitter_url: string;
-  facebook_url: string;
-  tiktok_url: string;
+  bio: string | null;
   status: string;
   is_verified: boolean;
   is_featured: boolean;
   profile_url: string | null;
   cover_url: string | null;
-  followers: number;
-  monthly_listeners: number;
+  website: string | null;
   total_plays: number;
   total_songs: number;
   total_albums: number;
-  genres: { id: string; name: string }[];
-  top_songs: Song[];
-  recent_albums: Album[];
+  followers: number;
+  genres: Array<{ id: string; name: string }>;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    username: string;
+    phone: string;
+  } | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-function formatNumber(num: number | undefined | null): string {
-  if (num === undefined || num === null) return '0';
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
+function compactNumber(value: number | null | undefined): string {
+  if (!value) return '0';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return `${value}`;
 }
 
 export default function ArtistDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -78,13 +50,15 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { data: artist, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
     queryFn: () => apiGet<{ data: Artist }>(`/admin/artists/${id}`),
   });
 
+  const artist = data?.data;
+
   const deleteMutation = useMutation({
-    mutationFn: () => apiDelete(`/admin/artists/${id}`),
+    mutationFn: () => apiDelete<{ message?: string }>(`/admin/artists/${id}`),
     onSuccess: () => {
       toast.success('Artist deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
@@ -94,92 +68,78 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   });
 
   const toggleVerifyMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/artists/${id}/toggle-verify`),
+    mutationFn: () => apiPost<{ message?: string }>(`/admin/artists/${id}/toggle-verify`),
     onSuccess: () => {
-      toast.success(a?.is_verified ? 'Artist unverified' : 'Artist verified');
+      toast.success('Verification status updated');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
-    onError: () => toast.error('Failed to toggle verification'),
+    onError: () => toast.error('Failed to update verification status'),
   });
 
-  const a = artist?.data;
-
-  const toggleFeatureMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/artists/${id}/toggle-featured`),
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: () => apiPost<{ message?: string }>(`/admin/artists/${id}/toggle-featured`),
     onSuccess: () => {
-      toast.success(a?.is_featured ? 'Removed from featured' : 'Added to featured');
+      toast.success('Featured status updated');
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
-    onError: () => toast.error('Failed to toggle featured status'),
+    onError: () => toast.error('Failed to update featured status'),
   });
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-        <div className="h-64 bg-muted rounded-xl animate-pulse" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-96 bg-muted rounded-xl animate-pulse" />
-          <div className="h-96 bg-muted rounded-xl animate-pulse" />
-        </div>
+        <div className="h-8 w-44 rounded bg-muted animate-pulse" />
+        <div className="h-72 rounded-xl bg-muted animate-pulse" />
       </div>
     );
   }
 
-  if (!a) {
+  if (!artist) {
     return (
-      <div className="text-center py-12">
-        <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+      <div className="py-12 text-center">
+        <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
         <h2 className="text-xl font-semibold">Artist not found</h2>
-        <Link href="/admin/artists" className="text-primary hover:underline mt-2 inline-block">
+        <Link href="/admin/artists" className="mt-2 inline-block text-primary hover:underline">
           Back to artists
         </Link>
       </div>
     );
   }
 
-  const socialLinks = [
-    { name: 'Spotify', url: a.spotify_url, color: 'bg-green-500' },
-    { name: 'Apple Music', url: a.apple_music_url, color: 'bg-pink-500' },
-    { name: 'YouTube', url: a.youtube_url, color: 'bg-red-500' },
-    { name: 'Instagram', url: a.instagram_url, color: 'bg-purple-500' },
-    { name: 'Twitter', url: a.twitter_url, color: 'bg-blue-400' },
-    { name: 'Facebook', url: a.facebook_url, color: 'bg-blue-600' },
-    { name: 'TikTok', url: a.tiktok_url, color: 'bg-black' },
-  ].filter(link => link.url);
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title={a.name}
-        description={a.short_bio || 'Artist Profile'}
+        title={artist.name}
+        description="Artist profile"
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Artists', href: '/admin/artists' },
-          { label: a.name },
+          { label: artist.name },
         ]}
         backHref="/admin/artists"
         actions={
           <div className="flex items-center gap-2">
             <Link
-              href={`/artists/${a.slug}`}
+              href={`/artists/${artist.slug}`}
               target="_blank"
-              className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-muted"
             >
               <Eye className="h-4 w-4" />
               View Live
-              <ArrowUpRight className="h-3 w-3" />
+              <ExternalLink className="h-4 w-4" />
             </Link>
             <Link
               href={`/admin/artists/${id}/edit`}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
             >
               <Edit className="h-4 w-4" />
-              Edit
+              Edit Artist
             </Link>
             <button
               onClick={() => setShowDeleteDialog(true)}
-              className="p-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+              className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -187,277 +147,94 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         }
       />
 
-      {/* Hero Section */}
-      <div className="relative rounded-xl overflow-hidden">
-        <div className="relative h-48 md:h-64">
-          {a.cover_url && (
-            <Image
-              src={a.cover_url}
-              alt={`${a.name} cover`}
-              fill
-              className="object-cover opacity-50"
-            />
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="relative h-52 md:h-64">
+          {artist.cover_url && (
+            <Image src={artist.cover_url} alt={`${artist.name} cover`} fill className="object-cover" />
           )}
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-linear-to-t from-black/80 to-transparent">
-          <div className="flex items-end gap-6">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl shrink-0">
-              {a.profile_url && (
-                <Image
-                  src={a.profile_url}
-                  alt={a.name}
-                  fill
-                  className="object-cover"
-                />
+          <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4 flex items-end gap-4">
+            <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white">
+              {artist.profile_url && (
+                <Image src={artist.profile_url} alt={artist.name} fill className="object-cover" />
               )}
             </div>
-            <div className="flex-1 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-3xl font-bold text-white">{a.name}</h2>
-                {a.is_verified && (
-                  <CheckCircle className="h-6 w-6 text-blue-400" fill="currentColor" />
-                )}
+            <div className="flex-1 text-white">
+              <div className="mb-1 flex items-center gap-2">
+                <h2 className="text-2xl font-bold">{artist.name}</h2>
+                {artist.is_verified && <CheckCircle className="h-5 w-5 text-blue-400" fill="currentColor" />}
               </div>
-              <div className="flex items-center gap-4 text-white/80 text-sm">
-                {(a.city || a.country) && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {[a.city, a.country].filter(Boolean).join(', ')}
-                  </span>
-                )}
-                {a.website && (
-                  <a href={a.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-white">
-                    <Globe className="h-4 w-4" />
-                    Website
+              <div className="flex flex-wrap items-center gap-3 text-sm text-white/85">
+                {artist.website && (
+                  <a href={artist.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-white">
+                    <Globe className="h-4 w-4" /> Website
                   </a>
                 )}
+                {artist.genres.length > 0 && <span>{artist.genres.map((g) => g.name).join(', ')}</span>}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <StatusBadge status={a.status} />
-              {a.is_featured && (
-                <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded">
-                  FEATURED
-                </span>
-              )}
-            </div>
+            <StatusBadge status={artist.status} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-4">
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Followers</p>
+            <p className="text-xl font-semibold">{compactNumber(artist.followers)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Total Plays</p>
+            <p className="text-xl font-semibold">{compactNumber(artist.total_plays)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Songs</p>
+            <p className="text-xl font-semibold">{compactNumber(artist.total_songs)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Albums</p>
+            <p className="text-xl font-semibold">{compactNumber(artist.total_albums)}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border bg-card">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Users className="h-4 w-4" />
-                <span className="text-sm">Followers</span>
-              </div>
-              <p className="text-2xl font-bold">{formatNumber(a.followers)}</p>
-            </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Headphones className="h-4 w-4" />
-                <span className="text-sm">Total Plays</span>
-              </div>
-              <p className="text-2xl font-bold">{formatNumber(a.total_plays)}</p>
-            </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Music className="h-4 w-4" />
-                <span className="text-sm">Songs</span>
-              </div>
-              <p className="text-2xl font-bold">{a.total_songs ?? 0}</p>
-            </div>
-            <div className="p-4 rounded-xl border bg-card">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Disc className="h-4 w-4" />
-                <span className="text-sm">Albums</span>
-              </div>
-              <p className="text-2xl font-bold">{a.total_albums ?? 0}</p>
-            </div>
+          <div className="rounded-xl border bg-card p-6">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bio</h3>
+            <p className="text-sm leading-6 text-foreground/90">{artist.bio || 'No bio provided.'}</p>
           </div>
-
-          {/* Top Songs */}
-          {(a.top_songs?.length ?? 0) > 0 && (
-            <div className="rounded-xl border bg-card">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Music className="h-5 w-5" />
-                  Top Songs
-                </h3>
-                <Link href={`/admin/songs?artist_id=${id}`} className="text-sm text-primary hover:underline">
-                  View All
-                </Link>
-              </div>
-              <div className="divide-y">
-                {a.top_songs!.map((song, index) => (
-                  <div key={song.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 group">
-                    <span className="w-6 text-sm text-muted-foreground text-center font-medium">
-                      {index + 1}
-                    </span>
-                    <div className="relative w-10 h-10 rounded overflow-hidden shrink-0">
-                      {song.cover_url && (
-                        <Image src={song.cover_url} alt={song.title} fill className="object-cover" />
-                      )}
-                      <button className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <Play className="h-4 w-4 text-white" fill="white" />
-                      </button>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/admin/songs/${song.id}`}
-                        className="font-medium hover:text-primary hover:underline truncate block"
-                      >
-                        {song.title}
-                      </Link>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatNumber(song.plays)} plays
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Albums */}
-          {(a.recent_albums?.length ?? 0) > 0 && (
-            <div className="rounded-xl border bg-card">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Disc className="h-5 w-5" />
-                  Recent Releases
-                </h3>
-                <Link href={`/admin/albums?artist_id=${id}`} className="text-sm text-primary hover:underline">
-                  View All
-                </Link>
-              </div>
-              <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {a.recent_albums!.map(album => (
-                  <Link key={album.id} href={`/admin/albums/${album.id}`} className="group">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
-                      {album.cover_url && (
-                        <Image src={album.cover_url} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform" />
-                      )}
-                    </div>
-                    <h4 className="font-medium text-sm truncate group-hover:text-primary">{album.title}</h4>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {album.album_type} • {new Date(album.release_date).getFullYear()}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Bio */}
-          {a.bio && (
-            <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold mb-4">Biography</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{a.bio}</p>
-            </div>
-          )}
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Quick Actions */}
           <div className="rounded-xl border bg-card p-6">
-            <h3 className="font-semibold mb-4">Quick Actions</h3>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Quick Actions</h3>
             <div className="space-y-2">
               <button
                 onClick={() => toggleVerifyMutation.mutate()}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center justify-between"
-                disabled={toggleVerifyMutation.isPending}
+                className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
               >
-                <span>{a.is_verified ? 'Remove Verification' : 'Verify Artist'}</span>
-                <CheckCircle className={`h-4 w-4 ${a.is_verified ? 'text-blue-500' : 'text-gray-400'}`} />
+                {artist.is_verified ? 'Remove verification' : 'Verify artist'}
               </button>
               <button
-                onClick={() => toggleFeatureMutation.mutate()}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted"
-                disabled={toggleFeatureMutation.isPending}
+                onClick={() => toggleFeaturedMutation.mutate()}
+                className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
               >
-                {a.is_featured ? 'Remove from Featured' : 'Add to Featured'}
+                {artist.is_featured ? 'Remove from featured' : 'Add to featured'}
               </button>
-              <Link
-                href={`/admin/songs/new?artist_id=${id}`}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2"
-              >
-                <Music className="h-4 w-4" />
-                Add Song
-              </Link>
-              <Link
-                href={`/admin/albums/new?artist_id=${id}`}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted flex items-center gap-2"
-              >
-                <Disc className="h-4 w-4" />
-                Add Album
-              </Link>
             </div>
           </div>
 
-          {/* Genres */}
-          {(a.genres?.length ?? 0) > 0 && (
+          {artist.user && (
             <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Genres
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {a.genres!.map(genre => (
-                  <span
-                    key={genre.id}
-                    className="px-3 py-1 bg-muted rounded-full text-sm"
-                  >
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Linked User</h3>
+              <p className="text-sm font-medium">{artist.user.name}</p>
+              <p className="text-sm text-muted-foreground">{artist.user.email}</p>
+              <p className="text-sm text-muted-foreground">@{artist.user.username}</p>
+              <Link href={`/admin/users/${artist.user.id}`} className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                Open user profile <ExternalLink className="h-3 w-3" />
+              </Link>
             </div>
           )}
-
-          {/* Social Links */}
-          {socialLinks.length > 0 && (
-            <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold mb-4">Social Links</h3>
-              <div className="space-y-2">
-                {socialLinks.map(link => (
-                  <a
-                    key={link.name}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <div className={`w-8 h-8 ${link.color} rounded-full flex items-center justify-center`}>
-                      <ExternalLink className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="flex-1">{link.name}</span>
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Timestamps */}
-          <div className="rounded-xl border bg-card p-6">
-            <h3 className="font-semibold mb-4">Timestamps</h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Created</dt>
-                <dd>{new Date(a.created_at).toLocaleDateString()}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Updated</dt>
-                <dd>{new Date(a.updated_at).toLocaleDateString()}</dd>
-              </div>
-            </dl>
-          </div>
         </div>
       </div>
 
@@ -465,10 +242,9 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Delete Artist"
-        description={`Are you sure you want to delete "${a.name}"? This will also remove all associated songs and albums.`}
+        description="This action cannot be undone."
         confirmLabel="Delete"
         variant="destructive"
-        isLoading={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate()}
       />
     </div>

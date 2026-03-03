@@ -67,6 +67,16 @@ export interface AllSettings {
   appearance: AppearanceSettings;
 }
 
+export interface UserProfile {
+  id: number;
+  name: string;
+  email?: string;
+  username?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  avatar_url?: string | null;
+}
+
 // ============================================================================
 // Get All Settings Hook
 // ============================================================================
@@ -76,6 +86,14 @@ export function useSettings() {
     queryKey: ["settings"],
     queryFn: () => apiGet<{ data: AllSettings }>("/settings")
       .then(res => res.data),
+  });
+}
+
+export function useUserProfile() {
+  return useQuery({
+    queryKey: ["user", "profile"],
+    queryFn: () => apiGet<{ data?: UserProfile } & UserProfile>("/user/profile")
+      .then((res) => (res.data ?? res) as UserProfile),
   });
 }
 
@@ -103,10 +121,18 @@ export function useUpdateProfileSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Omit<ProfileSettings, 'display_name'>>) =>
-      apiPut<{ message: string }>("/settings/profile", data),
+    mutationFn: (data: {
+      name?: string;
+      bio?: string | null;
+      website?: string | null;
+      phone?: string | null;
+      location?: string | null;
+      date_of_birth?: string | null;
+      gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    }) => apiPut<{ message?: string; data?: UserProfile }>("/user", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
     },
   });
 }
@@ -118,11 +144,20 @@ export function useUpdateAvatar() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append('avatar', file);
-      return apiPostForm<{ message: string; avatar_url: string }>("/user/avatar", formData);
+      return apiPostForm<{
+        success: boolean;
+        message: string;
+        data?: {
+          path: string;
+          url: string;
+          thumbnails?: Record<string, string>;
+        };
+      }>("/uploads/avatar", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
     },
   });
 }

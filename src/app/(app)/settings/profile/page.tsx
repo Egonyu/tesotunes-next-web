@@ -4,17 +4,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Camera, Link as LinkIcon, Twitter, Instagram, Youtube, Music2, Loader2 } from 'lucide-react';
-import { useSettings, useUpdateProfileSettings, useUpdateAvatar } from '@/hooks/useSettings';
+import { useUserProfile, useUpdateProfileSettings, useUpdateAvatar } from '@/hooks/useSettings';
 import { toast } from 'sonner';
 
 export default function ProfileSettingsPage() {
   const { data: session } = useSession();
-  const { data: settings } = useSettings();
+  const { data: profile } = useUserProfile();
   const updateProfile = useUpdateProfileSettings();
   const updateAvatar = useUpdateAvatar();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [avatar, setAvatar] = useState(session?.user?.image || '/images/default-avatar.jpg');
+  const [avatar, setAvatar] = useState(session?.user?.image || '/images/default-avatar.svg');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     displayName: session?.user?.name || '',
@@ -29,13 +29,25 @@ export default function ProfileSettingsPage() {
 
   // Load existing settings when they arrive
   useEffect(() => {
-    if (settings?.profile) {
-      setFormData(prev => ({
+    if (profile) {
+      setFormData((prev) => ({
         ...prev,
-        displayName: settings.profile.display_name || prev.displayName,
+        displayName: profile.name || prev.displayName,
+        username: profile.username || prev.username,
+        bio: profile.bio || prev.bio,
+        website: profile.website || prev.website,
       }));
+      if (profile.avatar_url) {
+        setAvatar(profile.avatar_url);
+      }
     }
-  }, [settings]);
+  }, [profile]);
+
+  useEffect(() => {
+    if (session?.user?.image) {
+      setAvatar(session.user.image);
+    }
+  }, [session?.user?.image]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -45,12 +57,13 @@ export default function ProfileSettingsPage() {
     const file = e.target.files?.[0];
     if (file) {
       // Validate type and size
-      if (!file.type.startsWith('image/') && file.type !== '') {
-        toast.error('Please select an image file');
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (file.type && !allowedTypes.includes(file.type)) {
+        toast.error('Avatar must be a JPG or PNG image');
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Avatar must be less than 2MB');
         return;
       }
       setAvatarFile(file);
@@ -65,21 +78,35 @@ export default function ProfileSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const displayName = formData.displayName.trim();
+      if (!displayName) {
+        toast.error('Display name is required');
+        return;
+      }
+
       // Upload avatar if changed
       if (avatarFile) {
-        await updateAvatar.mutateAsync(avatarFile);
+        const uploadRes = await updateAvatar.mutateAsync(avatarFile);
+        const uploadedUrl = uploadRes?.data?.url;
+        if (uploadedUrl) {
+          setAvatar(uploadedUrl);
+        }
         setAvatarFile(null);
       }
       // Save profile settings
       await updateProfile.mutateAsync({
-        public_profile: settings?.profile?.public_profile ?? true,
-        show_listening_activity: settings?.profile?.show_listening_activity ?? true,
-        show_followers: settings?.profile?.show_followers ?? true,
-        show_following: settings?.profile?.show_following ?? true,
+        name: displayName,
+        bio: formData.bio.trim() || null,
+        website: formData.website.trim() || null,
       });
       toast.success('Profile saved successfully!');
-    } catch {
-      toast.error('Failed to save profile. Please try again.');
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string };
+      const fieldErrors = err.response?.data?.errors;
+      const firstFieldError = fieldErrors
+        ? Object.values(fieldErrors).flat()[0]
+        : null;
+      toast.error(firstFieldError || err.response?.data?.message || err.message || 'Failed to save profile. Please try again.');
     }
   };
 
@@ -121,7 +148,7 @@ export default function ProfileSettingsPage() {
           <div>
             <h3 className="font-medium">Profile Photo</h3>
             <p className="text-sm text-muted-foreground">
-              Click to upload a new photo. Max size: 5MB
+              Click to upload a new photo. JPG/PNG, max size: 2MB
             </p>
           </div>
         </div>

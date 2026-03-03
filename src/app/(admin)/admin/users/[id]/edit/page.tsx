@@ -1,205 +1,165 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPostForm } from '@/lib/api';
-import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
-import { Eye, EyeOff, Upload, X } from 'lucide-react';
-import Image from 'next/image';
-import { getValidationErrors } from '@/lib/utils';
+import { use, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Eye, EyeOff } from 'lucide-react';
+import { apiGet, apiPut } from '@/lib/api';
+import { PageHeader, FormActions, FormField, FormSection } from '@/components/admin';
+import { toast } from 'sonner';
 
-interface UserFormData {
+type UserDetail = {
+  id: number;
+  name: string;
+  full_name?: string | null;
+  username: string;
+  email: string;
+  phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  bio?: string | null;
+  role: 'user' | 'artist' | 'moderator' | 'admin';
+  is_active: boolean;
+  avatar_url?: string | null;
+};
+
+type UserFormData = {
   name: string;
   email: string;
   username: string;
-  password: string;
-  password_confirmation: string;
   phone: string;
+  role: UserDetail['role'];
   country: string;
   city: string;
   bio: string;
-  role: string;
-  status: string;
-  email_verified: boolean;
-  is_artist: boolean;
-  artist_id: string;
-  avatar: File | null;
-}
-
-const initialFormData: UserFormData = {
-  name: '',
-  email: '',
-  username: '',
-  password: '',
-  password_confirmation: '',
-  phone: '',
-  country: '',
-  city: '',
-  bio: '',
-  role: 'user',
-  status: 'active',
-  email_verified: false,
-  is_artist: false,
-  artist_id: '',
-  avatar: null,
+  is_active: boolean;
+  password: string;
 };
 
-interface Role {
-  id: string;
-  name: string;
-  label: string;
-}
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+      errors?: Record<string, string[]>;
+    };
+  };
+  message?: string;
+};
 
-interface Artist {
-  id: string;
-  name: string;
-}
-
-interface UserApiData {
-  full_name?: string;
-  display_name?: string;
-  name?: string;
-  email?: string;
-  username?: string;
-  phone?: string;
-  country?: string;
-  city?: string;
-  bio?: string;
-  role?: string;
-  status?: string;
-  email_verified_at?: string;
-  is_artist?: boolean;
-  artist_id?: string;
-  avatar_url?: string;
+function parseError(error: unknown): { message: string; fields: Record<string, string> } {
+  const e = error as ApiError;
+  const fields: Record<string, string> = {};
+  const errs = e.response?.data?.errors;
+  if (errs) {
+    for (const [key, value] of Object.entries(errs)) {
+      fields[key] = value[0];
+    }
+  }
+  return {
+    message: e.response?.data?.message || e.message || 'Failed to update user',
+    fields,
+  };
 }
 
 export default function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<UserFormData>(initialFormData);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const [showPassword, setShowPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<UserFormData>({
+    name: '',
+    email: '',
+    username: '',
+    phone: '',
+    role: 'user',
+    country: '',
+    city: '',
+    bio: '',
+    is_active: true,
+    password: '',
+  });
 
-  const { data: userData, isLoading } = useQuery({
+  const { data: userRes, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
-    queryFn: () => apiGet<{ data: UserApiData }>(`/admin/users/${id}`),
+    queryFn: () => apiGet<{ data: UserDetail }>(`/admin/users/${id}`),
   });
 
-  const { data: rolesData } = useQuery({
-    queryKey: ['admin', 'roles'],
-    queryFn: () => apiGet<{ data: Role[] }>('/admin/roles'),
-  });
-
-  const { data: artistsData } = useQuery({
-    queryKey: ['admin', 'artists-select'],
-    queryFn: () => apiGet<{ data: Artist[] }>('/admin/artists?select=true'),
-  });
+  const user = userRes?.data;
 
   useEffect(() => {
-    if (userData?.data) {
-      const u = userData.data;
-      setFormData({
-        name: u.full_name || u.display_name || u.name || '',
-        email: u.email || '',
-        username: u.username || '',
-        password: '',
-        password_confirmation: '',
-        phone: u.phone || '',
-        country: u.country || '',
-        city: u.city || '',
-        bio: u.bio || '',
-        role: u.role || 'user',
-        status: u.status || 'active',
-        email_verified: !!u.email_verified_at,
-        is_artist: !!u.is_artist,
-        artist_id: u.artist_id || '',
-        avatar: null,
-      });
-      if (u.avatar_url) {
-        setAvatarPreview(u.avatar_url);
-      }
-    }
-  }, [userData]);
+    if (!user) return;
+    setFormData({
+      name: user.name || user.full_name || '',
+      email: user.email || '',
+      username: user.username || '',
+      phone: user.phone || '',
+      role: user.role || 'user',
+      country: user.country || '',
+      city: user.city || '',
+      bio: user.bio || '',
+      is_active: user.is_active ?? true,
+      password: '',
+    });
+    setErrors({});
+  }, [user]);
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiPostForm(`/admin/users/${id}`, data);
+  const updateUserMutation = useMutation({
+    mutationFn: async (payload: UserFormData) => {
+      const body: Record<string, unknown> = {
+        name: payload.name.trim(),
+        email: payload.email.trim(),
+        username: payload.username.trim(),
+        phone: payload.phone.trim(),
+        role: payload.role,
+        country: payload.country.trim() || null,
+        city: payload.city.trim() || null,
+        bio: payload.bio.trim() || null,
+        is_active: payload.is_active,
+      };
+
+      if (payload.password.trim()) {
+        body.password = payload.password.trim();
+      }
+
+      return apiPut<{ success: boolean; message: string; data?: UserDetail }>(`/admin/users/${id}`, body);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      toast.success(response.message || 'User updated successfully');
+      setErrors({});
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
-      router.push(`/admin/users/${id}`);
     },
-    onError: (error: unknown) => {
-      setErrors(getValidationErrors(error));
+    onError: (error) => {
+      const parsed = parseError(error);
+      setErrors(parsed.fields);
+      const firstFieldError = Object.values(parsed.fields)[0];
+      toast.error(firstFieldError || parsed.message);
     },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    const nextErrors: Record<string, string> = {};
+    if (!formData.name.trim()) nextErrors.name = 'Name is required';
+    if (!formData.email.trim()) nextErrors.email = 'Email is required';
+    if (!formData.username.trim()) nextErrors.username = 'Username is required';
+    if (formData.password && formData.password.length < 8) nextErrors.password = 'Password must be at least 8 characters';
 
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
     }
+
+    updateUserMutation.mutate(formData);
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, avatar: file }));
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const data = new FormData();
-    data.append('_method', 'PUT');
-    data.append('full_name', formData.name);
-    data.append('name', formData.name);
-    data.append('email', formData.email);
-    data.append('username', formData.username);
-    if (formData.password) {
-      data.append('password', formData.password);
-      data.append('password_confirmation', formData.password_confirmation);
-    }
-    data.append('phone', formData.phone);
-    data.append('country', formData.country);
-    data.append('city', formData.city);
-    data.append('bio', formData.bio);
-    data.append('role', formData.role);
-    data.append('status', formData.status);
-    data.append('email_verified', formData.email_verified ? '1' : '0');
-    data.append('is_artist', formData.is_artist ? '1' : '0');
-    if (formData.is_artist && formData.artist_id) {
-      data.append('artist_id', formData.artist_id);
-    }
-    if (formData.avatar) {
-      data.append('avatar', formData.avatar);
-    }
-
-    updateMutation.mutate(data);
-  };
-
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-        <div className="h-96 bg-muted rounded-xl animate-pulse" />
+        <div className="h-8 w-44 bg-muted rounded animate-pulse" />
+        <div className="h-100 bg-muted rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -208,242 +168,144 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     <div className="space-y-6">
       <PageHeader
         title="Edit User"
-        description={`Editing ${formData.name}`}
+        description="Update account details and access level"
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Users', href: '/admin/users' },
-          { label: formData.name || 'User', href: `/admin/users/${id}` },
+          { label: user.name || user.username, href: `/admin/users/${id}` },
           { label: 'Edit' },
         ]}
         backHref={`/admin/users/${id}`}
+        actions={
+          user.role === 'artist' ? (
+            <Link href="/admin/artists" className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-muted">
+              View Artist Records
+            </Link>
+          ) : undefined
+        }
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {errors._form && (
-          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
-            {errors._form}
-          </div>
-        )}
-        <FormSection title="Account Information" description="Basic user account details">
+        <FormSection title="Account" description="Fields map directly to AdminUsersController::update">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              label="Full Name"
-              name="name"
-              value={formData.name}
-              onChangeEvent={handleChange}
-              error={errors.name}
-              required
-            />
-            <FormField
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChangeEvent={handleChange}
-              error={errors.email}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              label="Username"
-              name="username"
-              value={formData.username}
-              onChangeEvent={handleChange}
-              error={errors.username}
-              placeholder="unique_username"
-              required
-            />
-            <FormField
-              label="Phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChangeEvent={handleChange}
-              error={errors.phone}
-              placeholder="+1 234 567 8900"
-            />
-          </div>
-        </FormSection>
-
-        <FormSection title="Change Password" description="Leave blank to keep current password">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <FormField
-                label="New Password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChangeEvent={handleChange}
-                error={errors.password}
+            <FormField label="Name" error={errors.name} required>
+              <input
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <FormField
-              label="Confirm Password"
-              name="password_confirmation"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password_confirmation}
-              onChangeEvent={handleChange}
-              error={errors.password_confirmation}
-            />
+            </FormField>
+
+            <FormField label="Email" error={errors.email} required>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
+              />
+            </FormField>
+
+            <FormField label="Username" error={errors.username} required>
+              <input
+                value={formData.username}
+                onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
+              />
+            </FormField>
+
+            <FormField label="Phone" error={errors.phone}>
+              <input
+                value={formData.phone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
+              />
+            </FormField>
           </div>
         </FormSection>
 
-        <FormSection title="Profile" description="User profile information">
+        <FormSection title="Profile">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              label="Country"
-              name="country"
-              value={formData.country}
-              onChangeEvent={handleChange}
-              error={errors.country}
-            />
-            <FormField
-              label="City"
-              name="city"
-              value={formData.city}
-              onChangeEvent={handleChange}
-              error={errors.city}
-            />
+            <FormField label="Country (ISO-2)" error={errors.country}>
+              <input
+                value={formData.country}
+                maxLength={2}
+                onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value.toUpperCase() }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
+                placeholder="UG"
+              />
+            </FormField>
+
+            <FormField label="City" error={errors.city}>
+              <input
+                value={formData.city}
+                onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
+              />
+            </FormField>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Bio</label>
+          <FormField label="Bio" error={errors.bio}>
             <textarea
-              name="bio"
+              rows={4}
               value={formData.bio}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="User bio..."
+              onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
+              className="w-full rounded-lg border px-4 py-2 bg-background"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Avatar</label>
-            <div className="flex items-start gap-4">
-              {avatarPreview && (
-                <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                  <Image
-                    src={avatarPreview}
-                    alt="Avatar preview"
-                    fill
-                    className="object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvatarPreview(null);
-                      setFormData(prev => ({ ...prev, avatar: null }));
-                    }}
-                    className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              <label className="flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-muted">
-                <Upload className="h-4 w-4" />
-                <span>Choose Avatar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
+          </FormField>
         </FormSection>
 
-        <FormSection title="Role & Status" description="User permissions and account status">
+        <FormSection title="Role & Access">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Role</label>
+            <FormField label="Role" error={errors.role}>
               <select
-                name="role"
                 value={formData.role}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value as UserDetail['role'] }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background"
               >
                 <option value="user">User</option>
                 <option value="artist">Artist</option>
                 <option value="moderator">Moderator</option>
                 <option value="admin">Admin</option>
-                <option value="super_admin">Super Admin</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="pending">Pending</option>
-              </select>
+            </FormField>
+
+            <div className="flex items-center gap-2 pt-8">
+              <input
+                id="is_active"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
+              />
+              <label htmlFor="is_active" className="text-sm font-medium">Active account</label>
             </div>
           </div>
+        </FormSection>
 
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
+        <FormSection title="Reset Password" description="Optional. Leave blank to keep existing password.">
+          <div className="relative">
+            <FormField label="New Password" error={errors.password}>
               <input
-                type="checkbox"
-                name="email_verified"
-                checked={formData.email_verified}
-                onChange={handleChange}
-                className="w-4 h-4 rounded border-gray-300"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                className="w-full rounded-lg border px-4 py-2 bg-background pr-10"
+                placeholder="At least 8 characters"
               />
-              <span className="text-sm">Email Verified</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="is_artist"
-                checked={formData.is_artist}
-                onChange={handleChange}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <span className="text-sm">Is Artist</span>
-            </label>
+            </FormField>
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-9 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
-
-          {formData.is_artist && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Link to Artist Profile</label>
-              <select
-                name="artist_id"
-                value={formData.artist_id}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Select artist...</option>
-                {artistsData?.data?.map((artist) => (
-                  <option key={artist.id} value={artist.id}>
-                    {artist.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </FormSection>
 
         <FormActions
           cancelHref={`/admin/users/${id}`}
-          isLoading={updateMutation.isPending}
-          submitLabel="Update User"
+          submitLabel={updateUserMutation.isPending ? 'Saving...' : 'Save User Changes'}
+          isSubmitting={updateUserMutation.isPending}
         />
       </form>
     </div>

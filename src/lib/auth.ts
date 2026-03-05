@@ -15,7 +15,19 @@ const isProduction = process.env.NODE_ENV === "production";
  */
 function resolveNextAuthUrl(): string {
   const raw = process.env.NEXTAUTH_URL ?? "";
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  if (raw.startsWith("https://")) return raw;
+  if (raw.startsWith("http://")) {
+    if (!isProduction) return raw;
+
+    try {
+      const parsed = new URL(raw);
+      const isLocalHost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+      if (isLocalHost) return raw;
+      return raw.replace("http://", "https://");
+    } catch {
+      return raw.replace("http://", "https://");
+    }
+  }
   // In production, always default to HTTPS
   if (isProduction && raw) return `https://${raw}`;
   return raw;

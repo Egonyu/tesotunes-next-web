@@ -38,6 +38,25 @@ export function getAuthToken(): string | null {
   return _authToken;
 }
 
+function normalizeApiPath(url: string): string {
+  const isAbsoluteUrl = /^https?:\/\//i.test(url);
+  if (isAbsoluteUrl) {
+    return url;
+  }
+
+  const base = api.defaults.baseURL ?? "";
+  const normalizedBase = base.replace(/\/+$/, "");
+  const baseEndsWithApi = normalizedBase.endsWith("/api") || normalizedBase === "/api";
+
+  let normalizedPath = url.startsWith("/") ? url : `/${url}`;
+
+  if (baseEndsWithApi && normalizedPath.startsWith("/api/")) {
+    normalizedPath = normalizedPath.replace(/^\/api/, "");
+  }
+
+  return normalizedPath;
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -152,7 +171,7 @@ export async function apiGet<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.get<T>(url, config);
+  const response = await api.get<T>(normalizeApiPath(url), config);
   return response.data;
 }
 
@@ -161,7 +180,7 @@ export async function apiPost<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.post<T>(url, data, config);
+  const response = await api.post<T>(normalizeApiPath(url), data, config);
   return response.data;
 }
 
@@ -170,7 +189,7 @@ export async function apiPut<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.put<T>(url, data, config);
+  const response = await api.put<T>(normalizeApiPath(url), data, config);
   return response.data;
 }
 
@@ -179,7 +198,7 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.post<T>(url, formData, {
+  const response = await api.post<T>(normalizeApiPath(url), formData, {
     ...config,
     timeout: 0, // No timeout for file uploads
   });
@@ -190,7 +209,7 @@ export async function apiDelete<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.delete<T>(url, config);
+  const response = await api.delete<T>(normalizeApiPath(url), config);
   return response.data;
 }
 

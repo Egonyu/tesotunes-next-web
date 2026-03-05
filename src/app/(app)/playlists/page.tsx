@@ -5,6 +5,8 @@ import { ListMusic, Plus, Globe, Lock } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Playlist, PaginatedResponse } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function getPlaylists(page = 1, limit = 20) {
   try {
     return await serverFetch<PaginatedResponse<Playlist>>(

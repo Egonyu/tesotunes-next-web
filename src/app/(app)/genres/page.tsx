@@ -5,6 +5,8 @@ import { Music } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Genre } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 const gradientColors = [
   "from-rose-500 to-pink-600",
   "from-orange-500 to-amber-600",

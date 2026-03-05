@@ -6,6 +6,8 @@ import { serverFetch } from "@/lib/api";
 import type { Song, PaginatedResponse } from "@/types";
 import { formatDuration } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 async function getSongs(page = 1, limit = 30) {
   try {
     return await serverFetch<PaginatedResponse<Song>>(

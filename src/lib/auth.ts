@@ -46,13 +46,18 @@ if (resolvedNextAuthUrl && resolvedNextAuthUrl !== process.env.NEXTAUTH_URL) {
   process.env.NEXTAUTH_URL = resolvedNextAuthUrl;
 }
 
-// Warn loudly at startup if NEXTAUTH_URL is misconfigured
+// Warn loudly at startup if NEXTAUTH_URL is misconfigured (skip in local dev)
 if (isProduction && !useSecureCookies) {
-  console.error(
-    "[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// — " +
-    "session cookies will NOT be set. " +
-    `Raw value: "${process.env.NEXTAUTH_URL}", resolved: "${resolvedNextAuthUrl}"`
-  );
+  const isLocal = (() => {
+    try { return ["localhost", "127.0.0.1"].includes(new URL(resolvedNextAuthUrl).hostname); } catch { return false; }
+  })();
+  if (!isLocal) {
+    console.error(
+      "[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// — " +
+      "session cookies will NOT be set. " +
+      `Raw value: "${process.env.NEXTAUTH_URL}", resolved: "${resolvedNextAuthUrl}"`
+    );
+  }
 }
 
 /**

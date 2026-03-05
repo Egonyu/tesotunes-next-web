@@ -6,22 +6,20 @@
 - Environments: .env.local
 
   Creating an optimized production build ...
-Γ£ô Compiled successfully in 37.2s
+Γ£ô Compiled successfully in 2.4min
   Running TypeScript ...
   Collecting page data using 7 workers ...
-[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// ΓÇö session cookies will NOT be set. Raw value: "http://localhost:3000", resolved: "http://localhost:3000"
-[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// ΓÇö session cookies will NOT be set. Raw value: "http://localhost:3000", resolved: "http://localhost:3000"
-  Generating static pages using 7 workers (0/166) ...
-  Generating static pages using 7 workers (41/166) 
-  Generating static pages using 7 workers (82/166) 
-[Auth] CRITICAL: NEXTAUTH_URL does not start with https:// ΓÇö session cookies will NOT be set. Raw value: "http://localhost:3000", resolved: "http://localhost:3000"
-  Generating static pages using 7 workers (124/166) 
-Γ£ô Generating static pages using 7 workers (166/166) in 8.9s
+  Generating static pages using 7 workers (0/168) ...
+  Generating static pages using 7 workers (42/168) 
+  Generating static pages using 7 workers (84/168) 
+  Generating static pages using 7 workers (126/168) 
+Γ£ô Generating static pages using 7 workers (168/168) in 25.4s
   Finalizing page optimization ...
 
-Route (app)                              Revalidate  Expire
+Route (app)
 Γöî Γùï /
 Γö£ Γùï /_not-found
+Γö£ ╞Æ /access-required
 Γö£ Γùï /admin
 Γö£ Γùï /admin/albums
 Γö£ ╞Æ /admin/albums/[id]
@@ -48,6 +46,9 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /admin/feature-flags
 Γö£ Γùï /admin/forums
 Γö£ Γùï /admin/forums/categories/create
+Γö£ Γùï /admin/genres
+Γö£ ╞Æ /admin/genres/[id]/edit
+Γö£ Γùï /admin/genres/create
 Γö£ Γùï /admin/podcasts
 Γö£ ╞Æ /admin/podcasts/[id]
 Γö£ ╞Æ /admin/podcasts/[id]/edit
@@ -68,7 +69,9 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /admin/songs/new
 Γö£ Γùï /admin/store
 Γö£ Γùï /admin/store/categories
+Γö£ Γùï /admin/store/categories/create
 Γö£ Γùï /admin/store/discounts
+Γö£ Γùï /admin/store/discounts/create
 Γö£ Γùï /admin/store/orders
 Γö£ ╞Æ /admin/store/orders/[id]
 Γö£ Γùï /admin/store/products
@@ -76,16 +79,16 @@ Route (app)                              Revalidate  Expire
 Γö£ ╞Æ /admin/store/products/[id]/edit
 Γö£ Γùï /admin/store/products/create
 Γö£ Γùï /admin/store/promotions
+Γö£ Γùï /admin/store/promotions/create
 Γö£ Γùï /admin/store/shipping
 Γö£ Γùï /admin/store/shops
 Γö£ Γùï /admin/users
 Γö£ ╞Æ /admin/users/[id]
 Γö£ ╞Æ /admin/users/[id]/edit
 Γö£ Γùï /admin/users/new
-Γö£ Γùï /albums                                      1m      1y
+Γö£ ╞Æ /albums
 Γö£ ╞Æ /albums/[slug]
 Γö£ ╞Æ /api/auth/[...nextauth]
-Γö£ ╞Æ /api/auth/debug
 Γö£ ╞Æ /api/auth/register
 Γö£ Γùï /artist
 Γö£ Γùï /artist/albums
@@ -117,7 +120,7 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /artist/upload
 Γö£ Γùï /artist/wallet
 Γö£ Γùï /artist/wallet/topup
-Γö£ Γùï /artists                                     1m      1y
+Γö£ ╞Æ /artists
 Γö£ ╞Æ /artists/[slug]
 Γö£ ╞Æ /artists/[slug]/discography
 Γö£ ╞Æ /artists/[slug]/events
@@ -149,7 +152,7 @@ Route (app)                              Revalidate  Expire
 Γö£ ╞Æ /forums/[category]
 Γö£ ╞Æ /forums/[category]/[topic]
 Γö£ Γùï /forums/new
-Γö£ Γùï /genres                                      1m      1y
+Γö£ ╞Æ /genres
 Γö£ ╞Æ /genres/[slug]
 Γö£ Γùï /history
 Γö£ ╞Æ /join/[code]
@@ -172,7 +175,7 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /ojokotau/campaigns/create
 Γö£ ╞Æ /ojokotau/donate/[campaignId]
 Γö£ Γùï /ojokotau/my-donations
-Γö£ Γùï /playlists                                   1m      1y
+Γö£ ╞Æ /playlists
 Γö£ ╞Æ /playlists/[slug]
 Γö£ Γùï /podcasts
 Γö£ ╞Æ /podcasts/[id]
@@ -195,6 +198,7 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /referrals/leaderboard
 Γö£ Γùï /referrals/rewards
 Γö£ Γùï /register
+Γö£ Γùï /reset-password
 Γö£ Γùï /rewards
 Γö£ Γùï /sacco
 Γö£ Γùï /sacco/analytics
@@ -225,7 +229,7 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /settings/profile
 Γö£ Γùï /settings/security
 Γö£ Γùï /settings/subscription
-Γö£ Γùï /songs                                       1m      1y
+Γö£ ╞Æ /songs
 Γö£ ╞Æ /songs/[slug]
 Γö£ Γùï /store
 Γö£ Γùï /store/cart
@@ -239,6 +243,7 @@ Route (app)                              Revalidate  Expire
 Γö£ Γùï /tickets
 Γö£ ╞Æ /tickets/[id]
 Γö£ ╞Æ /user/[username]
+Γö£ Γùï /verify-email
 Γö£ Γùï /wallet
 Γö£ Γùï /wallet/history
 Γöö Γùï /wallet/topup

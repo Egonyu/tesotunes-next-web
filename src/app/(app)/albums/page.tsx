@@ -5,6 +5,8 @@ import { Disc, Filter } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Album, PaginatedResponse } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function getAlbums(page = 1, limit = 20) {
   try {
     return await serverFetch<PaginatedResponse<Album>>(

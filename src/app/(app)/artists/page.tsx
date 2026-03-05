@@ -5,6 +5,9 @@ import { User, Filter, CheckCircle2 } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Artist, PaginatedResponse } from "@/types";
 
+// Render on-demand so the build doesn't depend on the API being available
+export const dynamic = "force-dynamic";
+
 async function getArtists(page = 1, limit = 24) {
   try {
     return await serverFetch<PaginatedResponse<Artist>>(

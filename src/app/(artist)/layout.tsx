@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import {
   LayoutDashboard,
@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
+import AccessNotice from '@/components/auth/AccessNotice';
 
 const navItems = [
   { href: '/artist', label: 'Dashboard', icon: LayoutDashboard },
@@ -46,13 +47,12 @@ const navItems = [
 
 export default function ArtistLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session, status: authStatus } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Only fetch profile when authenticated
-  const { data: profile } = useArtistProfile({
+  const { data: profile, isLoading: profileLoading } = useArtistProfile({
     enabled: authStatus === 'authenticated' && !!session
   });
 
@@ -66,8 +66,13 @@ export default function ArtistLayout({ children }: { children: React.ReactNode }
   }
 
   if (!session) {
-    router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
-    return null;
+    return (
+      <AccessNotice
+        title="Sign In Required"
+        description="Artist Studio requires an authenticated artist or admin account."
+        callbackUrl={pathname}
+      />
+    );
   }
 
   // Allow artist role OR admin roles (admins can also be artists)
@@ -78,9 +83,24 @@ export default function ArtistLayout({ children }: { children: React.ReactNode }
   // If user has artist profile data loaded, they're an artist
   const hasArtistProfile = !!profile?.id;
 
+  if (!isArtist && !isAdmin && profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!isArtist && !isAdmin && !hasArtistProfile) {
-    router.replace('/');
-    return null;
+    return (
+      <AccessNotice
+        title="Artist Access Required"
+        description="Your account is signed in but does not have access to Artist Studio resources yet."
+        callbackUrl={pathname}
+        role={(session.user as { role?: string }).role}
+        variant="forbidden"
+      />
+    );
   }
 
   const artistName = profile?.stage_name || session.user?.name || 'Artist';

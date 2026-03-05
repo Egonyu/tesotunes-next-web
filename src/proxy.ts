@@ -1,4 +1,15 @@
-export { default as proxy } from "next-auth/middleware";
+import { withAuth } from "next-auth/middleware";
+
+export const proxy = withAuth(
+  function middleware() {
+    // Intentionally empty: withAuth handles auth checks and redirect rules.
+  },
+  {
+    pages: {
+      signIn: "/access-required",
+    },
+  }
+);
 
 export const config = {
   matcher: [
@@ -8,6 +19,7 @@ export const config = {
     "/settings/:path*",
     "/wallet/:path*",
     "/sacco/:path*",
+    "/artist/:path*",
     "/artist-dashboard/:path*",
     "/admin/:path*",
   ],

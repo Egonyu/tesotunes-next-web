@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
@@ -37,13 +37,14 @@ import {
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { setAuthToken } from '@/lib/api';
+import AccessNotice from '@/components/auth/AccessNotice';
 
 // Case-insensitive role check — backend may send 'admin', 'Admin', 'super_admin', 'Super Admin', 'moderator'
-const ADMIN_ROLES = ['super admin', 'admin', 'super_admin', 'moderator'];
+const ADMIN_ROLES = ['super admin', 'admin', 'super_admin'];
 function isAdminRole(role: string | undefined | null): boolean {
   if (!role) return false;
   const lower = role.toLowerCase().trim();
-  return ADMIN_ROLES.includes(lower) || lower.includes('admin');
+  return ADMIN_ROLES.includes(lower);
 }
 
 const navItems = [
@@ -79,36 +80,19 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    // Only redirect AFTER the session check has fully resolved.
-    // This prevents a flash-redirect when the page first loads on Vercel
-    // (cold start) and status briefly reads 'unauthenticated' before the
-    // session cookie is parsed.
-    if (status === 'loading') return;
-
-    if (status === 'unauthenticated') {
-      // Give a small grace period — on Vercel deployments, the session check
-      // can take a moment. If still unauthenticated after the delay, redirect.
-      const timer = setTimeout(() => {
-        setAuthChecked(true);
-        router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else if (status === 'authenticated') {
-      setAuthChecked(true);
-      if (session?.user?.role && !isAdminRole(session.user.role)) {
-        router.replace('/');
-      }
+    if (session?.accessToken) {
+      setAuthToken(session.accessToken);
+    } else {
+      setAuthToken(null);
     }
-  }, [status, session, router, pathname]);
+  }, [session?.accessToken]);
 
-  if (status === 'loading' || !authChecked) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -116,19 +100,20 @@ export default function AdminLayout({
     );
   }
 
-  if (status === 'unauthenticated' || (session?.user?.role && !isAdminRole(session.user.role))) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (status === 'unauthenticated') {
+    return <AccessNotice title="Sign In Required" description="Admin pages are protected. Please sign in with an admin account to continue." callbackUrl={pathname} />;
   }
 
-  // Sync the auth token BEFORE rendering children so that react-query calls
-  // in admin pages (dashboard stats, artist details, etc.) already have
-  // the Bearer token available on first render — prevents 401 race conditions.
-  if (session?.accessToken) {
-    setAuthToken(session.accessToken);
+  if (session?.user?.role && !isAdminRole(session.user.role)) {
+    return (
+      <AccessNotice
+        title="Access Restricted"
+        description="Your account is signed in but does not have admin privileges for this area."
+        callbackUrl={pathname}
+        role={session.user.role}
+        variant="forbidden"
+      />
+    );
   }
 
   return (
@@ -193,7 +178,7 @@ export default function AdminLayout({
                 )}
                 title={collapsed ? item.label : undefined}
               >
-                <Icon className="h-5 w-5 flex-shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
               </Link>
             );

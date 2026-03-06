@@ -1,25 +1,34 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Play,
+  Pause,
   Share2,
-  Plus,
-  Radio,
+  ListPlus,
+  Download,
   Music,
   Calendar,
   Disc3,
   User,
   ExternalLink,
+  Heart,
+  BarChart3,
+  Clock,
+  ChevronRight,
 } from "lucide-react";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { formatDuration, formatNumber, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
+import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
+import { DownloadGate } from "@/components/social/DownloadGate";
+import { usePlayerStore } from "@/stores/player";
+import type { Song } from "@/types";
 
 interface SongDetail {
   id: number;
@@ -32,11 +41,15 @@ interface SongDetail {
   is_explicit: boolean;
   is_free: boolean;
   is_featured: boolean;
+  is_downloadable?: boolean;
   price?: number;
   like_count: number;
   download_count: number;
   audio_url?: string;
   lyrics?: string;
+  description?: string;
+  composer?: string;
+  producer?: string;
   credits?: {
     role: string;
     name: string;
@@ -47,7 +60,9 @@ interface SongDetail {
     slug: string;
     avatar_url: string | null;
     is_verified?: boolean;
-    followers_count?: number;
+    bio?: string;
+    follower_count?: number;
+    total_songs?: number;
   };
   album?: {
     id: number;
@@ -90,9 +105,74 @@ interface SongDetail {
   }[];
 }
 
+/** Convert SongDetail to the Song type the player store expects */
+function toPlayerSong(detail: SongDetail): Song {
+  return {
+    id: detail.id,
+    title: detail.title,
+    slug: detail.slug,
+    artist_id: detail.artist.id,
+    album_id: detail.album?.id,
+    duration: detail.duration_seconds || 0,
+    duration_seconds: detail.duration_seconds,
+    play_count: detail.play_count,
+    download_count: detail.download_count,
+    like_count: detail.like_count,
+    is_downloadable: detail.is_downloadable,
+    is_free: detail.is_free,
+    is_explicit: detail.is_explicit,
+    is_featured: detail.is_featured,
+    status: "published",
+    audio_url: detail.audio_url || "",
+    artwork_url: detail.artwork_url ?? undefined,
+    lyrics: detail.lyrics,
+    artist: {
+      id: detail.artist.id,
+      name: detail.artist.name,
+      slug: detail.artist.slug,
+      avatar_url: detail.artist.avatar_url ?? undefined,
+      follower_count: detail.artist.follower_count ?? 0,
+      monthly_listeners: 0,
+      is_verified: detail.artist.is_verified ?? false,
+      status: "active" as const,
+      genres: [],
+    },
+    album: detail.album
+      ? {
+          id: detail.album.id,
+          title: detail.album.title,
+          slug: detail.album.slug,
+          artwork_url: detail.album.artwork_url ?? undefined,
+        }
+      : undefined,
+    genres: detail.genres ?? (detail.genre ? [detail.genre] : []),
+    created_at: "",
+  } as Song;
+}
+
+interface SharePayload {
+  share_url: string;
+  og_title: string;
+  og_description: string | null;
+  og_image: string | null;
+  caption: string;
+  platform_links: {
+    copy: string;
+    whatsapp: string;
+    twitter: string;
+    facebook: string;
+    telegram: string;
+    instagram: null;
+  };
+}
+
 export default function SongDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const queryClient = useQueryClient();
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+
+  const { currentSong, isPlaying, play, pause, resume, addToQueue } = usePlayerStore();
 
   const { data: song, isLoading } = useQuery({
     queryKey: ["song", slug],
@@ -102,7 +182,61 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
     },
   });
 
-  // Like handled by universal LikeButton component
+  const isCurrentSong = song && currentSong?.id === song.id;
+
+  function handlePlay() {
+    if (!song) return;
+    if (isCurrentSong && isPlaying) {
+      pause();
+    } else if (isCurrentSong) {
+      resume();
+    } else {
+      play(toPlayerSong(song));
+    }
+  }
+
+  function handleAddToQueue() {
+    if (!song) return;
+    addToQueue(toPlayerSong(song));
+    toast.success(`Added "${song.title}" to queue`);
+  }
+
+  async function handleShare() {
+    if (!song) return;
+    setShareOpen(true);
+    setShareLoading(true);
+    try {
+      const res = await apiPost<{
+        success: boolean;
+        data: { share_payload: SharePayload };
+      }>("/shares", {
+        shareable_type: "Song",
+        shareable_id: song.id,
+        platform: "internal",
+      });
+      setSharePayload(res.data.share_payload);
+    } catch {
+      // Fallback: build payload client-side
+      const url = `${window.location.origin}/songs/${song.slug}`;
+      setSharePayload({
+        share_url: url,
+        og_title: `${song.title} — ${song.artist.name}`,
+        og_description: `Listen to ${song.title} by ${song.artist.name} on TesoTunes`,
+        og_image: song.artwork_url,
+        caption: `🎵 ${song.title} — ${song.artist.name}\n\nListen on TesoTunes\n\n${url}`,
+        platform_links: {
+          copy: url,
+          whatsapp: `https://wa.me/?text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}%20${encodeURIComponent(url)}`,
+          twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}&url=${encodeURIComponent(url)}&hashtags=TesoTunes`,
+          facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+          telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}`,
+          instagram: null,
+        },
+      });
+    } finally {
+      setShareLoading(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -138,7 +272,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Column - Cover & Actions */}
-        <div className="lg:w-80 flex-shrink-0">
+        <div className="lg:w-80 shrink-0">
           {/* Cover Art */}
           <div className="relative aspect-square rounded-xl overflow-hidden bg-muted shadow-xl mb-6">
             {song.artwork_url ? (
@@ -151,15 +285,41 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 priority
               />
             ) : (
-              <Music className="absolute inset-0 m-auto h-24 w-24 text-muted-foreground" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-linear-to-br from-primary/20 to-primary/5">
+                <Music className="h-24 w-24 text-muted-foreground" />
+              </div>
             )}
+            {/* Price badge */}
+            <div className="absolute top-3 right-3">
+              {song.is_free ? (
+                <span className="px-3 py-1 bg-green-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
+                  FREE
+                </span>
+              ) : song.price ? (
+                <span className="px-3 py-1 bg-primary/90 text-primary-foreground text-xs font-bold rounded-full backdrop-blur-sm">
+                  {song.price.toLocaleString()} Credits
+                </span>
+              ) : null}
+            </div>
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90">
-              <Play className="h-5 w-5 ml-1" />
-              Play Now
+            <button
+              onClick={handlePlay}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-colors"
+            >
+              {isCurrentSong && isPlaying ? (
+                <>
+                  <Pause className="h-5 w-5" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <Play className="h-5 w-5 ml-1" />
+                  Play Now
+                </>
+              )}
             </button>
             <div className="grid grid-cols-4 gap-2">
               <LikeButton
@@ -168,31 +328,70 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 initialCount={song.like_count}
                 showCount
               />
-              <button className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted">
-                <Plus className="h-5 w-5" />
-                <span className="text-xs">Add</span>
+              <button
+                onClick={handleAddToQueue}
+                className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted transition-colors"
+                title="Add to queue"
+              >
+                <ListPlus className="h-5 w-5" />
+                <span className="text-xs">Queue</span>
               </button>
-              <button className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted">
+              <button
+                onClick={handleShare}
+                className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted transition-colors"
+                title="Share song"
+              >
                 <Share2 className="h-5 w-5" />
                 <span className="text-xs">Share</span>
               </button>
-              <button className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted">
-                <Radio className="h-5 w-5" />
-                <span className="text-xs">Radio</span>
-              </button>
+              <DownloadGate
+                songId={song.id}
+                songTitle={song.title}
+                isFree={song.is_free}
+                isDownloadable={song.is_downloadable ?? false}
+                price={song.price}
+              />
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats Grid */}
           <div className="mt-6 p-4 bg-card rounded-lg border">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold">{formatNumber(song.play_count)}</p>
-                <p className="text-sm text-muted-foreground">Plays</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-2">
+                <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-tight">{formatNumber(song.play_count)}</p>
+                  <p className="text-xs text-muted-foreground">Plays</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{formatDuration(song.duration_seconds || 0)}</p>
-                <p className="text-sm text-muted-foreground">Duration</p>
+              <div className="flex items-center gap-3 p-2">
+                <div className="w-9 h-9 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <Heart className="h-4 w-4 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-tight">{formatNumber(song.like_count)}</p>
+                  <p className="text-xs text-muted-foreground">Likes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-2">
+                <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <Download className="h-4 w-4 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-tight">{formatNumber(song.download_count)}</p>
+                  <p className="text-xs text-muted-foreground">Downloads</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-2">
+                <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-tight">{formatDuration(song.duration_seconds || 0)}</p>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                </div>
               </div>
             </div>
           </div>
@@ -257,34 +456,92 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Genres & Moods */}
-          <div className="flex flex-wrap gap-2 mb-8">
-            {song.genre && (
-              <Link
-                href={`/genres/${song.genre.slug}`}
-                className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20"
-              >
-                {song.genre.name}
-              </Link>
-            )}
-            {song.genres?.map((genre) => (
-              <Link
-                key={genre.id}
-                href={`/genres/${genre.slug}`}
-                className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20"
-              >
-                {genre.name}
-              </Link>
-            ))}
-            {song.moods?.map((mood) => (
-              <Link
-                key={mood.id}
-                href={`/moods/${mood.slug}`}
-                className="px-3 py-1 bg-muted rounded-full text-sm hover:bg-muted/80"
-              >
-                {mood.name}
-              </Link>
-            ))}
+          {(song.genre || song.genres?.length || song.moods?.length) && (
+            <div className="flex flex-wrap gap-2 mb-8">
+              {song.genre && (
+                <Link
+                  href={`/genres/${song.genre.slug}`}
+                  className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20"
+                >
+                  {song.genre.name}
+                </Link>
+              )}
+              {song.genres?.map((genre) => (
+                <Link
+                  key={genre.id}
+                  href={`/genres/${genre.slug}`}
+                  className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm hover:bg-primary/20"
+                >
+                  {genre.name}
+                </Link>
+              ))}
+              {song.moods?.map((mood) => (
+                <Link
+                  key={mood.id}
+                  href={`/moods/${mood.slug}`}
+                  className="px-3 py-1 bg-muted rounded-full text-sm hover:bg-muted/80"
+                >
+                  {mood.name}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* About the Artist - always visible to fill the space */}
+          <div className="mb-8 p-5 bg-card rounded-lg border">
+            <h2 className="text-lg font-bold mb-3">About the Artist</h2>
+            <Link href={`/artists/${song.artist.slug}`} className="group">
+              <div className="flex items-start gap-4">
+                <div className="relative w-16 h-16 rounded-full bg-muted overflow-hidden shrink-0">
+                  {song.artist.avatar_url ? (
+                    <Image
+                      src={song.artist.avatar_url}
+                      alt={song.artist.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 m-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-lg group-hover:text-primary transition-colors">
+                      {song.artist.name}
+                    </p>
+                    {song.artist.is_verified && (
+                      <svg className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                      </svg>
+                    )}
+                  </div>
+                  {song.artist.bio && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {song.artist.bio}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    {song.artist.follower_count != null && (
+                      <span>{formatNumber(song.artist.follower_count)} followers</span>
+                    )}
+                    {song.artist.total_songs != null && (
+                      <span>{song.artist.total_songs} songs</span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0 mt-5 group-hover:text-primary transition-colors" />
+              </div>
+            </Link>
           </div>
+
+          {/* Song Description */}
+          {song.description && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-3">About This Song</h2>
+              <p className="text-muted-foreground leading-relaxed">{song.description}</p>
+            </div>
+          )}
 
           {/* Lyrics */}
           {song.lyrics && (
@@ -299,11 +556,33 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           )}
 
           {/* Credits */}
-          {song.credits && song.credits.length > 0 && (
+          {((song.credits && song.credits.length > 0) || song.composer || song.producer) && (
             <div className="mb-8">
               <h2 className="text-xl font-bold mb-4">Credits</h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                {song.credits.map((credit, i) => (
+                {song.composer && (
+                  <div className="flex items-center gap-3 p-3 bg-card rounded-lg border">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Music className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{song.composer}</p>
+                      <p className="text-sm text-muted-foreground">Composer</p>
+                    </div>
+                  </div>
+                )}
+                {song.producer && (
+                  <div className="flex items-center gap-3 p-3 bg-card rounded-lg border">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Disc3 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{song.producer}</p>
+                      <p className="text-sm text-muted-foreground">Producer</p>
+                    </div>
+                  </div>
+                )}
+                {song.credits?.map((credit, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-card rounded-lg border">
                     <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                       <User className="h-5 w-5 text-muted-foreground" />
@@ -326,7 +605,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 href={`/albums/${song.album.slug}`}
                 className="flex items-center gap-4 p-4 bg-card rounded-lg border hover:border-primary transition-colors"
               >
-                <div className="relative w-20 h-20 rounded bg-muted overflow-hidden flex-shrink-0">
+                <div className="relative w-20 h-20 rounded bg-muted overflow-hidden shrink-0">
                   {song.album.artwork_url ? (
                     <Image
                       src={song.album.artwork_url}
@@ -341,9 +620,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 </div>
                 <div>
                   <p className="font-bold text-lg">{song.album.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Album
-                  </p>
+                  <p className="text-sm text-muted-foreground">Album</p>
                 </div>
                 <ExternalLink className="h-5 w-5 ml-auto text-muted-foreground" />
               </Link>
@@ -391,15 +668,6 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
         </section>
       )}
 
-      {/* Comments */}
-      <section className="mt-12">
-        <CommentSection
-          commentableType="song"
-          commentableId={song.id}
-          title="Comments"
-        />
-      </section>
-
       {/* More from Artist */}
       {song.artist_top_songs && song.artist_top_songs.length > 0 && (
         <section className="mt-12">
@@ -446,6 +714,23 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
           </div>
         </section>
       )}
+
+      {/* Comments */}
+      <section className="mt-12">
+        <CommentSection
+          commentableType="song"
+          commentableId={song.id}
+          title="Comments"
+        />
+      </section>
+
+      {/* Share Bottom Sheet */}
+      <ShareBottomSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={sharePayload}
+        isLoading={shareLoading}
+      />
     </div>
   );
 }

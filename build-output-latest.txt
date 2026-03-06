@@ -1,19 +1,16 @@
-
-> lineone@3.1.0 build
-> next build
-
 Γû▓ Next.js 16.1.6 (Turbopack)
 - Environments: .env.local
 
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
   Creating an optimized production build ...
-Γ£ô Compiled successfully in 2.4min
+Γ£ô Compiled successfully in 58s
   Running TypeScript ...
   Collecting page data using 7 workers ...
   Generating static pages using 7 workers (0/168) ...
   Generating static pages using 7 workers (42/168) 
   Generating static pages using 7 workers (84/168) 
   Generating static pages using 7 workers (126/168) 
-Γ£ô Generating static pages using 7 workers (168/168) in 25.4s
+Γ£ô Generating static pages using 7 workers (168/168) in 8.4s
   Finalizing page optimization ...
 
 Route (app)

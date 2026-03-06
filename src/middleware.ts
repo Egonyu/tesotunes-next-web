@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 
-export const proxy = withAuth(
+export default withAuth(
   function middleware() {
     // Intentionally empty: withAuth handles auth checks and redirect rules.
   },

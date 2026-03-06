@@ -1,64 +1,109 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Crown, Zap, Music2, Star, CreditCard, X, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, Crown, Star, Music2, Building2, X, AlertTriangle, RefreshCw, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { cn, getErrorMessage } from '@/lib/utils';
 import {
   useSubscriptionPlans,
   useMySubscription,
   useSubscribe,
   useCancelSubscription,
-  useReactivateSubscription,
-  BillingCycle,
-  SubscribeRequest,
+  useChangePlan,
+  useToggleAutoRenew,
+  usePaymentStatus,
+  type SubscribeRequest,
+  type CurrentSubscription,
 } from '@/hooks/useSubscriptions';
 import { toast } from 'sonner';
 
+const PLAN_ICONS: Record<string, typeof Crown> = {
+  free: Music2,
+  premium: Crown,
+  artist: Star,
+  label: Building2,
+};
+
 export default function SubscriptionPage() {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [pendingPaymentId, setPendingPaymentId] = useState<number | null>(null);
 
   const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
-  const { data: currentSubscription } = useMySubscription();
+  const { data: currentSub } = useMySubscription();
   const subscribe = useSubscribe();
   const cancelSubscription = useCancelSubscription();
-  const reactivateSubscription = useReactivateSubscription();
+  const changePlan = useChangePlan();
+  const toggleAutoRenew = useToggleAutoRenew();
+  const { data: paymentStatus } = usePaymentStatus(pendingPaymentId);
+
+  // Watch payment polling result
+  useEffect(() => {
+    if (!paymentStatus) return;
+    if (paymentStatus.status === 'completed') {
+      toast.success('Payment confirmed! Your subscription is now active.');
+      setPendingPaymentId(null);
+      setSelectedPlanId(null);
+      setPhoneNumber('');
+    } else if (paymentStatus.status === 'failed' || paymentStatus.status === 'cancelled') {
+      toast.error(paymentStatus.message || 'Payment was not completed.');
+      setPendingPaymentId(null);
+    }
+  }, [paymentStatus]);
+
+  const isUpgradeOrChange = currentSub?.has_subscription && currentSub.status === 'active';
 
   const handleSubscribe = async (planId: number) => {
-    if (paymentMethod !== 'wallet' && !phoneNumber) {
+    if (!phoneNumber.trim()) {
       toast.error('Please enter your phone number');
       return;
     }
 
-    const subscribeData: SubscribeRequest = {
-      plan_id: planId,
-      billing_cycle: billingCycle,
-      payment_method: paymentMethod,
-      phone: paymentMethod !== 'wallet' ? phoneNumber : undefined,
-      auto_renew: true,
-    };
-
     try {
-      const result = await subscribe.mutateAsync(subscribeData);
-      toast.success(result.message || 'Subscription activated successfully!');
-      setSelectedPlanId(null);
-      setPhoneNumber('');
+      if (isUpgradeOrChange) {
+        // Changing plan — use change-plan endpoint
+        const result = await changePlan.mutateAsync({
+          plan_id: planId,
+          payment_method: paymentMethod === 'mtn_momo' ? 'mobile_money' : 'mobile_money',
+          phone_number: phoneNumber,
+        });
+        toast.success(result.message || 'Plan changed successfully!');
+        setSelectedPlanId(null);
+        setPhoneNumber('');
+      } else {
+        // New subscription
+        const data: SubscribeRequest = {
+          plan_id: planId,
+          payment_method: 'mobile_money',
+          phone_number: phoneNumber,
+        };
+
+        const result = await subscribe.mutateAsync(data);
+        if (result.payment_id && result.payment_status !== 'completed') {
+          // ZengaPay async — start polling
+          setPendingPaymentId(result.payment_id);
+          toast.info('Please approve the payment on your phone.');
+        } else {
+          toast.success(result.message || 'Subscription activated!');
+          setSelectedPlanId(null);
+          setPhoneNumber('');
+        }
+      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to subscribe'));
     }
   };
 
   const handleCancel = async () => {
+    if (!currentSub?.subscription_id) return;
     try {
-      const result = await cancelSubscription.mutateAsync({
-        reason: cancelReason,
-        cancel_immediately: false,
+      await cancelSubscription.mutateAsync({
+        subscriptionId: currentSub.subscription_id,
+        reason: cancelReason || undefined,
       });
-      toast.success(result.message || 'Subscription cancelled successfully');
+      toast.success('Subscription cancelled. It will remain active until the expiry date.');
       setShowCancelModal(false);
       setCancelReason('');
     } catch (error: unknown) {
@@ -66,12 +111,16 @@ export default function SubscriptionPage() {
     }
   };
 
-  const handleReactivate = async () => {
+  const handleToggleAutoRenew = async () => {
     try {
-      await reactivateSubscription.mutateAsync();
-      toast.success('Subscription reactivated successfully!');
+      await toggleAutoRenew.mutateAsync();
+      toast.success(
+        currentSub?.auto_renew
+          ? 'Auto-renewal disabled.'
+          : 'Auto-renewal enabled.'
+      );
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to reactivate subscription'));
+      toast.error(getErrorMessage(error, 'Failed to update auto-renewal'));
     }
   };
 
@@ -79,8 +128,8 @@ export default function SubscriptionPage() {
     return (
       <div className="space-y-8">
         <div className="h-24 bg-muted rounded-xl animate-pulse" />
-        <div className="grid gap-6 md:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="h-96 bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
@@ -97,105 +146,22 @@ export default function SubscriptionPage() {
         </p>
       </div>
 
-      {/* Current Plan */}
-      {currentSubscription && (
-        <div className="p-4 rounded-lg border bg-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Plan</p>
-              <p className="text-lg font-semibold capitalize">{currentSubscription.plan.name}</p>
-            </div>
-            <span
-              className={cn(
-                'px-3 py-1 rounded-full text-sm font-medium capitalize',
-                currentSubscription.status === 'active'
-                  ? 'bg-green-500/10 text-green-500'
-                  : currentSubscription.status === 'cancelled'
-                    ? 'bg-orange-500/10 text-orange-500'
-                    : 'bg-red-500/10 text-red-500'
-              )}
-            >
-              {currentSubscription.status}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Billing Cycle</p>
-              <p className="font-medium capitalize">{currentSubscription.billing_cycle}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Next Billing Date</p>
-              <p className="font-medium">
-                {new Date(currentSubscription.current_period_end).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-
-          {currentSubscription.cancel_at_period_end && (
-            <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-              <p className="text-sm text-orange-500">
-                Your subscription will end on{' '}
-                {new Date(currentSubscription.current_period_end).toLocaleDateString()}.
-              </p>
-              <button
-                onClick={handleReactivate}
-                disabled={reactivateSubscription.isPending}
-                className="mt-2 text-sm font-medium text-orange-500 hover:underline"
-              >
-                {reactivateSubscription.isPending ? 'Reactivating...' : 'Reactivate Subscription'}
-              </button>
-            </div>
-          )}
-
-          {currentSubscription.status === 'active' && !currentSubscription.cancel_at_period_end && (
-            <button
-              onClick={() => setShowCancelModal(true)}
-              className="mt-4 w-full sm:w-auto px-6 py-2 text-sm border border-red-500/20 text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
-            >
-              Cancel Subscription
-            </button>
-          )}
-        </div>
+      {/* Current Plan Card */}
+      {currentSub && (
+        <CurrentPlanCard
+          sub={currentSub}
+          onCancel={() => setShowCancelModal(true)}
+          onToggleAutoRenew={handleToggleAutoRenew}
+          isTogglingAutoRenew={toggleAutoRenew.isPending}
+        />
       )}
 
-      {/* Billing Toggle */}
-      <div className="flex justify-center">
-        <div className="inline-flex items-center gap-4 p-1 rounded-lg bg-muted">
-          <button
-            onClick={() => setBillingCycle('monthly')}
-            className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              billingCycle === 'monthly'
-                ? 'bg-background shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingCycle('yearly')}
-            className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              billingCycle === 'yearly'
-                ? 'bg-background shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Yearly
-            <span className="ml-2 text-xs text-green-500">Save 20%</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Plans */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Plans Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans?.map((plan) => {
-          const Icon = plan.slug === 'premium' ? Crown : plan.slug === 'artist' ? Star : Music2;
-          const isCurrentPlan = currentSubscription?.plan.id === plan.id;
-          const price = billingCycle === 'yearly'
-            ? plan.price_yearly
-            : plan.price_monthly;
+          const Icon = PLAN_ICONS[plan.slug] || Music2;
+          const isCurrentPlan = currentSub?.plan === plan.slug;
+          const price = plan.price_local || plan.price;
 
           return (
             <div
@@ -203,7 +169,7 @@ export default function SubscriptionPage() {
               className={cn(
                 'relative rounded-xl border p-6 transition-shadow',
                 plan.is_popular && 'border-primary shadow-lg',
-                isCurrentPlan && 'bg-muted/30'
+                isCurrentPlan && 'bg-muted/30 ring-2 ring-primary/20'
               )}
             >
               {plan.is_popular && (
@@ -217,23 +183,53 @@ export default function SubscriptionPage() {
                   <Icon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {plan.description}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
               </div>
 
               <div className="text-center mb-6">
                 <span className="text-3xl font-bold">
-                  {price === 0 ? 'Free' : `UGX ${price.toLocaleString()}`}
+                  {price === 0 ? 'Free' : `UGX ${Number(price).toLocaleString()}`}
                 </span>
                 {price > 0 && (
-                  <span className="text-muted-foreground text-sm">
-                    /{billingCycle === 'yearly' ? 'year' : 'month'}
-                  </span>
+                  <span className="text-muted-foreground text-sm">/month</span>
                 )}
               </div>
 
-              <ul className="space-y-3 mb-6">
+              {/* Plan Limits */}
+              <div className="space-y-2 mb-4 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Audio Quality</span>
+                  <span className="font-medium text-foreground">{plan.limits.audio_quality_kbps}kbps</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Downloads/Day</span>
+                  <span className="font-medium text-foreground">
+                    {plan.limits.downloads_per_day === null ? 'Unlimited' : plan.limits.downloads_per_day}
+                  </span>
+                </div>
+                {plan.limits.uploads_per_month !== null && plan.limits.uploads_per_month > 0 && (
+                  <div className="flex justify-between">
+                    <span>Uploads/Month</span>
+                    <span className="font-medium text-foreground">{plan.limits.uploads_per_month}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span>Ads</span>
+                  <span className={cn('font-medium', plan.has_ads ? 'text-orange-500' : 'text-green-500')}>
+                    {plan.has_ads ? 'Yes' : 'No Ads'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Offline</span>
+                  {plan.offline_mode ? (
+                    <Wifi className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+
+              <ul className="space-y-2 mb-6">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -249,6 +245,13 @@ export default function SubscriptionPage() {
                 >
                   Current Plan
                 </button>
+              ) : plan.slug === 'free' ? (
+                <button
+                  disabled
+                  className="w-full py-2 rounded-lg border font-medium text-muted-foreground cursor-not-allowed"
+                >
+                  Default
+                </button>
               ) : (
                 <button
                   onClick={() => setSelectedPlanId(plan.id)}
@@ -259,7 +262,7 @@ export default function SubscriptionPage() {
                       : 'border hover:bg-muted'
                   )}
                 >
-                  {plan.price_monthly === 0 ? 'Downgrade' : 'Upgrade'}
+                  {isUpgradeOrChange ? 'Change Plan' : 'Subscribe'}
                 </button>
               )}
             </div>
@@ -272,79 +275,81 @@ export default function SubscriptionPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-background rounded-xl border p-6 max-w-md w-full space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Complete Subscription</h3>
-              <button onClick={() => setSelectedPlanId(null)}>
+              <h3 className="text-lg font-semibold">
+                {isUpgradeOrChange ? 'Change Plan' : 'Complete Subscription'}
+              </h3>
+              <button onClick={() => { setSelectedPlanId(null); setPendingPaymentId(null); }}>
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Payment Method</label>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setPaymentMethod('wallet')}
-                  className={cn(
-                    'w-full p-3 rounded-lg border text-left transition-colors',
-                    paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    <span>TesoWallet</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('mtn_momo')}
-                  className={cn(
-                    'w-full p-3 rounded-lg border text-left transition-colors',
-                    paymentMethod === 'mtn_momo' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded bg-[#FFCC00]" />
-                    <span>MTN Mobile Money</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('airtel_money')}
-                  className={cn(
-                    'w-full p-3 rounded-lg border text-left transition-colors',
-                    paymentMethod === 'airtel_money' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded bg-[#E40000]" />
-                    <span>Airtel Money</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {paymentMethod !== 'wallet' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder={paymentMethod === 'mtn_momo' ? '0770 000 000' : '0750 000 000'}
-                  className="w-full px-4 py-3 rounded-lg border bg-background"
-                />
+            {/* Pending payment polling indicator */}
+            {pendingPaymentId && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                <p className="text-sm text-blue-500">
+                  Waiting for payment approval on your phone...
+                </p>
               </div>
             )}
 
-            <button
-              onClick={() => handleSubscribe(selectedPlanId)}
-              disabled={subscribe.isPending}
-              className={cn(
-                'w-full px-6 py-3 rounded-lg font-medium transition-colors',
-                subscribe.isPending
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
-              )}
-            >
-              {subscribe.isPending ? 'Processing...' : 'Subscribe Now'}
-            </button>
+            {!pendingPaymentId && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Payment Method</label>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setPaymentMethod('mtn_momo')}
+                      className={cn(
+                        'w-full p-3 rounded-lg border text-left transition-colors',
+                        paymentMethod === 'mtn_momo' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 rounded bg-[#FFCC00]" />
+                        <span>MTN Mobile Money</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('airtel_money')}
+                      className={cn(
+                        'w-full p-3 rounded-lg border text-left transition-colors',
+                        paymentMethod === 'airtel_money' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 rounded bg-[#E40000]" />
+                        <span>Airtel Money</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder={paymentMethod === 'mtn_momo' ? '0770 000 000' : '0750 000 000'}
+                    className="w-full px-4 py-3 rounded-lg border bg-background"
+                  />
+                </div>
+
+                <button
+                  onClick={() => handleSubscribe(selectedPlanId)}
+                  disabled={subscribe.isPending || changePlan.isPending}
+                  className={cn(
+                    'w-full px-6 py-3 rounded-lg font-medium transition-colors',
+                    subscribe.isPending || changePlan.isPending
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  )}
+                >
+                  {subscribe.isPending || changePlan.isPending ? 'Processing...' : 'Subscribe Now'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -358,7 +363,11 @@ export default function SubscriptionPage() {
               <div>
                 <h3 className="text-lg font-semibold">Cancel Subscription?</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Your subscription will remain active until the end of the current billing period.
+                  Your subscription will remain active until{' '}
+                  {currentSub?.expires_at
+                    ? new Date(currentSub.expires_at).toLocaleDateString()
+                    : 'the end of the current period'}
+                  .
                 </p>
               </div>
             </div>
@@ -392,6 +401,159 @@ export default function SubscriptionPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Current Plan Card Subcomponent
+// ============================================================================
+
+function CurrentPlanCard({
+  sub,
+  onCancel,
+  onToggleAutoRenew,
+  isTogglingAutoRenew,
+}: {
+  sub: CurrentSubscription;
+  onCancel: () => void;
+  onToggleAutoRenew: () => void;
+  isTogglingAutoRenew: boolean;
+}) {
+  if (!sub.has_subscription) {
+    return (
+      <div className="p-4 rounded-lg border bg-card">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Current Plan</p>
+            <p className="text-lg font-semibold">Free</p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted text-muted-foreground">
+            Free Tier
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground">Quality</p>
+            <p className="font-medium">{sub.limits.audio_quality_kbps}kbps</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Downloads</p>
+            <p className="font-medium">{sub.limits.downloads_per_day}/day</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Ads</p>
+            <p className="font-medium text-orange-500">Yes</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-lg border bg-card">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Current Plan</p>
+          <p className="text-lg font-semibold capitalize">{sub.plan_name || sub.plan}</p>
+        </div>
+        <span
+          className={cn(
+            'px-3 py-1 rounded-full text-sm font-medium capitalize',
+            sub.status === 'active'
+              ? 'bg-green-500/10 text-green-500'
+              : sub.status === 'cancelled'
+                ? 'bg-orange-500/10 text-orange-500'
+                : sub.status === 'expired'
+                  ? 'bg-red-500/10 text-red-500'
+                  : 'bg-blue-500/10 text-blue-500'
+          )}
+        >
+          {sub.status}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">Days Remaining</p>
+          <p className="font-medium">{sub.days_remaining ?? '—'}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Expires</p>
+          <p className="font-medium">
+            {sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Quality</p>
+          <p className="font-medium">{sub.limits.audio_quality_kbps}kbps</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Downloads</p>
+          <p className="font-medium">
+            {sub.limits.downloads_per_day === 0 ? 'Unlimited' : `${sub.limits.downloads_per_day}/day`}
+          </p>
+        </div>
+      </div>
+
+      {/* Feature flags */}
+      <div className="flex gap-4 mt-3">
+        {sub.ad_free && (
+          <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-500">
+            Ad-Free
+          </span>
+        )}
+        {sub.offline_access && (
+          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-500">
+            Offline Access
+          </span>
+        )}
+      </div>
+
+      {/* Auto-renew toggle */}
+      {sub.status === 'active' && (
+        <div className="mt-4 flex items-center justify-between p-3 rounded-lg bg-muted/50">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">Auto-Renewal</span>
+          </div>
+          <button
+            onClick={onToggleAutoRenew}
+            disabled={isTogglingAutoRenew}
+            className={cn(
+              'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+              sub.auto_renew ? 'bg-primary' : 'bg-muted-foreground/30'
+            )}
+          >
+            <span
+              className={cn(
+                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                sub.auto_renew ? 'translate-x-6' : 'translate-x-1'
+              )}
+            />
+          </button>
+        </div>
+      )}
+
+      {/* Cancel button for active subscriptions */}
+      {sub.status === 'active' && (
+        <button
+          onClick={onCancel}
+          className="mt-4 w-full sm:w-auto px-6 py-2 text-sm border border-red-500/20 text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
+        >
+          Cancel Subscription
+        </button>
+      )}
+
+      {/* Cancelled notice */}
+      {sub.status === 'cancelled' && sub.expires_at && (
+        <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+          <p className="text-sm text-orange-500">
+            Your subscription was cancelled. Access continues until{' '}
+            {new Date(sub.expires_at).toLocaleDateString()}.
+          </p>
         </div>
       )}
     </div>

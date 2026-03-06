@@ -19,12 +19,14 @@ import {
 import Link from "next/link";
 import { useLibrary, useRecentlyPlayed, useFollowedArtists } from "@/hooks/api";
 import { useWallet } from "@/hooks/usePayments";
+import { useMySubscription } from "@/hooks/useSubscriptions";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const { playlists, likedSongs, followedArtists: libArtists, isLoading: libraryLoading } = useLibrary();
   const { data: recentSongs, isLoading: recentLoading } = useRecentlyPlayed(5);
   const { data: walletData } = useWallet();
+  const { data: currentSub } = useMySubscription();
 
   if (status === "loading") {
     return (
@@ -87,7 +89,25 @@ export default function ProfilePage() {
 
           {/* User Info */}
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">{user?.name || "User"}</h1>
+            <div className="flex items-center gap-2 mb-2">
+              <h1 className="text-3xl font-bold">{user?.name || "User"}</h1>
+              {currentSub?.has_subscription && currentSub.tier && (
+                <Link
+                  href="/settings/subscription"
+                  className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize hover:bg-primary/20 transition-colors"
+                >
+                  {currentSub.tier}
+                </Link>
+              )}
+              {!currentSub?.has_subscription && (
+                <Link
+                  href="/pricing"
+                  className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                >
+                  Free
+                </Link>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Mail className="h-4 w-4" />

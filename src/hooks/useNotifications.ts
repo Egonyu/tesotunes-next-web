@@ -11,7 +11,26 @@ import { toast } from 'sonner';
 
 export interface Notification {
   id: number;
-  type: 'like' | 'comment' | 'follow' | 'repost' | 'purchase' | 'payment' | 'announcement' | 'music';
+  type:
+    | 'like'
+    | 'comment'
+    | 'follow'
+    | 'repost'
+    | 'purchase'
+    | 'payment'
+    | 'announcement'
+    | 'music'
+    // New notification types (backend expansion)
+    | 'new_episode'
+    | 'new_podcast'
+    | 'ticket'
+    | 'award_nomination'
+    | 'referral_reward'
+    | 'song_approved'
+    | 'subscription_expiring'
+    | 'weekly_digest'
+    | 'playlist_share'
+    | 'tip';
   title: string;
   message: string;
   link: string;
@@ -46,15 +65,22 @@ export interface NotificationPreferences {
   events?: { email: boolean; push: boolean; in_app: boolean };
   new_follower?: { email: boolean; push: boolean; in_app: boolean };
   playlist_activity?: { email: boolean; push: boolean; in_app: boolean };
+  playlist_share?: { email: boolean; push: boolean; in_app: boolean };
   artist_release?: { email: boolean; push: boolean; in_app: boolean };
   comment_reply?: { email: boolean; push: boolean; in_app: boolean };
   payment_received?: { email: boolean; push: boolean; in_app: boolean };
+  tip_received?: { email: boolean; push: boolean; in_app: boolean };
   payout_approved?: { email: boolean; push: boolean; in_app: boolean };
   song_approved?: { email: boolean; push: boolean; in_app: boolean };
   subscription_expiring?: { email: boolean; push: boolean; in_app: boolean };
   award_nomination?: { email: boolean; push: boolean; in_app: boolean };
+  new_episode?: { email: boolean; push: boolean; in_app: boolean };
+  new_podcast?: { email: boolean; push: boolean; in_app: boolean };
+  referral_reward?: { email: boolean; push: boolean; in_app: boolean };
+  ticket_purchase?: { email: boolean; push: boolean; in_app: boolean };
   event_reminder?: { email: boolean; push: boolean; in_app: boolean };
   system_announcement?: { email: boolean; push: boolean; in_app: boolean };
+  weekly_digest?: boolean;
   quiet_hours?: {
     enabled: boolean;
     start: string;

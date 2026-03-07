@@ -62,6 +62,7 @@ const moduleItems = [
   { href: "/edula", label: "Edula", icon: Rss },
   { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
+  { href: "/campaigns", label: "Campaigns", icon: Heart },
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },
   { href: "/polls", label: "Polls", icon: ThumbsUp },

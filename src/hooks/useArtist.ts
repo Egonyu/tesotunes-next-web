@@ -261,6 +261,41 @@ export function useRequestWithdrawal() {
 }
 
 // ============================================================================
+// Royalty Splits
+// ============================================================================
+
+export interface RoyaltySplit {
+  id: number;
+  song_id: number;
+  song_title: string;
+  song_artwork?: string | null;
+  recipient_id: number;
+  recipient_name: string;
+  recipient_email?: string;
+  percentage: number;
+  applies_to_streaming: boolean;
+  applies_to_downloads: boolean;
+  status: 'active' | 'pending' | 'revoked';
+  total_earned: number;
+  pending_payout: number;
+}
+
+export interface RoyaltySplitsResponse {
+  data: RoyaltySplit[];
+}
+
+export function useRoyaltySplits(songId?: number) {
+  return useQuery({
+    queryKey: ['artist', 'royalty-splits', songId ?? 'all'],
+    queryFn: () =>
+      apiGet<RoyaltySplitsResponse | RoyaltySplit[]>(
+        songId ? `/artist/songs/${songId}/royalty-splits` : '/artist/royalty-splits'
+      ).then(res => (Array.isArray(res) ? res : res.data)),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ============================================================================
 // Analytics Hook
 // ============================================================================
 

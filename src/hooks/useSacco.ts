@@ -513,6 +513,203 @@ export function useSaccoDividends() {
 }
 
 // ============================================================================
+// Contributions Hooks
+// ============================================================================
+
+export interface SaccoContribution {
+  id: number;
+  amount: number;
+  payment_method: string;
+  status: 'pending' | 'completed' | 'failed';
+  contribution_date: string;
+  reference?: string;
+  notes?: string;
+}
+
+export function useSaccoContributions(params?: { page?: number; per_page?: number }) {
+  return useQuery({
+    queryKey: ['sacco', 'contributions', params],
+    queryFn: async () => {
+      const res = await apiGet<{ success: boolean; data: SaccoContribution[] }>(
+        '/sacco/contributions',
+        { params }
+      );
+      const raw = extractData(res);
+      const items = Array.isArray(raw) ? raw : (raw as unknown as { data: SaccoContribution[] }).data ?? [];
+      return { data: items, total: items.length };
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+// ============================================================================
+// Groups Hooks
+// ============================================================================
+
+export interface SaccoGroup {
+  id: number;
+  name: string;
+  description?: string;
+  members_count: number;
+  created_at: string;
+  is_member: boolean;
+}
+
+export function useSaccoGroups() {
+  return useQuery({
+    queryKey: ['sacco', 'groups'],
+    queryFn: async () => {
+      const res = await apiGet<{ success: boolean; data: SaccoGroup[] }>('/sacco/groups');
+      const raw = extractData(res);
+      return Array.isArray(raw) ? raw : (raw as unknown as { data: SaccoGroup[] }).data ?? [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// Meetings Hooks
+// ============================================================================
+
+export interface SaccoMeeting {
+  id: number;
+  title: string;
+  agenda?: string;
+  meeting_date: string;
+  location?: string;
+  is_online: boolean;
+  meeting_link?: string;
+  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+  attendees_count: number;
+  is_attending?: boolean;
+}
+
+export function useSaccoMeetings(params?: { status?: string }) {
+  return useQuery({
+    queryKey: ['sacco', 'meetings', params],
+    queryFn: async () => {
+      const res = await apiGet<{ success: boolean; data: SaccoMeeting[] }>(
+        '/sacco/meetings',
+        { params }
+      );
+      const raw = extractData(res);
+      return Array.isArray(raw) ? raw : (raw as unknown as { data: SaccoMeeting[] }).data ?? [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useRsvpMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, attending }: { meetingId: number; attending: boolean }) =>
+      apiPost<{ message: string }>(`/sacco/meetings/${meetingId}/rsvp`, { attending }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'meetings'] });
+    },
+  });
+}
+
+// ============================================================================
+// Fines Hooks
+// ============================================================================
+
+export interface SaccoFine {
+  id: number;
+  reason: string;
+  amount: number;
+  due_date: string;
+  status: 'pending' | 'paid' | 'waived' | 'overdue';
+  issued_date: string;
+  paid_at?: string;
+}
+
+export function useSaccoFines(params?: { status?: string }) {
+  return useQuery({
+    queryKey: ['sacco', 'fines', params],
+    queryFn: async () => {
+      const res = await apiGet<{ success: boolean; data: SaccoFine[] }>(
+        '/sacco/fines',
+        { params }
+      );
+      const raw = extractData(res);
+      return Array.isArray(raw) ? raw : (raw as unknown as { data: SaccoFine[] }).data ?? [];
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function usePaySaccoFine() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      fine_id: number;
+      phone_number: string;
+      payment_method: 'mtn_momo' | 'airtel_money';
+    }) =>
+      apiPost<{ message: string; data: { reference: string } }>(
+        `/sacco/fines/${data.fine_id}/pay`,
+        data
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'fines'] });
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'dashboard'] });
+    },
+  });
+}
+
+// ============================================================================
+// Withdrawal Requests Hooks
+// ============================================================================
+
+export interface SaccoWithdrawalRequest {
+  id: number;
+  amount: number;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'disbursed';
+  requested_at: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  payment_method: string;
+  phone_number: string;
+}
+
+export function useSaccoWithdrawalRequests(params?: { status?: string }) {
+  return useQuery({
+    queryKey: ['sacco', 'withdrawal-requests', params],
+    queryFn: async () => {
+      const res = await apiGet<{ success: boolean; data: SaccoWithdrawalRequest[] }>(
+        '/sacco/withdrawal-requests',
+        { params }
+      );
+      const raw = extractData(res);
+      return Array.isArray(raw) ? raw : (raw as unknown as { data: SaccoWithdrawalRequest[] }).data ?? [];
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCreateWithdrawalRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      amount: number;
+      reason?: string;
+      phone_number: string;
+      payment_method: 'mtn_momo' | 'airtel_money';
+    }) =>
+      apiPost<{ message: string; data: SaccoWithdrawalRequest }>(
+        '/sacco/withdrawal-requests',
+        data
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'withdrawal-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'dashboard'] });
+    },
+  });
+}
+
+// ============================================================================
 // Re-export all hooks for easy imports
 // ============================================================================
 
@@ -533,4 +730,12 @@ export const saccoHooks = {
   useSaccoShares,
   useBuyShares,
   useSaccoDividends,
+  useSaccoContributions,
+  useSaccoGroups,
+  useSaccoMeetings,
+  useRsvpMeeting,
+  useSaccoFines,
+  usePaySaccoFine,
+  useSaccoWithdrawalRequests,
+  useCreateWithdrawalRequest,
 };

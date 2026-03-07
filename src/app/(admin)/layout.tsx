@@ -33,10 +33,12 @@ import {
   Trophy,
   Loader2,
   Tags,
+  Crown,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
-import { setAuthToken } from '@/lib/api';
+import { setAuthToken, api } from '@/lib/api';
 import AccessNotice from '@/components/auth/AccessNotice';
 
 // Case-insensitive role check — backend may send 'admin', 'Admin', 'super_admin', 'Super Admin', 'moderator'
@@ -64,6 +66,8 @@ const navItems = [
   { href: '/admin/promotions/disputes', label: 'Disputes', icon: Megaphone },
   { href: '/admin/promotions/analytics', label: 'Promo Analytics', icon: BarChart3 },
   { href: '/admin/sacco', label: 'SACCO', icon: CreditCard },
+  { href: '/admin/sacco/board-meetings', label: 'Board Meetings', icon: Building2 },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: Crown },
   { href: '/admin/forums', label: 'Forums', icon: MessageSquare },
   { href: '/admin/polls', label: 'Polls', icon: BarChart3 },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
@@ -83,6 +87,14 @@ export default function AdminLayout({
   const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [apiVersion, setApiVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get('/health', { timeout: 5000 }).then(res => {
+      const ver = res.headers['x-api-version'] as string | undefined;
+      if (ver) setApiVersion(ver);
+    }).catch(() => {/* silently ignore */});
+  }, []);
 
   useEffect(() => {
     if (session?.accessToken) {
@@ -216,6 +228,11 @@ export default function AdminLayout({
             />
           </div>
           <div className="flex items-center gap-4">
+            {apiVersion && (
+              <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-muted text-muted-foreground border" title="Backend API version">
+                API {apiVersion}
+              </span>
+            )}
             <button className="relative p-2 hover:bg-muted rounded-lg">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />

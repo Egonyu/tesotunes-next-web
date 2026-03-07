@@ -15,6 +15,9 @@ import {
   Edit,
   Loader2,
   Wallet,
+  Wifi,
+  Volume2,
+  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useLibrary, useRecentlyPlayed, useFollowedArtists } from "@/hooks/api";
@@ -127,6 +130,30 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
+
+            {/* Subscription perks */}
+            {currentSub?.has_subscription && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {currentSub.ad_free && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                    <CheckCircle className="h-3 w-3" />
+                    Ad-free
+                  </span>
+                )}
+                {currentSub.offline_access && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                    <Wifi className="h-3 w-3" />
+                    Offline
+                  </span>
+                )}
+                {currentSub.limits?.audio_quality_kbps && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                    <Volume2 className="h-3 w-3" />
+                    {currentSub.limits.audio_quality_kbps}kbps
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

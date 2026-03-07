@@ -15,6 +15,9 @@ import {
   ArrowDownRight,
   Globe,
   Loader2,
+  Activity,
+  Server,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +63,23 @@ interface AnalyticsResponse {
   data: AnalyticsData;
 }
 
+interface ApiUsageData {
+  total_requests: number;
+  requests_today: number;
+  avg_response_ms: number;
+  error_rate: number;
+  by_endpoint: Array<{ endpoint: string; count: number; avg_ms: number; error_count: number }>;
+  by_hour: Array<{ hour: number; count: number }>;
+  top_users: Array<{ user_id: number; name: string; email: string; request_count: number }>;
+}
+
+interface TopUserEntry {
+  user_id: number;
+  name: string;
+  email: string;
+  request_count: number;
+}
+
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Music, Users, DollarSign, TrendingUp,
 };
@@ -67,10 +87,24 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 // ── Component ────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [activeTab, setActiveTab] = useState<'platform' | 'api'>('platform');
 
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ['admin-analytics', timeRange],
     queryFn: () => apiGet<AnalyticsResponse>('/admin/analytics', { params: { range: timeRange } }),
+    enabled: activeTab === 'platform',
+  });
+
+  const { data: apiUsageData, isLoading: apiUsageLoading } = useQuery({
+    queryKey: ['admin-analytics', 'api-usage', timeRange],
+    queryFn: () => apiGet<{ data: ApiUsageData }>('/admin/analytics/api-usage', { params: { range: timeRange } }),
+    enabled: activeTab === 'api',
+  });
+
+  const { data: topUsersData, isLoading: topUsersLoading } = useQuery({
+    queryKey: ['admin-analytics', 'top-users', timeRange],
+    queryFn: () => apiGet<{ data: TopUserEntry[] }>('/admin/analytics/top-users', { params: { range: timeRange } }),
+    enabled: activeTab === 'api',
   });
 
   const analytics = analyticsData?.data;
@@ -79,10 +113,9 @@ export default function AnalyticsPage() {
   const revenueBreakdown = analytics?.revenue_breakdown ?? [];
   const streamsChart = analytics?.streams_chart ?? [];
   const peakHours = analytics?.peak_hours ?? [];
-
   const maxStream = Math.max(...streamsChart.map((d) => d.count), 1);
 
-  if (isLoading) {
+  if (isLoading && activeTab === 'platform') {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -122,6 +155,35 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Tab navigation */}
+      <div className="flex border-b gap-6">
+        <button
+          onClick={() => setActiveTab('platform')}
+          className={cn(
+            'pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5',
+            activeTab === 'platform'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <BarChart3 className="h-3.5 w-3.5" />
+          Platform
+        </button>
+        <button
+          onClick={() => setActiveTab('api')}
+          className={cn(
+            'pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5',
+            activeTab === 'api'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Activity className="h-3.5 w-3.5" />
+          API Usage
+        </button>
+      </div>
+
+      {activeTab === 'platform' && (<>
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric) => {
@@ -263,6 +325,148 @@ export default function AnalyticsPage() {
             <div className="py-8 text-center text-muted-foreground">No data available</div>
           )}
         </div>
+      </div>
+    </>
+    )}
+
+    {/* API Usage Tab */}
+    {activeTab === 'api' && (
+      <ApiUsageTab
+        usage={apiUsageData?.data}
+        topUsers={topUsersData?.data}
+        isLoading={apiUsageLoading || topUsersLoading}
+      />
+    )}
+    </div>
+  );
+}
+
+// ── API Usage Tab ─────────────────────────────────────────────────────
+function ApiUsageTab({
+  usage,
+  topUsers,
+  isLoading,
+}: {
+  usage?: ApiUsageData;
+  topUsers?: TopUserEntry[];
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const maxHourCount = Math.max(...(usage?.by_hour?.map(h => h.count) ?? [1]), 1);
+  const maxEndpointCount = Math.max(...(usage?.by_endpoint?.map(e => e.count) ?? [1]), 1);
+
+  return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Requests', value: (usage?.total_requests ?? 0).toLocaleString(), icon: Activity, color: 'text-blue-500' },
+          { label: 'Today', value: (usage?.requests_today ?? 0).toLocaleString(), icon: TrendingUp, color: 'text-green-500' },
+          { label: 'Avg Response', value: usage ? `${usage.avg_response_ms}ms` : '—', icon: Server, color: 'text-purple-500' },
+          { label: 'Error Rate', value: usage ? `${usage.error_rate.toFixed(2)}%` : '—', icon: AlertTriangle, color: usage && usage.error_rate > 5 ? 'text-red-500' : 'text-orange-500' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <div key={label} className="p-4 rounded-xl border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={cn('h-4 w-4', color)} />
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+            <p className="text-2xl font-bold">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Requests by Hour */}
+        <div className="p-6 rounded-xl border bg-card">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            Requests by Hour (24h)
+          </h3>
+          {usage?.by_hour?.length ? (
+            <div className="h-40 flex items-end gap-1">
+              {usage.by_hour.map((h) => {
+                const height = Math.max((h.count / maxHourCount) * 100, 2);
+                return (
+                  <div
+                    key={h.hour}
+                    className="flex-1 bg-blue-500/30 hover:bg-blue-500/60 rounded-t transition-colors cursor-default"
+                    style={{ height: `${height}%` }}
+                    title={`${h.hour}:00 — ${h.count.toLocaleString()} reqs`}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">No data</div>
+          )}
+        </div>
+
+        {/* Top Endpoints */}
+        <div className="p-6 rounded-xl border bg-card">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Server className="h-4 w-4 text-muted-foreground" />
+            Top Endpoints
+          </h3>
+          {usage?.by_endpoint?.length ? (
+            <div className="space-y-3">
+              {usage.by_endpoint.slice(0, 7).map((ep) => (
+                <div key={ep.endpoint}>
+                  <div className="flex items-center justify-between mb-0.5 text-xs">
+                    <span className="font-mono text-muted-foreground truncate max-w-[60%]">{ep.endpoint}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-muted-foreground">{ep.avg_ms}ms</span>
+                      {ep.error_count > 0 && (
+                        <span className="text-red-500">{ep.error_count} err</span>
+                      )}
+                      <span className="font-medium">{ep.count.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', ep.error_count > 0 ? 'bg-orange-500' : 'bg-primary')}
+                      style={{ width: `${(ep.count / maxEndpointCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">No endpoint data</p>
+          )}
+        </div>
+      </div>
+
+      {/* Top Users */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          Top API Users
+        </h3>
+        {topUsers?.length ? (
+          <div className="space-y-2">
+            {topUsers.slice(0, 10).map((user, i) => (
+              <div key={user.user_id} className="flex items-center gap-4 py-2 border-b last:border-0">
+                <span className="text-sm text-muted-foreground w-5 shrink-0">{i + 1}.</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+                <span className="text-sm font-semibold shrink-0">
+                  {user.request_count.toLocaleString()} reqs
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm">No user data available</p>
+        )}
       </div>
     </div>
   );

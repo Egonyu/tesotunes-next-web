@@ -19,6 +19,8 @@ import { useLibrary } from "@/hooks";
 import { cn, formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/stores";
 import type { Song, Album, Artist, Playlist } from "@/types";
+import { useMySubscription } from "@/hooks/useSubscriptions";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 
 type LibraryTab = "playlists" | "songs" | "albums" | "artists";
 type ViewMode = "grid" | "list";
@@ -28,6 +30,7 @@ export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<LibraryTab>("playlists");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const { play } = usePlayerStore();
+  const { data: currentSub } = useMySubscription({ enabled: !!session });
 
   const {
     playlists,
@@ -89,6 +92,17 @@ export default function LibraryPage() {
           </button>
         </div>
       </div>
+
+      {/* Downloads quota */}
+      {currentSub && currentSub.limits.downloads_per_day !== null && (
+        <FeatureGate
+          feature="downloads"
+          used={0}
+          limit={currentSub.limits.downloads_per_day}
+          planName={currentSub.plan_name ?? currentSub.plan}
+          className="mb-6"
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">

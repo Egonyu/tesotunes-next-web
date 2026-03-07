@@ -13,10 +13,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Music,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistEarnings, useRequestWithdrawal } from '@/hooks/useArtist';
+import { useArtistEarnings, useRequestWithdrawal, useRoyaltySplits } from '@/hooks/useArtist';
 
 export default function ArtistEarningsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -26,6 +28,7 @@ export default function ArtistEarningsPage() {
 
   const { data: earningsData, isLoading, error } = useArtistEarnings();
   const withdrawMutation = useRequestWithdrawal();
+  const { data: royaltySplits, isLoading: splitsLoading } = useRoyaltySplits();
 
   const stats = earningsData?.stats || {
     balance: 0,
@@ -220,6 +223,119 @@ export default function ArtistEarningsPage() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Revenue Type Breakdown */}
+      {earningsSources.length > 0 && (
+        <div className="p-6 rounded-xl border bg-card">
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <Music className="h-4 w-4 text-muted-foreground" />
+            Revenue by Type
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {earningsSources.map((item) => {
+              const colorMap: Record<string, string> = {
+                streams: 'bg-blue-500',
+                stream: 'bg-blue-500',
+                downloads: 'bg-green-500',
+                download: 'bg-green-500',
+                tips: 'bg-amber-500',
+                tip: 'bg-amber-500',
+                distribution: 'bg-purple-500',
+                sale: 'bg-rose-500',
+              };
+              const bgMap: Record<string, string> = {
+                streams: 'bg-blue-50 dark:bg-blue-950',
+                stream: 'bg-blue-50 dark:bg-blue-950',
+                downloads: 'bg-green-50 dark:bg-green-950',
+                download: 'bg-green-50 dark:bg-green-950',
+                tips: 'bg-amber-50 dark:bg-amber-950',
+                tip: 'bg-amber-50 dark:bg-amber-950',
+                distribution: 'bg-purple-50 dark:bg-purple-950',
+                sale: 'bg-rose-50 dark:bg-rose-950',
+              };
+              const key = item.source.toLowerCase();
+              const bar = colorMap[key] ?? 'bg-primary';
+              const bg = bgMap[key] ?? 'bg-muted';
+              return (
+                <div key={item.source} className={cn('p-4 rounded-xl', bg)}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium capitalize text-muted-foreground">{item.source}</span>
+                    <span className="text-xs font-semibold">{item.percentage}%</span>
+                  </div>
+                  <p className="text-base font-bold">UGX {item.amount.toLocaleString()}</p>
+                  <div className="mt-2 h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                    <div className={cn('h-full rounded-full', bar)} style={{ width: `${item.percentage}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Royalty Splits */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          Collaborator Royalty Splits
+        </h2>
+        {splitsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !royaltySplits?.length ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No royalty splits configured for your songs.</p>
+            <p className="text-xs mt-1">Add collaborators when uploading songs to share revenue automatically.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 font-medium text-muted-foreground">Song</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Collaborator</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Share</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Total Earned</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Pending</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {royaltySplits.map((split) => (
+                  <tr key={split.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="py-3 max-w-[140px] truncate">{split.song_title}</td>
+                    <td className="py-3">
+                      <div>
+                        <p className="font-medium truncate max-w-[120px]">{split.recipient_name}</p>
+                        {split.recipient_email && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{split.recipient_email}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 text-right font-semibold">{split.percentage}%</td>
+                    <td className="py-3 text-right">UGX {split.total_earned.toLocaleString()}</td>
+                    <td className="py-3 text-right">UGX {split.pending_payout.toLocaleString()}</td>
+                    <td className="py-3 text-center">
+                      <span className={cn(
+                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                        split.status === 'active'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          : split.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                          : 'bg-muted text-muted-foreground'
+                      )}>
+                        {split.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Transaction History */}

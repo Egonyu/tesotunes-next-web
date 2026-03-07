@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Mail, Smartphone, Music2, Heart, MessageSquare, DollarSign, Calendar, Loader2, Clock, Users, Gift, TrendingUp, ShoppingBag } from 'lucide-react';
+import { Bell, Mail, Smartphone, Music2, Heart, MessageSquare, DollarSign, Calendar, Loader2, Clock, Users, Gift, TrendingUp, ShoppingBag, Trophy, AlertTriangle, CheckCircle2, ListMusic, Ticket, PlayCircle, CreditCard, Moon, VolumeX } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { 
   useNotificationPreferences, 
   useUpdateNotificationPreferences,
@@ -27,6 +28,9 @@ interface NotificationSetting {
 }
 
 export default function NotificationsPage() {
+  const { data: session } = useSession();
+  const isArtist = session?.user?.role === 'artist' || session?.user?.role === 'label' || session?.user?.role === 'admin' || session?.user?.role === 'super_admin';
+
   const { data: preferencesData, isLoading: isLoadingPreferences } = useNotificationPreferences();
   const updatePreferences = useUpdateNotificationPreferences();
   const registerPush = useRegisterPushNotification();
@@ -36,6 +40,10 @@ export default function NotificationsPage() {
   const [isEnablingPush, setIsEnablingPush] = useState(false);
   const [emailDigestFrequency, setEmailDigestFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'never'>('weekly');
   const [marketingEmails, setMarketingEmails] = useState(true);
+  const [globalMute, setGlobalMute] = useState(false);
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
+  const [quietHoursStart, setQuietHoursStart] = useState('22:00');
+  const [quietHoursEnd, setQuietHoursEnd] = useState('07:00');
   
   const [settings, setSettings] = useState<NotificationSetting[]>([
     {
@@ -44,6 +52,15 @@ export default function NotificationsPage() {
       description: 'Get notified when artists you follow release new music',
       icon: Music2,
       email: true,
+      push: true,
+      inApp: true,
+    },
+    {
+      id: 'new_episode',
+      label: 'New Episodes',
+      description: 'When a podcast you subscribe to publishes a new episode',
+      icon: PlayCircle,
+      email: false,
       push: true,
       inApp: true,
     },
@@ -66,10 +83,28 @@ export default function NotificationsPage() {
       inApp: true,
     },
     {
+      id: 'playlist_share',
+      label: 'Playlist Shares',
+      description: 'When someone shares a playlist with you',
+      icon: ListMusic,
+      email: false,
+      push: true,
+      inApp: true,
+    },
+    {
       id: 'payments',
       label: 'Payments & Earnings',
       description: 'Payment confirmations, earnings updates, and withdrawal alerts',
       icon: DollarSign,
+      email: true,
+      push: true,
+      inApp: true,
+    },
+    {
+      id: 'ticket_purchase',
+      label: 'Ticket Purchases',
+      description: 'Booking confirmations and ticket delivery for events',
+      icon: Ticket,
       email: true,
       push: true,
       inApp: true,
@@ -93,9 +128,27 @@ export default function NotificationsPage() {
       inApp: true,
     },
     {
-      id: 'referral_updates',
-      label: 'Referral Updates',
-      description: 'When someone signs up with your referral or you earn rewards',
+      id: 'award_nomination',
+      label: 'Award Nominations',
+      description: 'When you or someone you follow is nominated for an award',
+      icon: Trophy,
+      email: true,
+      push: true,
+      inApp: true,
+    },
+    {
+      id: 'subscription_expiring',
+      label: 'Subscription Expiry',
+      description: 'Reminders before your subscription expires (7, 3, and 1 day before)',
+      icon: AlertTriangle,
+      email: true,
+      push: true,
+      inApp: true,
+    },
+    {
+      id: 'referral_reward',
+      label: 'Referral Rewards',
+      description: 'When someone signs up with your referral code and you earn credits',
       icon: Gift,
       email: true,
       push: true,
@@ -119,6 +172,25 @@ export default function NotificationsPage() {
       push: true,
       inApp: true,
     },
+    // Artist-only — shown conditionally in the UI
+    {
+      id: 'song_approved',
+      label: 'Song Approved',
+      description: 'When your submitted song passes moderation and goes live',
+      icon: CheckCircle2,
+      email: true,
+      push: true,
+      inApp: true,
+    },
+    {
+      id: 'payout_approved',
+      label: 'Payout Approved',
+      description: 'When your withdrawal request is processed and funds are disbursed',
+      icon: CreditCard,
+      email: true,
+      push: true,
+      inApp: true,
+    },
   ]);
   
   // Check push notification support on mount
@@ -133,6 +205,12 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (preferencesData?.data) {
       const apiPrefs = preferencesData.data;
+      if (typeof apiPrefs.global_mute === 'boolean') setGlobalMute(apiPrefs.global_mute);
+      if (apiPrefs.quiet_hours) {
+        setQuietHoursEnabled(apiPrefs.quiet_hours.enabled ?? false);
+        if (apiPrefs.quiet_hours.start) setQuietHoursStart(apiPrefs.quiet_hours.start);
+        if (apiPrefs.quiet_hours.end) setQuietHoursEnd(apiPrefs.quiet_hours.end);
+      }
       setSettings(prevSettings =>
         prevSettings.map(setting => {
           const pref = (apiPrefs as Record<string, unknown>)[setting.id];
@@ -168,9 +246,18 @@ export default function NotificationsPage() {
       };
     });
 
-    // Include email digest and marketing preferences
+    // weekly_digest is a boolean flag, not a channel object
+    preferences['weekly_digest'] = emailDigestFrequency !== 'never';
+    // Include full digest frequency and marketing preferences
     preferences['email_digest'] = { frequency: emailDigestFrequency };
     preferences['marketing'] = { enabled: marketingEmails };
+    // Quiet hours & global mute
+    preferences['global_mute'] = globalMute;
+    preferences['quiet_hours'] = {
+      enabled: quietHoursEnabled,
+      start: quietHoursStart,
+      end: quietHoursEnd,
+    };
     
     updatePreferences.mutate(preferences as PreferencesType);
   };
@@ -284,7 +371,7 @@ export default function NotificationsPage() {
       
       {/* Notification Settings */}
       <div className="space-y-4">
-        {settings.map((setting) => {
+        {settings.filter(s => s.id !== 'song_approved' && s.id !== 'payout_approved').map((setting) => {
           const Icon = setting.icon;
           
           return (
@@ -292,7 +379,7 @@ export default function NotificationsPage() {
               key={setting.id}
               className="flex items-start gap-4 p-4 rounded-lg border"
             >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Icon className="h-5 w-5 text-primary" />
               </div>
               
@@ -345,6 +432,67 @@ export default function NotificationsPage() {
         })}
       </div>
       
+      {/* Artist-only Notifications */}
+      {isArtist && (
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-3">Artist Notifications</h3>
+          </div>
+          {[
+            {
+              id: 'song_approved',
+              label: 'Song Approved',
+              description: 'When your submitted song passes moderation and goes live',
+              icon: CheckCircle2,
+            },
+            {
+              id: 'payout_approved',
+              label: 'Payout Approved',
+              description: 'When your withdrawal request is processed and funds are disbursed',
+              icon: CreditCard,
+            },
+          ].map((artistSetting) => {
+            const existing = settings.find(s => s.id === artistSetting.id);
+            const Icon = artistSetting.icon;
+            if (!existing) return null;
+            return (
+              <div
+                key={artistSetting.id}
+                className="flex items-start gap-4 p-4 rounded-lg border border-primary/20 bg-primary/5"
+              >
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">{artistSetting.label}</h3>
+                    <span className="px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded font-medium">Artist</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{artistSetting.description}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={existing.email} onChange={(e) => updateSetting(artistSetting.id, 'email', e.target.checked)} className="sr-only peer" />
+                    <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                    <Mail className="h-4 w-4 ml-2 text-muted-foreground" />
+                  </label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={existing.push} onChange={(e) => updateSetting(artistSetting.id, 'push', e.target.checked)} className="sr-only peer" />
+                    <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                    <Smartphone className="h-4 w-4 ml-2 text-muted-foreground" />
+                  </label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={existing.inApp} onChange={(e) => updateSetting(artistSetting.id, 'inApp', e.target.checked)} className="sr-only peer" />
+                    <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                    <Bell className="h-4 w-4 ml-2 text-muted-foreground" />
+                  </label>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="flex items-center gap-4 pt-4 border-t">
         <button
@@ -395,7 +543,7 @@ export default function NotificationsPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             {emailDigestFrequency === 'daily' && 'You\'ll receive a daily digest at 8:00 AM with your listening stats and recommendations.'}
-            {emailDigestFrequency === 'weekly' && 'You\'ll receive a weekly digest every Monday with your top songs, new releases, and activity.'}
+            {emailDigestFrequency === 'weekly' && 'You\'ll receive a weekly digest every Monday at 9:00 AM EAT (East Africa Time) with your top songs, new releases, and activity.'}
             {emailDigestFrequency === 'monthly' && 'You\'ll receive a monthly digest on the 1st with your listening report and highlights.'}
             {emailDigestFrequency === 'never' && 'You won\'t receive any email digests.'}
           </p>
@@ -426,6 +574,87 @@ export default function NotificationsPage() {
         </label>
       </div>
       
+      {/* Quiet Hours & Global Mute */}
+      <div className="space-y-4 pt-4 border-t">
+        <h3 className="font-semibold">Do Not Disturb</h3>
+
+        {/* Global Mute */}
+        <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+              <VolumeX className="h-5 w-5 text-slate-500" />
+            </div>
+            <div>
+              <h4 className="font-medium">Global Mute</h4>
+              <p className="text-sm text-muted-foreground">
+                Silence all notifications immediately — still saved, just not delivered
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={globalMute}
+              onChange={(e) => setGlobalMute(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-slate-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+          </label>
+        </div>
+
+        {/* Quiet Hours */}
+        <div className="p-4 rounded-lg border space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                <Moon className="h-5 w-5 text-indigo-500" />
+              </div>
+              <div>
+                <h4 className="font-medium">Quiet Hours</h4>
+                <p className="text-sm text-muted-foreground">
+                  Pause push &amp; in-app notifications during a time window each day
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={quietHoursEnabled}
+                onChange={(e) => setQuietHoursEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+            </label>
+          </div>
+
+          {quietHoursEnabled && (
+            <div className="grid grid-cols-2 gap-4 pl-13">
+              <div>
+                <label className="block text-sm font-medium mb-1">Start time</label>
+                <input
+                  type="time"
+                  value={quietHoursStart}
+                  onChange={(e) => setQuietHoursStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">End time</label>
+                <input
+                  type="time"
+                  value={quietHoursEnd}
+                  onChange={(e) => setQuietHoursEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Times are in East Africa Time (EAT, UTC+3). Notifications will still arrive in your inbox — delivery resumes after the window ends.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Save Button */}
       <div className="flex gap-4 pt-4 border-t">
         <button

@@ -15,6 +15,10 @@ import {
   ChevronRight,
   Menu,
   X,
+  Receipt,
+  CalendarDays,
+  AlertTriangle,
+  ArrowUpFromLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -40,6 +44,11 @@ const saccoNav: NavItem[] = [
   },
   { href: '/sacco/loans', label: 'Loans', icon: CreditCard },
   { href: '/sacco/shares', label: 'Shares', icon: Coins },
+  { href: '/sacco/contributions', label: 'Contributions', icon: Receipt },
+  { href: '/sacco/meetings', label: 'Meetings', icon: CalendarDays },
+  { href: '/sacco/groups', label: 'Groups', icon: Users },
+  { href: '/sacco/fines', label: 'Fines', icon: AlertTriangle },
+  { href: '/sacco/withdrawals', label: 'Withdrawals', icon: ArrowUpFromLine },
   { href: '/sacco/resources', label: 'Resources', icon: Warehouse },
   { href: '/sacco/analytics', label: 'Analytics', icon: BarChart3 },
   {

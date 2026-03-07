@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Crown, Star, Music2, Building2, X, AlertTriangle, RefreshCw, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Check, Crown, Star, Music2, Building2, X, AlertTriangle, RefreshCw, Wifi, WifiOff, Loader2, History, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { cn, getErrorMessage } from '@/lib/utils';
 import {
   useSubscriptionPlans,
@@ -11,6 +11,7 @@ import {
   useChangePlan,
   useToggleAutoRenew,
   usePaymentStatus,
+  useSubscriptionHistory,
   type SubscribeRequest,
   type CurrentSubscription,
 } from '@/hooks/useSubscriptions';
@@ -24,6 +25,7 @@ const PLAN_ICONS: Record<string, typeof Crown> = {
 };
 
 export default function SubscriptionPage() {
+  const [activeTab, setActiveTab] = useState<'plan' | 'history'>('plan');
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -38,6 +40,7 @@ export default function SubscriptionPage() {
   const changePlan = useChangePlan();
   const toggleAutoRenew = useToggleAutoRenew();
   const { data: paymentStatus } = usePaymentStatus(pendingPaymentId);
+  const { data: historyData, isLoading: historyLoading } = useSubscriptionHistory({ per_page: 20 });
 
   // Watch payment polling result
   useEffect(() => {
@@ -146,18 +149,96 @@ export default function SubscriptionPage() {
         </p>
       </div>
 
-      {/* Current Plan Card */}
-      {currentSub && (
-        <CurrentPlanCard
-          sub={currentSub}
-          onCancel={() => setShowCancelModal(true)}
-          onToggleAutoRenew={handleToggleAutoRenew}
-          isTogglingAutoRenew={toggleAutoRenew.isPending}
-        />
-      )}
+      {/* Expiry Warning Banner — GAP-UI-07 */}
+      {currentSub?.has_subscription &&
+        currentSub.status === 'active' &&
+        typeof currentSub.days_remaining === 'number' &&
+        currentSub.days_remaining <= 7 && (
+          <div
+            className={cn(
+              'flex items-start gap-3 p-4 rounded-lg border',
+              currentSub.days_remaining <= 1
+                ? 'bg-red-500/10 border-red-500/20'
+                : 'bg-amber-500/10 border-amber-500/20'
+            )}
+          >
+            <AlertTriangle
+              className={cn(
+                'h-5 w-5 shrink-0 mt-0.5',
+                currentSub.days_remaining <= 1 ? 'text-red-500' : 'text-amber-500'
+              )}
+            />
+            <div className="flex-1">
+              <p
+                className={cn(
+                  'font-medium',
+                  currentSub.days_remaining <= 1 ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'
+                )}
+              >
+                {currentSub.days_remaining === 0
+                  ? 'Your subscription expires today!'
+                  : currentSub.days_remaining === 1
+                    ? 'Your subscription expires tomorrow'
+                    : `Your subscription expires in ${currentSub.days_remaining} days`}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Renew now to keep your {currentSub.plan_name || currentSub.plan} benefits uninterrupted.
+              </p>
+            </div>
+            {!currentSub.auto_renew && (
+              <button
+                onClick={() => setActiveTab('plan')}
+                className="text-sm font-medium text-primary hover:underline shrink-0"
+              >
+                Renew Now
+              </button>
+            )}
+          </div>
+        )}
 
-      {/* Plans Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Tab navigation */}
+      <div className="flex border-b gap-6">
+        <button
+          onClick={() => setActiveTab('plan')}
+          className={cn(
+            'pb-3 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'plan'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Current Plan
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={cn(
+            'pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5',
+            activeTab === 'history'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <History className="h-3.5 w-3.5" />
+          Billing History
+        </button>
+      </div>
+
+      {activeTab === 'history' ? (
+        <BillingHistoryTab data={historyData?.data} isLoading={historyLoading} />
+      ) : (
+        <>
+          {/* Current Plan Card — inside tab */}
+          {currentSub && (
+            <CurrentPlanCard
+              sub={currentSub}
+              onCancel={() => setShowCancelModal(true)}
+              onToggleAutoRenew={handleToggleAutoRenew}
+              isTogglingAutoRenew={toggleAutoRenew.isPending}
+            />
+          )}
+
+          {/* Plans Grid */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans?.map((plan) => {
           const Icon = PLAN_ICONS[plan.slug] || Music2;
           const isCurrentPlan = currentSub?.plan === plan.slug;
@@ -268,7 +349,9 @@ export default function SubscriptionPage() {
             </div>
           );
         })}
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Payment Modal */}
       {selectedPlanId && (
@@ -556,6 +639,102 @@ function CurrentPlanCard({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Billing History Tab — GAP-UI-04
+// ============================================================================
+
+const STATUS_STYLES: Record<string, { icon: typeof CheckCircle; className: string }> = {
+  active:    { icon: CheckCircle, className: 'text-green-500' },
+  expired:   { icon: Clock,       className: 'text-muted-foreground' },
+  cancelled: { icon: XCircle,     className: 'text-red-500' },
+};
+
+function BillingHistoryTab({
+  data,
+  isLoading,
+}: {
+  data?: import('@/hooks/useSubscriptions').SubscriptionHistoryEntry[];
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!data?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <History className="h-10 w-10 text-muted-foreground mb-3" />
+        <p className="font-medium">No billing history yet</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Your past subscription periods will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {data.map((entry) => {
+        const style = STATUS_STYLES[entry.status] ?? STATUS_STYLES.expired;
+        const StatusIcon = style.icon;
+
+        return (
+          <div
+            key={entry.id}
+            className="flex items-start gap-4 p-4 rounded-lg border bg-card"
+          >
+            <StatusIcon className={cn('h-5 w-5 mt-0.5 shrink-0', style.className)} />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium capitalize">{entry.plan.name}</span>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 text-xs rounded-full capitalize',
+                    entry.status === 'active'
+                      ? 'bg-green-500/10 text-green-500'
+                      : entry.status === 'cancelled'
+                        ? 'bg-red-500/10 text-red-500'
+                        : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {entry.status}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {new Date(entry.started_at).toLocaleDateString()} →{' '}
+                {new Date(entry.expires_at).toLocaleDateString()}
+              </p>
+              {entry.cancellation_reason && (
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  Cancelled: {entry.cancellation_reason}
+                </p>
+              )}
+            </div>
+
+            <div className="text-right shrink-0">
+              <p className="font-medium">
+                {entry.amount_paid === 0
+                  ? 'Free'
+                  : `${entry.currency} ${Number(entry.amount_paid).toLocaleString()}`}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize mt-0.5">
+                {entry.payment_method.replace(/_/g, ' ')}
+              </p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

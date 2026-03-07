@@ -20,6 +20,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useUploadSong, useArtistAlbums, UploadSongData } from '@/hooks/useArtist';
 import { useGenres } from '@/hooks/api';
+import { useMySubscription } from '@/hooks/useSubscriptions';
+import { FeatureGate } from '@/components/subscription/FeatureGate';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -59,6 +61,7 @@ export default function UploadPage() {
   const { data: genres, isLoading: genresLoading, error: genresError } = useGenres();
   const { data: albumsData, error: albumsError } = useArtistAlbums({ per_page: 100, enabled: isAuthenticated });
   const albums = albumsData?.data || [];
+  const { data: currentSub } = useMySubscription();
 
   // Log any hook errors for debugging
   if (genresError) console.error('Genres fetch error:', genresError);
@@ -255,6 +258,16 @@ export default function UploadPage() {
         </h1>
         <p className="text-muted-foreground">Share your music with the world</p>
       </div>
+
+      {/* Upload quota gate */}
+      {currentSub && (
+        <FeatureGate
+          feature="uploads"
+          used={0}
+          limit={currentSub.limits.uploads_per_month}
+          planName={currentSub.plan_name ?? currentSub.plan}
+        />
+      )}
 
       {/* Error Alert */}
       {error && (

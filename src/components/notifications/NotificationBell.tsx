@@ -3,9 +3,55 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Loader2 } from 'lucide-react';
+import {
+  Bell,
+  Loader2,
+  Heart,
+  MessageCircle,
+  UserPlus,
+  Music,
+  ShoppingBag,
+  CreditCard,
+  Megaphone,
+  Repeat2,
+  Trophy,
+  Gift,
+  CheckCircle2,
+  AlertTriangle,
+  PlayCircle,
+  ListMusic,
+  Ticket,
+  DollarSign,
+  Mail,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUnreadCount, useNotifications, useMarkAsRead, useRealtimeNotifications, type Notification } from '@/hooks/useNotifications';
+
+const NOTIFICATION_ICONS: Record<string, LucideIcon> = {
+  like: Heart,
+  comment: MessageCircle,
+  follow: UserPlus,
+  repost: Repeat2,
+  purchase: ShoppingBag,
+  payment: CreditCard,
+  announcement: Megaphone,
+  music: Music,
+  new_episode: PlayCircle,
+  new_podcast: Music,
+  ticket: Ticket,
+  award_nomination: Trophy,
+  referral_reward: Gift,
+  song_approved: CheckCircle2,
+  subscription_expiring: AlertTriangle,
+  weekly_digest: Mail,
+  playlist_share: ListMusic,
+  tip: DollarSign,
+};
+
+function getNotificationIcon(type: Notification['type']): LucideIcon {
+  return NOTIFICATION_ICONS[type] ?? Bell;
+}
 
 interface NotificationBellProps {
   className?: string;
@@ -79,16 +125,35 @@ export function NotificationBell({ className }: NotificationBellProps) {
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border bg-popover shadow-lg z-50">
-          <div className="sticky top-0 bg-popover border-b px-4 py-3 flex items-center justify-between">
-            <h3 className="font-semibold">Notifications</h3>
-            <Link 
-              href="/notifications"
-              onClick={() => setIsOpen(false)}
-              className="text-sm text-primary hover:underline"
-            >
-              View all
-            </Link>
+        <div className="absolute right-0 mt-2 w-80 max-h-112 overflow-y-auto rounded-xl border bg-popover shadow-lg z-50">
+          <div className="sticky top-0 bg-popover border-b px-4 py-3">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-semibold">Notifications</h3>
+              <Link 
+                href="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="text-sm text-primary hover:underline"
+              >
+                View all
+              </Link>
+            </div>
+            {/* By-type unread badges */}
+            {unreadData?.by_type && Object.keys(unreadData.by_type).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {Object.entries(unreadData.by_type)
+                  .filter(([, count]) => count > 0)
+                  .slice(0, 4)
+                  .map(([type, count]) => {
+                    const Icon = getNotificationIcon(type as Notification['type']);
+                    return (
+                      <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-muted rounded-full">
+                        <Icon className="h-3 w-3" />
+                        {count}
+                      </span>
+                    );
+                  })}
+              </div>
+            )}
           </div>
           
           {isLoading ? (
@@ -102,7 +167,9 @@ export function NotificationBell({ className }: NotificationBellProps) {
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification) => (
+              {notifications.map((notification) => {
+                const TypeIcon = getNotificationIcon(notification.type);
+                return (
                 <Link
                   key={notification.id}
                   href={notification.link || '/notifications'}
@@ -113,16 +180,21 @@ export function NotificationBell({ className }: NotificationBellProps) {
                   )}
                 >
                   {notification.actor?.avatar_url ? (
-                    <Image
-                      src={notification.actor.avatar_url}
-                      alt={notification.actor.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
+                    <div className="relative shrink-0">
+                      <Image
+                        src={notification.actor.avatar_url}
+                        alt={notification.actor.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
+                      <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-muted border">
+                        <TypeIcon className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <Bell className="h-5 w-5 text-muted-foreground" />
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <TypeIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -134,7 +206,8 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
                   )}
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

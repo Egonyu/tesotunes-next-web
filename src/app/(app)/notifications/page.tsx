@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -12,6 +12,7 @@ import {
   Repeat2,
   UserPlus,
   Music,
+  Mic2,
   ShoppingBag,
   CreditCard,
   Megaphone,
@@ -19,7 +20,16 @@ import {
   Settings,
   Loader2,
   Wifi,
-  WifiOff
+  WifiOff,
+  Trophy,
+  Gift,
+  CheckCircle2,
+  AlertTriangle,
+  Mail,
+  Ticket,
+  PlayCircle,
+  DollarSign,
+  ListMusic,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotificationsWithRealtime, type Notification } from '@/hooks/useNotifications';
@@ -37,7 +47,7 @@ export default function NotificationsPage() {
     deleteNotification,
   } = useNotificationsWithRealtime({ filter });
   
-  const typeConfig = {
+  const typeConfig: Record<string, { icon: React.ElementType; color: string }> = {
     like: { icon: Heart, color: 'text-red-500 bg-red-100 dark:bg-red-950' },
     comment: { icon: MessageCircle, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950' },
     follow: { icon: UserPlus, color: 'text-green-500 bg-green-100 dark:bg-green-950' },
@@ -46,6 +56,17 @@ export default function NotificationsPage() {
     payment: { icon: CreditCard, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950' },
     announcement: { icon: Megaphone, color: 'text-orange-500 bg-orange-100 dark:bg-orange-950' },
     music: { icon: Music, color: 'text-primary bg-primary/10' },
+    // New notification types
+    new_episode: { icon: PlayCircle, color: 'text-violet-500 bg-violet-100 dark:bg-violet-950' },
+    new_podcast: { icon: Mic2, color: 'text-violet-500 bg-violet-100 dark:bg-violet-950' },
+    ticket: { icon: Ticket, color: 'text-pink-500 bg-pink-100 dark:bg-pink-950' },
+    award_nomination: { icon: Trophy, color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-950' },
+    referral_reward: { icon: Gift, color: 'text-teal-500 bg-teal-100 dark:bg-teal-950' },
+    song_approved: { icon: CheckCircle2, color: 'text-green-500 bg-green-100 dark:bg-green-950' },
+    subscription_expiring: { icon: AlertTriangle, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950' },
+    weekly_digest: { icon: Mail, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950' },
+    playlist_share: { icon: ListMusic, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950' },
+    tip: { icon: DollarSign, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950' },
   };
   
   const formatTimeAgo = (dateString: string) => {

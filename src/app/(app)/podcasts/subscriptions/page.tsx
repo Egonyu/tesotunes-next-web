@@ -12,11 +12,13 @@ import {
   ChevronRight,
   Mic,
   Loader2,
+  CheckCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useSubscribedPodcasts,
   useUnsubscribeFromPodcast,
+  useMarkPodcastListened,
   formatDuration,
   formatEpisodeDate,
 } from '@/hooks/usePodcasts';
@@ -26,6 +28,7 @@ export default function PodcastSubscriptionsPage() {
   const [search, setSearch] = useState('');
   const { data: podcasts, isLoading } = useSubscribedPodcasts();
   const unsubscribe = useUnsubscribeFromPodcast();
+  const markListened = useMarkPodcastListened();
 
   const filteredPodcasts = (podcasts || []).filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -131,6 +134,8 @@ export default function PodcastSubscriptionsPage() {
                     isNew
                     onUnsubscribe={handleUnsubscribe}
                     isUnsubscribing={unsubscribe.isPending}
+                    onMarkListened={(id) => markListened.mutate(id)}
+                    isMarkingListened={markListened.isPending}
                   />
                 ))}
               </div>
@@ -166,6 +171,8 @@ function PodcastSubscriptionCard({
   isNew,
   onUnsubscribe,
   isUnsubscribing,
+  onMarkListened,
+  isMarkingListened,
 }: {
   podcast: {
     id: number;
@@ -181,6 +188,8 @@ function PodcastSubscriptionCard({
   isNew?: boolean;
   onUnsubscribe: (id: number, title: string) => void;
   isUnsubscribing: boolean;
+  onMarkListened?: (id: number) => void;
+  isMarkingListened?: boolean;
 }) {
   const [showActions, setShowActions] = useState(false);
 
@@ -206,6 +215,21 @@ function PodcastSubscriptionCard({
                   <span className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full font-medium">
                     NEW
                   </span>
+                )}
+                {onMarkListened && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); onMarkListened(podcast.id); }}
+                    disabled={isMarkingListened}
+                    className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-muted-foreground/30 text-muted-foreground hover:text-green-600 hover:border-green-600 disabled:opacity-50 transition-colors"
+                    title="Mark all as listened"
+                  >
+                    {isMarkingListened ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <CheckCheck className="h-3 w-3" />
+                    )}
+                    Mark listened
+                  </button>
                 )}
               </div>
             </div>

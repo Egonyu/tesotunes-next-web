@@ -161,6 +161,34 @@ export function useUnsubscribeFromPodcast() {
   });
 }
 
+export function useMarkPodcastListened() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (podcastId: number | string) =>
+      apiPost(`/podcasts/${podcastId}/mark-listened`, {}),
+    onMutate: async (podcastId) => {
+      await queryClient.cancelQueries({ queryKey: ['podcasts', 'subscribed'] });
+      const previous = queryClient.getQueryData<Podcast[]>(['podcasts', 'subscribed']);
+      queryClient.setQueryData<Podcast[]>(['podcasts', 'subscribed'], (old) =>
+        old?.map(p => p.id === Number(podcastId)
+          ? { ...p, has_new_episodes: false }
+          : p
+        )
+      );
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(['podcasts', 'subscribed'], ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['podcasts', 'subscribed'] });
+    },
+  });
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================

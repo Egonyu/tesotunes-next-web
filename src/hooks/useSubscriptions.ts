@@ -229,7 +229,7 @@ export function useCancelSubscription() {
 // For async ZengaPay payments: poll until completed/failed
 // ============================================================================
 
-export function usePaymentStatus(paymentId: number | null) {
+export function useSubscriptionPaymentStatus(paymentId: number | null) {
   return useQuery({
     queryKey: ["payment", "status", paymentId],
     queryFn: () =>
@@ -247,3 +247,28 @@ export function usePaymentStatus(paymentId: number | null) {
     },
   });
 }
+
+// ============================================================================
+// useCanAccess — check if current subscription grants a named feature
+// ============================================================================
+
+type SubscriptionFeature = 'ad_free' | 'stream_with_ads' | 'offline_access' | 'high_quality' | string;
+
+export function useCanAccess(feature: SubscriptionFeature): boolean {
+  const { data: sub } = useMySubscription();
+
+  switch (feature) {
+    case 'ad_free':
+      return sub?.ad_free === true;
+    case 'stream_with_ads':
+      // Free-tier users stream with ads (i.e. they do NOT have ad_free)
+      return !sub?.ad_free;
+    case 'offline_access':
+      return sub?.offline_access === true;
+    case 'high_quality':
+      return (sub?.limits?.audio_quality_kbps ?? 0) >= 320;
+    default:
+      return false;
+  }
+}
+

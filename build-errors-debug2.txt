@@ -1,0 +1,24 @@
+
+> lineone@3.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 56s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/(app)/settings/subscription/page.tsx:227:47
+Type error: Property 'data' does not exist on type 'SubscriptionHistoryEntry[]'.
+
+  225 |
+  226 |       {activeTab === 'history' ? (
+> 227 |         <BillingHistoryTab data={historyData?.data} isLoading={historyLoading} />
+      |                                               ^
+  228 |       ) : (
+  229 |         <>
+  230 |           {/* Current Plan Card ΓÇö inside tab */}
+Next.js build worker exited with code: 1 and signal: null

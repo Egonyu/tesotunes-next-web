@@ -10,7 +10,7 @@ import {
   useCancelSubscription,
   useChangePlan,
   useToggleAutoRenew,
-  usePaymentStatus,
+  useSubscriptionPaymentStatus,
   useSubscriptionHistory,
   type SubscribeRequest,
   type CurrentSubscription,
@@ -39,7 +39,7 @@ export default function SubscriptionPage() {
   const cancelSubscription = useCancelSubscription();
   const changePlan = useChangePlan();
   const toggleAutoRenew = useToggleAutoRenew();
-  const { data: paymentStatus } = usePaymentStatus(pendingPaymentId);
+  const { data: paymentStatus } = useSubscriptionPaymentStatus(pendingPaymentId);
   const { data: historyData, isLoading: historyLoading } = useSubscriptionHistory({ per_page: 20 });
 
   // Watch payment polling result
@@ -224,7 +224,7 @@ export default function SubscriptionPage() {
       </div>
 
       {activeTab === 'history' ? (
-        <BillingHistoryTab data={historyData?.data} isLoading={historyLoading} />
+        <BillingHistoryTab data={historyData} isLoading={historyLoading} />
       ) : (
         <>
           {/* Current Plan Card — inside tab */}

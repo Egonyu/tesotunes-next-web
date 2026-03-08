@@ -10,6 +10,7 @@ import {
   useInfiniteQuery,
 } from '@tanstack/react-query';
 import { socialApi } from '@/lib/social-api';
+import { toast } from 'sonner';
 import type {
   CommentableType,
   LikeableType,
@@ -136,7 +137,10 @@ export function useToggleLike(type: LikeableType, id: number) {
       const previous = queryClient.getQueryData(queryKey);
 
       queryClient.setQueryData(queryKey, (old: unknown) => {
-        if (!old) return old;
+        if (!old) {
+          // First interaction — no cached state yet, assume "not liked" → "liked"
+          return { success: true, data: { is_liked: true, likes_count: 1 } };
+        }
         const typedOld = old as { success: boolean; data: { is_liked: boolean; likes_count: number } };
         const wasLiked = typedOld.data.is_liked;
         return {
@@ -156,9 +160,27 @@ export function useToggleLike(type: LikeableType, id: number) {
       if (context?.previous) {
         queryClient.setQueryData(['social', 'like', type, id], context.previous);
       }
+      toast.error('Failed to update like');
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['social', 'like', type, id] });
+    onSuccess: (res) => {
+      // Map backend response { data: { liked, like_count } } into cache format
+      const queryKey = ['social', 'like', type, id];
+      const raw = res as { data?: { liked?: boolean; like_count?: number }; credits_earned?: number } | undefined;
+      if (raw?.data) {
+        queryClient.setQueryData(queryKey, {
+          success: true,
+          data: {
+            is_liked: raw.data.liked ?? false,
+            likes_count: raw.data.like_count ?? 0,
+          },
+        });
+      }
+      if (raw?.credits_earned && raw.credits_earned > 0) {
+        toast.success(`+${raw.credits_earned} credit earned!`, {
+          duration: 2500,
+          icon: "❤️",
+        });
+      }
     },
   });
 }
@@ -186,22 +208,26 @@ export function useToggleFollow(type: FollowableType, id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => socialApi.toggleFollow(type, id),
-    onMutate: async () => {
+    // isCurrentlyFollowing is passed from the component via mutate(boolean)
+    mutationFn: (isCurrentlyFollowing: boolean) => {
+      return socialApi.toggleFollow(type, id, isCurrentlyFollowing);
+    },
+    onMutate: async (isCurrentlyFollowing: boolean) => {
       const queryKey = ['social', 'follow', type, id];
       await queryClient.cancelQueries({ queryKey });
 
       const previous = queryClient.getQueryData(queryKey);
 
       queryClient.setQueryData(queryKey, (old: unknown) => {
-        if (!old) return old;
+        if (!old) {
+          return { success: true, data: { is_following: !isCurrentlyFollowing, followers_count: isCurrentlyFollowing ? 0 : 1 } };
+        }
         const typedOld = old as { success: boolean; data: { is_following: boolean; followers_count: number } };
-        const wasFollowing = typedOld.data.is_following;
         return {
           ...typedOld,
           data: {
-            is_following: !wasFollowing,
-            followers_count: wasFollowing
+            is_following: !isCurrentlyFollowing,
+            followers_count: isCurrentlyFollowing
               ? Math.max(0, typedOld.data.followers_count - 1)
               : typedOld.data.followers_count + 1,
           },
@@ -214,6 +240,7 @@ export function useToggleFollow(type: FollowableType, id: number) {
       if (context?.previous) {
         queryClient.setQueryData(['social', 'follow', type, id], context.previous);
       }
+      toast.error('Failed to update follow');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['social', 'follow', type, id] });

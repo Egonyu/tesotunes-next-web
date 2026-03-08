@@ -1,10 +1,38 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
+import { useMySubscription } from "@/hooks/useSubscriptions";
 import { useRecordPlay } from "@/hooks/api";
 import { getAuthToken } from "@/lib/api";
+
+/**
+ * Maps subscription audio_quality_kbps to the quality param accepted by
+ * the backend stream endpoint.  Free-tier (128 kbps) gets "normal",
+ * Premium (320 kbps) gets "very_high", etc.
+ */
+function qualityParamFromKbps(kbps: number): string {
+  if (kbps >= 320) return "very_high";
+  if (kbps >= 256) return "high";
+  if (kbps >= 192) return "normal";
+  return "normal"; // free-tier default
+}
+
+/** Append or replace the `quality` query-string param on an audio URL. */
+function applyQualityToUrl(url: string, quality: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url, window.location.origin);
+    u.searchParams.set("quality", quality);
+    // Return pathname+search for relative, or full URL for absolute
+    return url.startsWith("http") ? u.toString() : `${u.pathname}${u.search}`;
+  } catch {
+    // If URL parsing fails, append naively
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}quality=${encodeURIComponent(quality)}`;
+  }
+}
 
 export function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -41,6 +69,24 @@ export function AudioPlayer() {
   const effectiveVolume = isMuted ? 0 : volume;
 
   const { mutate: recordPlay } = useRecordPlay();
+
+  // Subscription-based audio quality enforcement
+  const { data: subscription } = useMySubscription();
+  const qualityParam = useMemo(
+    () => qualityParamFromKbps(subscription?.limits?.audio_quality_kbps ?? 128),
+    [subscription?.limits?.audio_quality_kbps]
+  );
+
+  /** Resolve the best audio URL for a song, enforcing subscription quality. */
+  const resolveAudioUrl = useCallback(
+    (song: { audio_url?: string; stream_url?: string; file_url?: string } | null): string => {
+      if (!song) return "";
+      const raw = song.audio_url || song.stream_url || song.file_url || "";
+      if (!raw) return "";
+      return applyQualityToUrl(raw, qualityParam);
+    },
+    [qualityParam]
+  );
 
   // Record a qualified play to the backend (30s+ or 30%+ of duration)
   const maybeRecordPlay = useCallback(() => {
@@ -100,7 +146,7 @@ export function AudioPlayer() {
     const mainAudio = audioRef.current;
 
     // Prepare next track on crossfade element
-    fadeAudio.src = nextSong.audio_url || nextSong.stream_url || nextSong.file_url || "";
+    fadeAudio.src = resolveAudioUrl(nextSong);
     fadeAudio.volume = 0;
     fadeAudio.playbackRate = playbackRate;
     fadeAudio.load();
@@ -185,7 +231,7 @@ export function AudioPlayer() {
       crossfadeAudioRef.current.src = "";
     }
 
-    audioRef.current.src = currentSong.audio_url || currentSong.stream_url || currentSong.file_url || "";
+    audioRef.current.src = resolveAudioUrl(currentSong);
     audioRef.current.volume = effectiveVolume;
     audioRef.current.load();
 

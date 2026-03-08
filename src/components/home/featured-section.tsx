@@ -5,8 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import { useState } from "react";
-import type { Song } from "@/types";
+import { useState, useEffect, useCallback } from "react";
+import type { Song, PaginatedResponse } from "@/types";
 import { usePlayerStore } from "@/stores";
 
 interface FeaturedItem {
@@ -21,52 +21,61 @@ interface FeaturedItem {
 
 export function FeaturedSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const { play } = usePlayerStore();
 
-  const { data: featured, isLoading } = useQuery({
+  const { data: featured, isLoading: featuredLoading } = useQuery({
     queryKey: ["featured"],
     queryFn: async () => {
       const res = await apiGet<{ data: FeaturedItem[] }>("/featured");
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
 
-  // Fallback data for demo
-  const items: FeaturedItem[] = featured || [
-    {
-      id: 1,
-      title: "East African Vibes",
-      subtitle: "The hottest tracks from the region",
-      image_url: "/images/placeholder-event.jpg",
-      link: "/playlists/east-african-vibes",
-      type: "playlist",
+  // Fallback: fetch top songs when /featured has no data
+  const { data: topSongs, isLoading: songsLoading } = useQuery({
+    queryKey: ["featured-fallback-songs"],
+    queryFn: async () => {
+      const res = await apiGet<PaginatedResponse<Song>>("/songs", {
+        params: { limit: 5, sort: "-play_count" },
+      });
+      return res.data;
     },
-    {
-      id: 2,
-      title: "New Album Release",
-      subtitle: "Check out the latest from top artists",
-      image_url: "/images/placeholder-event.jpg",
-      link: "/albums/new-release",
-      type: "album",
-    },
-    {
-      id: 3,
-      title: "Trending Artists",
-      subtitle: "Discover new talent",
-      image_url: "/images/placeholder-event.jpg",
-      link: "/artists",
-      type: "artist",
-    },
-  ];
+    enabled: !featuredLoading && (!featured || featured.length === 0),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const nextSlide = () => {
+  const isLoading = featuredLoading || (!featured?.length && songsLoading);
+
+  // Build items from API featured data, or fall back to top songs
+  const items: FeaturedItem[] = featured?.length
+    ? featured
+    : (topSongs || []).map((song) => ({
+        id: song.id,
+        title: song.title,
+        subtitle: `${song.artist.name} · ${new Intl.NumberFormat().format(song.play_count)} plays`,
+        image_url: song.artwork_url || "",
+        link: `/songs/${song.slug}`,
+        type: "song" as const,
+        song,
+      }));
+
+  const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % items.length);
-  };
+  }, [items.length]);
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + items.length) % items.length);
   };
+
+  // Auto-advance every 6 seconds, pause on hover
+  useEffect(() => {
+    if (isPaused || items.length <= 1) return;
+    const timer = setInterval(nextSlide, 6000);
+    return () => clearInterval(timer);
+  }, [isPaused, items.length, nextSlide]);
 
   if (isLoading) {
     return (
@@ -74,10 +83,29 @@ export function FeaturedSection() {
     );
   }
 
+  if (items.length === 0) {
+    return (
+      <section className="relative h-64 md:h-80 lg:h-96 rounded-xl overflow-hidden bg-linear-to-br from-primary/20 to-primary/5">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+            Welcome to TesoTunes
+          </h2>
+          <p className="text-muted-foreground max-w-md">
+            Discover the best East African music, artists, and playlists
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   const currentItem = items[currentSlide];
 
   return (
-    <section className="relative group">
+    <section
+      className="relative group"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
       <div className="relative h-64 md:h-80 lg:h-96 rounded-xl overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">

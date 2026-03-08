@@ -21,6 +21,7 @@ import { usePlayerStore } from "@/stores";
 import type { Song, Album, Artist, Playlist } from "@/types";
 import { useMySubscription } from "@/hooks/useSubscriptions";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
+import { CreatePlaylistModal } from "@/components/music/CreatePlaylistModal";
 
 type LibraryTab = "playlists" | "songs" | "albums" | "artists";
 type ViewMode = "grid" | "list";
@@ -29,6 +30,7 @@ export default function LibraryPage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<LibraryTab>("playlists");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const { play } = usePlayerStore();
   const { data: currentSub } = useMySubscription({ enabled: !!session });
 
@@ -129,6 +131,7 @@ export default function LibraryPage() {
           playlists={playlists}
           viewMode={viewMode}
           isLoading={isLoading}
+          onCreatePlaylist={() => setShowCreatePlaylist(true)}
         />
       )}
 
@@ -156,6 +159,11 @@ export default function LibraryPage() {
           isLoading={isLoading}
         />
       )}
+
+      <CreatePlaylistModal
+        open={showCreatePlaylist}
+        onClose={() => setShowCreatePlaylist(false)}
+      />
     </div>
   );
 }
@@ -164,10 +172,12 @@ function PlaylistsSection({
   playlists,
   viewMode,
   isLoading,
+  onCreatePlaylist,
 }: {
   playlists: Playlist[];
   viewMode: ViewMode;
   isLoading: boolean;
+  onCreatePlaylist: () => void;
 }) {
   if (isLoading) {
     return <LoadingSkeleton viewMode={viewMode} />;
@@ -177,7 +187,10 @@ function PlaylistsSection({
     <div>
       {/* Create Playlist Card */}
       <div className="mb-6">
-        <button className="flex items-center gap-4 p-4 rounded-lg border-2 border-dashed hover:border-primary hover:bg-muted/50 transition-colors w-full md:w-auto">
+        <button
+          onClick={onCreatePlaylist}
+          className="flex items-center gap-4 p-4 rounded-lg border-2 border-dashed hover:border-primary hover:bg-muted/50 transition-colors w-full md:w-auto"
+        >
           <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
             <Plus className="h-6 w-6" />
           </div>

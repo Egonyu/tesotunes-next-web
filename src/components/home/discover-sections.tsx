@@ -19,6 +19,9 @@ import {
   Gift,
 } from "lucide-react";
 import { CommunityPoll } from "./community-poll";
+import { useUpcomingEvents } from "@/hooks/useEvents";
+import { useStoreProducts } from "@/hooks/useStoreProducts";
+import { useAwards } from "@/hooks/useAwards";
 
 interface DiscoverCard {
   title: string;
@@ -28,33 +31,6 @@ interface DiscoverCard {
   gradient: string;
   badge?: string;
 }
-
-const discoverCards: DiscoverCard[] = [
-  {
-    title: "Events",
-    description: "Discover concerts, festivals & live shows happening near you.",
-    href: "/events",
-    icon: <CalendarDays className="h-6 w-6" />,
-    gradient: "from-orange-500/20 to-amber-500/20 hover:from-orange-500/30 hover:to-amber-500/30",
-    badge: "Upcoming",
-  },
-  {
-    title: "Artist Stores",
-    description: "Shop merch, exclusive content & collectibles directly from your favorite artists.",
-    href: "/store",
-    icon: <Store className="h-6 w-6" />,
-    gradient: "from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30",
-    badge: "Shop Now",
-  },
-  {
-    title: "Awards",
-    description: "Nominate & vote in music award seasons. Celebrate the best of East African music.",
-    href: "/awards",
-    icon: <Trophy className="h-6 w-6" />,
-    gradient: "from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30",
-    badge: "Season Open",
-  },
-];
 
 const saccoRewards = [
   {
@@ -88,6 +64,48 @@ const saccoRewards = [
 ];
 
 export function DiscoverSections() {
+  const { data: eventsData } = useUpcomingEvents(5);
+  const { data: storeData } = useStoreProducts();
+  const { data: awardsData } = useAwards({ per_page: 1 });
+
+  const upcomingCount = Array.isArray(eventsData) ? eventsData.length : 0;
+  const productCount = Array.isArray(storeData) ? storeData.length : 0;
+  const awardsTotal = awardsData?.meta?.total
+    ?? (Array.isArray(awardsData?.data) ? awardsData.data.length : 0);
+
+  const discoverCards: DiscoverCard[] = [
+    {
+      title: "Events",
+      description: upcomingCount > 0
+        ? `${upcomingCount} upcoming event${upcomingCount > 1 ? 's' : ''} — concerts, festivals & live shows near you.`
+        : "Discover concerts, festivals & live shows happening near you.",
+      href: "/events",
+      icon: <CalendarDays className="h-6 w-6" />,
+      gradient: "from-orange-500/20 to-amber-500/20 hover:from-orange-500/30 hover:to-amber-500/30",
+      badge: upcomingCount > 0 ? `${upcomingCount} Upcoming` : "Upcoming",
+    },
+    {
+      title: "Artist Stores",
+      description: productCount > 0
+        ? `Browse ${productCount}+ merch items, exclusive content & collectibles from your favorite artists.`
+        : "Shop merch, exclusive content & collectibles directly from your favorite artists.",
+      href: "/store",
+      icon: <Store className="h-6 w-6" />,
+      gradient: "from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30",
+      badge: productCount > 0 ? `${productCount}+ Items` : "Shop Now",
+    },
+    {
+      title: "Awards",
+      description: awardsTotal > 0
+        ? `${awardsTotal} award season${awardsTotal > 1 ? 's' : ''} — nominate & vote for the best of East African music.`
+        : "Nominate & vote in music award seasons. Celebrate the best of East African music.",
+      href: "/awards",
+      icon: <Trophy className="h-6 w-6" />,
+      gradient: "from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30",
+      badge: awardsTotal > 0 ? "Season Open" : "Coming Soon",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Two-column: Community Poll + SACCO Rewards */}

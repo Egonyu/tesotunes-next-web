@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { 
+import {
   Wallet,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -62,57 +62,57 @@ export default function WalletPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPhone, setWithdrawPhone] = useState('');
-  
+
   // Fetch wallet data
   const { data: walletData, isLoading } = useQuery({
     queryKey: ['wallet'],
     queryFn: () => apiGet<WalletResponse>('/payments/wallet'),
   });
-  
+
   // Fetch recent transactions
   const { data: transactionsData } = useQuery({
     queryKey: ['wallet-transactions'],
     queryFn: () => apiGet<TransactionsResponse>('/payments/wallet/transactions?limit=5'),
   });
-  
+
   // Withdraw mutation
   const withdrawMutation = useWithdraw();
-  
+
   const wallet = walletData?.data;
   const paymentMethods = walletData?.payment_methods || [];
   const recentTransactions = transactionsData?.data || [];
-  
+
   const balance = wallet?.balance || 0;
   const pendingBalance = wallet?.pending_balance || 0;
   const monthlyTopups = wallet?.monthly_topups || 0;
   const monthlySpent = wallet?.monthly_spent || 0;
-  
+
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount.replace(/\D/g, ''));
-    
+
     if (!amount || amount < 1000) {
       toast.error('Minimum withdrawal is UGX 1,000');
       return;
     }
-    
+
     if (amount > balance) {
       toast.error('Insufficient balance');
       return;
     }
-    
+
     const cleanPhone = withdrawPhone.replace(/\D/g, '');
     if (cleanPhone.length < 9) {
       toast.error('Please enter a valid phone number');
       return;
     }
-    
+
     try {
       await withdrawMutation.mutateAsync({
         amount,
         phone: formatPhoneNumber(withdrawPhone),
         provider: 'zengapay',
       });
-      
+
       toast.success('Withdrawal initiated! You will receive your funds shortly.');
       setShowWithdrawModal(false);
       setWithdrawAmount('');
@@ -122,14 +122,14 @@ export default function WalletPage() {
       toast.error(errorMessage);
     }
   };
-  
+
   const quickActions = [
     { label: 'Top Up', icon: Plus, href: '/wallet/topup', color: 'bg-green-500' },
     { label: 'Credits', icon: Gift, href: '/credits', color: 'bg-purple-500' },
-    { label: 'History', icon: History, href: '/wallet/history', color: 'bg-blue-500' },
+    { label: 'History', icon: History, href: '/transactions', color: 'bg-blue-500' },
     { label: 'Cards', icon: CreditCard, href: '/wallet/cards', color: 'bg-orange-500' },
   ];
-  
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en', {
       month: 'short',
@@ -138,7 +138,7 @@ export default function WalletPage() {
       minute: '2-digit',
     });
   };
-  
+
   if (isLoading) {
     return (
       <div className="container py-16 flex items-center justify-center">
@@ -146,7 +146,7 @@ export default function WalletPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
@@ -154,7 +154,7 @@ export default function WalletPage() {
         <Wallet className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">My Wallet</h1>
       </div>
-      
+
       {/* Balance Card */}
       <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary via-primary to-primary/80 p-6 text-primary-foreground">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -176,7 +176,7 @@ export default function WalletPage() {
               <ArrowDownCircle className="h-5 w-5" />
               Top Up
             </Link>
-            <button 
+            <button
               onClick={() => setShowWithdrawModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
             >
@@ -186,7 +186,7 @@ export default function WalletPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Quick Actions */}
       <div className="grid grid-cols-4 gap-3">
         {quickActions.map((action) => {
@@ -205,7 +205,7 @@ export default function WalletPage() {
           );
         })}
       </div>
-      
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4 rounded-xl border bg-card">
@@ -229,7 +229,7 @@ export default function WalletPage() {
           <p className="text-xs text-muted-foreground">This month</p>
         </div>
       </div>
-      
+
       {/* Payment Methods */}
       <div className="p-4 rounded-xl border bg-card">
         <div className="flex items-center justify-between mb-4">
@@ -263,12 +263,12 @@ export default function WalletPage() {
           )}
         </div>
       </div>
-      
+
       {/* Recent Transactions */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Recent Transactions</h2>
-          <Link 
+          <Link
             href="/wallet/history"
             className="flex items-center gap-1 text-sm text-primary hover:underline"
           >
@@ -283,8 +283,8 @@ export default function WalletPage() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     'p-2 rounded-full',
-                    tx.type === 'credit' 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
+                    tx.type === 'credit'
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
                       : 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400'
                   )}>
                     {tx.type === 'credit' ? (
@@ -313,32 +313,32 @@ export default function WalletPage() {
           </div>
         )}
       </div>
-      
+
       {/* Withdraw Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
+          <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowWithdrawModal(false)}
           />
           <div className="relative bg-background rounded-2xl p-6 w-full max-w-md mx-4 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">Withdraw Funds</h2>
-              <button 
+              <button
                 onClick={() => setShowWithdrawModal(false)}
                 className="p-2 hover:bg-muted rounded-lg"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               {/* Available Balance */}
               <div className="p-4 rounded-lg bg-muted">
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <p className="text-2xl font-bold">UGX {balance.toLocaleString()}</p>
               </div>
-              
+
               {/* Amount Input */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Amount (UGX)</label>
@@ -350,7 +350,7 @@ export default function WalletPage() {
                   className="w-full px-4 py-3 rounded-lg border bg-background"
                 />
               </div>
-              
+
               {/* Phone Number */}
               <div>
                 <label className="text-sm font-medium mb-2 block">ZengaPay Mobile Money Number</label>
@@ -366,7 +366,7 @@ export default function WalletPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowWithdrawModal(false)}

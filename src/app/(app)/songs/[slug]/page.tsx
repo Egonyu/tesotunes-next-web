@@ -19,6 +19,9 @@ import {
   BarChart3,
   Clock,
   ChevronRight,
+  Coins,
+  ShoppingCart,
+  CheckCircle2,
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatDuration, formatNumber, formatDate } from "@/lib/utils";
@@ -27,7 +30,11 @@ import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
 import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
 import { DownloadGate } from "@/components/social/DownloadGate";
+import { SongPurchaseModal } from "@/components/music/SongPurchaseModal";
+import { TipModal } from "@/components/music/TipModal";
+import { useCheckPurchase } from "@/hooks/api";
 import { usePlayerStore } from "@/stores/player";
+import { useSession } from "next-auth/react";
 import type { Song } from "@/types";
 
 interface SongDetail {
@@ -171,6 +178,9 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [tipModalOpen, setTipModalOpen] = useState(false);
+  const { data: session } = useSession();
 
   const { currentSong, isPlaying, play, pause, resume, addToQueue } = usePlayerStore();
 
@@ -183,6 +193,8 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
   });
 
   const isCurrentSong = song && currentSong?.id === song.id;
+  const { data: isPurchased } = useCheckPurchase(song?.id ?? 0);
+  const isAuthenticated = !!session?.user;
 
   function handlePlay() {
     if (!song) return;
@@ -208,13 +220,19 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
     try {
       const res = await apiPost<{
         success: boolean;
-        data: { share_payload: SharePayload };
+        data: { share_payload: SharePayload; credits_earned?: number };
       }>("/shares", {
         shareable_type: "Song",
         shareable_id: song.id,
         platform: "internal",
       });
       setSharePayload(res.data.share_payload);
+      if (res.data.credits_earned && res.data.credits_earned > 0) {
+        toast.success(`+${res.data.credits_earned} credits for sharing!`, {
+          duration: 3000,
+          icon: "🔗",
+        });
+      }
     } catch {
       // Fallback: build payload client-side
       const url = `${window.location.origin}/songs/${song.slug}`;
@@ -321,6 +339,30 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 </>
               )}
             </button>
+
+            {/* Buy Button — only for paid songs not yet purchased */}
+            {!song.is_free && song.price && !isPurchased && (
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    toast.error("Please sign in to purchase songs");
+                    return;
+                  }
+                  setPurchaseModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-500 text-white rounded-full font-bold hover:bg-yellow-600 transition-colors"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                Buy for {song.price.toLocaleString()} Credits
+              </button>
+            )}
+            {!song.is_free && isPurchased && (
+              <div className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-500/10 text-green-600 rounded-full font-semibold">
+                <CheckCircle2 className="h-5 w-5" />
+                Purchased
+              </div>
+            )}
+
             <div className="grid grid-cols-4 gap-2">
               <LikeButton
                 likeableType="song"
@@ -352,6 +394,21 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 price={song.price}
               />
             </div>
+
+            {/* Tip Button */}
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.error("Please sign in to send tips");
+                  return;
+                }
+                setTipModalOpen(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-pink-500/30 text-pink-500 rounded-full font-semibold hover:bg-pink-500/10 transition-colors"
+            >
+              <Heart className="h-4 w-4" />
+              Tip Artist
+            </button>
           </div>
 
           {/* Stats Grid */}
@@ -731,6 +788,30 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
         payload={sharePayload}
         isLoading={shareLoading}
       />
+
+      {/* Purchase Modal */}
+      {song && (
+        <SongPurchaseModal
+          open={purchaseModalOpen}
+          onClose={() => setPurchaseModalOpen(false)}
+          songId={song.id}
+          songTitle={song.title}
+          artistName={song.artist.name}
+          price={song.price ?? 0}
+          artworkUrl={song.artwork_url}
+        />
+      )}
+
+      {/* Tip Modal */}
+      {song && (
+        <TipModal
+          open={tipModalOpen}
+          onClose={() => setTipModalOpen(false)}
+          recipientId={song.artist.id}
+          recipientType="artist"
+          recipientName={song.artist.name}
+        />
+      )}
     </div>
   );
 }

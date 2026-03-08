@@ -2,29 +2,13 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Users, CheckCircle, Loader2, ChevronRight } from "lucide-react";
+import { Users, CheckCircle, Loader2, ChevronRight, Vote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePolls, useVotePoll, transformPoll, type Poll } from "@/hooks/usePolls";
 import { useSession } from "next-auth/react";
 
 // Mock poll for fallback when no polls exist yet
-const mockPoll: Poll = {
-  id: 0,
-  question: "Best Ugandan song of 2025?",
-  description: "Vote for your favorite Ugandan song released in 2025",
-  options: [
-    { id: 1, text: "Sitya Loss - Eddy Kenzo", votes: 2456, percentage: 35 },
-    { id: 2, text: "Gyenvude - Sheebah", votes: 1890, percentage: 27 },
-    { id: 3, text: "Tokigeza - Fik Fameica", votes: 1567, percentage: 22 },
-    { id: 4, text: "Mulembe - Gravity Omutujju", votes: 1123, percentage: 16 },
-  ],
-  totalVotes: 7036,
-  creator: { name: "TesoTunes", avatar: "/images/logo.png", isVerified: true },
-  createdAt: "2026-01-15",
-  endsAt: "2026-03-15",
-  hasVoted: false,
-  status: "active",
-};
+// (removed — component now shows empty state when no active polls)
 
 export function CommunityPoll() {
   const { data: session } = useSession();
@@ -33,19 +17,20 @@ export function CommunityPoll() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [localVoted, setLocalVoted] = useState(false);
 
-  // Get the most recent active poll, or fallback to mock
-  const poll: Poll = useMemo(() => {
+  // Get the most recent active poll from API — no mock fallback
+  const poll: Poll | null = useMemo(() => {
     if (pollsData && Array.isArray(pollsData) && pollsData.length > 0) {
       return transformPoll(pollsData[0] as unknown as Record<string, unknown>);
     }
-    return mockPoll;
+    return null;
   }, [pollsData]);
 
-  const hasVoted = poll.hasVoted || localVoted;
-  const showResults = hasVoted || poll.status === "closed";
+  const hasVoted = poll?.hasVoted || localVoted;
+  const showResults = hasVoted || poll?.status === "closed";
 
   // Optimistic local state for after voting
   const displayOptions = useMemo(() => {
+    if (!poll) return [];
     if (!localVoted || !selectedOption) return poll.options;
 
     const updated = poll.options.map((opt) => ({
@@ -57,12 +42,12 @@ export function CommunityPoll() {
       ...opt,
       percentage: total > 0 ? Math.round((opt.votes / total) * 100) : 0,
     }));
-  }, [poll.options, localVoted, selectedOption]);
+  }, [poll?.options, localVoted, selectedOption]);
 
   const totalVotes = displayOptions.reduce((sum, o) => sum + o.votes, 0);
 
   const handleVote = (optionId: number) => {
-    if (hasVoted || poll.status === "closed") return;
+    if (!poll || hasVoted || poll.status === "closed") return;
 
     if (!session) {
       // Not logged in — just select visually
@@ -82,6 +67,16 @@ export function CommunityPoll() {
     return (
       <div className="rounded-xl border bg-card p-6 flex items-center justify-center min-h-[200px]">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!poll) {
+    return (
+      <div className="rounded-xl border bg-card p-6 flex flex-col items-center justify-center min-h-[200px] text-muted-foreground">
+        <Vote className="h-8 w-8 mb-2 opacity-50" />
+        <p className="text-sm font-medium">No active polls</p>
+        <p className="text-xs mt-1">Check back later for community polls</p>
       </div>
     );
   }

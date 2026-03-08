@@ -7,14 +7,14 @@
 
 ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
   Creating an optimized production build ...
-Γ£ô Compiled successfully in 47s
+Γ£ô Compiled successfully in 44s
   Running TypeScript ...
   Collecting page data using 7 workers ...
-  Generating static pages using 7 workers (0/177) ...
-  Generating static pages using 7 workers (44/177) 
-  Generating static pages using 7 workers (88/177) 
-  Generating static pages using 7 workers (132/177) 
-Γ£ô Generating static pages using 7 workers (177/177) in 8.5s
+  Generating static pages using 7 workers (0/178) ...
+  Generating static pages using 7 workers (44/178) 
+  Generating static pages using 7 workers (88/178) 
+  Generating static pages using 7 workers (133/178) 
+Γ£ô Generating static pages using 7 workers (178/178) in 6.9s
   Finalizing page optimization ...
 
 Route (app)
@@ -115,6 +115,7 @@ Route (app)
 Γö£ Γùï /artist/promotions/create
 Γö£ Γùï /artist/promotions/orders
 Γö£ Γùï /artist/referrals
+Γö£ Γùï /artist/royalty-splits
 Γö£ Γùï /artist/settings
 Γö£ Γùï /artist/songs
 Γö£ ╞Æ /artist/songs/[id]

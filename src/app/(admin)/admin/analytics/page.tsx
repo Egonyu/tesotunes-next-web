@@ -18,6 +18,7 @@ import {
   Activity,
   Server,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -89,22 +90,25 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [activeTab, setActiveTab] = useState<'platform' | 'api'>('platform');
 
-  const { data: analyticsData, isLoading } = useQuery({
+  const { data: analyticsData, isLoading, isError: platformError, refetch: refetchPlatform } = useQuery({
     queryKey: ['admin-analytics', timeRange],
     queryFn: () => apiGet<AnalyticsResponse>('/admin/analytics', { params: { range: timeRange } }),
     enabled: activeTab === 'platform',
+    retry: 1,
   });
 
-  const { data: apiUsageData, isLoading: apiUsageLoading } = useQuery({
+  const { data: apiUsageData, isLoading: apiUsageLoading, isError: apiUsageError, refetch: refetchApiUsage } = useQuery({
     queryKey: ['admin-analytics', 'api-usage', timeRange],
     queryFn: () => apiGet<{ data: ApiUsageData }>('/admin/analytics/api-usage', { params: { range: timeRange } }),
     enabled: activeTab === 'api',
+    retry: 1,
   });
 
-  const { data: topUsersData, isLoading: topUsersLoading } = useQuery({
+  const { data: topUsersData, isLoading: topUsersLoading, isError: topUsersError, refetch: refetchTopUsers } = useQuery({
     queryKey: ['admin-analytics', 'top-users', timeRange],
     queryFn: () => apiGet<{ data: TopUserEntry[] }>('/admin/analytics/top-users', { params: { range: timeRange } }),
     enabled: activeTab === 'api',
+    retry: 1,
   });
 
   const analytics = analyticsData?.data;
@@ -184,7 +188,26 @@ export default function AnalyticsPage() {
       </div>
 
       {activeTab === 'platform' && (<>
+      {/* Platform Error State */}
+      {platformError && (
+        <div className="flex flex-col items-center justify-center p-8 rounded-xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20">
+          <AlertTriangle className="h-10 w-10 text-red-500 mb-3" />
+          <h3 className="font-semibold text-lg mb-1">Failed to load analytics</h3>
+          <p className="text-sm text-muted-foreground mb-4 text-center">
+            Could not connect to the analytics API. Make sure the backend is running.
+          </p>
+          <button
+            onClick={() => refetchPlatform()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Metrics */}
+      {!platformError && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric) => {
           const Icon = iconMap[metric.icon] ?? BarChart3;
@@ -210,7 +233,10 @@ export default function AnalyticsPage() {
         })}
       </div>
 
+      )}
+
       {/* Charts Row */}
+      {!platformError && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Streams Chart */}
         <div className="p-6 rounded-xl border bg-card">
@@ -266,7 +292,10 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      )}
+
       {/* Bottom Row */}
+      {!platformError && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Countries */}
         <div className="p-6 rounded-xl border bg-card">
@@ -326,6 +355,7 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
+    )}
     </>
     )}
 
@@ -335,6 +365,8 @@ export default function AnalyticsPage() {
         usage={apiUsageData?.data}
         topUsers={topUsersData?.data}
         isLoading={apiUsageLoading || topUsersLoading}
+        isError={apiUsageError || topUsersError}
+        onRetry={() => { refetchApiUsage(); refetchTopUsers(); }}
       />
     )}
     </div>
@@ -346,15 +378,40 @@ function ApiUsageTab({
   usage,
   topUsers,
   isLoading,
+  isError,
+  onRetry,
 }: {
   usage?: ApiUsageData;
   topUsers?: TopUserEntry[];
   isLoading: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
 }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 rounded-xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20">
+        <AlertTriangle className="h-10 w-10 text-red-500 mb-3" />
+        <h3 className="font-semibold text-lg mb-1">Failed to load API usage data</h3>
+        <p className="text-sm text-muted-foreground mb-4 text-center">
+          Could not connect to the API usage endpoints. Make sure the backend is running.
+        </p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
+        )}
       </div>
     );
   }

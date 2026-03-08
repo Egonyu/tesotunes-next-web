@@ -8,6 +8,8 @@ import { apiGet } from "@/lib/api";
 import { usePlayerStore } from "@/stores";
 import { formatNumber } from "@/lib/utils";
 import type { Song, PaginatedResponse } from "@/types";
+import { useToggleLike, useLikeStatus } from "@/hooks/useSocial";
+import { useSession } from "next-auth/react";
 
 interface SongGridProps {
   type: "trending" | "new" | "recent" | "top";
@@ -146,9 +148,7 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                       <Download className="h-4 w-4" />
                     </a>
                   )}
-                  <button className="p-1 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Heart className="h-4 w-4" />
-                  </button>
+                  <SongLikeButton songId={song.id} />
                   <button className="p-1 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
@@ -159,5 +159,31 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
         );
       })}
     </div>
+  );
+}
+
+function SongLikeButton({ songId }: { songId: number }) {
+  const { data: session } = useSession();
+  const { data: likeData } = useLikeStatus('song', songId, {
+    enabled: !!session?.user,
+  });
+  const toggleLike = useToggleLike('song', songId);
+  const isLiked = (likeData as { data?: { is_liked?: boolean } })?.data?.is_liked;
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        if (session?.user) toggleLike.mutate();
+      }}
+      className={`p-1 transition-colors ${
+        isLiked
+          ? 'text-red-500 hover:text-red-600'
+          : 'text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100'
+      }`}
+      title={isLiked ? 'Unlike' : 'Like'}
+    >
+      <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+    </button>
   );
 }

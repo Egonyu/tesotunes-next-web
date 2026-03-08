@@ -111,6 +111,24 @@ export default function SongsPage() {
     onError: () => toast.error('Failed to delete song'),
   });
 
+  const approveSingleMutation = useMutation({
+    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/approve`),
+    onSuccess: () => {
+      toast.success('Song approved');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to approve song'),
+  });
+
+  const rejectSingleMutation = useMutation({
+    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/reject`, { reason: 'Rejected by admin' }),
+    onSuccess: () => {
+      toast.success('Song rejected');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to reject song'),
+  });
+
   const songs = songsData?.data || [];
   const meta = songsData?.meta;
   const stats = statsData?.data;
@@ -345,7 +363,27 @@ export default function SongsPage() {
                     {new Date(song.created_at).toLocaleDateString()}
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
+                      {(song.status === 'pending' || song.status === 'pending_review') && (
+                        <>
+                          <button
+                            onClick={() => approveSingleMutation.mutate(song.id)}
+                            disabled={approveSingleMutation.isPending}
+                            className="p-2 hover:bg-green-50 dark:hover:bg-green-950 rounded-lg text-green-600 disabled:opacity-50"
+                            title="Approve"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => rejectSingleMutation.mutate(song.id)}
+                            disabled={rejectSingleMutation.isPending}
+                            className="p-2 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg text-yellow-600 disabled:opacity-50"
+                            title="Reject"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                       <Link
                         href={`/admin/songs/${song.id}`}
                         className="p-2 hover:bg-muted rounded-lg"

@@ -7,14 +7,14 @@
 
 ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
   Creating an optimized production build ...
-Γ£ô Compiled successfully in 47s
+Γ£ô Compiled successfully in 63s
   Running TypeScript ...
   Collecting page data using 7 workers ...
-  Generating static pages using 7 workers (0/177) ...
-  Generating static pages using 7 workers (44/177) 
-  Generating static pages using 7 workers (88/177) 
-  Generating static pages using 7 workers (132/177) 
-Γ£ô Generating static pages using 7 workers (177/177) in 8.5s
+  Generating static pages using 7 workers (0/180) ...
+  Generating static pages using 7 workers (45/180) 
+  Generating static pages using 7 workers (90/180) 
+  Generating static pages using 7 workers (135/180) 
+Γ£ô Generating static pages using 7 workers (180/180) in 10.6s
   Finalizing page optimization ...
 
 Route (app)
@@ -45,6 +45,7 @@ Route (app)
 Γö£ ╞Æ /admin/events/[id]/edit
 Γö£ Γùï /admin/events/new
 Γö£ Γùï /admin/feature-flags
+Γö£ Γùï /admin/featured
 Γö£ Γùï /admin/forums
 Γö£ Γùï /admin/forums/categories/create
 Γö£ Γùï /admin/genres
@@ -95,6 +96,7 @@ Route (app)
 Γö£ ╞Æ /api/auth/register
 Γö£ Γùï /artist
 Γö£ Γùï /artist/albums
+Γö£ ╞Æ /artist/albums/[id]/edit
 Γö£ Γùï /artist/albums/create
 Γö£ Γùï /artist/analytics
 Γö£ Γùï /artist/campaigns
@@ -115,6 +117,7 @@ Route (app)
 Γö£ Γùï /artist/promotions/create
 Γö£ Γùï /artist/promotions/orders
 Γö£ Γùï /artist/referrals
+Γö£ Γùï /artist/royalty-splits
 Γö£ Γùï /artist/settings
 Γö£ Γùï /artist/songs
 Γö£ ╞Æ /artist/songs/[id]
@@ -252,6 +255,7 @@ Route (app)
 Γö£ Γùï /terms
 Γö£ Γùï /tickets
 Γö£ ╞Æ /tickets/[id]
+Γö£ Γùï /transactions
 Γö£ ╞Æ /user/[username]
 Γö£ Γùï /verify-email
 Γö£ Γùï /wallet

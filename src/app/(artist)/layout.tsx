@@ -37,6 +37,7 @@ const navItems = [
   { href: '/artist/upload', label: 'Upload', icon: Upload },
   { href: '/artist/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/artist/earnings', label: 'Earnings', icon: Wallet },
+  { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users },
   { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
   { href: '/artist/fan-club', label: 'Fan Club', icon: Crown },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },

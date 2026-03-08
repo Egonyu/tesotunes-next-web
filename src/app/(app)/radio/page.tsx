@@ -59,7 +59,7 @@ function RadioCard({
 
 export default function RadioPage() {
   const [playingStation, setPlayingStation] = useState<string | null>(null);
-  const { data: stations = [], isLoading } = useRadioStations();
+  const { data: stations = [], isLoading, isError } = useRadioStations();
   const { data: featured } = useFeaturedStation();
 
   const featuredStation = featured || stations[0];
@@ -68,6 +68,25 @@ export default function RadioPage() {
     return (
       <div className="container mx-auto py-8 px-4 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (stations.length === 0) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center gap-3 mb-8">
+          <RadioIcon className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Radio</h1>
+            <p className="text-muted-foreground">Live radio stations curated for you</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <RadioIcon className="h-16 w-16 mb-4 opacity-50" />
+          <p className="text-lg font-medium">No radio stations available</p>
+          <p className="text-sm mt-1">Radio stations will appear here once configured</p>
+        </div>
       </div>
     );
   }
@@ -95,10 +114,10 @@ export default function RadioPage() {
             </span>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-            {featuredStation?.name || 'TesoTunes Hits'}
+            {featuredStation?.name || 'Now Playing'}
           </h2>
           <p className="text-white/80 mb-6">
-            {featuredStation?.description || 'The hottest tracks from around the world'}
+            {featuredStation?.description || 'Tune in to live radio'}
           </p>
           <div className="flex items-center gap-4">
             <button
@@ -121,7 +140,7 @@ export default function RadioPage() {
             </button>
             <button className="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-white/50 text-white font-semibold hover:bg-white/10 transition-colors">
               <Volume2 className="h-5 w-5" />
-              {featuredStation?.listeners?.toLocaleString() || '12.5k'} listening
+              {featuredStation?.listeners?.toLocaleString() || '0'} listening
             </button>
           </div>
         </div>

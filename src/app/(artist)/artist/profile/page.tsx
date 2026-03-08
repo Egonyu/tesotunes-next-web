@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Camera,
@@ -16,11 +16,21 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useArtistProfile, useUpdateArtistProfile } from '@/hooks/useArtist';
+import {
+  useArtistProfile,
+  useUpdateArtistProfile,
+  useUpdateArtistAvatar,
+  useUpdateArtistBanner,
+} from '@/hooks/useArtist';
 
 export default function ArtistProfilePage() {
   const { data: profile, isLoading } = useArtistProfile();
   const updateProfile = useUpdateArtistProfile();
+  const updateAvatar = useUpdateArtistAvatar();
+  const updateBanner = useUpdateArtistBanner();
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     stage_name: '',
@@ -38,6 +48,44 @@ export default function ArtistProfilePage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be less than 10MB');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    try {
+      await updateAvatar.mutateAsync(file);
+      toast.success('Avatar updated');
+    } catch {
+      toast.error('Failed to upload avatar');
+    }
+  };
+
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be less than 10MB');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    try {
+      await updateBanner.mutateAsync(file);
+      toast.success('Banner updated');
+    } catch {
+      toast.error('Failed to upload banner');
+    }
+  };
 
   // Populate form when profile loads
   useEffect(() => {
@@ -137,14 +185,33 @@ export default function ArtistProfilePage() {
         {profile?.banner && (
           <Image src={profile.banner} alt="Cover" fill className="object-cover" />
         )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-          <Camera className="h-8 w-8 text-white" />
-        </div>
+        <button
+          type="button"
+          onClick={() => bannerInputRef.current?.click()}
+          disabled={updateBanner.isPending}
+          className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-wait"
+        >
+          {updateBanner.isPending ? (
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+          ) : (
+            <div className="flex flex-col items-center gap-1">
+              <Camera className="h-8 w-8 text-white" />
+              <span className="text-xs text-white font-medium">Change Banner</span>
+            </div>
+          )}
+        </button>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleBannerChange}
+        />
       </div>
 
       {/* Avatar & Info */}
       <div className="flex items-end gap-6 -mt-12 ml-6 relative z-10">
-        <div className="relative">
+        <div className="relative group">
           <div className="h-24 w-24 rounded-full border-4 border-background overflow-hidden bg-muted">
             {profile?.avatar ? (
               <Image src={profile.avatar} alt="Avatar" width={96} height={96} className="object-cover" />
@@ -154,6 +221,25 @@ export default function ArtistProfilePage() {
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={updateAvatar.isPending}
+            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-wait"
+          >
+            {updateAvatar.isPending ? (
+              <Loader2 className="h-5 w-5 text-white animate-spin" />
+            ) : (
+              <Camera className="h-5 w-5 text-white" />
+            )}
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
         <div className="flex-1 pb-1">
           <div className="flex items-center gap-2">

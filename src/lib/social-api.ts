@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import { API_ORIGIN } from '@/lib/api-config';
 import type {
   CommentableType,
   LikeableType,
@@ -36,6 +37,42 @@ interface LaravelPaginatedResponse<T> {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RawComment = Record<string, any>;
+
+/** Transform a raw backend comment into the SocialComment shape the frontend expects */
+function mapComment(raw: RawComment): SocialComment {
+  const user = raw.user ?? {};
+  const avatarPath: string | null = user.avatar ?? null;
+  const avatarUrl = avatarPath
+    ? (avatarPath.startsWith('http') ? avatarPath : `${API_ORIGIN}/storage/${avatarPath}`)
+    : null;
+
+  return {
+    id: raw.id,
+    uuid: raw.uuid,
+    content: raw.content ?? '',
+    user: {
+      id: user.id,
+      name: user.display_name || user.name || 'Unknown',
+      username: user.username,
+      avatar_url: avatarUrl,
+      is_verified: Boolean(user.is_verified),
+    },
+    parent_id: raw.parent_id ?? null,
+    likes_count: raw.likes_count ?? 0,
+    replies_count: raw.replies_count ?? 0,
+    is_liked: Boolean(raw.is_liked),
+    is_edited: raw.updated_at !== raw.created_at && Boolean(raw.content),
+    status: raw.status ?? 'approved',
+    replies: Array.isArray(raw.replies)
+      ? raw.replies.map(mapComment)
+      : [],
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+  };
+}
+
 export const socialApi = {
   // ========================================================================
   // Comments — /api/comments/*
@@ -47,14 +84,14 @@ export const socialApi = {
     id: number,
     params?: { page?: number; per_page?: number; sort?: 'latest' | 'oldest' | 'popular' }
   ): Promise<CommentsResponse> {
-    const raw = await apiGet<LaravelPaginatedResponse<SocialComment>>(
+    const raw = await apiGet<LaravelPaginatedResponse<RawComment>>(
       `/comments/${type}/${id}`,
       { params }
     );
 
-    // Reshape Laravel paginator into the CommentsResponse the hooks expect
+    // Reshape Laravel paginator + transform raw comments into SocialComment shape
     return {
-      data: raw.data?.data ?? [],
+      data: (raw.data?.data ?? []).map(mapComment),
       meta: {
         current_page: raw.data?.current_page ?? 1,
         last_page: raw.data?.last_page ?? 1,
@@ -98,12 +135,17 @@ export const socialApi = {
     return apiPost<LikeToggleResponse>(`/like/${type}/${id}`);
   },
 
-  /** Check like status for an entity (derived from toggle response cache) */
-  getLikeStatus(type: LikeableType, id: number) {
-    // Backend doesn't have a dedicated status endpoint;
-    // status is embedded in entity responses (is_liked field).
-    // Return a stub that consumers can use as fallback.
-    return apiPost<LikeStatusResponse>(`/like/${type}/${id}`);
+  /** Check like status for an entity */
+  async getLikeStatus(type: LikeableType, id: number): Promise<LikeStatusResponse> {
+    try {
+      return await apiGet<LikeStatusResponse>(`/like/${type}/${id}/status`);
+    } catch {
+      // Returns default for unauthenticated users (401) or other errors
+      return {
+        success: true,
+        data: { is_liked: false, likes_count: 0 },
+      };
+    }
   },
 
   // ========================================================================
@@ -111,19 +153,23 @@ export const socialApi = {
   // ========================================================================
 
   /** Toggle follow on any followable entity */
-  toggleFollow(type: FollowableType, id: number) {
-    if (type === 'artist') {
-      return apiPost<FollowToggleResponse>(`/artists/${id}/follow`);
+  toggleFollow(type: FollowableType, id: number, isCurrentlyFollowing: boolean) {
+    if (isCurrentlyFollowing) {
+      return apiDelete<FollowToggleResponse>(`/artists/${id}/follow`);
     }
-    // Fallback for non-artist types — may not be implemented yet
     return apiPost<FollowToggleResponse>(`/artists/${id}/follow`);
   },
 
   /** Check follow status for an entity */
-  getFollowStatus(type: FollowableType, id: number) {
-    if (type === 'artist') {
-      return apiGet<FollowStatusResponse>(`/artists/${id}/follow/status`);
+  async getFollowStatus(type: FollowableType, id: number): Promise<FollowStatusResponse> {
+    try {
+      if (type === 'artist') {
+        return await apiGet<FollowStatusResponse>(`/artists/${id}/follow/status`);
+      }
+      return await apiGet<FollowStatusResponse>(`/artists/${id}/follow/status`);
+    } catch {
+      // Returns default for unauthenticated users (401) or other errors
+      return { success: true, data: { is_following: false, followers_count: 0 } };
     }
-    return apiGet<FollowStatusResponse>(`/artists/${id}/follow/status`);
   },
 };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,7 +16,8 @@ import {
   Calendar,
   DollarSign,
   Info,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUploadSong, useArtistAlbums, UploadSongData } from '@/hooks/useArtist';
@@ -570,6 +572,21 @@ export default function UploadPage() {
             </div>
           </div>
         )}
+
+        {/* Collaborator Split Note */}
+        <div className="p-4 rounded-xl border bg-card space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            <span className="font-medium">Revenue Splits</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Want to share revenue with collaborators? After uploading, add royalty splits from the{' '}
+            <Link href="/artist/royalty-splits" className="text-primary hover:underline">
+              Royalty Splits
+            </Link>{' '}
+            page.
+          </p>
+        </div>
 
         {/* Review Note */}
         <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">

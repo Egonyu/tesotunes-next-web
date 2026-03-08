@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+import { toast } from "sonner";
 import type { Song, Artist, Album, Genre, Playlist, PaginatedResponse } from "@/types";
 
 // ============================================================================
@@ -48,7 +49,15 @@ export function useRecordPlay() {
       duration_played: number;
       total_duration?: number;
       completed?: boolean;
-    }) => apiPost(`/player/record-play`, data),
+    }) => apiPost<{ credits_earned?: number; message?: string }>(`/player/record-play`, data),
+    onSuccess: (res) => {
+      if (res?.credits_earned && res.credits_earned > 0) {
+        toast.success(`+${res.credits_earned} credits earned for listening!`, {
+          duration: 3000,
+          icon: "🎵",
+        });
+      }
+    },
   });
 }
 
@@ -374,5 +383,75 @@ export function useLibrary() {
       savedAlbumsQuery.error ||
       followedArtistsQuery.error,
   };
+}
+
+// ============================================================================
+// Song Purchase Hooks
+// ============================================================================
+
+export interface PurchaseResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    purchase_id: number;
+    credits_deducted: number;
+    credits_remaining: number;
+  };
+}
+
+export function useCheckPurchase(songId: number) {
+  return useQuery({
+    queryKey: ["song", "purchase", songId],
+    queryFn: () =>
+      apiGet<{ data: { purchased: boolean } }>(`/songs/${songId}/purchase-status`).then(
+        (res) => res.data.purchased
+      ),
+    enabled: songId > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePurchaseSong() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (songId: number) =>
+      apiPost<PurchaseResponse>(`/songs/${songId}/purchase`),
+    onSuccess: (_, songId) => {
+      queryClient.invalidateQueries({ queryKey: ["song", "purchase", songId] });
+      queryClient.invalidateQueries({ queryKey: ["credits"] });
+      queryClient.invalidateQueries({ queryKey: ["library"] });
+    },
+  });
+}
+
+// ============================================================================
+// Tip Hooks
+// ============================================================================
+
+export interface TipResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    tip_id: number;
+    amount: number;
+    credits_remaining: number;
+  };
+}
+
+export function useSendTip() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      recipient_id: number;
+      recipient_type: 'artist' | 'song';
+      amount: number;
+      message?: string;
+    }) => apiPost<TipResponse>("/tips", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credits"] });
+    },
+  });
 }
 

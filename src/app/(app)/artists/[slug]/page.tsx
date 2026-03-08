@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +17,8 @@ import {
   CheckCircle,
   Loader2,
   Shuffle,
-  ExternalLink
+  ExternalLink,
+  Heart,
 } from "lucide-react";
 import { useArtist, useArtistSongs, usePublicArtistAlbums } from "@/hooks/api";
 import { usePlayerStore } from "@/stores";
@@ -25,6 +27,10 @@ import type { Song } from "@/types";
 import { FollowButton } from "@/components/social/FollowButton";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
+import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
+import { TipModal } from "@/components/music/TipModal";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 // Helper to check if URL is external (for unoptimized loading)
 function isExternalUrl(url: string | undefined | null): boolean {
@@ -35,6 +41,9 @@ function isExternalUrl(url: string | undefined | null): boolean {
 export default function ArtistPage() {
   const params = useParams();
   const slug = params?.slug as string;
+  const [tipModalOpen, setTipModalOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const { data: session } = useSession();
 
   const { data: artist, isLoading: artistLoading, error: artistError } = useArtist(slug);
   const { data: songsData, isLoading: songsLoading } = useArtistSongs(artist?.id || 0, { enabled: !!artist?.id });
@@ -236,13 +245,25 @@ export default function ArtistPage() {
 
         {/* Share Button */}
         <button
-          onClick={() => navigator.share?.({
-            title: artist.name,
-            url: window.location.href
-          }).catch(() => {})}
+          onClick={() => setShareOpen(true)}
           className="p-3 text-muted-foreground hover:text-foreground"
         >
           <Share2 className="h-6 w-6" />
+        </button>
+
+        {/* Tip Button */}
+        <button
+          onClick={() => {
+            if (!session?.user) {
+              toast.error("Please sign in to send tips");
+              return;
+            }
+            setTipModalOpen(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-pink-500/30 text-pink-500 font-semibold hover:bg-pink-500/10 transition-colors"
+        >
+          <Heart className="h-5 w-5" />
+          <span className="hidden sm:inline">Tip</span>
         </button>
 
         <button className="p-3 text-muted-foreground hover:text-foreground">
@@ -456,6 +477,36 @@ export default function ArtistPage() {
           title={`Comments on ${artist.name}`}
         />
       </section>
+
+      {/* Tip Modal */}
+      <TipModal
+        open={tipModalOpen}
+        onClose={() => setTipModalOpen(false)}
+        recipientId={artist.id}
+        recipientType="artist"
+        recipientName={artist.name}
+      />
+
+      {/* Share Bottom Sheet */}
+      <ShareBottomSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={artist ? {
+          share_url: typeof window !== 'undefined' ? window.location.href : '',
+          og_title: artist.name,
+          og_description: artist.bio || `Listen to ${artist.name} on TesoTunes`,
+          og_image: avatarUrl || null,
+          caption: `🎵 ${artist.name}\n\nListen on TesoTunes\n\n${typeof window !== 'undefined' ? window.location.href : ''}`,
+          platform_links: {
+            copy: typeof window !== 'undefined' ? window.location.href : '',
+            whatsapp: `https://wa.me/?text=${encodeURIComponent(`🎵 ${artist.name} — Listen on TesoTunes ${typeof window !== 'undefined' ? window.location.href : ''}`)}`,
+            twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`🎵 ${artist.name} — Listen on TesoTunes`)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`,
+            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`,
+            telegram: `https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(`🎵 ${artist.name} — Listen on TesoTunes`)}`,
+            instagram: null,
+          },
+        } : null}
+      />
     </div>
   );
 }

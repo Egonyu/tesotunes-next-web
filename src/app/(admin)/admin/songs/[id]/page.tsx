@@ -10,9 +10,11 @@ import { useState } from 'react';
 import {
   Edit, Trash2, Music, Play, Pause, Eye, ArrowUpRight,
   Calendar, TrendingUp, Clock, Disc, User, Tag, Heart,
-  Download, Share2, BarChart2, Headphones, Volume2, VolumeX
+  Download, Share2, BarChart2, Headphones, Volume2, VolumeX,
+  CheckCircle, XCircle,
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
+import { toast } from 'sonner';
 
 interface Song {
   id: string;
@@ -72,6 +74,8 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -109,6 +113,28 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
     },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () => apiPost(`/admin/songs/${id}/approve`),
+    onSuccess: () => {
+      toast.success('Song approved and published');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to approve song'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (reason: string) => apiPost(`/admin/songs/${id}/reject`, { reason }),
+    onSuccess: () => {
+      toast.success('Song rejected');
+      setShowRejectDialog(false);
+      setRejectReason('');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to reject song'),
   });
 
   if (isLoading) {
@@ -440,6 +466,37 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Song Approval (for pending songs) */}
+          {(s.status === 'pending' || s.status === 'pending_review') && (
+            <div className="rounded-xl border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 p-6">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
+                <Clock className="h-5 w-5" />
+                Pending Review
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This song is waiting for admin approval before it can be published.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => approveMutation.mutate()}
+                  disabled={approveMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={rejectMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reject
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Quick Actions */}
           <div className="rounded-xl border bg-card p-6">
             <h3 className="font-semibold mb-4">Quick Actions</h3>
@@ -560,6 +617,39 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
         isLoading={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate()}
       />
+
+      {/* Reject Reason Dialog */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRejectDialog(false)}>
+          <div className="bg-card border rounded-xl p-6 w-full max-w-md mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-2">Reject Song</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please provide a reason for rejecting &ldquo;{s.title}&rdquo;. The artist will be notified.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection (e.g., low audio quality, inappropriate content...)"
+              className="w-full px-3 py-2 border rounded-lg bg-background resize-none h-24 text-sm"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => { setShowRejectDialog(false); setRejectReason(''); }}
+                className="px-4 py-2 border rounded-lg hover:bg-muted text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => rejectMutation.mutate(rejectReason)}
+                disabled={rejectMutation.isPending || !rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
+              >
+                {rejectMutation.isPending ? 'Rejecting...' : 'Reject Song'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

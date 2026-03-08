@@ -118,8 +118,8 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
 }
 
 export const authConfig: NextAuthOptions = {
-  // Enable debug logging in development (set NEXTAUTH_DEBUG=true on Vercel to enable in production)
-  debug: process.env.NEXTAUTH_DEBUG === "true" || !isProduction,
+  // Enable debug logging only when explicitly requested (set NEXTAUTH_DEBUG=true)
+  debug: process.env.NEXTAUTH_DEBUG === "true",
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days

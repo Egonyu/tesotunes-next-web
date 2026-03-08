@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ListMusic, Plus, Globe, Lock } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Playlist, PaginatedResponse } from "@/types";
+import { CreatePlaylistButton } from "./create-playlist-button";
 
 export const dynamic = "force-dynamic";
 
@@ -151,10 +152,7 @@ export default function PlaylistsPage() {
             Discover curated playlists for every mood
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-          <Plus className="h-4 w-4" />
-          Create Playlist
-        </button>
+        <CreatePlaylistButton />
       </div>
 
       {/* Featured Playlists */}

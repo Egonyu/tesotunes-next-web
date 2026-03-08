@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPost } from '@/lib/api';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
-import { CheckCircle, Edit, ExternalLink, Eye, Globe, MapPin, Music, Trash2, User, Users } from 'lucide-react';
+import { CheckCircle, Edit, ExternalLink, Eye, Globe, MapPin, Music, Trash2, User, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Artist = {
@@ -103,6 +103,26 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
     onError: () => toast.error('Failed to update featured status'),
+  });
+
+  const approveSongMutation = useMutation({
+    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/approve`),
+    onSuccess: () => {
+      toast.success('Song approved');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id, 'songs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to approve song'),
+  });
+
+  const rejectSongMutation = useMutation({
+    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/reject`, { reason: 'Rejected by admin' }),
+    onSuccess: () => {
+      toast.success('Song rejected');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id, 'songs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: () => toast.error('Failed to reject song'),
   });
 
   if (isLoading) {
@@ -273,7 +293,27 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                           <div>Downloads: {compactNumber(song.download_count)}</div>
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            {(song.status === 'pending' || song.status === 'pending_review') && (
+                              <>
+                                <button
+                                  onClick={() => approveSongMutation.mutate(song.id)}
+                                  disabled={approveSongMutation.isPending}
+                                  className="inline-flex items-center gap-1 rounded border border-green-300 px-2 py-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 disabled:opacity-50"
+                                  title="Approve"
+                                >
+                                  <CheckCircle className="h-3 w-3" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => rejectSongMutation.mutate(song.id)}
+                                  disabled={rejectSongMutation.isPending}
+                                  className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50"
+                                  title="Reject"
+                                >
+                                  <XCircle className="h-3 w-3" /> Reject
+                                </button>
+                              </>
+                            )}
                             <Link href={`/admin/songs/${song.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted">
                               <Eye className="h-3 w-3" /> View
                             </Link>

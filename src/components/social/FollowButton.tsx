@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { UserPlus, UserMinus, Loader2, Bell, BellOff } from 'lucide-react';
+import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFollowStatus, useToggleFollow } from '@/hooks/useSocial';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 import type { FollowableType } from '@/types/social';
 
 // ============================================================================
@@ -50,6 +52,7 @@ export function FollowButton({
   className,
   skipFetch = false,
 }: FollowButtonProps) {
+  const { data: session } = useSession();
   const { data: status, isLoading } = useFollowStatus(followableType, followableId, {
     enabled: !skipFetch,
   });
@@ -62,9 +65,13 @@ export function FollowButton({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      toggleFollow.mutate();
+      if (!session?.user) {
+        toast.error('Please sign in to follow');
+        return;
+      }
+      toggleFollow.mutate(isFollowing);
     },
-    [toggleFollow]
+    [toggleFollow, session, isFollowing]
   );
 
   const isPending = isLoading || toggleFollow.isPending;

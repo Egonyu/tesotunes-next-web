@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 import { Heart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLikeStatus, useToggleLike } from '@/hooks/useSocial';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 import type { LikeableType } from '@/types/social';
 
 // ============================================================================
@@ -47,6 +49,7 @@ export function LikeButton({
   className,
   skipFetch = false,
 }: LikeButtonProps) {
+  const { data: session } = useSession();
   const { data: status, isLoading } = useLikeStatus(likeableType, likeableId, {
     enabled: !skipFetch,
   });
@@ -59,9 +62,13 @@ export function LikeButton({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
+      if (!session?.user) {
+        toast.error('Please sign in to like');
+        return;
+      }
       toggleLike.mutate();
     },
-    [toggleLike]
+    [toggleLike, session]
   );
 
   const sizeClass = `h-${iconSize} w-${iconSize}`;

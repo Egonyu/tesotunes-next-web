@@ -28,16 +28,7 @@ export function GenreGrid() {
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  const displayGenres = genres || [
-    { id: 1, name: "Afrobeat", slug: "afrobeat", song_count: 245 },
-    { id: 2, name: "Bongo Flava", slug: "bongo-flava", song_count: 189 },
-    { id: 3, name: "Kadongo Kamu", slug: "kadongo-kamu", song_count: 156 },
-    { id: 4, name: "Gospel", slug: "gospel", song_count: 312 },
-    { id: 5, name: "Hip Hop", slug: "hip-hop", song_count: 201 },
-    { id: 6, name: "Dancehall", slug: "dancehall", song_count: 134 },
-    { id: 7, name: "RnB", slug: "rnb", song_count: 178 },
-    { id: 8, name: "Traditional", slug: "traditional", song_count: 89 },
-  ];
+  const displayGenres = genres || [];
 
   if (isLoading) {
     return (
@@ -48,6 +39,15 @@ export function GenreGrid() {
             className="h-24 rounded-lg bg-muted animate-pulse"
           />
         ))}
+      </div>
+    );
+  }
+
+  if (displayGenres.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Music className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No genres available</p>
       </div>
     );
   }

@@ -35,6 +35,7 @@ import {
   Tags,
   Crown,
   Building2,
+  Star,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
@@ -56,6 +57,7 @@ const navItems = [
   { href: '/admin/albums', label: 'Albums', icon: Disc3 },
   { href: '/admin/artists', label: 'Artists', icon: Mic2 },
   { href: '/admin/genres', label: 'Genres', icon: Tags },
+  { href: '/admin/featured', label: 'Featured', icon: Star },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },
   { href: '/admin/store', label: 'Store', icon: ShoppingBag },
   { href: '/admin/store/promotions', label: 'Promotions', icon: Percent },

@@ -2,10 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, Loader2, Lock, Crown, ShoppingCart, X } from "lucide-react";
+import { Download, Loader2, Lock, Crown, ShoppingCart, X, Music2, Gem } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+
+type AudioQuality = "128" | "192" | "320" | "flac";
+
+interface QualityOption {
+  value: AudioQuality;
+  label: string;
+  description: string;
+  premium: boolean;
+  extension: string;
+}
+
+const qualityOptions: QualityOption[] = [
+  { value: "128", label: "Standard", description: "128 kbps MP3", premium: false, extension: "mp3" },
+  { value: "192", label: "High", description: "192 kbps MP3", premium: false, extension: "mp3" },
+  { value: "320", label: "Premium", description: "320 kbps MP3", premium: true, extension: "mp3" },
+  { value: "flac", label: "Lossless", description: "FLAC (CD quality)", premium: true, extension: "flac" },
+];
 
 interface DownloadGateProps {
   songId: number;
@@ -30,41 +47,43 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
   const { data: session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showGate, setShowGate] = useState(false);
+  const [showQualityPicker, setShowQualityPicker] = useState(false);
   const [gateType, setGateType] = useState<DownloadError>("unknown");
 
-  async function handleDownload() {
-    // Client-side pre-check: not downloadable at all
+  function handleInitiateDownload() {
     if (!isDownloadable) {
       setGateType("not_downloadable");
       setShowGate(true);
       return;
     }
-
-    // Must be signed in
     if (!session?.user) {
       setGateType("auth_required");
       setShowGate(true);
       return;
     }
+    setShowQualityPicker(true);
+  }
 
+  async function handleDownload(quality: AudioQuality = "320") {
+    setShowQualityPicker(false);
     setIsDownloading(true);
     try {
       const res = await apiPost<{
         success: boolean;
         download_url?: string;
         message?: string;
-      }>(`/v1/songs/${songId}/download`);
+      }>(`/v1/songs/${songId}/download`, { quality });
 
       if (res.download_url) {
-        // Trigger browser download
+        const ext = quality === "flac" ? "flac" : "mp3";
         const a = document.createElement("a");
         a.href = res.download_url;
-        a.download = `${songTitle}.mp3`;
+        a.download = `${songTitle}.${ext}`;
         a.rel = "noopener";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        toast.success("Download started!");
+        toast.success(`Downloading ${songTitle} (${quality === "flac" ? "FLAC" : quality + "kbps"})`);
       } else {
         toast.error(res.message || "Download failed");
       }
@@ -83,7 +102,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
   return (
     <>
       <button
-        onClick={handleDownload}
+        onClick={handleInitiateDownload}
         disabled={isDownloading}
         className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
         title={!isDownloadable ? "Not available for download" : isFree ? "Free download" : "Download"}
@@ -99,6 +118,59 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
           {!isDownloadable ? "N/A" : "Download"}
         </span>
       </button>
+
+      {/* Quality Picker */}
+      {showQualityPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Music2 className="h-5 w-5" />
+                Download Quality
+              </h3>
+              <button
+                onClick={() => setShowQualityPicker(false)}
+                className="p-1 rounded-full hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Choose audio quality for &ldquo;{songTitle}&rdquo;
+            </p>
+            <div className="space-y-2">
+              {qualityOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleDownload(option.value)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      option.premium ? 'bg-amber-500/10' : 'bg-primary/10'
+                    }`}>
+                      {option.premium ? (
+                        <Gem className="h-5 w-5 text-amber-500" />
+                      ) : (
+                        <Download className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </div>
+                  {option.premium && (
+                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">
+                      Premium
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gate Dialog */}
       {showGate && (

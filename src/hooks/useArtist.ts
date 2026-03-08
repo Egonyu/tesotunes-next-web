@@ -260,6 +260,31 @@ export function useRequestWithdrawal() {
   });
 }
 
+// Per-song earnings breakdown
+export interface SongEarning {
+  song_id: number;
+  title: string;
+  artwork_url: string | null;
+  streams_revenue: number;
+  downloads_revenue: number;
+  tips_revenue: number;
+  total_revenue: number;
+  play_count: number;
+  download_count: number;
+}
+
+export function usePerSongEarnings(params?: { page?: number; per_page?: number; sort?: string }) {
+  return useQuery({
+    queryKey: ['artist', 'earnings', 'songs', params],
+    queryFn: () =>
+      apiGet<{ data: SongEarning[]; meta?: { total: number; current_page: number; last_page: number } }>(
+        '/artist/earnings/songs',
+        { params }
+      ),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
 // ============================================================================
 // Royalty Splits
 // ============================================================================
@@ -292,6 +317,58 @@ export function useRoyaltySplits(songId?: number) {
         songId ? `/artist/songs/${songId}/royalty-splits` : '/artist/royalty-splits'
       ).then(res => (Array.isArray(res) ? res : res.data)),
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+export interface CreateRoyaltySplitData {
+  song_id: number;
+  recipient_email: string;
+  recipient_name: string;
+  percentage: number;
+  applies_to_streaming: boolean;
+  applies_to_downloads: boolean;
+}
+
+export interface UpdateRoyaltySplitData {
+  percentage?: number;
+  applies_to_streaming?: boolean;
+  applies_to_downloads?: boolean;
+}
+
+export function useCreateRoyaltySplit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateRoyaltySplitData) =>
+      apiPost<{ message: string; data: RoyaltySplit }>(
+        `/artist/songs/${data.song_id}/royalty-splits`,
+        data
+      ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['artist', 'royalty-splits'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', 'royalty-splits', variables.song_id] });
+    },
+  });
+}
+
+export function useUpdateRoyaltySplit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ splitId, data }: { splitId: number; data: UpdateRoyaltySplitData }) =>
+      apiPut<{ message: string }>(`/artist/royalty-splits/${splitId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artist', 'royalty-splits'] });
+    },
+  });
+}
+
+export function useDeleteRoyaltySplit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (splitId: number) =>
+      apiDelete<{ message: string }>(`/artist/royalty-splits/${splitId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artist', 'royalty-splits'] });
+    },
   });
 }
 
@@ -349,6 +426,48 @@ export function useUpdateArtistProfile() {
       apiPut<{ message: string }>("/artist/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "profile"] });
+    },
+  });
+}
+
+// ============================================================================
+// Avatar / Banner Upload Hooks
+// ============================================================================
+
+export function useUpdateArtistAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
+        "/artist/profile/avatar",
+        formData
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "profile"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "dashboard"] });
+    },
+  });
+}
+
+export function useUpdateArtistBanner() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("banner", file);
+      return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
+        "/artist/profile/banner",
+        formData
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "profile"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "dashboard"] });
     },
   });
 }
@@ -462,6 +581,82 @@ export function useCreateAlbum() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "albums"] });
+    },
+  });
+}
+
+// ============================================================================
+// Album Detail Hook
+// ============================================================================
+
+export interface AlbumDetail {
+  id: number;
+  title: string;
+  description: string | null;
+  artwork: string | null;
+  artwork_url: string | null;
+  type: 'album' | 'single' | 'ep';
+  status: 'draft' | 'released' | 'archived';
+  release_date: string | null;
+  genre: string | null;
+  songs_count: number;
+  total_plays: number;
+  songs: Array<{
+    id: number;
+    title: string;
+    duration_seconds: number;
+    play_count: number;
+    status: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useArtistAlbumDetail(id: number | string) {
+  return useQuery({
+    queryKey: ["artist", "album", id],
+    queryFn: () =>
+      apiGet<{ data: AlbumDetail }>(`/artist/albums/${id}`).then((res) => res.data),
+    enabled: !!id,
+  });
+}
+
+// ============================================================================
+// Update Album Hook
+// ============================================================================
+
+export interface UpdateAlbumData {
+  title?: string;
+  description?: string;
+  release_date?: string;
+  type?: 'album' | 'single' | 'ep';
+  genre?: string;
+  cover_image?: File;
+}
+
+export function useUpdateAlbum() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number | string; data: UpdateAlbumData }) => {
+      const formData = new FormData();
+      // Laravel needs _method for PUT via FormData
+      formData.append("_method", "PUT");
+      if (data.title) formData.append("title", data.title);
+      if (data.description !== undefined) formData.append("description", data.description || "");
+      if (data.release_date) formData.append("release_date", data.release_date);
+      if (data.type) formData.append("type", data.type);
+      if (data.genre) formData.append("genre", data.genre);
+      if (data.cover_image) formData.append("cover_image", data.cover_image);
+
+      return apiPostForm<{ message: string; data: { id: number; title: string } }>(
+        `/artist/albums/${id}`,
+        formData
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "albums"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "album", variables.id] });
     },
   });
 }

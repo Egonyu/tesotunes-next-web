@@ -18,7 +18,7 @@ import {
   Music,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistEarnings, useRequestWithdrawal, useRoyaltySplits } from '@/hooks/useArtist';
+import { useArtistEarnings, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, type SongEarning } from '@/hooks/useArtist';
 
 export default function ArtistEarningsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -29,6 +29,8 @@ export default function ArtistEarningsPage() {
   const { data: earningsData, isLoading, error } = useArtistEarnings();
   const withdrawMutation = useRequestWithdrawal();
   const { data: royaltySplits, isLoading: splitsLoading } = useRoyaltySplits();
+  const { data: songEarningsData, isLoading: songEarningsLoading } = usePerSongEarnings({ per_page: 10, sort: 'total_revenue' });
+  const songEarnings: SongEarning[] = songEarningsData?.data || [];
 
   const stats = earningsData?.stats || {
     balance: 0,
@@ -330,6 +332,69 @@ export default function ArtistEarningsPage() {
                         {split.status}
                       </span>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Per-Song Revenue */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <Music className="h-4 w-4 text-muted-foreground" />
+          Revenue by Song
+        </h2>
+        {songEarningsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : songEarnings.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Music className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No song earnings data yet.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 font-medium text-muted-foreground">Song</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Streams</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Downloads</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Tips</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {songEarnings.map((song) => (
+                  <tr key={song.song_id} className="hover:bg-muted/50 transition-colors">
+                    <td className="py-3">
+                      <div className="flex items-center gap-3">
+                        {song.artwork_url ? (
+                          <img
+                            src={song.artwork_url}
+                            alt={song.title}
+                            className="h-8 w-8 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                            <Music className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium truncate max-w-[180px]">{song.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {song.play_count.toLocaleString()} plays · {song.download_count.toLocaleString()} downloads
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 text-right">UGX {song.streams_revenue.toLocaleString()}</td>
+                    <td className="py-3 text-right">UGX {song.downloads_revenue.toLocaleString()}</td>
+                    <td className="py-3 text-right">UGX {song.tips_revenue.toLocaleString()}</td>
+                    <td className="py-3 text-right font-semibold">UGX {song.total_revenue.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

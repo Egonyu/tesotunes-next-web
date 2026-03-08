@@ -5,9 +5,26 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiDelete, apiGet, apiPost } from '@/lib/api';
+import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
-import { CheckCircle, Edit, ExternalLink, Eye, Globe, MapPin, Music, Trash2, User, Users, XCircle } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle,
+  DollarSign,
+  Edit,
+  ExternalLink,
+  Eye,
+  Globe,
+  Music,
+  PiggyBank,
+  Trash2,
+  User,
+  Users,
+  XCircle,
+  FileText,
+  Clock,
+  Ban,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 type Artist = {
@@ -25,6 +42,8 @@ type Artist = {
   total_songs: number;
   total_albums: number;
   followers: number;
+  earnings_balance?: number;
+  commission_rate?: number;
   genres: Array<{ id: string; name: string }>;
   user?: {
     id: number;
@@ -49,6 +68,29 @@ type ArtistSong = {
   created_at?: string;
 };
 
+type SaccoMember = {
+  id: number;
+  user_id: number;
+  member_number: string;
+  status: string;
+  joined_at: string;
+  total_savings: number;
+  loans_count: number;
+  username?: string;
+  email?: string;
+};
+
+type EventItem = {
+  id: number;
+  title: string;
+  status: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  venue_name?: string | null;
+  city?: string | null;
+  is_featured?: boolean;
+};
+
 function compactNumber(value: number | null | undefined): string {
   if (!value) return '0';
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -56,11 +98,19 @@ function compactNumber(value: number | null | undefined): string {
   return `${value}`;
 }
 
+function formatUGX(amount: number | null | undefined): string {
+  if (!amount) return 'UGX 0';
+  return `UGX ${amount.toLocaleString()}`;
+}
+
 export default function ArtistDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteSongId, setDeleteSongId] = useState<number | null>(null);
+
+  // --- Queries ---
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'artist', id],
@@ -69,11 +119,28 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
 
   const { data: songsRes, isLoading: songsLoading } = useQuery({
     queryKey: ['admin', 'artist', id, 'songs'],
-    queryFn: () => apiGet<{ data: ArtistSong[]; meta?: { total?: number } }>(`/admin/songs?artist_id=${id}&per_page=20&sort=-created_at`),
+    queryFn: () => apiGet<{ data: ArtistSong[]; meta?: { total?: number } }>(`/admin/songs?artist_id=${id}&per_page=50&sort=-created_at`),
   });
 
   const artist = data?.data;
+
+  const { data: saccoRes } = useQuery({
+    queryKey: ['admin', 'artist', id, 'sacco'],
+    queryFn: () => apiGet<{ data: SaccoMember[] }>(`/admin/sacco/members?user_id=${artist?.user?.id}&per_page=1`),
+    enabled: !!artist?.user?.id,
+  });
+
+  const { data: eventsRes, isLoading: eventsLoading } = useQuery({
+    queryKey: ['admin', 'artist', id, 'events'],
+    queryFn: () => apiGet<{ data: EventItem[]; meta?: { total?: number } }>(`/admin/events?user_id=${artist?.user?.id}&per_page=10`),
+    enabled: !!artist?.user?.id,
+  });
+
   const artistSongs = songsRes?.data ?? [];
+  const saccoMember = saccoRes?.data?.[0] ?? null;
+  const artistEvents = eventsRes?.data ?? [];
+
+  // --- Mutations ---
 
   const deleteMutation = useMutation({
     mutationFn: () => apiDelete<{ message?: string }>(`/admin/artists/${id}`),
@@ -105,25 +172,38 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
     onError: () => toast.error('Failed to update featured status'),
   });
 
-  const approveSongMutation = useMutation({
-    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/approve`),
-    onSuccess: () => {
-      toast.success('Song approved');
+  const changeSongStatusMutation = useMutation({
+    mutationFn: ({ songId, status }: { songId: number; status: string }) =>
+      apiPut<{ message?: string }>(`/admin/songs/${songId}`, { status }),
+    onSuccess: (_, { status }) => {
+      toast.success(`Song status changed to ${status}`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id, 'songs'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
-    onError: () => toast.error('Failed to approve song'),
+    onError: () => toast.error('Failed to change song status'),
   });
 
-  const rejectSongMutation = useMutation({
-    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/reject`, { reason: 'Rejected by admin' }),
+  const deleteSongMutation = useMutation({
+    mutationFn: (songId: number) => apiDelete<{ message?: string }>(`/admin/songs/${songId}`),
     onSuccess: () => {
-      toast.success('Song rejected');
+      toast.success('Song deleted');
+      setDeleteSongId(null);
       queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id, 'songs'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
-    onError: () => toast.error('Failed to reject song'),
+    onError: () => toast.error('Failed to delete song'),
   });
+
+  const toggleSongFeaturedMutation = useMutation({
+    mutationFn: (songId: number) => apiPost<{ message?: string }>(`/admin/songs/${songId}/toggle-featured`),
+    onSuccess: () => {
+      toast.success('Featured status updated');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id, 'songs'] });
+    },
+    onError: () => toast.error('Failed to toggle featured'),
+  });
+
+  // --- Render ---
 
   if (isLoading) {
     return (
@@ -145,6 +225,13 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
       </div>
     );
   }
+
+  const songStatusActions: Array<{ label: string; value: string; icon: typeof CheckCircle; color: string }> = [
+    { label: 'Publish', value: 'published', icon: CheckCircle, color: 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950' },
+    { label: 'Draft', value: 'draft', icon: FileText, color: 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' },
+    { label: 'Pending', value: 'pending', icon: Clock, color: 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-950' },
+    { label: 'Reject', value: 'rejected', icon: Ban, color: 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -185,6 +272,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         }
       />
 
+      {/* Hero / Cover */}
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="relative h-52 md:h-64">
           {artist.cover_url && (
@@ -215,7 +303,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-4">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-4 lg:grid-cols-6">
           <div className="rounded-lg border p-4">
             <p className="text-xs text-muted-foreground">Followers</p>
             <p className="text-xl font-semibold">{compactNumber(artist.followers)}</p>
@@ -232,19 +321,32 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             <p className="text-xs text-muted-foreground">Albums</p>
             <p className="text-xl font-semibold">{compactNumber(artist.total_albums)}</p>
           </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Earnings Balance</p>
+            <p className="text-xl font-semibold">{formatUGX(artist.earnings_balance)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-xs text-muted-foreground">Commission Rate</p>
+            <p className="text-xl font-semibold">{artist.commission_rate != null ? `${artist.commission_rate}%` : '—'}</p>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Bio */}
           <div className="rounded-xl border bg-card p-6">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bio</h3>
             <p className="text-sm leading-6 text-foreground/90">{artist.bio || 'No bio provided.'}</p>
           </div>
 
+          {/* Songs Management Table */}
           <div className="rounded-xl border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Artist Songs</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Songs ({songsRes?.meta?.total ?? artistSongs.length})
+              </h3>
               <Link
                 href={`/admin/songs?artist_id=${artist.id}`}
                 className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -262,7 +364,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             ) : artistSongs.length === 0 ? (
               <p className="text-sm text-muted-foreground">No songs found for this artist.</p>
             ) : (
-              <div className="overflow-hidden rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
@@ -290,37 +392,107 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                         <td className="px-3 py-2 text-xs text-muted-foreground">
                           <div>Plays: {compactNumber(song.play_count)}</div>
                           <div>Likes: {compactNumber(song.like_count)}</div>
-                          <div>Downloads: {compactNumber(song.download_count)}</div>
+                          <div>DL: {compactNumber(song.download_count)}</div>
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            {(song.status === 'pending' || song.status === 'pending_review') && (
-                              <>
-                                <button
-                                  onClick={() => approveSongMutation.mutate(song.id)}
-                                  disabled={approveSongMutation.isPending}
-                                  className="inline-flex items-center gap-1 rounded border border-green-300 px-2 py-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 disabled:opacity-50"
-                                  title="Approve"
-                                >
-                                  <CheckCircle className="h-3 w-3" /> Approve
-                                </button>
-                                <button
-                                  onClick={() => rejectSongMutation.mutate(song.id)}
-                                  disabled={rejectSongMutation.isPending}
-                                  className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50"
-                                  title="Reject"
-                                >
-                                  <XCircle className="h-3 w-3" /> Reject
-                                </button>
-                              </>
-                            )}
-                            <Link href={`/admin/songs/${song.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted">
+                          <div className="flex flex-wrap items-center gap-1">
+                            {/* Status change buttons — show only statuses different from current */}
+                            {songStatusActions
+                              .filter((a) => a.value !== (song.status || 'draft'))
+                              .map((action) => {
+                                const Icon = action.icon;
+                                return (
+                                  <button
+                                    key={action.value}
+                                    onClick={() => changeSongStatusMutation.mutate({ songId: song.id, status: action.value })}
+                                    disabled={changeSongStatusMutation.isPending}
+                                    className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs disabled:opacity-50 ${action.color}`}
+                                    title={action.label}
+                                  >
+                                    <Icon className="h-3 w-3" /> {action.label}
+                                  </button>
+                                );
+                              })}
+                            <button
+                              onClick={() => toggleSongFeaturedMutation.mutate(song.id)}
+                              disabled={toggleSongFeaturedMutation.isPending}
+                              className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950 disabled:opacity-50"
+                              title={song.is_featured ? 'Unfeature' : 'Feature'}
+                            >
+                              <Music className="h-3 w-3" /> {song.is_featured ? 'Unfeature' : 'Feature'}
+                            </button>
+                            <Link href={`/admin/songs/${song.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted">
                               <Eye className="h-3 w-3" /> View
                             </Link>
-                            <Link href={`/admin/songs/${song.id}/edit`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted">
+                            <Link href={`/admin/songs/${song.id}/edit`} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted">
                               <Edit className="h-3 w-3" /> Edit
                             </Link>
+                            <button
+                              onClick={() => setDeleteSongId(song.id)}
+                              className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                              title="Delete song"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Events Section */}
+          <div className="rounded-xl border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <Calendar className="mr-1.5 inline h-4 w-4" />
+                Events ({eventsRes?.meta?.total ?? artistEvents.length})
+              </h3>
+              <Link
+                href="/admin/events"
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                Manage events <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {eventsLoading ? (
+              <div className="space-y-2">
+                <div className="h-10 rounded bg-muted animate-pulse" />
+                <div className="h-10 rounded bg-muted animate-pulse" />
+              </div>
+            ) : artistEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No events found for this artist.</p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Event</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
+                      <th className="px-3 py-2 text-left font-medium">Date</th>
+                      <th className="px-3 py-2 text-left font-medium">Venue</th>
+                      <th className="px-3 py-2 text-left font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {artistEvents.map((event) => (
+                      <tr key={event.id} className="hover:bg-muted/30">
+                        <td className="px-3 py-2 font-medium">{event.title}</td>
+                        <td className="px-3 py-2"><StatusBadge status={event.status} /></td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {event.starts_at ? new Date(event.starts_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {event.venue_name || event.city || '—'}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Link href={`/admin/events/${event.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted">
+                            <Eye className="h-3 w-3" /> View
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -331,7 +503,67 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
+        {/* Sidebar */}
         <div className="space-y-6">
+          {/* Earnings Card */}
+          <div className="rounded-xl border bg-card p-6">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <DollarSign className="mr-1.5 inline h-4 w-4" />
+              Earnings
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Balance</p>
+                <p className="text-lg font-semibold">{formatUGX(artist.earnings_balance)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Commission Rate</p>
+                <p className="text-lg font-semibold">{artist.commission_rate != null ? `${artist.commission_rate}%` : 'Not set'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* SACCO Status Card */}
+          <div className="rounded-xl border bg-card p-6">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <PiggyBank className="mr-1.5 inline h-4 w-4" />
+              SACCO Status
+            </h3>
+            {saccoMember ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Status</span>
+                  <StatusBadge status={saccoMember.status} size="sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Member #</p>
+                  <p className="text-sm font-medium">{saccoMember.member_number}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Savings</p>
+                  <p className="text-sm font-semibold">{formatUGX(saccoMember.total_savings)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Loans</p>
+                  <p className="text-sm font-medium">{saccoMember.loans_count}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Joined</p>
+                  <p className="text-sm">{new Date(saccoMember.joined_at).toLocaleDateString()}</p>
+                </div>
+                <Link
+                  href="/admin/sacco"
+                  className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  View SACCO details <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Not a SACCO member.</p>
+            )}
+          </div>
+
+          {/* Quick Actions */}
           <div className="rounded-xl border bg-card p-6">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Quick Actions</h3>
             <div className="space-y-2">
@@ -350,6 +582,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
+          {/* Linked User */}
           {artist.user && (
             <div className="rounded-xl border bg-card p-6">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Linked User</h3>
@@ -364,6 +597,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      {/* Delete Artist Dialog */}
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
@@ -372,6 +606,18 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={() => deleteMutation.mutate()}
+      />
+
+      {/* Delete Song Dialog */}
+      <ConfirmDialog
+        open={deleteSongId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteSongId(null); }}
+        title="Delete Song"
+        description="This will permanently delete the song and its audio files. This action cannot be undone."
+        confirmLabel="Delete Song"
+        variant="destructive"
+        onConfirm={() => { if (deleteSongId) deleteSongMutation.mutate(deleteSongId); }}
+        isLoading={deleteSongMutation.isPending}
       />
     </div>
   );

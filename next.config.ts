@@ -82,13 +82,6 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
-
-  experimental: {
-    // Allow large file uploads through Server Actions (audio files up to 100MB)
-    serverActions: {
-      bodySizeLimit: '100mb',
-    },
-  },
 };
 
 export default nextConfig;

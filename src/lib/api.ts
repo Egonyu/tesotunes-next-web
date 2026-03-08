@@ -11,6 +11,10 @@ const CLIENT_BASE_URL = isServer ? API_URL : (
     : "/api"           // Production — route through Next.js rewrite proxy
 );
 
+// Direct URL to the Laravel API — used for file uploads to bypass Vercel's
+// ~4.5 MB request body limit on proxied/rewritten requests.
+const DIRECT_API_URL = API_URL;
+
 // Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
   baseURL: CLIENT_BASE_URL,
@@ -198,7 +202,10 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await api.post<T>(normalizeApiPath(url), formData, {
+  // File uploads go directly to the Laravel API to bypass Vercel's ~4.5 MB
+  // request body size limit on rewrite-proxied requests.
+  const directUrl = `${DIRECT_API_URL}${normalizeApiPath(url)}`;
+  const response = await api.post<T>(directUrl, formData, {
     ...config,
     timeout: 0, // No timeout for file uploads
   });

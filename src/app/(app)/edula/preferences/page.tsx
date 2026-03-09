@@ -1,23 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell,
   Eye,
-  EyeOff,
   Filter,
-  Globe,
-  Heart,
-  MessageCircle,
+  Loader2,
   Music,
   Save,
   Sparkles,
   TrendingUp,
   Users,
   Volume2,
-  VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFeedPreferences, useUpdateFeedPreferences } from '@/hooks/useFeed';
+import { toast } from 'sonner';
 
 interface Preference {
   id: string;
@@ -27,46 +25,108 @@ interface Preference {
   icon: React.ReactNode;
 }
 
+const DEFAULT_PREFS: Preference[] = [
+  { id: 'autoplay', label: 'Autoplay media', description: 'Automatically play videos and audio previews', enabled: true, icon: <Volume2 className="h-5 w-5" /> },
+  { id: 'sensitive', label: 'Show sensitive content', description: 'Display content that may be sensitive', enabled: false, icon: <Eye className="h-5 w-5" /> },
+  { id: 'trending', label: 'Trending topics', description: 'Show trending topics in your feed', enabled: true, icon: <TrendingUp className="h-5 w-5" /> },
+  { id: 'suggestions', label: 'Follow suggestions', description: 'Show recommended accounts to follow', enabled: true, icon: <Users className="h-5 w-5" /> },
+  { id: 'music_previews', label: 'Music previews', description: 'Show inline music previews in posts', enabled: true, icon: <Music className="h-5 w-5" /> },
+];
+
+const DEFAULT_INTERESTS = [
+  { id: 'afrobeats', label: 'Afrobeats', selected: true },
+  { id: 'hiphop', label: 'Hip Hop', selected: false },
+  { id: 'dancehall', label: 'Dancehall', selected: false },
+  { id: 'rnb', label: 'R&B', selected: false },
+  { id: 'gospel', label: 'Gospel', selected: false },
+  { id: 'jazz', label: 'Jazz', selected: false },
+  { id: 'reggae', label: 'Reggae', selected: false },
+  { id: 'traditional', label: 'Traditional', selected: false },
+];
+
+const DEFAULT_NOTIFICATIONS = {
+  newPosts: true,
+  likes: false,
+  comments: true,
+  mentions: true,
+  reposts: false,
+};
+
 export default function FeedPreferencesPage() {
-  const [preferences, setPreferences] = useState<Preference[]>([
-    { id: 'autoplay', label: 'Autoplay media', description: 'Automatically play videos and audio previews', enabled: true, icon: <Volume2 className="h-5 w-5" /> },
-    { id: 'sensitive', label: 'Show sensitive content', description: 'Display content that may be sensitive', enabled: false, icon: <Eye className="h-5 w-5" /> },
-    { id: 'trending', label: 'Trending topics', description: 'Show trending topics in your feed', enabled: true, icon: <TrendingUp className="h-5 w-5" /> },
-    { id: 'suggestions', label: 'Follow suggestions', description: 'Show recommended accounts to follow', enabled: true, icon: <Users className="h-5 w-5" /> },
-    { id: 'music_previews', label: 'Music previews', description: 'Show inline music previews in posts', enabled: true, icon: <Music className="h-5 w-5" /> },
-  ]);
-  
-  const [interests, setInterests] = useState([
-    { id: 'afrobeats', label: 'Afrobeats', selected: true },
-    { id: 'hiphop', label: 'Hip Hop', selected: true },
-    { id: 'dancehall', label: 'Dancehall', selected: true },
-    { id: 'rnb', label: 'R&B', selected: false },
-    { id: 'gospel', label: 'Gospel', selected: false },
-    { id: 'jazz', label: 'Jazz', selected: false },
-    { id: 'reggae', label: 'Reggae', selected: true },
-    { id: 'traditional', label: 'Traditional', selected: false },
-  ]);
-  
-  const [notifications, setNotifications] = useState({
-    newPosts: true,
-    likes: false,
-    comments: true,
-    mentions: true,
-    reposts: false,
-  });
-  
+  const { data: prefsData, isLoading } = useFeedPreferences();
+  const updatePrefs = useUpdateFeedPreferences();
+
+  const [preferences, setPreferences] = useState<Preference[]>(DEFAULT_PREFS);
+  const [interests, setInterests] = useState(DEFAULT_INTERESTS);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from API
+  useEffect(() => {
+    if (!prefsData?.data?.settings || hydrated) return;
+
+    const s = prefsData.data.settings as Record<string, unknown>;
+
+    // Apply saved content preferences
+    if (s.content && typeof s.content === 'object') {
+      const content = s.content as Record<string, boolean>;
+      setPreferences((prev) =>
+        prev.map((p) =>
+          content[p.id] !== undefined ? { ...p, enabled: content[p.id] } : p
+        )
+      );
+    }
+
+    // Apply saved genre interests
+    if (Array.isArray(s.interests)) {
+      const saved = new Set(s.interests as string[]);
+      setInterests((prev) =>
+        prev.map((i) => ({ ...i, selected: saved.has(i.id) }))
+      );
+    }
+
+    // Apply saved notifications
+    if (s.notifications && typeof s.notifications === 'object') {
+      const n = s.notifications as Record<string, boolean>;
+      setNotifications((prev) => ({ ...prev, ...n }));
+    }
+
+    setHydrated(true);
+  }, [prefsData, hydrated]);
+
   const togglePreference = (id: string) => {
-    setPreferences(prefs => 
-      prefs.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p)
+    setPreferences((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
     );
   };
-  
+
   const toggleInterest = (id: string) => {
-    setInterests(ints => 
-      ints.map(i => i.id === id ? { ...i, selected: !i.selected } : i)
+    setInterests((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, selected: !i.selected } : i))
     );
   };
-  
+
+  const handleSave = () => {
+    const payload: Record<string, unknown> = {
+      content: Object.fromEntries(preferences.map((p) => [p.id, p.enabled])),
+      interests: interests.filter((i) => i.selected).map((i) => i.id),
+      notifications,
+    };
+
+    updatePrefs.mutate(payload, {
+      onSuccess: () => toast.success('Preferences saved'),
+      onError: () => toast.error('Failed to save preferences'),
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
@@ -116,7 +176,7 @@ export default function FeedPreferencesPage() {
           Music Interests
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Select genres you're interested in to personalize your feed
+          Select genres you&apos;re interested in to personalize your feed
         </p>
         <div className="flex flex-wrap gap-2">
           {interests.map((interest) => (
@@ -159,7 +219,7 @@ export default function FeedPreferencesPage() {
               >
                 <span>{labels[key]}</span>
                 <button
-                  onClick={() => setNotifications(n => ({ ...n, [key]: !n[key as keyof typeof n] }))}
+                  onClick={() => setNotifications((n) => ({ ...n, [key]: !n[key as keyof typeof n] }))}
                   className={cn(
                     'relative h-6 w-11 rounded-full transition-colors',
                     value ? 'bg-primary' : 'bg-muted'
@@ -177,9 +237,17 @@ export default function FeedPreferencesPage() {
       </section>
       
       {/* Save Button */}
-      <button className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 flex items-center justify-center gap-2">
-        <Save className="h-5 w-5" />
-        Save Preferences
+      <button
+        onClick={handleSave}
+        disabled={updatePrefs.isPending}
+        className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 flex items-center justify-center gap-2 disabled:opacity-50"
+      >
+        {updatePrefs.isPending ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Save className="h-5 w-5" />
+        )}
+        {updatePrefs.isPending ? 'Saving...' : 'Save Preferences'}
       </button>
     </div>
   );

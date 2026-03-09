@@ -4,28 +4,33 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { Loader2, Users } from 'lucide-react';
 import { PostCard } from '@/components/edula/post-card';
-import { transformPost, type PostCardData } from '@/types/edula';
+import { FeedItemCard } from '@/components/edula/feed-item-card';
+import { transformPost, type MixedFeedContent } from '@/types/edula';
 import {
-  useFeed,
+  useMixedFeed,
   useLikePost,
   useUnlikePost,
   useBookmarkPost,
   useUnbookmarkPost,
   useRepost,
 } from '@/hooks/useFeed';
+import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
 export default function FollowingFeedPage() {
-  const { data: feedData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed('following');
+  const { data: session } = useSession();
+  const { data: feedData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useMixedFeed('following');
   const likePost = useLikePost();
   const unlikePost = useUnlikePost();
   const bookmarkPost = useBookmarkPost();
   const unbookmarkPost = useUnbookmarkPost();
   const repost = useRepost();
 
-  const posts: PostCardData[] = useMemo(() => {
+  const currentUserId = (session?.user as { id?: number } | undefined)?.id;
+
+  const feedItems: MixedFeedContent[] = useMemo(() => {
     if (feedData?.pages) {
-      return feedData.pages.flatMap((page) => page.data.map(transformPost));
+      return feedData.pages.flatMap((page) => page.items);
     }
     return [];
   }, [feedData]);
@@ -56,29 +61,42 @@ export default function FollowingFeedPage() {
           <Users className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-bold">Following</h1>
         </div>
-        <p className="text-sm text-muted-foreground hidden sm:block">Posts from people you follow</p>
+        <p className="text-sm text-muted-foreground hidden sm:block">Activity from people you follow</p>
       </div>
 
-      {/* Feed */}
-      {posts.length > 0 ? (
+      {/* Feed — Mixed Posts + FeedItems */}
+      {feedItems.length > 0 ? (
         <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onLike={handleLike}
-              onBookmark={handleBookmark}
-              onRepost={(id) => { repost.mutate({ postId: id }); toast.success('Reposted!'); }}
-              onNotInterested={() => toast.info('Preference saved')}
-            />
-          ))}
+          {feedItems.map((item, idx) => {
+            if (item.source === 'post') {
+              const postCardData = transformPost(item.data);
+              return (
+                <PostCard
+                  key={`post-${item.data.id}-${idx}`}
+                  post={postCardData}
+                  onLike={handleLike}
+                  onBookmark={handleBookmark}
+                  onRepost={(id) => { repost.mutate({ postId: id }); toast.success('Reposted!'); }}
+                  onNotInterested={() => toast.info('Preference saved')}
+                  isOwner={postCardData.author.id === currentUserId}
+                />
+              );
+            }
+
+            return (
+              <FeedItemCard
+                key={`fi-${item.data.uuid ?? item.data.id}-${idx}`}
+                item={item.data}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-lg font-medium">No posts yet</p>
+          <p className="text-lg font-medium">No activity yet</p>
           <p className="text-muted-foreground mt-1">
-            Follow some artists and fans to see their posts here
+            Follow some artists and fans to see their activity here
           </p>
           <Link
             href="/edula/discover"

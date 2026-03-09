@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { PostCard } from '@/components/edula/post-card';
+import { FeedItemCard } from '@/components/edula/feed-item-card';
 import { CreatePostComposer } from '@/components/edula/create-post-composer';
-import { transformPost, type PostCardData } from '@/types/edula';
+import { ModuleFilterChips } from '@/components/edula/module-filter-chips';
+import { transformPost, type MixedFeedContent } from '@/types/edula';
+import type { FeedModule } from '@/types/edula';
 import {
-  useFeed,
+  useMixedFeed,
+  useModuleFeed,
   useCreatePost,
   useLikePost,
   useUnlikePost,
@@ -21,15 +25,17 @@ import { toast } from 'sonner';
 
 export default function EdulaPage() {
   const { data: session } = useSession();
+  const [moduleFilter, setModuleFilter] = useState<FeedModule | 'all'>('all');
 
-  // Feed data
-  const {
-    data: feedData,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useFeed('for-you');
+  // Feed data — mixed Posts + FeedItems (for-you when no module filter)
+  const forYouFeed = useMixedFeed('for-you');
+
+  // Module-filtered feed (only active when a specific module is selected)
+  const moduleFeed = useModuleFeed(moduleFilter !== 'all' ? moduleFilter : '');
+
+  // Pick the active feed source based on filter
+  const activeFeed = moduleFilter === 'all' ? forYouFeed : moduleFeed;
+  const { data: feedData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = activeFeed;
 
   // Mutations
   const createPostMutation = useCreatePost();
@@ -41,10 +47,10 @@ export default function EdulaPage() {
   const deletePost = useDeletePost();
   const refreshFeed = useRefreshFeed();
 
-  // Transform API data
-  const posts: PostCardData[] = useMemo(() => {
+  // Flatten pages into a single mixed content array
+  const feedItems: MixedFeedContent[] = useMemo(() => {
     if (feedData?.pages) {
-      return feedData.pages.flatMap((page) => page.data.map(transformPost));
+      return feedData.pages.flatMap((page) => page.items);
     }
     return [];
   }, [feedData]);
@@ -118,6 +124,9 @@ export default function EdulaPage() {
         />
       )}
 
+      {/* Module Filter Chips */}
+      <ModuleFilterChips selected={moduleFilter} onChange={setModuleFilter} />
+
       {/* Refresh Banner */}
       {refreshFeed.isSuccess && (
         <button
@@ -129,24 +138,37 @@ export default function EdulaPage() {
         </button>
       )}
 
-      {/* Feed */}
+      {/* Feed — Mixed Posts + FeedItems */}
       <div className="space-y-4">
-        {posts.map((post, idx) => (
-          <PostCard
-            key={`${post.id}-${idx}`}
-            post={post}
-            onLike={handleLike}
-            onBookmark={handleBookmark}
-            onRepost={handleRepost}
-            onDelete={handleDelete}
-            onNotInterested={(id) => toast.info('Preference saved')}
-            isOwner={post.author.id === currentUserId}
-          />
-        ))}
+        {feedItems.map((item, idx) => {
+          if (item.source === 'post') {
+            const postCardData = transformPost(item.data);
+            return (
+              <PostCard
+                key={`post-${item.data.id}-${idx}`}
+                post={postCardData}
+                onLike={handleLike}
+                onBookmark={handleBookmark}
+                onRepost={handleRepost}
+                onDelete={handleDelete}
+                onNotInterested={(id) => toast.info('Preference saved')}
+                isOwner={postCardData.author.id === currentUserId}
+              />
+            );
+          }
+
+          // FeedItem card
+          return (
+            <FeedItemCard
+              key={`fi-${item.data.uuid ?? item.data.id}-${idx}`}
+              item={item.data}
+            />
+          );
+        })}
       </div>
 
       {/* Empty State */}
-      {posts.length === 0 && (
+      {feedItems.length === 0 && (
         <div className="text-center py-16">
           <p className="text-lg font-medium">Your feed is empty</p>
           <p className="text-sm text-muted-foreground mt-1">

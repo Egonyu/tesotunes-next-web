@@ -20,6 +20,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
 import type { PostCardData } from '@/types/edula';
+import { WhoLikedModal } from './who-liked-modal';
+import { RichText } from './rich-text';
 
 interface PostCardProps {
   post: PostCardData;
@@ -49,6 +51,7 @@ export function PostCard({
   isOwner = false,
 }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLikers, setShowLikers] = useState(false);
 
   const handleLike = useCallback(() => {
     onLike?.(post.id, post.isLiked);
@@ -156,7 +159,9 @@ export function PostCard({
 
       {/* Content */}
       <Link href={`/edula/${post.id}`} className="block">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.content}</p>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed">
+          <RichText text={post.content} />
+        </p>
       </Link>
 
       {/* Media */}
@@ -176,17 +181,30 @@ export function PostCard({
 
       {/* Action Bar */}
       <div className="flex items-center justify-between mt-4 pt-3 border-t">
-        <button
-          onClick={handleLike}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors',
-            'hover:bg-red-50 dark:hover:bg-red-950',
-            post.isLiked ? 'text-red-500' : 'text-muted-foreground'
+        <div className="flex items-center">
+          <button
+            onClick={handleLike}
+            className={cn(
+              'flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-l-full transition-colors',
+              'hover:bg-red-50 dark:hover:bg-red-950',
+              post.isLiked ? 'text-red-500' : 'text-muted-foreground'
+            )}
+          >
+            <Heart className="h-[18px] w-[18px]" fill={post.isLiked ? 'currentColor' : 'none'} />
+          </button>
+          {post.likes > 0 && (
+            <button
+              onClick={() => setShowLikers(true)}
+              className={cn(
+                'pr-3 pl-1 py-1.5 rounded-r-full transition-colors',
+                'hover:bg-red-50 dark:hover:bg-red-950 hover:underline',
+                post.isLiked ? 'text-red-500' : 'text-muted-foreground'
+              )}
+            >
+              <span className="text-xs font-medium">{formatNumber(post.likes)}</span>
+            </button>
           )}
-        >
-          <Heart className="h-[18px] w-[18px]" fill={post.isLiked ? 'currentColor' : 'none'} />
-          <span className="text-xs font-medium">{formatNumber(post.likes)}</span>
-        </button>
+        </div>
 
         <Link
           href={`/edula/${post.id}`}
@@ -226,6 +244,11 @@ export function PostCard({
           </button>
         </div>
       </div>
+
+      {/* Who Liked Modal */}
+      {showLikers && (
+        <WhoLikedModal postId={post.id} onClose={() => setShowLikers(false)} />
+      )}
     </article>
   );
 }

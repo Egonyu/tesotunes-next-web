@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import { apiGet, apiPost, apiDelete, apiPostForm } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 
 // Re-export types from central location
 export type {
@@ -13,20 +13,30 @@ export type {
   SuggestedUser,
   FeedItem,
   FeedItemType,
+  FeedModule,
+  FeedActor,
+  FeedMedia,
+  FeedEngagement,
+  FeedAction,
+  FeedCardSize,
+  MixedFeedContent,
   PostCardData,
 } from "@/types/edula";
 
-export { transformPost as transformPostToComponent } from "@/types/edula";
+export { transformPost as transformPostToComponent, classifyFeedContent, getFeedCardSize } from "@/types/edula";
 
 // Import for internal use
 import type {
   Post,
   FeedResponse,
+  FeedItem,
+  MixedFeedContent,
   Comment,
   TrendingItem,
   Announcement,
   SuggestedUser,
 } from "@/types/edula";
+import { classifyFeedContent } from "@/types/edula";
 
 // ============================================================================
 // Feed Hooks
@@ -410,3 +420,183 @@ export function useTrackInteraction() {
   });
 }
 
+// ============================================================================
+// Mixed Feed Hook (Posts + FeedItems unified)
+// ============================================================================
+
+interface MixedFeedResponse {
+  data: Record<string, unknown>[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+/**
+ * Hook that fetches the "for-you" endpoint which returns both Posts and
+ * FeedItems merged and sorted by created_at. Each item carries a `source`
+ * field ('post' | 'feed_item'). We classify them into MixedFeedContent.
+ */
+export function useMixedFeed(type: 'for-you' | 'following' | 'discover' = 'for-you') {
+  return useInfiniteQuery({
+    queryKey: ['mixed-feed', type],
+    queryFn: async ({ pageParam = 1 }) => {
+      const raw = await apiGet<MixedFeedResponse>(`/feed/${type}`, {
+        params: { page: pageParam },
+      });
+
+      const items: MixedFeedContent[] = (raw?.data ?? []).map(classifyFeedContent);
+
+      return {
+        items,
+        meta: raw?.meta ?? { current_page: 1, last_page: 1, per_page: 20, total: 0 },
+      };
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.current_page < lastPage.meta.last_page
+        ? lastPage.meta.current_page + 1
+        : undefined,
+    initialPageParam: 1,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000, // Poll for new items every 60s
+  });
+}
+
+/**
+ * Hook for module-filtered feed (e.g., music-only, events-only).
+ */
+export function useModuleFeed(module: string) {
+  return useInfiniteQuery({
+    queryKey: ['module-feed', module],
+    queryFn: async ({ pageParam = 1 }) => {
+      const raw = await apiGet<MixedFeedResponse>(`/feed/module/${module}`, {
+        params: { page: pageParam },
+      });
+
+      const items: MixedFeedContent[] = (raw?.data ?? []).map(classifyFeedContent);
+
+      return {
+        items,
+        meta: raw?.meta ?? { current_page: 1, last_page: 1, per_page: 20, total: 0 },
+      };
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.current_page < lastPage.meta.last_page
+        ? lastPage.meta.current_page + 1
+        : undefined,
+    initialPageParam: 1,
+    staleTime: 2 * 60 * 1000,
+    enabled: !!module,
+  });
+}
+
+// ============================================================================
+// Saved Feed
+// ============================================================================
+
+/** Fetch saved/bookmarked feed items — GET /api/feed/saved */
+export function useSavedFeed() {
+  return useInfiniteQuery({
+    queryKey: ['feed', 'saved'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const raw = await apiGet<MixedFeedResponse>('/feed/saved', {
+        params: { page: pageParam },
+      });
+
+      const items: MixedFeedContent[] = (raw?.data ?? []).map(classifyFeedContent);
+
+      return {
+        items,
+        meta: raw?.meta ?? { current_page: 1, last_page: 1, per_page: 20, total: 0 },
+      };
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.current_page < lastPage.meta.last_page
+        ? lastPage.meta.current_page + 1
+        : undefined,
+    initialPageParam: 1,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Unsave a feed item — DELETE /api/feed/{uuid}/save */
+export function useUnsaveFeedItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (uuid: string) => apiDelete(`/feed/${uuid}/save`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed', 'saved'] });
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
+// ============================================================================
+// Post Likers
+// ============================================================================
+
+interface PostLiker {
+  id: number;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  is_verified: boolean;
+}
+
+/** Fetch users who liked a post — GET /api/posts/{postId}/likers */
+export function usePostLikers(postId: number | null) {
+  return useInfiniteQuery({
+    queryKey: ['post', postId, 'likers'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await apiGet<{ data: PostLiker[]; meta: { current_page: number; last_page: number } }>(
+        `/posts/${postId}/likers`,
+        { params: { page: pageParam } }
+      );
+      return res;
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage?.meta?.current_page < lastPage?.meta?.last_page
+        ? lastPage.meta.current_page + 1
+        : undefined,
+    initialPageParam: 1,
+    enabled: !!postId,
+  });
+}
+
+export type { PostLiker };
+
+// ============================================================================
+// Feed Preferences
+// ============================================================================
+
+interface FeedPreferencesResponse {
+  data: {
+    feedback_summary: Record<string, unknown>;
+    settings: Record<string, unknown>;
+  };
+}
+
+/** Fetch feed preferences — GET /api/feed/preferences */
+export function useFeedPreferences() {
+  return useQuery({
+    queryKey: ['feed', 'preferences'],
+    queryFn: () => apiGet<FeedPreferencesResponse>('/feed/preferences'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Update feed preferences — PUT /api/feed/preferences */
+export function useUpdateFeedPreferences() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (preferences: Record<string, unknown>) =>
+      apiPut('/feed/preferences', { preferences }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed', 'preferences'] });
+    },
+  });
+}

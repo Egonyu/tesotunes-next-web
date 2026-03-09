@@ -61,21 +61,133 @@ export interface FeedResponse {
 }
 
 export interface FeedItem {
+  id: number;
   uuid: string;
   type: FeedItemType;
-  title: string;
+  module: FeedModule;
+  title: string | null;
+  body: string | null;
+  actor: FeedActor;
+  media: FeedMedia | null;
+  engagement: FeedEngagement;
+  tags: string[];
+  actions: FeedAction[];
+  extras: Record<string, unknown>;
+  is_prestige: boolean;
+  has_celebration: boolean;
+  is_aggregated: boolean;
+  aggregation_count: number;
+  source: 'post' | 'feed_item';
+  published_at: string;
+  expires_at: string | null;
+  // Legacy compat fields (from FeedController transform)
   description?: string;
   image?: string;
   action_url?: string;
   metadata?: Record<string, unknown>;
-  created_at: string;
+  created_at?: string;
   feedable_type?: string;
   feedable_id?: number;
 }
 
+export interface FeedActor {
+  id: number | null;
+  name: string;
+  avatar_url: string | null;
+  verified: boolean;
+  type: string;
+}
+
+export interface FeedMedia {
+  type: 'song' | 'album' | 'image' | 'video' | 'playlist' | string;
+  url: string | null;
+  thumbnail_url: string | null;
+  duration_seconds?: number;
+  audio_url?: string;
+}
+
+export interface FeedEngagement {
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+}
+
+export interface FeedAction {
+  type: 'play' | 'view' | 'register' | 'vote' | 'buy' | string;
+  label: string;
+  url: string;
+}
+
+export type FeedModule =
+  | 'music'
+  | 'social'
+  | 'events'
+  | 'awards'
+  | 'store'
+  | 'sacco'
+  | 'ojokotau'
+  | 'loyalty'
+  | 'forum'
+  | 'podcasts'
+  | 'platform';
+
 export type FeedItemType =
+  // Music
   | 'song_release'
   | 'album_release'
+  | 'playlist_created'
+  | 'song_milestone'
+  | 'artist_update'
+  | 'artist_joined'
+  // Events
+  | 'event_created'
+  | 'event_reminder'
+  | 'ticket_purchased'
+  | 'event_attended'
+  // Awards
+  | 'nomination_submitted'
+  | 'award_won'
+  | 'award_season_started'
+  | 'award_voted'
+  // Store
+  | 'product_purchased'
+  | 'product_reviewed'
+  | 'store_created'
+  // SACCO
+  | 'sacco_joined'
+  | 'loan_taken'
+  | 'loan_repaid'
+  | 'dividend_received'
+  | 'sacco_milestone'
+  // Loyalty
+  | 'fan_club_joined'
+  | 'reward_redeemed'
+  | 'points_milestone'
+  // Forum / Polls
+  | 'thread_created'
+  | 'reply_posted'
+  | 'poll_created'
+  | 'poll_ended'
+  // Podcasts
+  | 'episode_published'
+  | 'podcast_milestone'
+  // Ojokotau
+  | 'campaign_created'
+  | 'campaign_funded'
+  | 'campaign_milestone'
+  // Promotions
+  | 'promotion_started'
+  | 'promotion_featured'
+  // Social
+  | 'user_post'
+  | 'user_activity'
+  | 'user_followed'
+  | 'comment_posted'
+  | 'shared_content'
+  // Platform
+  | 'announcement'
+  // Legacy / generic
   | 'artist_activity'
   | 'friend_activity'
   | 'platform_event'
@@ -116,6 +228,72 @@ export interface SuggestedUser {
 }
 
 export type FeedFilter = 'all' | 'following' | 'recommendations' | 'artists' | 'events';
+
+// ── Feed Card Sizing ───────────────────────────────────────────
+// Variable card heights based on content type (ChatGPT discovery feed spec)
+
+export type FeedCardSize = 'compact' | 'standard' | 'featured' | 'hero';
+
+/** Determine display size for a feed item based on type + prestige */
+export function getFeedCardSize(item: FeedItem): FeedCardSize {
+  if (item.is_prestige || item.has_celebration) return 'hero';
+  if (item.is_aggregated && item.aggregation_count > 3) return 'compact';
+
+  switch (item.type) {
+    case 'song_release':
+    case 'album_release':
+    case 'episode_published':
+      return 'featured';
+    case 'event_created':
+    case 'award_won':
+    case 'award_season_started':
+    case 'campaign_created':
+    case 'announcement':
+      return 'standard';
+    case 'user_followed':
+    case 'comment_posted':
+    case 'shared_content':
+    case 'user_activity':
+    case 'reply_posted':
+      return 'compact';
+    default:
+      return 'standard';
+  }
+}
+
+/** Unified feed content — either a Post or a FeedItem */
+export type MixedFeedContent =
+  | { source: 'post'; data: Post }
+  | { source: 'feed_item'; data: FeedItem };
+
+/** Transform backend's forYou response into typed mixed content */
+export function classifyFeedContent(
+  raw: Record<string, unknown>
+): MixedFeedContent {
+  if (raw.source === 'feed_item' || raw.feed_type) {
+    return { source: 'feed_item', data: raw as unknown as FeedItem };
+  }
+  return { source: 'post', data: raw as unknown as Post };
+}
+
+// ── Module Color/Icon Map ──────────────────────────────────────
+
+export const MODULE_STYLES: Record<
+  string,
+  { color: string; icon: string; label: string }
+> = {
+  music:    { color: '#8B5CF6', icon: '🎵', label: 'Music' },
+  social:   { color: '#3B82F6', icon: '👥', label: 'Social' },
+  events:   { color: '#F59E0B', icon: '📅', label: 'Events' },
+  awards:   { color: '#EF4444', icon: '🏆', label: 'Awards' },
+  store:    { color: '#10B981', icon: '🛍️', label: 'Store' },
+  sacco:    { color: '#14B8A6', icon: '💰', label: 'SACCO' },
+  ojokotau: { color: '#F97316', icon: '🤝', label: 'Ojokotau' },
+  loyalty:  { color: '#EC4899', icon: '⭐', label: 'Loyalty' },
+  forum:    { color: '#6366F1', icon: '💬', label: 'Forum' },
+  podcasts: { color: '#8B5CF6', icon: '🎙️', label: 'Podcasts' },
+  platform: { color: '#6B7280', icon: '📢', label: 'Platform' },
+};
 
 // Component-level types (transformed from API)
 export interface PostCardData {

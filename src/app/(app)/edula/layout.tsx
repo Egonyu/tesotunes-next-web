@@ -10,6 +10,7 @@ import {
   Compass,
   Settings,
   Megaphone,
+  Bookmark,
   Rss,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ const feedNav = [
   { href: '/edula/trending', label: 'Trending', icon: TrendingUp },
   { href: '/edula/discover', label: 'Discover', icon: Compass },
   { href: '/edula/announcements', label: 'Announcements', icon: Megaphone },
+  { href: '/edula/saved', label: 'Saved', icon: Bookmark },
 ];
 
 

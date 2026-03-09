@@ -270,7 +270,8 @@ export type MixedFeedContent =
 export function classifyFeedContent(
   raw: Record<string, unknown>
 ): MixedFeedContent {
-  if (raw.source === 'feed_item' || raw.feed_type) {
+  // Classify as feed_item if explicitly tagged or if it lacks a post-like author field
+  if (raw.source === 'feed_item' || raw.feed_type || (!raw.author && !raw.content)) {
     return { source: 'feed_item', data: raw as unknown as FeedItem };
   }
   return { source: 'post', data: raw as unknown as Post };
@@ -328,17 +329,18 @@ export interface PostCardData {
 
 /** Transform API Post to component-friendly PostCardData */
 export function transformPost(post: Post): PostCardData {
+  const author = post.author ?? { id: 0, name: 'Unknown', username: 'unknown', avatar_url: '', is_verified: false };
   return {
     id: post.id,
     uuid: post.uuid,
     author: {
-      id: post.author.id,
-      name: post.author.name,
-      username: post.author.username.startsWith('@')
-        ? post.author.username
-        : `@${post.author.username}`,
-      avatar: post.author.avatar_url,
-      isVerified: post.author.is_verified,
+      id: author.id,
+      name: author.name,
+      username: author.username?.startsWith('@')
+        ? author.username
+        : `@${author.username ?? 'unknown'}`,
+      avatar: author.avatar_url ?? '',
+      isVerified: author.is_verified ?? false,
     },
     content: post.content,
     media: post.media

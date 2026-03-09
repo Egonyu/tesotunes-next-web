@@ -172,7 +172,9 @@ export default function UploadPage() {
         let errorMessage = 'Upload failed. Please try again.';
         if (err && typeof err === 'object' && 'response' in err) {
           const axiosError = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> }; status?: number } };
-          if (axiosError.response?.data?.message) {
+          if (axiosError.response?.status === 401) {
+            errorMessage = 'Your session has expired. Please log in again to upload.';
+          } else if (axiosError.response?.data?.message) {
             errorMessage = axiosError.response.data.message;
           } else if (axiosError.response?.data?.errors) {
             errorMessage = Object.values(axiosError.response.data.errors).flat().join(', ');
@@ -183,7 +185,6 @@ export default function UploadPage() {
           errorMessage = err.message;
         }
         setError(errorMessage);
-        console.error('Upload error:', err);
       },
     });
   };
@@ -280,18 +281,27 @@ export default function UploadPage() {
               <p className="font-medium text-red-800 dark:text-red-200">Error</p>
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                queryClient.invalidateQueries();
-                setError(null);
-                window.location.reload();
-              }}
-              className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Retry
-            </button>
+            {error.includes('session has expired') ? (
+              <Link
+                href="/login"
+                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
+              >
+                Log in
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  queryClient.invalidateQueries();
+                  setError(null);
+                  window.location.reload();
+                }}
+                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            )}
           </div>
         </div>
       )}

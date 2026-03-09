@@ -204,6 +204,23 @@ export async function apiPostForm<T>(
 ): Promise<T> {
   // File uploads go directly to the Laravel API to bypass Vercel's ~4.5 MB
   // request body size limit on rewrite-proxied requests.
+  //
+  // Because this is a cross-origin request (not through the Next.js proxy),
+  // the in-memory auth token MUST be present.  If TokenSync hasn't synced
+  // yet, or the Sanctum token was cleared, fetch a fresh session to
+  // recover the token before we fire the request.
+  if (!_authToken && typeof window !== "undefined") {
+    try {
+      const { getSession } = await import("next-auth/react");
+      const session = await getSession();
+      if (session?.accessToken) {
+        setAuthToken(session.accessToken as string);
+      }
+    } catch {
+      // getSession unavailable — continue without token
+    }
+  }
+
   const directUrl = `${DIRECT_API_URL}${normalizeApiPath(url)}`;
   const response = await api.post<T>(directUrl, formData, {
     ...config,

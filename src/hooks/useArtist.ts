@@ -116,6 +116,18 @@ export interface EarningsData {
   earnings_sources: EarningsSource[];
   transactions: Transaction[];
   monthly_chart?: MonthlyEarning[];
+  monthly_trends?: MonthlyEarning[];
+  per_song_earnings?: PerSongEarnings[];
+}
+
+export interface PerSongEarnings {
+  id: number;
+  title: string;
+  artwork_url: string | null;
+  streams_revenue: number;
+  downloads_revenue: number;
+  tips_revenue: number;
+  total: number;
 }
 
 export interface TopSong {

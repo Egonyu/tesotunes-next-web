@@ -226,12 +226,32 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const songStatusActions: Array<{ label: string; value: string; icon: typeof CheckCircle; color: string }> = [
-    { label: 'Publish', value: 'published', icon: CheckCircle, color: 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950' },
-    { label: 'Draft', value: 'draft', icon: FileText, color: 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' },
-    { label: 'Pending', value: 'pending', icon: Clock, color: 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-950' },
-    { label: 'Reject', value: 'rejected', icon: Ban, color: 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950' },
-  ];
+  /** Get contextual status actions based on current song status */
+  const getSongActions = (currentStatus: string): Array<{ label: string; value: string; icon: typeof CheckCircle; color: string }> => {
+    switch (currentStatus) {
+      case 'published':
+        return [
+          { label: 'Unpublish', value: 'draft', icon: FileText, color: 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' },
+        ];
+      case 'pending':
+      case 'pending_review':
+        return [
+          { label: 'Approve', value: 'published', icon: CheckCircle, color: 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950' },
+          { label: 'Reject', value: 'rejected', icon: Ban, color: 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950' },
+        ];
+      case 'rejected':
+        return [
+          { label: 'Publish', value: 'published', icon: CheckCircle, color: 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950' },
+          { label: 'Draft', value: 'draft', icon: FileText, color: 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' },
+        ];
+      case 'draft':
+      default:
+        return [
+          { label: 'Publish', value: 'published', icon: CheckCircle, color: 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950' },
+          { label: 'Pending', value: 'pending', icon: Clock, color: 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-950' },
+        ];
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -396,9 +416,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap items-center gap-1">
-                            {/* Status change buttons — show only statuses different from current */}
-                            {songStatusActions
-                              .filter((a) => a.value !== (song.status || 'draft'))
+                            {/* Contextual status change buttons */}
+                            {getSongActions(song.status || 'draft')
                               .map((action) => {
                                 const Icon = action.icon;
                                 return (

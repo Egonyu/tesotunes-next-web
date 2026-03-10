@@ -30,7 +30,19 @@ export default function ArtistEarningsPage() {
   const withdrawMutation = useRequestWithdrawal();
   const { data: royaltySplits, isLoading: splitsLoading } = useRoyaltySplits();
   const { data: songEarningsData, isLoading: songEarningsLoading } = usePerSongEarnings({ per_page: 10, sort: 'total_revenue' });
-  const songEarnings: SongEarning[] = songEarningsData?.data || [];
+  // Use per_song_earnings from main earnings response as fallback
+  const songEarnings: SongEarning[] = songEarningsData?.data || 
+    (earningsData?.per_song_earnings?.map(s => ({
+      song_id: s.id,
+      title: s.title,
+      artwork_url: s.artwork_url,
+      streams_revenue: s.streams_revenue,
+      downloads_revenue: s.downloads_revenue,
+      tips_revenue: s.tips_revenue,
+      total_revenue: s.total,
+      play_count: 0,
+      download_count: 0,
+    })) || []);
 
   const stats = earningsData?.stats || {
     balance: 0,
@@ -45,6 +57,9 @@ export default function ArtistEarningsPage() {
 
   // Build monthly chart from API data or derive from transactions
   const monthlyChart = useMemo(() => {
+    if (earningsData?.monthly_trends && earningsData.monthly_trends.length > 0) {
+      return earningsData.monthly_trends;
+    }
     if (earningsData?.monthly_chart && earningsData.monthly_chart.length > 0) {
       return earningsData.monthly_chart;
     }

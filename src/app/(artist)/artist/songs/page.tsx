@@ -109,7 +109,7 @@ export default function ArtistSongsPage() {
   };
 
   const statusLabels: Record<string, string> = {
-    published: 'Approved',
+    published: 'Published',
     pending: 'Pending Review',
     draft: 'Draft',
     rejected: 'Rejected',
@@ -207,7 +207,7 @@ export default function ArtistSongsPage() {
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-green-600">{statusCounts.published}</p>
-          <p className="text-sm text-muted-foreground">Approved</p>
+          <p className="text-sm text-muted-foreground">Published</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
@@ -247,7 +247,7 @@ export default function ArtistSongsPage() {
           className="px-4 py-2 border rounded-lg bg-background"
         >
           <option value="all">All Status</option>
-          <option value="published">Approved</option>
+          <option value="published">Published</option>
           <option value="pending">Pending Review</option>
           <option value="draft">Draft</option>
           <option value="rejected">Rejected</option>

@@ -53,8 +53,9 @@ interface SongsResponse {
 interface SongsStats {
   total: number;
   published: number;
-  pending_review: number;
+  pending: number;
   draft: number;
+  rejected?: number;
 }
 
 export default function SongsPage() {
@@ -112,7 +113,7 @@ export default function SongsPage() {
   });
 
   const approveSingleMutation = useMutation({
-    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/approve`),
+    mutationFn: (songId: number) => apiPost('/admin/songs/bulk-approve', { song_ids: [songId] }),
     onSuccess: () => {
       toast.success('Song approved');
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
@@ -121,7 +122,7 @@ export default function SongsPage() {
   });
 
   const rejectSingleMutation = useMutation({
-    mutationFn: (songId: number) => apiPost(`/admin/songs/${songId}/reject`, { reason: 'Rejected by admin' }),
+    mutationFn: (songId: number) => apiPost('/admin/songs/bulk-reject', { song_ids: [songId], reason: 'Rejected by admin' }),
     onSuccess: () => {
       toast.success('Song rejected');
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
@@ -139,6 +140,14 @@ export default function SongsPage() {
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  };
+
+  const statusLabels: Record<string, string> = {
+    published: 'Published',
+    pending_review: 'Pending Review',
+    pending: 'Pending Review',
+    rejected: 'Rejected',
+    draft: 'Draft',
   };
 
   const formatPlays = (plays: number | null | undefined) => {
@@ -197,7 +206,7 @@ export default function SongsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold">{formatPlays(stats?.total || 0)}</p>
           <p className="text-sm text-muted-foreground">Total Songs</p>
@@ -207,12 +216,16 @@ export default function SongsPage() {
           <p className="text-sm text-muted-foreground">Published</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
-          <p className="text-2xl font-bold text-yellow-600">{stats?.pending_review || 0}</p>
+          <p className="text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
           <p className="text-sm text-muted-foreground">Pending Review</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-gray-600">{formatPlays(stats?.draft || 0)}</p>
           <p className="text-sm text-muted-foreground">Drafts</p>
+        </div>
+        <div className="p-4 rounded-xl border bg-card">
+          <p className="text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
+          <p className="text-sm text-muted-foreground">Rejected</p>
         </div>
       </div>
 
@@ -235,7 +248,7 @@ export default function SongsPage() {
         >
           <option value="all">All Status</option>
           <option value="published">Published</option>
-          <option value="pending_review">Pending</option>
+          <option value="pending">Pending Review</option>
           <option value="rejected">Rejected</option>
           <option value="draft">Draft</option>
         </select>
@@ -356,7 +369,7 @@ export default function SongsPage() {
                       'px-2 py-1 rounded-full text-xs font-medium',
                       statusStyles[song.status || 'draft'] || statusStyles.draft
                     )}>
-                      {(song.status || 'draft').replace(/_/g, ' ')}
+                      {statusLabels[song.status || 'draft'] || song.status}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">

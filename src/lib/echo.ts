@@ -1,6 +1,7 @@
 import Pusher from 'pusher-js';
 import Echo from 'laravel-echo';
 import { API_URL } from './api-config';
+import { getAuthToken } from './api';
 
 // Make Pusher available globally for Laravel Echo
 if (typeof window !== 'undefined') {
@@ -9,23 +10,15 @@ if (typeof window !== 'undefined') {
 
 let echoInstance: Echo<'pusher'> | null = null;
 
+/**
+ * Return a configured Echo instance.
+ * Auth uses the Sanctum Bearer token (via getAuthToken) so that
+ * private-channel authorization works through the Laravel API.
+ */
 export function getEchoInstance(): Echo<'pusher'> | null {
   if (typeof window === 'undefined') return null;
 
   if (!echoInstance) {
-    // Get auth token from cookie or localStorage
-    const getAuthToken = () => {
-      // Try to get from cookie first
-      const cookies = document.cookie.split(';');
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'XSRF-TOKEN') {
-          return decodeURIComponent(value);
-        }
-      }
-      return null;
-    };
-
     echoInstance = new Echo({
       broadcaster: 'pusher',
       key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '',
@@ -35,8 +28,8 @@ export function getEchoInstance(): Echo<'pusher'> | null {
       authEndpoint: `${API_URL}/broadcasting/auth`,
       auth: {
         headers: {
-          'X-XSRF-TOKEN': getAuthToken() || '',
-          'Accept': 'application/json',
+          Authorization: `Bearer ${getAuthToken() || ''}`,
+          Accept: 'application/json',
         },
       },
     });
@@ -50,6 +43,16 @@ export function disconnectEcho(): void {
     echoInstance.disconnect();
     echoInstance = null;
   }
+}
+
+/**
+ * Reconnect Echo with a fresh auth token.
+ * Call this after login/token-sync so private channels authenticate properly.
+ */
+export function reconnectEcho(): void {
+  disconnectEcho();
+  // Next call to getEchoInstance() will create a fresh instance
+  // with the current Bearer token.
 }
 
 export type { Echo };

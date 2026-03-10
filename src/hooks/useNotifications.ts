@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
-import { getEchoInstance } from '@/lib/echo';
+import { apiGet, apiPost, apiDelete, getAuthToken } from '@/lib/api';
+import { getEchoInstance, reconnectEcho } from '@/lib/echo';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
@@ -27,6 +27,8 @@ export interface Notification {
     | 'award_nomination'
     | 'referral_reward'
     | 'song_approved'
+    | 'song_pending_review'
+    | 'song_moderation'
     | 'subscription_expiring'
     | 'weekly_digest'
     | 'playlist_share'
@@ -254,6 +256,13 @@ export function useRealtimeNotifications() {
   useEffect(() => {
     if (!session?.user?.id) return;
     
+    // Wait until the auth token is available before connecting Echo.
+    // Without a valid token the private-channel auth request will fail.
+    const token = getAuthToken();
+    if (!token) return;
+
+    // (Re)connect Echo so it picks up the latest Bearer token.
+    reconnectEcho();
     const echo = getEchoInstance();
     if (!echo) return;
     

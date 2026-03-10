@@ -62,7 +62,7 @@ export interface ArtistSong {
   downloads: number;
   duration: string;
   duration_seconds?: number;
-  status: 'published' | 'pending' | 'draft';
+  status: 'published' | 'pending' | 'draft' | 'rejected';
   release_date: string;
 }
 
@@ -79,6 +79,7 @@ export interface SongsResponse {
     published: number;
     pending: number;
     draft: number;
+    rejected?: number;
   };
 }
 

@@ -116,7 +116,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => apiPost(`/admin/songs/${id}/approve`),
+    mutationFn: () => apiPost('/admin/songs/bulk-approve', { song_ids: [Number(id)] }),
     onSuccess: () => {
       toast.success('Song approved and published');
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
@@ -126,7 +126,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (reason: string) => apiPost(`/admin/songs/${id}/reject`, { reason }),
+    mutationFn: (reason: string) => apiPost('/admin/songs/bulk-reject', { song_ids: [Number(id)], reason }),
     onSuccess: () => {
       toast.success('Song rejected');
       setShowRejectDialog(false);

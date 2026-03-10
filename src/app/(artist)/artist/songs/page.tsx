@@ -105,6 +105,14 @@ export default function ArtistSongsPage() {
     published: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+  };
+
+  const statusLabels: Record<string, string> = {
+    published: 'Approved',
+    pending: 'Pending Review',
+    draft: 'Draft',
+    rejected: 'Rejected',
   };
 
   const handleDelete = (id: number, title: string) => {
@@ -192,14 +200,14 @@ export default function ArtistSongsPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold">{statusCounts.total}</p>
           <p className="text-sm text-muted-foreground">Total Songs</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-green-600">{statusCounts.published}</p>
-          <p className="text-sm text-muted-foreground">Published</p>
+          <p className="text-sm text-muted-foreground">Approved</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
@@ -208,6 +216,10 @@ export default function ArtistSongsPage() {
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-gray-600">{statusCounts.draft}</p>
           <p className="text-sm text-muted-foreground">Drafts</p>
+        </div>
+        <div className="p-4 rounded-xl border bg-card">
+          <p className="text-2xl font-bold text-red-600">{statusCounts.rejected || 0}</p>
+          <p className="text-sm text-muted-foreground">Rejected</p>
         </div>
       </div>
 
@@ -235,9 +247,10 @@ export default function ArtistSongsPage() {
           className="px-4 py-2 border rounded-lg bg-background"
         >
           <option value="all">All Status</option>
-          <option value="published">Published</option>
-          <option value="pending">Pending</option>
+          <option value="published">Approved</option>
+          <option value="pending">Pending Review</option>
           <option value="draft">Draft</option>
+          <option value="rejected">Rejected</option>
         </select>
         <select
           value={sortBy}
@@ -332,10 +345,10 @@ export default function ArtistSongsPage() {
 
             {/* Status */}
             <span className={cn(
-              'px-2 py-1 rounded-full text-xs font-medium capitalize hidden sm:block',
-              statusStyles[song.status]
+              'px-2 py-1 rounded-full text-xs font-medium hidden sm:block',
+              statusStyles[song.status] || statusStyles.draft
             )}>
-              {song.status}
+              {statusLabels[song.status] || song.status}
             </span>
 
             {/* Actions */}

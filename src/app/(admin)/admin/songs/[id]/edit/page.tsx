@@ -162,7 +162,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const { data: albumsRes } = useQuery({
     queryKey: ['admin', 'albums', 'song-edit'],
-    queryFn: () => apiGet<{ data: AlbumOption[] }>('/admin/albums?per_page=1000'),
+    queryFn: () => apiGet<{ data: AlbumOption[] }>('/albums?per_page=1000'),
   });
 
   const { data: genresRes } = useQuery({
@@ -242,8 +242,6 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
       if (formData.key.trim()) payload.append('key', formData.key.trim());
       if (formData.description.trim()) payload.append('description', formData.description.trim());
       if (formData.lyrics.trim()) payload.append('lyrics', formData.lyrics.trim());
-      if (formData.meta_title.trim()) payload.append('meta_title', formData.meta_title.trim());
-      if (formData.meta_description.trim()) payload.append('meta_description', formData.meta_description.trim());
 
       formData.genre_ids.forEach((genreId) => payload.append('genre_ids[]', genreId));
       formData.featured_artists.forEach((artistId) => payload.append('featured_artists[]', artistId));

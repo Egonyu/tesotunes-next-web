@@ -11,10 +11,8 @@ const mockSession = {
     email: 'test@example.com',
     role: 'user',
     image: null,
-    accessToken: 'mock-access-token',
   },
   expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  accessToken: 'mock-access-token',
 } as const;
 
 // Create a new QueryClient for each test

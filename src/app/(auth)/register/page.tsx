@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Check } from "lucide-react";
+import { registerUser } from "@/lib/register-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,42 +35,15 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const result = await registerUser(formData);
 
-      // Safely parse response — guard against empty/non-JSON body
-      let result: Record<string, unknown> | null = null;
-      const text = await response.text();
-      if (text && text.trim().length > 0) {
-        try {
-          result = JSON.parse(text);
-        } catch (parseError) {
-          console.error("[Register] Failed to parse response:", {
-            status: response.status,
-            text: text.substring(0, 200),
-            error: parseError
-          });
-        }
-      }
-
-      if (!response.ok) {
-        if (!result) {
-          setErrors({ general: ["Registration service unavailable. Please try again later."] });
-          return;
-        }
-        if (response.status === 422 && result.errors) {
-          setErrors(result.errors as Record<string, string[]>);
+      if (!result.ok) {
+        if (result.status === 422 && result.errors) {
+          setErrors(result.errors);
         } else {
-          const message =
-            (result.message as string) ||
-            (result.error as string) ||
-            "An error occurred during registration";
-          setErrors({ general: [message] });
+          setErrors({
+            general: [result.message || "An error occurred during registration"],
+          });
         }
         return;
       }

@@ -1,24 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
-import { apiPost } from '@/lib/api';
+import Image from 'next/image';
 import {
   ArrowLeft,
   Upload,
-  Music,
   Image as ImageIcon,
   Loader2,
-  Plus,
-  X,
   Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useCreateAlbum } from '@/hooks/useArtist';
 
 export default function CreateAlbumPage() {
   const router = useRouter();
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const createAlbum = useCreateAlbum();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -27,53 +26,47 @@ export default function CreateAlbumPage() {
     release_date: '',
     type: 'album' as 'album' | 'single' | 'ep',
   });
-  const [tracks, setTracks] = useState<{ title: string; file: File | null }[]>([]);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
-  const createAlbum = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiPost<{ data: { id: number } }>('/artist/albums', data);
-    },
-    onSuccess: (res) => {
-      toast.success('Album created successfully!');
-      router.push('/artist/albums');
-    },
-    onError: () => {
-      toast.error('Failed to create album. Please try again.');
-    },
-  });
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Cover image must be less than 10MB');
+      return;
+    }
 
-  const addTrack = () => {
-    setTracks([...tracks, { title: '', file: null }]);
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
   };
 
-  const removeTrack = (index: number) => {
-    setTracks(tracks.filter((_, i) => i !== index));
-  };
-
-  const updateTrack = (index: number, field: string, value: string | File) => {
-    const updated = [...tracks];
-    updated[index] = { ...updated[index], [field]: value };
-    setTracks(updated);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = new FormData();
-    data.append('title', formData.title);
-    data.append('description', formData.description);
-    data.append('genre', formData.genre);
-    data.append('release_date', formData.release_date);
-    data.append('type', formData.type);
+    if (!formData.title.trim()) {
+      toast.error('Album title is required');
+      return;
+    }
 
-    tracks.forEach((track, i) => {
-      data.append(`tracks[${i}][title]`, track.title);
-      if (track.file) {
-        data.append(`tracks[${i}][file]`, track.file);
-      }
-    });
-
-    createAlbum.mutate(data);
+    try {
+      await createAlbum.mutateAsync({
+        title: formData.title,
+        description: formData.description,
+        release_date: formData.release_date || undefined,
+        type: formData.type,
+        genre: formData.genre,
+        cover_image: coverFile || undefined,
+      });
+      toast.success('Album created successfully!');
+      router.push('/artist/albums');
+    } catch {
+      toast.error('Failed to create album. Please try again.');
+    }
   };
 
   return (
@@ -90,14 +83,32 @@ export default function CreateAlbumPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleCoverChange}
+        />
+
         {/* Cover Art & Basic Info */}
         <div className="grid gap-6 md:grid-cols-[200px_1fr]">
           <div>
             <label className="block text-sm font-medium mb-2">Cover Art</label>
-            <div className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors">
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Upload Cover</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              className="aspect-square w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden relative"
+            >
+              {coverPreview ? (
+                <Image src={coverPreview} alt="Album cover preview" fill className="object-cover" />
+              ) : (
+                <>
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Upload Cover</span>
+                </>
+              )}
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -160,76 +171,21 @@ export default function CreateAlbumPage() {
           </div>
         </div>
 
-        {/* Tracks */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Tracks</h2>
-            <button
-              type="button"
-              onClick={addTrack}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm hover:bg-muted"
-            >
-              <Plus className="h-4 w-4" />
-              Add Track
-            </button>
+        <div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 font-medium text-foreground mb-1">
+            <Upload className="h-4 w-4" />
+            Add songs after album creation
           </div>
-
-          {tracks.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed p-8 text-center">
-              <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-medium mb-1">No tracks added</h3>
-              <p className="text-sm text-muted-foreground mb-4">Add tracks to your album</p>
-              <button
-                type="button"
-                onClick={addTrack}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
-              >
-                Add First Track
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {tracks.map((track, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
-                  <span className="text-sm text-muted-foreground w-6 text-center">{i + 1}</span>
-                  <Music className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input
-                    type="text"
-                    value={track.title}
-                    onChange={(e) => updateTrack(i, 'title', e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-md border bg-background text-sm"
-                    placeholder="Track title"
-                  />
-                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm cursor-pointer hover:bg-muted">
-                    <Upload className="h-3.5 w-3.5" />
-                    {track.file ? track.file.name.slice(0, 20) : 'Upload'}
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) updateTrack(i, 'file', e.target.files[0]);
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeTrack(i)}
-                    className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <p>
+            Album metadata and cover art are saved first. Upload individual tracks from the artist upload flow and attach them to this album after it is created.
+          </p>
         </div>
 
         {/* Submit */}
         <div className="flex gap-3 pt-4 border-t">
           <button
             type="submit"
-            disabled={createAlbum.isPending || !formData.title}
+            disabled={createAlbum.isPending || !formData.title.trim()}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50"
           >
             {createAlbum.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

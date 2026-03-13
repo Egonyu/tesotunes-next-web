@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete, apiPostForm, getAuthToken } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
+import { useSession } from "next-auth/react";
+import {
+  buildArtistAlbumCreateFormData,
+  buildArtistAlbumUpdateFormData,
+  buildArtistSongUploadFormData,
+  type ArtistAlbumPayload,
+  type ArtistSongUploadPayload,
+} from "@/lib/artist-media-payloads";
 
 // ============================================================================
 // Types
@@ -175,16 +183,14 @@ export interface ArtistProfile {
 // ============================================================================
 
 export function useArtistDashboard(options?: { enabled?: boolean }) {
-  const [hasToken, setHasToken] = useState(false);
-  useEffect(() => {
-    setHasToken(!!getAuthToken());
-  }, []);
+  const { status } = useSession();
+
   return useQuery({
     queryKey: ["artist", "dashboard"],
     queryFn: () => apiGet<{ data: ArtistDashboard }>("/artist/dashboard")
       .then(res => res.data),
     staleTime: 30 * 1000, // 30 seconds
-    enabled: options?.enabled ?? hasToken,
+    enabled: options?.enabled ?? status === "authenticated",
   });
 }
 
@@ -200,15 +206,13 @@ export function useMyArtistSongs(params?: {
   sort?: string;
   order?: 'asc' | 'desc';
 }, options?: { enabled?: boolean }) {
-  const [hasToken, setHasToken] = useState(false);
-  useEffect(() => {
-    setHasToken(!!getAuthToken());
-  }, []);
+  const { status } = useSession();
+
   return useQuery({
     queryKey: ["artist", "songs", params],
     queryFn: () => apiGet<SongsResponse>("/artist/songs", { params }),
     staleTime: 30 * 1000,
-    enabled: options?.enabled ?? hasToken,
+    enabled: options?.enabled ?? status === "authenticated",
   });
 }
 
@@ -489,23 +493,7 @@ export function useUpdateArtistBanner() {
 // Song Upload Hook
 // ============================================================================
 
-export interface UploadSongData {
-  title: string;
-  audio_file: File;
-  cover_image?: File;
-  album_id?: number;
-  genre?: string; // Will be mapped to genre_id
-  featured_artists?: string;
-  lyrics?: string;
-  release_date?: string;
-  price?: number;
-  is_explicit?: boolean;
-  description?: string;
-  composer?: string;
-  producer?: string;
-  is_downloadable?: boolean;
-  is_free?: boolean;
-}
+export type UploadSongData = ArtistSongUploadPayload;
 
 export interface UploadSongResponse {
   message: string;
@@ -528,26 +516,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
 
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
-      const formData = new FormData();
-
-      // Required fields - map to backend field names
-      formData.append('title', data.title);
-      formData.append('audio', data.audio_file); // Backend expects 'audio'
-
-      // Optional fields - map to backend field names
-      if (data.cover_image) formData.append('cover', data.cover_image); // Backend expects 'cover'
-      if (data.album_id) formData.append('album_id', String(data.album_id));
-      if (data.genre) formData.append('genre_id', data.genre); // Backend expects 'genre_id'
-      if (data.featured_artists) formData.append('featured_artists[]', data.featured_artists);
-      if (data.lyrics) formData.append('lyrics', data.lyrics);
-      if (data.release_date) formData.append('release_date', data.release_date);
-      if (data.price !== undefined) formData.append('price', String(data.price));
-      if (data.is_explicit !== undefined) formData.append('is_explicit', data.is_explicit ? '1' : '0');
-      if (data.description) formData.append('description', data.description);
-      if (data.composer) formData.append('composer', data.composer);
-      if (data.producer) formData.append('producer', data.producer);
-      if (data.is_downloadable !== undefined) formData.append('is_downloadable', data.is_downloadable ? '1' : '0');
-      if (data.is_free !== undefined) formData.append('is_free', data.is_free ? '1' : '0');
+      const formData = buildArtistSongUploadFormData(data);
 
       return apiPostForm<UploadSongResponse>('/artist/songs', formData, {
         onUploadProgress: (progressEvent) => {
@@ -572,23 +541,14 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
 // Create Album Hook
 // ============================================================================
 
-export interface CreateAlbumData {
-  title: string;
-  cover_image?: File;
-  description?: string;
-  release_date?: string;
-}
+export type CreateAlbumData = ArtistAlbumPayload;
 
 export function useCreateAlbum() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: CreateAlbumData) => {
-      const formData = new FormData();
-      formData.append('title', data.title);
-      if (data.cover_image) formData.append('cover_image', data.cover_image);
-      if (data.description) formData.append('description', data.description);
-      if (data.release_date) formData.append('release_date', data.release_date);
+      const formData = buildArtistAlbumCreateFormData(data);
 
       return apiPostForm<{ message: string; data: { id: number; title: string } }>('/artist/albums', formData);
     },
@@ -652,15 +612,7 @@ export function useUpdateAlbum() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number | string; data: UpdateAlbumData }) => {
-      const formData = new FormData();
-      // Laravel needs _method for PUT via FormData
-      formData.append("_method", "PUT");
-      if (data.title) formData.append("title", data.title);
-      if (data.description !== undefined) formData.append("description", data.description || "");
-      if (data.release_date) formData.append("release_date", data.release_date);
-      if (data.type) formData.append("type", data.type);
-      if (data.genre) formData.append("genre", data.genre);
-      if (data.cover_image) formData.append("cover_image", data.cover_image);
+      const formData = buildArtistAlbumUpdateFormData(data);
 
       return apiPostForm<{ message: string; data: { id: number; title: string } }>(
         `/artist/albums/${id}`,

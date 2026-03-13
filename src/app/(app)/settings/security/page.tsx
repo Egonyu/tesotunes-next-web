@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Shield,
@@ -97,6 +97,10 @@ export default function SecuritySettingsPage() {
       apiPost("/settings/2fa/disable", { password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["2fa-status"] });
+      setSetupStep("idle");
+      setSetupData(null);
+      setVerifyCode("");
+      setCopiedCodes(false);
       setShowDisable(false);
       setDisablePassword("");
       toast.success("Two-factor authentication disabled");
@@ -567,6 +571,8 @@ function PasswordChangeSection() {
 // ============================================================================
 
 function ActiveSessionsSection() {
+  const queryClient = useQueryClient();
+
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["active-sessions"],
     queryFn: () =>
@@ -584,6 +590,7 @@ function ActiveSessionsSection() {
   const revokeAll = useMutation({
     mutationFn: () => apiPost("/settings/sessions/revoke-all", {}),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-sessions"] });
       toast.success("All other sessions revoked");
     },
   });

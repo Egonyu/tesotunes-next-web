@@ -199,7 +199,6 @@ export const authConfig: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-        session.accessToken = token.accessToken as string;
       }
       return session;
     },
@@ -210,11 +209,16 @@ export const authConfig: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        remember_me: { label: "Remember me", type: "checkbox" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
+
+        const rememberMe =
+          (credentials as Record<string, string | boolean | undefined>).remember_me === true ||
+          (credentials as Record<string, string | boolean | undefined>).remember_me === "true";
 
         try {
           const response = await fetch(`${API_URL}/auth/login`, {
@@ -226,6 +230,7 @@ export const authConfig: NextAuthOptions = {
             body: JSON.stringify({
               email: credentials.email,
               password: credentials.password,
+              remember_me: rememberMe,
             }),
           });
 
@@ -239,10 +244,6 @@ export const authConfig: NextAuthOptions = {
           if (!response.ok) {
             const message = (data.message as string) || "Unknown error";
             console.error("[Auth] Login failed:", message);
-            // Surface 2FA requirement to the frontend
-            if (response.status === 423 || message.toLowerCase().includes("two factor")) {
-              throw new Error("2FA_REQUIRED");
-            }
             throw new Error(message);
           }
 
@@ -273,10 +274,6 @@ export const authConfig: NextAuthOptions = {
           return null;
         } catch (error) {
           console.error("[Auth] Exception during login:", error);
-          // Re-throw known error messages so NextAuth surfaces them
-          if (error instanceof Error && error.message === "2FA_REQUIRED") {
-            throw error;
-          }
           if (error instanceof Error && error.message !== "Unknown error") {
             throw error;
           }

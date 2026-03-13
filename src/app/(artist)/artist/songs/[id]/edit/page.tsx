@@ -19,7 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistSong, useArtistAlbums } from '@/hooks/useArtist';
 import { useGenres } from '@/hooks/api';
-import { api } from '@/lib/api';
+import { apiPostForm, isApiError } from '@/lib/api';
+import { buildArtistSongUpdateFormData } from '@/lib/artist-media-payloads';
 import { toast } from 'sonner';
 
 interface SongDetail {
@@ -137,45 +138,35 @@ export default function EditSongPage() {
     setSaving(true);
 
     try {
-      const formData = new FormData();
-      formData.append('_method', 'PUT'); // Laravel method spoofing for FormData
-
-      formData.append('title', title.trim());
-      if (albumId) formData.append('album_id', String(albumId));
-      if (genreId) formData.append('genre_id', genreId);
-      if (featuredArtists.trim()) formData.append('featured_artists', featuredArtists.trim());
-      if (lyrics.trim()) formData.append('lyrics', lyrics.trim());
-      if (releaseDate) formData.append('release_date', releaseDate);
-      if (price && !isFree) formData.append('price', price);
-      formData.append('is_explicit', isExplicit ? '1' : '0');
-      if (description.trim()) formData.append('description', description.trim());
-      if (composer.trim()) formData.append('composer', composer.trim());
-      if (producer.trim()) formData.append('producer', producer.trim());
-      formData.append('is_downloadable', isDownloadable ? '1' : '0');
-      formData.append('is_free', isFree ? '1' : '0');
-
-      if (coverFile) {
-        formData.append('cover', coverFile);
-      }
-
-      // Use POST with _method=PUT for FormData (Laravel convention)
-      await api.post(`/artist/songs/${songId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const formData = buildArtistSongUpdateFormData({
+        title: title.trim(),
+        album_id: albumId === '' ? undefined : Number(albumId),
+        genre: genreId || undefined,
+        featured_artists: featuredArtists,
+        lyrics,
+        release_date: releaseDate || undefined,
+        price: price && !isFree ? price : undefined,
+        is_explicit: isExplicit,
+        description,
+        composer,
+        producer,
+        is_downloadable: isDownloadable,
+        is_free: isFree,
+        cover_image: coverFile || undefined,
       });
+
+      await apiPostForm(`/artist/songs/${songId}`, formData);
 
       toast.success('Song updated successfully');
       queryClient.invalidateQueries({ queryKey: ['artist', 'songs'] });
       router.push(`/artist/songs/${songId}`);
     } catch (err: unknown) {
       let errorMessage = 'Failed to update song. Please try again.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as {
-          response?: { data?: { message?: string; errors?: Record<string, string[]> } };
-        };
-        if (axiosError.response?.data?.message) {
-          errorMessage = axiosError.response.data.message;
-        } else if (axiosError.response?.data?.errors) {
-          errorMessage = Object.values(axiosError.response.data.errors).flat().join(', ');
+      if (isApiError(err)) {
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.errors) {
+          errorMessage = Object.values(err.response.data.errors).flat().join(', ');
         }
       } else if (err instanceof Error) {
         errorMessage = err.message;

@@ -75,6 +75,15 @@ const config: Config = {
     '<rootDir>/src/test/**/*.test.(ts|tsx)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  modulePathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/playwright-report/',
+    '<rootDir>/test-results/',
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+  ],
   transformIgnorePatterns: [
     '/node_modules/(?!(next-auth|@auth)/)',
   ],

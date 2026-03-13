@@ -1,67 +1,36 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
-import { API_URL, isServer, isLocalDev } from "./api-config";
+import { API_URL } from "./api-config";
 
-// In development, hit the Laravel API directly.
-// In production (browser), use the Next.js rewrite proxy at /api/* to avoid
-// CORS and leverage same-origin requests.  Server-side code (RSC / serverFetch)
-// still needs the absolute URL.
-const CLIENT_BASE_URL = isServer ? API_URL : (
-  isLocalDev
-    ? API_URL          // Local dev — hit Laravel directly
-    : "/api"           // Production — route through Next.js rewrite proxy
-);
+// Browser requests go through the Next.js backend proxy so the Laravel access
+// token stays server-side inside the NextAuth JWT. Server-side code can still
+// call Laravel directly when needed.
+const CLIENT_BASE_URL = typeof window === "undefined" ? API_URL : "/api/backend";
 
-// Direct URL to the Laravel API — used for file uploads to bypass Vercel's
-// ~4.5 MB request body limit on proxied/rewritten requests.
-const DIRECT_API_URL = API_URL;
-
-// Create axios instance with defaults
 export const api: AxiosInstance = axios.create({
   baseURL: CLIENT_BASE_URL,
-  timeout: 30000, // 30 second timeout
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true, // Required for Sanctum cookies in dev (direct API)
+  withCredentials: true,
 });
+
+export interface ApiErrorResponse {
+  message?: string;
+  errors?: Record<string, string[] | string>;
+}
 
 const isDevEnv = process.env.NODE_ENV !== "production";
 
-// In-memory auth token — never persisted to localStorage (XSS mitigation).
-// Populated on mount by TokenSync from the httpOnly NextAuth JWT cookie.
-let _authToken: string | null = null;
-
-/** Set the in-memory auth token (called by TokenSync / login flows). */
-export function setAuthToken(token: string | null) {
-  _authToken = token;
-}
-
-/** Read the current in-memory auth token. */
-export function getAuthToken(): string | null {
-  return _authToken;
-}
-
 function normalizeApiPath(url: string): string {
-  const isAbsoluteUrl = /^https?:\/\//i.test(url);
-  if (isAbsoluteUrl) {
+  if (/^https?:\/\//i.test(url)) {
     return url;
   }
 
-  const base = api.defaults.baseURL ?? "";
-  const normalizedBase = base.replace(/\/+$/, "");
-  const baseEndsWithApi = normalizedBase.endsWith("/api") || normalizedBase === "/api";
-
-  let normalizedPath = url.startsWith("/") ? url : `/${url}`;
-
-  if (baseEndsWithApi && normalizedPath.startsWith("/api/")) {
-    normalizedPath = normalizedPath.replace(/^\/api/, "");
-  }
-
-  return normalizedPath;
+  return url.startsWith("/") ? url : `/${url}`;
 }
 
-// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
@@ -72,37 +41,13 @@ api.interceptors.request.use(
       }
     }
 
-    if (_authToken) {
-      config.headers.Authorization = `Bearer ${_authToken}`;
-    }
-
-    if (isLocalDev && typeof window !== "undefined") {
-      console.debug("[API][REQ]", {
-        method: config.method,
-        baseURL: config.baseURL,
-        url: config.url,
-        params: config.params,
-      });
-    }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    if (isLocalDev && typeof window !== "undefined") {
-      console.debug("[API][RES]", {
-        status: response.status,
-        method: response.config.method,
-        url: response.config.url,
-        data: response.data,
-      });
-    }
-    return response;
-  },
+  (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
@@ -118,7 +63,6 @@ api.interceptors.response.use(
       });
     }
 
-    // --- Handle network-level errors (no response from server) ---
     if (!error.response) {
       if (isDevEnv) {
         return Promise.reject(error);
@@ -131,46 +75,19 @@ api.interceptors.response.use(
             ? "Unable to reach the server. Please check your internet connection."
             : `Network error: ${error.message}`;
 
-      const networkError = new Error(message) as Error & { isNetworkError: boolean; originalError: AxiosError };
+      const networkError = new Error(message) as Error & {
+        isNetworkError: boolean;
+        originalError: AxiosError;
+      };
       networkError.isNetworkError = true;
       networkError.originalError = error;
       return Promise.reject(networkError);
     }
 
-    // Retry once on 401 if a token has appeared in memory
-    // (handles race condition where TokenSync hasn't synced the token yet)
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      typeof window !== "undefined"
-    ) {
-      originalRequest._retry = true;
-
-      // Wait for TokenSync to populate the in-memory token
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      if (_authToken && originalRequest.headers) {
-        originalRequest.headers.Authorization = `Bearer ${_authToken}`;
-        try {
-          return await api(originalRequest);
-        } catch (retryError) {
-          // Retry also failed — token is stale, clear it.
-          // Do NOT hard-redirect here; let page-level auth guards handle it.
-          if (axios.isAxiosError(retryError) && retryError.response?.status === 401) {
-            _authToken = null;
-          }
-          return Promise.reject(retryError);
-        }
-      }
-
-      // No token after waiting — don't redirect, just reject.
-      // Page layouts (admin/artist) already handle unauthenticated state.
-    }
     return Promise.reject(error);
   }
 );
 
-// Type-safe API wrapper
 export async function apiGet<T>(
   url: string,
   config?: AxiosRequestConfig
@@ -202,29 +119,9 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  // File uploads go directly to the Laravel API to bypass Vercel's ~4.5 MB
-  // request body size limit on rewrite-proxied requests.
-  //
-  // Because this is a cross-origin request (not through the Next.js proxy),
-  // the in-memory auth token MUST be present.  If TokenSync hasn't synced
-  // yet, or the Sanctum token was cleared, fetch a fresh session to
-  // recover the token before we fire the request.
-  if (!_authToken && typeof window !== "undefined") {
-    try {
-      const { getSession } = await import("next-auth/react");
-      const session = await getSession();
-      if (session?.accessToken) {
-        setAuthToken(session.accessToken as string);
-      }
-    } catch {
-      // getSession unavailable — continue without token
-    }
-  }
-
-  const directUrl = `${DIRECT_API_URL}${normalizeApiPath(url)}`;
-  const response = await api.post<T>(directUrl, formData, {
+  const response = await api.post<T>(normalizeApiPath(url), formData, {
     ...config,
-    timeout: 0, // No timeout for file uploads
+    timeout: 0,
   });
   return response.data;
 }
@@ -235,6 +132,10 @@ export async function apiDelete<T>(
 ): Promise<T> {
   const response = await api.delete<T>(normalizeApiPath(url), config);
   return response.data;
+}
+
+export function isApiError(error: unknown): error is AxiosError<ApiErrorResponse> {
+  return axios.isAxiosError<ApiErrorResponse>(error);
 }
 
 // Server-side fetch wrapper for RSC

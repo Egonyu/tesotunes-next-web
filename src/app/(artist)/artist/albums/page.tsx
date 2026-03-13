@@ -8,8 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
-  Trash2,
-  Eye,
   Music,
   Calendar,
   Loader2,
@@ -136,12 +134,6 @@ export default function ArtistAlbumsPage() {
                 )}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <Link
-                    href={`/artist/albums/${album.id}`}
-                    className="p-3 bg-white rounded-full hover:bg-gray-100"
-                  >
-                    <Eye className="h-5 w-5 text-gray-900" />
-                  </Link>
-                  <Link
                     href={`/artist/albums/${album.id}/edit`}
                     className="p-3 bg-white rounded-full hover:bg-gray-100"
                   >
@@ -160,13 +152,6 @@ export default function ArtistAlbumsPage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-1">
-                  <Link
-                    href={`/artist/albums/${album.id}`}
-                    className="p-2 hover:bg-muted rounded-lg"
-                    title="View"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
                   <Link
                     href={`/artist/albums/${album.id}/edit`}
                     className="p-2 hover:bg-muted rounded-lg"

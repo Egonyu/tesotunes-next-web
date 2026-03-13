@@ -7,8 +7,8 @@ import { ArrowLeft, Loader2, ChevronRight, ChevronLeft, Check, AlertCircle } fro
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useCreateGoal } from '@/hooks/useSaccoGoals'
+import { isApiError } from '@/lib/api'
 import type { GoalType, GoalCurrency, GoalVisibility, CreateGoalData } from '@/types/sacco'
-import axios from 'axios'
 
 const goalTypes: { value: GoalType; label: string; icon: string; description: string }[] = [
   { value: 'music_video', label: 'Music Video', icon: '🎬', description: 'Fund your next visual masterpiece' },
@@ -32,7 +32,7 @@ const visibilityOptions: { value: GoalVisibility; label: string; icon: string }[
 ]
 
 function extractErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
+  if (isApiError(error)) {
     const data = error.response?.data
     if (data?.message) return data.message
     if (data?.errors) {

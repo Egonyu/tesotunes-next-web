@@ -34,6 +34,8 @@ type Artist = {
   bio: string | null;
   status: string;
   is_verified: boolean;
+  verification_status?: string;
+  rejection_reason?: string | null;
   is_featured: boolean;
   profile_url: string | null;
   cover_url: string | null;
@@ -109,6 +111,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteSongId, setDeleteSongId] = useState<number | null>(null);
+  const [showRejectComposer, setShowRejectComposer] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   // --- Queries ---
 
@@ -170,6 +174,38 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
     onError: () => toast.error('Failed to update featured status'),
+  });
+
+  const rejectArtistMutation = useMutation({
+    mutationFn: (reason: string) => apiPost<{ message?: string }>(`/admin/artists/${id}/reject`, { reason }),
+    onSuccess: () => {
+      toast.success('Artist application rejected');
+      setShowRejectComposer(false);
+      setRejectReason('');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to reject artist application'),
+  });
+
+  const approveArtistMutation = useMutation({
+    mutationFn: () => apiPost<{ message?: string }>(`/admin/artists/${id}/approve`),
+    onSuccess: () => {
+      toast.success('Artist approved');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to approve artist'),
+  });
+
+  const suspendArtistMutation = useMutation({
+    mutationFn: () => apiPost<{ message?: string }>(`/admin/artists/${id}/suspend`),
+    onSuccess: () => {
+      toast.success('Artist suspended');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to suspend artist'),
   });
 
   const changeSongStatusMutation = useMutation({
@@ -586,6 +622,15 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
           <div className="rounded-xl border bg-card p-6">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Quick Actions</h3>
             <div className="space-y-2">
+              {artist.status !== 'active' && (
+                <button
+                  onClick={() => approveArtistMutation.mutate()}
+                  disabled={approveArtistMutation.isPending}
+                  className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  {approveArtistMutation.isPending ? 'Approving artist...' : 'Approve artist'}
+                </button>
+              )}
               <button
                 onClick={() => toggleVerifyMutation.mutate()}
                 className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
@@ -593,12 +638,51 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                 {artist.is_verified ? 'Remove verification' : 'Verify artist'}
               </button>
               <button
+                onClick={() => setShowRejectComposer((value) => !value)}
+                className="w-full rounded-lg border border-red-300 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              >
+                Reject application
+              </button>
+              {artist.status !== 'suspended' && (
+                <button
+                  onClick={() => suspendArtistMutation.mutate()}
+                  disabled={suspendArtistMutation.isPending}
+                  className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  {suspendArtistMutation.isPending ? 'Suspending artist...' : 'Suspend artist'}
+                </button>
+              )}
+              <button
                 onClick={() => toggleFeaturedMutation.mutate()}
                 className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
               >
                 {artist.is_featured ? 'Remove from featured' : 'Add to featured'}
               </button>
             </div>
+            {showRejectComposer && (
+              <div className="mt-4 space-y-2 rounded-lg border border-red-200 bg-red-50/60 p-3">
+                <p className="text-sm font-medium text-red-700">Reject artist application</p>
+                <textarea
+                  value={rejectReason}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  placeholder="Reason for rejection..."
+                  className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={() => rejectArtistMutation.mutate(rejectReason)}
+                  disabled={rejectArtistMutation.isPending || !rejectReason.trim()}
+                  className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {rejectArtistMutation.isPending ? 'Rejecting...' : 'Confirm rejection'}
+                </button>
+              </div>
+            )}
+            {artist.rejection_reason && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50/60 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Current rejection reason</p>
+                <p className="mt-1 text-sm text-red-900">{artist.rejection_reason}</p>
+              </div>
+            )}
           </div>
 
           {/* Linked User */}

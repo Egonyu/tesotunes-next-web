@@ -5,7 +5,7 @@ import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
 import { useMySubscription } from "@/hooks/useSubscriptions";
 import { useRecordPlay } from "@/hooks/api";
-import { getAuthToken } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 /**
  * Maps subscription audio_quality_kbps to the quality param accepted by
@@ -69,6 +69,7 @@ export function AudioPlayer() {
   const effectiveVolume = isMuted ? 0 : volume;
 
   const { mutate: recordPlay } = useRecordPlay();
+  const { status: authStatus } = useSession();
 
   // Subscription-based audio quality enforcement
   const { data: subscription } = useMySubscription();
@@ -93,7 +94,7 @@ export function AudioPlayer() {
     if (playTrackedRef.current || !trackedSongIdRef.current) return;
 
     // Skip recording if user is not authenticated (route requires auth:sanctum)
-    if (!getAuthToken()) return;
+    if (authStatus !== "authenticated") return;
 
     const audio = audioRef.current;
     if (!audio) return;
@@ -123,7 +124,7 @@ export function AudioPlayer() {
         }
       );
     }
-  }, [recordPlay]);
+  }, [authStatus, recordPlay]);
 
   // Clean up crossfade timer
   const clearCrossfadeTimer = useCallback(() => {

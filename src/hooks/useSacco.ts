@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, getAuthToken } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
+import { useSession } from "next-auth/react";
 import type {
   SaccoMember,
   SaccoMemberDashboard,
@@ -122,10 +122,8 @@ function extractData<T>(res: { success?: boolean; data?: T }): T {
 // ============================================================================
 
 export function useSaccoMembership() {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    setEnabled(!!getAuthToken());
-  }, []);
+  const { status } = useSession();
+
   return useQuery({
     queryKey: ["sacco", "membership"],
     queryFn: async (): Promise<SaccoMember | null> => {
@@ -145,7 +143,7 @@ export function useSaccoMembership() {
       };
     },
     staleTime: 60 * 1000,
-    enabled,
+    enabled: status === "authenticated",
     retry: 1,
   });
 }

@@ -1,7 +1,5 @@
 import Pusher from 'pusher-js';
 import Echo from 'laravel-echo';
-import { API_URL } from './api-config';
-import { getAuthToken } from './api';
 
 // Make Pusher available globally for Laravel Echo
 if (typeof window !== 'undefined') {
@@ -12,8 +10,8 @@ let echoInstance: Echo<'pusher'> | null = null;
 
 /**
  * Return a configured Echo instance.
- * Auth uses the Sanctum Bearer token (via getAuthToken) so that
- * private-channel authorization works through the Laravel API.
+ * Private-channel auth goes through the Next.js backend proxy so the Laravel
+ * access token never needs to be exposed to browser JavaScript.
  */
 export function getEchoInstance(): Echo<'pusher'> | null {
   if (typeof window === 'undefined') return null;
@@ -25,13 +23,7 @@ export function getEchoInstance(): Echo<'pusher'> | null {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
       forceTLS: true,
       enabledTransports: ['ws', 'wss'],
-      authEndpoint: `${API_URL}/broadcasting/auth`,
-      auth: {
-        headers: {
-          Authorization: `Bearer ${getAuthToken() || ''}`,
-          Accept: 'application/json',
-        },
-      },
+      authEndpoint: '/api/backend/broadcasting/auth',
     });
   }
 
@@ -46,13 +38,11 @@ export function disconnectEcho(): void {
 }
 
 /**
- * Reconnect Echo with a fresh auth token.
- * Call this after login/token-sync so private channels authenticate properly.
+ * Reconnect Echo so it can re-authorize via the current authenticated session.
  */
 export function reconnectEcho(): void {
   disconnectEcho();
-  // Next call to getEchoInstance() will create a fresh instance
-  // with the current Bearer token.
+  // Next call to getEchoInstance() will create a fresh instance.
 }
 
 export type { Echo };

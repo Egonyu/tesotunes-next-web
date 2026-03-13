@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiGet, apiPost, apiDelete, getAuthToken } from '@/lib/api';
+import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { getEchoInstance, reconnectEcho } from '@/lib/echo';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -255,13 +255,8 @@ export function useRealtimeNotifications() {
   
   useEffect(() => {
     if (!session?.user?.id) return;
-    
-    // Wait until the auth token is available before connecting Echo.
-    // Without a valid token the private-channel auth request will fail.
-    const token = getAuthToken();
-    if (!token) return;
 
-    // (Re)connect Echo so it picks up the latest Bearer token.
+    // Reconnect Echo so it re-authorizes through the current authenticated session.
     reconnectEcho();
     const echo = getEchoInstance();
     if (!echo) return;

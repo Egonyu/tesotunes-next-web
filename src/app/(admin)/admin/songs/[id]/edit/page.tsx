@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Music, Upload, Image as ImageIcon, FileAudio } from 'lucide-react';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { PageHeader, FormActions, FormField, FormSection } from '@/components/admin';
 import { toast } from 'sonner';
+import { buildAdminSongUpdateFormData } from '@/lib/admin-song-payloads';
 
 type ArtistOption = { id: number; name: string };
 type AlbumOption = { id: number; title: string };
@@ -223,35 +224,30 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
 
   const updateMutation = useMutation({
     mutationFn: async (variables: UpdateSongVariables) => {
-      const payload = new FormData();
-      payload.append('_method', 'PUT');
-      payload.append('title', formData.title.trim());
-      payload.append('artist_id', formData.artist_id);
-      payload.append('status', formData.status);
-      payload.append('explicit', formData.explicit ? '1' : '0');
-      payload.append('is_featured', formData.is_featured ? '1' : '0');
+      const payload = buildAdminSongUpdateFormData({
+        title: formData.title,
+        artist_id: formData.artist_id,
+        status: formData.status,
+        explicit: formData.explicit,
+        is_featured: formData.is_featured,
+        slug: formData.slug,
+        album_id: formData.album_id,
+        duration: formData.duration,
+        release_date: formData.release_date,
+        track_number: formData.track_number,
+        disc_number: formData.disc_number,
+        lyrics: formData.lyrics,
+        description: formData.description,
+        isrc: formData.isrc,
+        bpm: formData.bpm,
+        key: formData.key,
+        genre_ids: formData.genre_ids,
+        featured_artists: formData.featured_artists,
+        audio_file: variables.includeFiles ? audioFile : null,
+        cover_image: variables.includeFiles ? coverFile : null,
+      });
 
-      if (formData.slug.trim()) payload.append('slug', formData.slug.trim());
-      if (formData.album_id) payload.append('album_id', formData.album_id);
-      if (formData.release_date) payload.append('release_date', formData.release_date);
-      if (formData.track_number) payload.append('track_number', formData.track_number);
-      if (formData.disc_number) payload.append('disc_number', formData.disc_number);
-      if (formData.duration) payload.append('duration', formData.duration);
-      if (formData.isrc.trim()) payload.append('isrc', formData.isrc.trim());
-      if (formData.bpm) payload.append('bpm', formData.bpm);
-      if (formData.key.trim()) payload.append('key', formData.key.trim());
-      if (formData.description.trim()) payload.append('description', formData.description.trim());
-      if (formData.lyrics.trim()) payload.append('lyrics', formData.lyrics.trim());
-
-      formData.genre_ids.forEach((genreId) => payload.append('genre_ids[]', genreId));
-      formData.featured_artists.forEach((artistId) => payload.append('featured_artists[]', artistId));
-
-      if (variables.includeFiles) {
-        if (coverFile) payload.append('cover_image', coverFile);
-        if (audioFile) payload.append('audio_file', audioFile);
-      }
-
-      return apiPost<{ success: boolean; message?: string; data?: SongDetail }, FormData>(
+      return apiPostForm<{ success: boolean; message?: string; data?: SongDetail }>(
         `/admin/songs/${id}`,
         payload,
         { timeout: 0 }
@@ -607,26 +603,6 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
                   placeholder="Song lyrics"
                 />
               </FormField>
-            </FormSection>
-
-            <FormSection title="SEO Metadata">
-              <div className="grid grid-cols-1 gap-4">
-                <FormField label="Meta Title" error={errors.meta_title}>
-                  <input
-                    value={formData.meta_title}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, meta_title: e.target.value }))}
-                    className="w-full rounded-lg border px-4 py-2 bg-background"
-                  />
-                </FormField>
-                <FormField label="Meta Description" error={errors.meta_description}>
-                  <textarea
-                    rows={3}
-                    value={formData.meta_description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, meta_description: e.target.value }))}
-                    className="w-full rounded-lg border px-4 py-2 bg-background"
-                  />
-                </FormField>
-              </div>
             </FormSection>
           </div>
 

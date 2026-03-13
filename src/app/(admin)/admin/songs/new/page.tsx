@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
 import { toast } from 'sonner';
 import { getErrorMessage, getValidationErrors } from '@/lib/utils';
+import { buildAdminSongCreateFormData } from '@/lib/admin-song-payloads';
 
 // -------------------------------------------------------------------
 // Types — matching the Laravel backend contract (CLAUDE.md §Song Upload)
@@ -17,6 +18,11 @@ import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 interface AlbumOption {
   id: number;
   title: string;
+}
+
+interface ArtistOption {
+  id: number;
+  name: string;
 }
 
 interface GenreOption {
@@ -28,12 +34,13 @@ interface GenreOption {
 /** Form state mirrors backend validation rules exactly */
 interface SongFormState {
   title: string;
+  artist_id: string;
   audio: File | null;
   cover: File | null;
   album_id: string;
   genre_id: string;
   genre_ids: string[];
-  featured_artists: string;
+  featured_artists: string[];
   lyrics: string;
   release_date: string;
   price: string;
@@ -48,12 +55,13 @@ interface SongFormState {
 
 const INITIAL_FORM: SongFormState = {
   title: '',
+  artist_id: '',
   audio: null,
   cover: null,
   album_id: '',
   genre_id: '',
   genre_ids: [],
-  featured_artists: '',
+  featured_artists: [],
   lyrics: '',
   release_date: '',
   price: '',
@@ -80,12 +88,18 @@ export default function CreateSongPage() {
     queryFn: () => apiGet<{ data: AlbumOption[] }>('/admin/albums?per_page=500'),
   });
 
+  const { data: artistsRes } = useQuery({
+    queryKey: ['admin', 'artists', 'list'],
+    queryFn: () => apiGet<{ data: ArtistOption[] }>('/admin/artists?per_page=500'),
+  });
+
   const { data: genresRes } = useQuery({
     queryKey: ['genres'],
     queryFn: () => apiGet<{ data: GenreOption[] }>('/genres'),
   });
 
   const albums = albumsRes?.data ?? [];
+  const artists = artistsRes?.data ?? [];
   const genres = genresRes?.data ?? [];
 
   // ---- Mutation ----
@@ -153,6 +167,7 @@ export default function CreateSongPage() {
     // Client-side validation — only title + audio are required by backend
     const validationErrors: Record<string, string> = {};
     if (!form.title.trim()) validationErrors.title = 'Title is required';
+    if (!form.artist_id) validationErrors.artist_id = 'Artist is required';
     if (!form.audio) validationErrors.audio = 'Audio file is required';
 
     if (Object.keys(validationErrors).length > 0) {
@@ -161,38 +176,26 @@ export default function CreateSongPage() {
       return;
     }
 
-    // Build FormData with field names matching backend contract exactly:
-    //   audio (not audio_file), cover (not cover_image), is_explicit (not explicit)
-    const data = new FormData();
-
-    // Required
-    data.append('title', form.title.trim());
-    data.append('audio', form.audio!);
-
-    // Optional file
-    if (form.cover) data.append('cover', form.cover);
-
-    // Optional text fields — only send when they have values
-    if (form.album_id) data.append('album_id', form.album_id);
-    if (form.genre_id) data.append('genre_id', form.genre_id);
-    if (form.genre_ids.length > 0) {
-      form.genre_ids.forEach(id => data.append('genre_ids[]', id));
-    }
-    if (form.featured_artists.trim()) data.append('featured_artists', form.featured_artists.trim());
-    if (form.lyrics.trim()) data.append('lyrics', form.lyrics.trim());
-    if (form.release_date) data.append('release_date', form.release_date);
-    if (form.price) data.append('price', form.price);
-    if (form.description.trim()) data.append('description', form.description.trim());
-    if (form.composer.trim()) data.append('composer', form.composer.trim());
-    if (form.producer.trim()) data.append('producer', form.producer.trim());
-
-    // Booleans
-    data.append('is_explicit', form.is_explicit ? '1' : '0');
-    data.append('is_downloadable', form.is_downloadable ? '1' : '0');
-    data.append('is_free', form.is_free ? '1' : '0');
-
-    // Status (admin can set directly)
-    if (form.status) data.append('status', form.status);
+    const data = buildAdminSongCreateFormData({
+      title: form.title,
+      artist_id: form.artist_id,
+      status: form.status,
+      explicit: form.is_explicit,
+      is_featured: false,
+      album_id: form.album_id,
+      release_date: form.release_date,
+      lyrics: form.lyrics,
+      description: form.description,
+      genre_ids: form.genre_ids.length > 0 ? form.genre_ids : (form.genre_id ? [form.genre_id] : []),
+      featured_artists: form.featured_artists,
+      composer: form.composer,
+      producer: form.producer,
+      price: form.is_free ? '' : form.price,
+      is_downloadable: form.is_downloadable,
+      is_free: form.is_free,
+      audio_file: form.audio,
+      cover_image: form.cover,
+    });
 
     createMutation.mutate(data);
   };
@@ -225,6 +228,21 @@ export default function CreateSongPage() {
                   placeholder="Enter song title"
                   maxLength={255}
                 />
+              </FormField>
+
+              <FormField label="Artist" required error={errors.artist_id}>
+                <select
+                  value={form.artist_id}
+                  onChange={(e) => updateField('artist_id', e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select artist</option>
+                  {artists.map((artist) => (
+                    <option key={artist.id} value={String(artist.id)}>
+                      {artist.name}
+                    </option>
+                  ))}
+                </select>
               </FormField>
 
               <FormField label="Description" error={errors.description}>
@@ -303,8 +321,8 @@ export default function CreateSongPage() {
                   </label>
                 )}
               </div>
-              {errors.audio && (
-                <p className="text-sm text-red-600 mt-1">{errors.audio}</p>
+              {(errors.audio || errors.audio_file) && (
+                <p className="text-sm text-red-600 mt-1">{errors.audio || errors.audio_file}</p>
               )}
             </FormSection>
 
@@ -321,16 +339,28 @@ export default function CreateSongPage() {
 
             {/* Featured Artists */}
             <FormSection title="Featured Artists">
-              <FormField label="Featured Artists" error={errors.featured_artists}>
-                <input
-                  type="text"
+              <FormField label="Featured Artists" error={errors.featured_artists || errors['featured_artists.0']}>
+                <select
+                  multiple
                   value={form.featured_artists}
-                  onChange={(e) => updateField('featured_artists', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="Comma-separated names (e.g., Artist A, Artist B)"
-                />
+                  onChange={(e) =>
+                    updateField(
+                      'featured_artists',
+                      Array.from(e.target.selectedOptions).map((option) => option.value)
+                    )
+                  }
+                  className="w-full min-h-30 px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                >
+                  {artists
+                    .filter((artist) => String(artist.id) !== form.artist_id)
+                    .map((artist) => (
+                      <option key={artist.id} value={String(artist.id)}>
+                        {artist.name}
+                      </option>
+                    ))}
+                </select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter featured artist names separated by commas
+                  Hold Ctrl or Cmd to select multiple featured artists
                 </p>
               </FormField>
             </FormSection>
@@ -380,8 +410,8 @@ export default function CreateSongPage() {
                   </label>
                 )}
               </div>
-              {errors.cover && (
-                <p className="text-sm text-red-600 mt-1">{errors.cover}</p>
+              {(errors.cover || errors.cover_image) && (
+                <p className="text-sm text-red-600 mt-1">{errors.cover || errors.cover_image}</p>
               )}
             </FormSection>
 

@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
 import {
   CreditCard,
   Coins,
-  Zap,
   Phone,
-  ChevronRight,
+  Wallet,
   BadgeCheck,
   Info,
 } from 'lucide-react'
@@ -28,6 +26,13 @@ const PAYMENT_METHODS: Array<{
   color: string
 }> = [
   {
+    id: 'wallet',
+    label: 'TesoTunes Wallet',
+    description: 'Pay instantly with your wallet balance',
+    icon: Wallet,
+    color: 'text-emerald-500',
+  },
+  {
     id: 'mtn_momo',
     label: 'MTN Mobile Money',
     description: 'Pay with MTN MoMo',
@@ -47,13 +52,6 @@ const PAYMENT_METHODS: Array<{
     description: 'Pay with your credit balance',
     icon: Coins,
     color: 'text-primary',
-  },
-  {
-    id: 'hybrid',
-    label: 'Hybrid Payment',
-    description: 'Split between UGX + Credits',
-    icon: Zap,
-    color: 'text-purple-500',
   },
   {
     id: 'card',
@@ -77,7 +75,6 @@ export function PaymentMethodSelector({
   }
 
   const canPayWithCredits = creditsBalance >= total
-  const canUseHybrid = creditsBalance > 0
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -85,9 +82,7 @@ export function PaymentMethodSelector({
 
       <div className="space-y-2">
         {PAYMENT_METHODS.map((method) => {
-          const isDisabled =
-            (method.id === 'credits' && !canPayWithCredits) ||
-            (method.id === 'hybrid' && !canUseHybrid)
+          const isDisabled = method.id === 'credits' && !canPayWithCredits
 
           return (
             <button
@@ -130,75 +125,13 @@ export function PaymentMethodSelector({
         })}
       </div>
 
-      {paymentMethod === 'hybrid' && (
-        <HybridPaymentSlider total={total} creditsBalance={creditsBalance} />
-      )}
-    </div>
-  )
-}
-
-function HybridPaymentSlider({
-  total,
-  creditsBalance,
-}: {
-  total: number
-  creditsBalance: number
-}) {
-  const { creditsToUse, setCreditsToUse, setHybridCalculation } =
-    useEventCartStore()
-  const maxCredits = Math.min(creditsBalance, Math.floor(total * 0.5))
-  const ugxAmount = total - creditsToUse
-
-  function handleSliderChange(value: number) {
-    const credits = Math.min(value, maxCredits)
-    setCreditsToUse(credits)
-    setHybridCalculation({
-      total_amount: total,
-      ugx_amount: total - credits,
-      credits_amount: credits,
-      bonus_credits: Math.floor(credits * 0.1),
-      savings_percent: Math.round((credits / total) * 100),
-      max_credits_allowed: maxCredits,
-      min_credits_required: 0,
-    })
-  }
-
-  return (
-    <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Credits to use</span>
-        <span className="font-bold">{creditsToUse.toLocaleString()}</span>
-      </div>
-
-      <input
-        type="range"
-        min={0}
-        max={maxCredits}
-        value={creditsToUse}
-        onChange={(e) => handleSliderChange(Number(e.target.value))}
-        className="w-full accent-primary"
-      />
-
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>0 credits</span>
-        <span>{maxCredits.toLocaleString()} credits (max 50%)</span>
-      </div>
-
-      <div className="pt-2 border-t space-y-1">
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">UGX payment</span>
-          <span>UGX {ugxAmount.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">Credits payment</span>
-          <span>{creditsToUse.toLocaleString()} credits</span>
-        </div>
-        {creditsToUse > 0 && (
-          <div className="flex justify-between text-xs text-green-600 font-medium">
-            <span>Bonus credits earned</span>
-            <span>+{Math.floor(creditsToUse * 0.1).toLocaleString()}</span>
-          </div>
-        )}
+      <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          Each checkout currently supports one payment method for one ticket
+          tier. Mixed wallet and credits payments will come in a later Events
+          update.
+        </p>
       </div>
     </div>
   )

@@ -17,7 +17,15 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistEvents, useDeleteEvent } from '@/hooks/useEvents';
+import {
+  getEventCapacity,
+  getEventImage,
+  getEventStartDate,
+  getEventTimeLabel,
+  getEventVenueLabel,
+  useArtistEvents,
+  useDeleteEvent,
+} from '@/hooks/useEvents';
 import { toast } from 'sonner';
 
 export default function ArtistEventsPage() {
@@ -110,7 +118,7 @@ export default function ArtistEventsPage() {
               >
                 <div className="relative w-full md:w-64 h-48 md:h-auto bg-muted flex-shrink-0">
                   <Image
-                    src={event.image || '/images/placeholder.jpg'}
+                    src={getEventImage(event)}
                     alt={event.title}
                     fill
                     className="object-cover"
@@ -124,22 +132,22 @@ export default function ArtistEventsPage() {
                       <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {new Date(event.date).toLocaleDateString('en-US', {
+                          {new Date(getEventStartDate(event) || '').toLocaleDateString('en-US', {
                             weekday: 'long',
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric'
                           })}
                         </div>
-                        {event.time && (
+                        {getEventStartDate(event) && (
                           <div className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
-                            {event.time}
+                            {getEventTimeLabel(event)}
                           </div>
                         )}
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
-                          {event.venue || 'TBD'}{event.city ? `, ${event.city}` : event.location ? `, ${event.location}` : ''}
+                          {getEventVenueLabel(event)}{event.city ? `, ${event.city}` : ''}
                         </div>
                       </div>
                     </div>
@@ -151,21 +159,21 @@ export default function ArtistEventsPage() {
                     </span>
                   </div>
 
-                  {event.capacity && event.capacity > 0 && (
+                  {getEventCapacity(event) > 0 && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-sm mb-2">
                         <div className="flex items-center gap-1">
                           <Ticket className="h-4 w-4 text-muted-foreground" />
-                          <span>{event.tickets_sold || 0} / {event.capacity} tickets sold</span>
+                          <span>{event.tickets_sold || 0} / {getEventCapacity(event)} tickets sold</span>
                         </div>
                         <span className="font-medium">
-                          {Math.round(((event.tickets_sold || 0) / event.capacity) * 100)}%
+                          {Math.round(((event.tickets_sold || 0) / getEventCapacity(event)) * 100)}%
                         </span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
-                          style={{ width: `${Math.min(((event.tickets_sold || 0) / event.capacity) * 100, 100)}%` }}
+                          style={{ width: `${Math.min(((event.tickets_sold || 0) / getEventCapacity(event)) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
@@ -216,7 +224,7 @@ export default function ArtistEventsPage() {
               <div key={event.id} className="rounded-xl border bg-card overflow-hidden">
                 <div className="relative h-40 bg-muted">
                   <Image
-                    src={event.image || '/images/placeholder.jpg'}
+                    src={getEventImage(event)}
                     alt={event.title}
                     fill
                     className="object-cover opacity-75"
@@ -231,7 +239,7 @@ export default function ArtistEventsPage() {
                 <div className="p-4">
                   <h3 className="font-semibold mb-1">{event.title}</h3>
                   <p className="text-sm text-muted-foreground mb-2">
-                    {new Date(event.date).toLocaleDateString()} {event.venue ? `• ${event.venue}` : ''}
+                    {new Date(getEventStartDate(event) || '').toLocaleDateString()} {getEventVenueLabel(event) ? `• ${getEventVenueLabel(event)}` : ''}
                   </p>
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />

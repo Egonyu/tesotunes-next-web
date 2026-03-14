@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, ArrowRight, Gift, Percent } from 'lucide-react'
+import { Users, ArrowRight, Clock3 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -24,31 +24,24 @@ export function GroupBookingCTA({ eventId, className }: GroupBookingCTAProps) {
         <div>
           <h3 className="font-semibold text-sm">Going with friends?</h3>
           <p className="text-xs text-muted-foreground">
-            Save more with group bookings
+            Group booking is planned for a future Events release
           </p>
         </div>
       </div>
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Percent className="h-3.5 w-3.5 text-green-500" />
+          <Clock3 className="h-3.5 w-3.5 text-primary" />
           <span>
-            <span className="font-medium text-foreground">5-9 people</span> -
-            10% off each ticket
+            One-person checkout is live today and already matches the backend
+            ticket contract
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Percent className="h-3.5 w-3.5 text-green-500" />
+          <Clock3 className="h-3.5 w-3.5 text-primary" />
           <span>
-            <span className="font-medium text-foreground">10+ people</span> -
-            20% off each ticket
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Gift className="h-3.5 w-3.5 text-primary" />
-          <span>
-            Organizer earns{' '}
-            <span className="font-medium text-foreground">5% credit cashback</span>
+            Shared invite links, split payments, and group discounts are still
+            product-tracked work
           </span>
         </div>
       </div>
@@ -58,7 +51,7 @@ export function GroupBookingCTA({ eventId, className }: GroupBookingCTAProps) {
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border-2 border-primary text-primary font-medium text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
       >
         <Users className="h-4 w-4" />
-        Create Group Booking
+        View Planned Group Booking
         <ArrowRight className="h-4 w-4" />
       </Link>
     </div>

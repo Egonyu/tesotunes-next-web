@@ -26,7 +26,7 @@ interface LoanDetail {
   interest_rate: number;
   term_months: number;
   purpose: string;
-  status: 'pending_approval' | 'approved' | 'active' | 'rejected' | 'paid_off' | 'overdue';
+  status: 'pending' | 'approved' | 'active' | 'disbursed' | 'rejected' | 'paid_off' | 'overdue' | 'completed';
   monthly_payment?: number;
   total_repayment?: number;
   created_at: string;
@@ -60,6 +60,14 @@ interface LoanDetail {
   }>;
 }
 
+interface LoanRepayment {
+  id: number;
+  amount_ugx?: number;
+  amount_paid?: number;
+  payment_date?: string;
+  status?: string;
+}
+
 export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const loanId = parseInt(resolvedParams.id);
@@ -70,14 +78,31 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
   // Fetch loan details
   const { data: loanData, isLoading, error } = useQuery({
     queryKey: ['sacco-loan', loanId],
-    queryFn: () => apiGet<{ data: LoanDetail }>(`/admin/sacco/loans/${loanId}`),
+    queryFn: () => apiGet<{ success: boolean; data: LoanDetail }>(`/admin/sacco/loans/${loanId}`),
   });
 
   const loan = loanData?.data;
 
+  const { data: repaymentsData } = useQuery({
+    queryKey: ['sacco-loan', loanId, 'repayments'],
+    queryFn: () => apiGet<{ success: boolean; data: LoanRepayment[] }>(`/admin/sacco/loans/${loanId}/repayments`),
+    enabled: Boolean(loanId),
+  });
+
   // Approve loan mutation
   const approveMutation = useMutation({
     mutationFn: () => apiPost(`/admin/sacco/loans/${loanId}/approve`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco-loan', loanId] });
+      queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
+      queryClient.invalidateQueries({ queryKey: ['sacco-dashboard'] });
+    },
+  });
+
+  const disburseMutation = useMutation({
+    mutationFn: () => apiPost(`/admin/sacco/loans/${loanId}/disburse`, {
+      disbursement_method: 'admin_manual',
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco-loan', loanId] });
       queryClient.invalidateQueries({ queryKey: ['sacco-loans'] });
@@ -145,6 +170,7 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const loanStatus = loan.status;
+  const repayments = repaymentsData?.data || [];
 
   return (
     <div className="space-y-6">
@@ -346,7 +372,7 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           {/* Actions */}
-          {loanStatus === 'pending_approval' && (
+          {loanStatus === 'pending' && (
             <div className="rounded-xl border bg-card p-6">
               <h2 className="font-semibold mb-4">Decision</h2>
               <div className="space-y-3">
@@ -375,15 +401,29 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
           )}
 
           {/* Approval Success */}
-          {(loanStatus === 'approved' || loanStatus === 'active') && (
+          {(loanStatus === 'approved' || loanStatus === 'disbursed' || loanStatus === 'active' || loanStatus === 'completed') && (
             <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-900/30 p-6">
               <div className="flex items-center gap-3 mb-3">
                 <CheckCircle className="h-6 w-6 text-green-600" />
-                <h2 className="font-semibold text-green-900 dark:text-green-100">Loan Approved</h2>
+                <h2 className="font-semibold text-green-900 dark:text-green-100">
+                  {loanStatus === 'approved' ? 'Loan Approved' : 'Loan In Good Standing'}
+                </h2>
               </div>
               <p className="text-sm text-green-700 dark:text-green-300">
-                This loan has been approved. The funds will be disbursed to the member&apos;s account within 24-48 hours.
+                {loanStatus === 'approved'
+                  ? 'This loan has been approved and is ready for disbursement.'
+                  : 'This loan has moved beyond review and is now being serviced through the normalized SACCO workflow.'}
               </p>
+              {loanStatus === 'approved' && (
+                <button
+                  onClick={() => disburseMutation.mutate()}
+                  disabled={disburseMutation.isPending}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  {disburseMutation.isPending ? 'Disbursing...' : 'Disburse Loan'}
+                </button>
+              )}
             </div>
           )}
 
@@ -400,6 +440,28 @@ export default function AdminLoanDetailPage({ params }: { params: Promise<{ id: 
               </p>
             </div>
           )}
+
+          {/* Repayments */}
+          <div className="rounded-xl border bg-card p-6">
+            <h2 className="font-semibold mb-4">Repayment Activity</h2>
+            <div className="space-y-3">
+              {repayments.length > 0 ? repayments.map((repayment) => (
+                <div key={repayment.id} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+                  <div>
+                    <p className="font-medium">UGX {Number(repayment.amount_ugx ?? repayment.amount_paid ?? 0).toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {repayment.payment_date ? new Date(repayment.payment_date).toLocaleDateString() : 'Payment date pending'}
+                    </p>
+                  </div>
+                  <span className={cn('rounded-full px-2 py-0.5 text-xs capitalize', getStatusStyles(repayment.status || 'active'))}>
+                    {(repayment.status || 'recorded').replace('_', ' ')}
+                  </span>
+                </div>
+              )) : (
+                <p className="py-4 text-center text-muted-foreground">No repayments have been recorded for this loan yet.</p>
+              )}
+            </div>
+          </div>
 
           {/* Risk Assessment */}
           <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30">

@@ -68,19 +68,28 @@ interface BackendProfile {
 
 interface BackendLoan {
   id: number;
-  application_number?: string;
-  product?: string;
-  principal_amount?: number;
+  loan_number?: string;
+  loan_type?: string;
+  product_name?: string;
+  principal_amount_ugx?: number;
   interest_rate?: number;
-  total_amount?: number;
-  amount_paid?: number;
-  outstanding_balance?: number;
+  total_payable_ugx?: number;
+  amount_paid_ugx?: number;
+  balance_remaining_ugx?: number;
   status?: string;
-  duration_months?: number;
+  tenure_months?: number;
   disbursement_date?: string | null;
-  due_date?: string | null;
-  next_payment_date?: string | null;
-  next_payment_amount?: number;
+  maturity_date?: string | null;
+  first_payment_date?: string | null;
+  monthly_installment_ugx?: number;
+  repayments?: Array<{
+    id: number;
+    amount_ugx?: number;
+    payment_date?: string;
+    created_at?: string;
+    principal_paid_ugx?: number;
+    interest_paid_ugx?: number;
+  }>;
 }
 
 interface BackendLoanProduct {
@@ -100,21 +109,65 @@ interface BackendLoanProduct {
   eligibility_requirements?: Record<string, unknown>;
 }
 
-interface BackendAccount {
-  id: number;
-  account_number?: string;
-  account_type?: string;
+interface BackendSavingsSummary {
+  accounts?: Array<{
+    id: number;
+    account_number?: string;
+    account_type?: string;
+    account_name?: string;
+    balance_ugx?: number;
+    interest_rate?: number;
+    accrued_interest_ugx?: number;
+    status?: string;
+    created_at?: string;
+  }>;
   balance?: number;
+  interest_earned?: number;
   interest_rate?: number;
-  status?: string;
+  this_month?: number;
+  last_deposit?: string | null;
+  goals?: Array<{ id: number; name: string; target: number; current: number; deadline: string }>;
+}
+
+interface BackendTransaction {
+  id: number;
+  type?: string;
+  amount_ugx?: number;
+  description?: string;
   created_at?: string;
+  payment_date?: string;
+  status?: string;
+  reference_number?: string;
+}
+
+interface BackendShareSummary {
+  member_id?: number;
+  total_shares?: number;
+  share_value?: number;
+  total_value?: number;
+  purchases?: Array<{
+    id: number;
+    type?: string;
+    quantity?: number;
+    amount?: number;
+    date?: string;
+  }>;
+  market?: {
+    price_per_share_ugx?: number;
+    total_shares_issued?: number;
+    total_market_value_ugx?: number;
+  };
 }
 
 // ---- Helpers ----
 
-/** Safely extract `.data` from backend `{ success, data }` wrapper. */
-function extractData<T>(res: { success?: boolean; data?: T }): T {
-  return (res as { data: T }).data;
+/** Safely extract `.data` from canonical API responses, falling back to the raw payload if needed. */
+function extractData<T>(res: { data?: T } | T): T {
+  if (res && typeof res === "object" && "data" in (res as Record<string, unknown>)) {
+    return (res as { data: T }).data;
+  }
+
+  return res as T;
 }
 
 // ============================================================================
@@ -127,7 +180,7 @@ export function useSaccoMembership() {
   return useQuery({
     queryKey: ["sacco", "membership"],
     queryFn: async (): Promise<SaccoMember | null> => {
-      const res = await apiGet<{ success: boolean; data: BackendProfile }>("/sacco/membership");
+      const res = await apiGet<{ data: BackendProfile | null }>("/sacco/membership");
       const d = extractData(res);
       if (!d || !d.member_number) return null;
       return {
@@ -175,7 +228,7 @@ export function useSaccoDashboard() {
   return useQuery({
     queryKey: ["sacco", "dashboard"],
     queryFn: async (): Promise<SaccoMemberDashboard> => {
-      const res = await apiGet<{ success: boolean; data: BackendDashboard }>("/sacco/me");
+      const res = await apiGet<{ data: BackendDashboard }>("/sacco/dashboard");
       const d = extractData(res);
       return {
         member_number: d.member?.member_number ?? "",
@@ -216,22 +269,15 @@ export function useSaccoSavings() {
   return useQuery({
     queryKey: ["sacco", "savings"],
     queryFn: async () => {
-      const res = await apiGet<{ success: boolean; data: BackendAccount[] }>("/sacco/savings");
-      const accounts = extractData(res);
-      const savingsAccounts = Array.isArray(accounts)
-        ? accounts.filter((a) => a.account_type === "savings")
-        : [];
-      const totalBalance = savingsAccounts.reduce((s, a) => s + (a.balance ?? 0), 0);
-      const avgRate = savingsAccounts.length
-        ? savingsAccounts.reduce((s, a) => s + (a.interest_rate ?? 0), 0) / savingsAccounts.length
-        : 12;
+      const res = await apiGet<{ data: BackendSavingsSummary }>("/sacco/savings");
+      const summary = extractData(res);
       return {
-        balance: totalBalance,
-        interest_earned: 0,
-        interest_rate: avgRate,
-        this_month: 0,
-        last_deposit: null as string | null,
-        goals: [] as Array<{ id: number; name: string; target: number; current: number; deadline: string }>,
+        balance: summary?.balance ?? 0,
+        interest_earned: summary?.interest_earned ?? 0,
+        interest_rate: summary?.interest_rate ?? 0,
+        this_month: summary?.this_month ?? 0,
+        last_deposit: summary?.last_deposit ?? null,
+        goals: summary?.goals ?? [],
       };
     },
     staleTime: 60 * 1000,
@@ -250,7 +296,7 @@ export function useSaccoDeposit() {
       apiPost<{
         message: string;
         data: { reference: string; status: "pending" | "processing" };
-      }>("/sacco/deposit", data),
+      }>("/sacco/savings/deposit", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -269,7 +315,7 @@ export function useSaccoWithdraw() {
       apiPost<{
         message: string;
         data: { reference: string; status: "pending" | "processing" };
-      }>("/sacco/withdraw", data),
+      }>("/sacco/savings/withdraw", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -289,35 +335,30 @@ export function useSaccoTransactions(params?: {
     queryKey: ["sacco", "transactions", params],
     queryFn: async () => {
       const res = await apiGet<{
-        success: boolean;
-        data: Array<{
-          id: number;
-          transaction_type?: string;
-          type?: string;
-          amount?: number;
-          description?: string;
-          created_at?: string;
-          date?: string;
-          status?: string;
-          reference?: string;
-          account?: { account_type?: string };
-        }>;
+        data: BackendTransaction[];
+        meta?: { current_page?: number; last_page?: number; total?: number };
       }>("/sacco/transactions", { params: { ...params, per_page: params?.limit } });
 
-      const raw = extractData(res);
-      const items = Array.isArray(raw) ? raw : (raw as unknown as { data: typeof raw }).data ?? [];
+      const items = Array.isArray(res.data) ? res.data : [];
 
       const data: SaccoTransaction[] = items.map((tx) => ({
         id: tx.id,
-        type: (tx.transaction_type ?? tx.type ?? "deposit") as SaccoTransaction["type"],
-        amount: tx.amount ?? 0,
+        type: (tx.type ?? "deposit") as SaccoTransaction["type"],
+        amount: tx.amount_ugx ?? 0,
         description: tx.description ?? "",
-        date: tx.created_at ?? tx.date ?? "",
+        date: tx.payment_date ?? tx.created_at ?? "",
         status: (tx.status ?? "completed") as SaccoTransaction["status"],
-        reference: tx.reference,
+        reference: tx.reference_number,
       }));
 
-      return { data, pagination: { current_page: 1, last_page: 1, total: data.length } };
+      return {
+        data,
+        pagination: {
+          current_page: res.meta?.current_page ?? 1,
+          last_page: res.meta?.last_page ?? 1,
+          total: res.meta?.total ?? data.length,
+        },
+      };
     },
     staleTime: 30 * 1000,
   });
@@ -328,19 +369,34 @@ export function useSaccoTransactions(params?: {
 // ============================================================================
 
 function mapBackendLoan(raw: BackendLoan): SaccoLoan {
+  const statusMap: Record<string, SaccoLoan["status"]> = {
+    paid: "paid_off",
+    active: "active",
+    disbursed: "disbursed",
+    pending: "pending",
+    rejected: "rejected",
+    overdue: "overdue",
+  };
+
   return {
     id: raw.id,
-    amount: raw.principal_amount ?? raw.total_amount ?? 0,
-    balance: raw.outstanding_balance ?? 0,
+    amount: raw.principal_amount_ugx ?? raw.total_payable_ugx ?? 0,
+    balance: raw.balance_remaining_ugx ?? 0,
     interest_rate: raw.interest_rate ?? 0,
-    term_months: raw.duration_months ?? 0,
-    monthly_payment: raw.next_payment_amount ?? 0,
-    next_payment: raw.next_payment_amount ?? 0,
-    due_date: raw.next_payment_date ?? raw.due_date ?? "",
-    status: (raw.status ?? "pending") as SaccoLoan["status"],
-    product: raw.product ?? "Loan",
+    term_months: raw.tenure_months ?? 0,
+    monthly_payment: raw.monthly_installment_ugx ?? 0,
+    next_payment: raw.monthly_installment_ugx ?? 0,
+    due_date: raw.first_payment_date ?? raw.maturity_date ?? "",
+    status: statusMap[raw.status ?? "pending"] ?? "pending",
+    product: raw.product_name ?? raw.loan_type ?? "Loan",
     disbursed_at: raw.disbursement_date ?? null,
-    payments: [],
+    payments: (raw.repayments ?? []).map((payment) => ({
+      id: payment.id,
+      amount: payment.amount_ugx ?? 0,
+      date: payment.payment_date ?? payment.created_at ?? "",
+      principal: payment.principal_paid_ugx ?? 0,
+      interest: payment.interest_paid_ugx ?? 0,
+    })),
   };
 }
 
@@ -348,7 +404,7 @@ export function useSaccoLoanProducts() {
   return useQuery({
     queryKey: ["sacco", "loan-products"],
     queryFn: async (): Promise<SaccoLoanProduct[]> => {
-      const res = await apiGet<{ success: boolean; data: BackendLoanProduct[] }>("/sacco/loan-products");
+      const res = await apiGet<{ data: BackendLoanProduct[] }>("/sacco/loan-products");
       const items = extractData(res);
       return (items ?? []).map((p) => {
         const minM = p.min_duration_months ?? 1;
@@ -379,8 +435,8 @@ export function useSaccoLoans(params?: { status?: string }) {
   return useQuery({
     queryKey: ["sacco", "loans", params],
     queryFn: async (): Promise<SaccoLoan[]> => {
-      const res = await apiGet<{ success: boolean; data: BackendLoan[] }>("/sacco/loans", { params });
-      const items = extractData(res);
+      const res = await apiGet<{ data: BackendLoan[] }>("/sacco/loans", { params });
+      const items = Array.isArray(res.data) ? res.data : [];
       return (items ?? []).map(mapBackendLoan);
     },
     staleTime: 60 * 1000,
@@ -391,9 +447,8 @@ export function useSaccoLoan(id: number) {
   return useQuery({
     queryKey: ["sacco", "loans", id],
     queryFn: async (): Promise<SaccoLoan> => {
-      const res = await apiGet<{ success: boolean; data: { loan: BackendLoan } }>(`/sacco/loans/${id}`);
-      const d = extractData(res);
-      return mapBackendLoan(d.loan ?? (d as unknown as BackendLoan));
+      const res = await apiGet<{ data: BackendLoan }>(`/sacco/loans/${id}`);
+      return mapBackendLoan(extractData(res));
     },
     enabled: !!id,
   });
@@ -444,7 +499,7 @@ export function useMakeLoanPayment() {
       apiPost<{
         message: string;
         data: { reference: string; status: "pending" | "processing" };
-      }>(`/sacco/loans/${data.loan_id}/pay`, data),
+      }>(`/sacco/loans/${data.loan_id}/repay`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });
     },
@@ -459,18 +514,22 @@ export function useSaccoShares() {
   return useQuery({
     queryKey: ["sacco", "shares"],
     queryFn: async (): Promise<SaccoShare> => {
-      const res = await apiGet<{ success: boolean; data: BackendAccount[] }>("/sacco/shares");
-      const accounts = extractData(res);
-      const shareAccounts = Array.isArray(accounts)
-        ? accounts.filter((a) => a.account_type === "shares")
-        : [];
-      const totalValue = shareAccounts.reduce((s, a) => s + (a.balance ?? 0), 0);
-      const SHARE_PRICE = 10000; // UGX per share – platform constant
+      const res = await apiGet<{ data: BackendShareSummary }>("/sacco/shares");
+      const summary = extractData(res);
+      const totalValue = summary?.total_value ?? 0;
+      const SHARE_PRICE = summary?.share_value ?? summary?.market?.price_per_share_ugx ?? 10000;
       return {
-        total_shares: SHARE_PRICE > 0 ? Math.round(totalValue / SHARE_PRICE) : 0,
+        total_shares: summary?.total_shares ?? (SHARE_PRICE > 0 ? Math.round(totalValue / SHARE_PRICE) : 0),
         share_value: SHARE_PRICE,
         total_value: totalValue,
-        purchases: [],
+        purchases: (summary?.purchases ?? [])
+          .filter((purchase) => purchase.type === "purchase")
+          .map((purchase) => ({
+            id: purchase.id,
+            quantity: purchase.quantity ?? 0,
+            amount: purchase.amount ?? 0,
+            date: purchase.date ?? "",
+          })),
       };
     },
     staleTime: 60 * 1000,
@@ -524,6 +583,51 @@ export interface SaccoContribution {
   notes?: string;
 }
 
+export interface SaccoLoanEligibility {
+  is_eligible: boolean;
+  max_amount: number;
+  credit_score: number;
+  savings_balance: number;
+  shares_value: number;
+  membership_months?: number;
+  reasons?: string[];
+  product?: {
+    id: number;
+    name: string;
+    requires_guarantors: boolean;
+    min_guarantors: number;
+  } | null;
+}
+
+export interface SaccoGuarantor {
+  id: number;
+  name: string;
+  member_number: string;
+  credit_score: number;
+  total_savings: number;
+  shares_value: number;
+  active_loans: number;
+}
+
+export interface SaccoLoanSchedulePreview {
+  product: { id: number; name: string };
+  summary: {
+    principal_amount: number;
+    interest_amount: number;
+    processing_fee: number;
+    insurance_fee: number;
+    total_amount: number;
+    monthly_installment: number;
+    term_months: number;
+  };
+  schedule: Array<{
+    installment: number;
+    due_date: string;
+    amount_ugx: number;
+    balance_after_ugx: number;
+  }>;
+}
+
 export function useSaccoContributions(params?: { page?: number; per_page?: number }) {
   return useQuery({
     queryKey: ['sacco', 'contributions', params],
@@ -537,6 +641,45 @@ export function useSaccoContributions(params?: { page?: number; per_page?: numbe
       return { data: items, total: items.length };
     },
     staleTime: 60 * 1000,
+  });
+}
+
+export function useSaccoProfile() {
+  return useQuery({
+    queryKey: ["sacco", "profile"],
+    queryFn: () => apiGet<{ data: BackendProfile }>("/sacco/profile").then((res) => extractData(res)),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSaccoLoanEligibility(productId?: number) {
+  return useQuery({
+    queryKey: ["sacco", "loan-eligibility", productId],
+    queryFn: () =>
+      apiGet<{ data: SaccoLoanEligibility }>("/sacco/loans/eligibility", {
+        params: productId ? { product_id: productId } : undefined,
+      }).then((res) => extractData(res)),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSaccoGuarantors(search?: string) {
+  return useQuery({
+    queryKey: ["sacco", "guarantors", search],
+    queryFn: () =>
+      apiGet<{ data: SaccoGuarantor[] }>("/sacco/loans/guarantors", {
+        params: search ? { search } : undefined,
+      }).then((res) => extractData(res)),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useLoanSchedulePreview() {
+  return useMutation({
+    mutationFn: (data: { product_id: number; amount: number; term_months: number }) =>
+      apiPost<{ data: SaccoLoanSchedulePreview }>("/sacco/loans/calculate-schedule", data).then(
+        (res) => extractData(res)
+      ),
   });
 }
 
@@ -572,14 +715,34 @@ export function useSaccoGroups() {
 export interface SaccoMeeting {
   id: number;
   title: string;
+  description?: string;
+  meeting_type?: string;
   agenda?: string;
   meeting_date: string;
+  scheduled_at?: string;
   location?: string;
   is_online: boolean;
   meeting_link?: string;
   status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   attendees_count: number;
   is_attending?: boolean;
+  quorum_required?: number;
+  quorum_met?: boolean;
+  proxy_name?: string | null;
+  minutes?: string | null;
+  resolutions?: string[];
+}
+
+export interface SaccoNotification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  channel: string;
+  data: Record<string, unknown>;
+  read_at?: string | null;
+  sent_at?: string | null;
+  created_at?: string | null;
 }
 
 export function useSaccoMeetings(params?: { status?: string }) {
@@ -600,10 +763,48 @@ export function useSaccoMeetings(params?: { status?: string }) {
 export function useRsvpMeeting() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ meetingId, attending }: { meetingId: number; attending: boolean }) =>
-      apiPost<{ message: string }>(`/sacco/meetings/${meetingId}/rsvp`, { attending }),
+    mutationFn: ({ meetingId, attending, proxy_name }: { meetingId: number; attending: boolean; proxy_name?: string }) =>
+      apiPost<{ message: string; data: SaccoMeeting }>(`/sacco/meetings/${meetingId}/rsvp`, { attending, proxy_name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco', 'meetings'] });
+    },
+  });
+}
+
+export function useSaccoNotifications(limit = 20) {
+  return useQuery({
+    queryKey: ['sacco', 'notifications', limit],
+    queryFn: async () => {
+      const res = await apiGet<{ data: SaccoNotification[]; meta?: { unread_count?: number } }>(
+        '/sacco/notifications',
+        { params: { limit } }
+      );
+
+      return {
+        notifications: res.data ?? [],
+        unreadCount: res.meta?.unread_count ?? 0,
+      };
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useMarkSaccoNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId: number) => apiPost<{ message: string }>(`/sacco/notifications/${notificationId}/read`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'notifications'] });
+    },
+  });
+}
+
+export function useMarkAllSaccoNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<{ message: string }>('/sacco/notifications/read-all', {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sacco', 'notifications'] });
     },
   });
 }
@@ -729,6 +930,10 @@ export const saccoHooks = {
   useBuyShares,
   useSaccoDividends,
   useSaccoContributions,
+  useSaccoProfile,
+  useSaccoLoanEligibility,
+  useSaccoGuarantors,
+  useLoanSchedulePreview,
   useSaccoGroups,
   useSaccoMeetings,
   useRsvpMeeting,

@@ -15,7 +15,13 @@ import {
   Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Event as HookEvent } from '@/hooks/useEvents'
+import {
+  getEventImage,
+  getEventStartDate,
+  getEventTimeLabel,
+  getEventVenueLabel,
+  type Event as HookEvent,
+} from '@/hooks/useEvents'
 
 // Flexible Event type that works with both hook and enhanced types
 type EventLike = HookEvent
@@ -72,12 +78,11 @@ export function EventCard({
   compact = false,
   className,
 }: EventCardProps) {
-  const dateStr = event.starts_at || event.date
+  const dateStr = getEventStartDate(event)
   const eventDate = dateStr ? formatEventDate(dateStr) : null
   const isPast = dateStr ? new Date(dateStr) < new Date() : false
   const price = formatPrice(event)
-  const imageUrl =
-    event.artwork || event.banner || event.banner_image || event.image || '/images/illustrations/default-event.jpg'
+  const imageUrl = getEventImage(event)
   const totalAttending = event.attendee_count || event.tickets_sold || 0
   const hypeScore = (event as unknown as Record<string, unknown>).hype_score as number | undefined
 
@@ -197,13 +202,13 @@ export function EventCard({
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
-              {event.venue_name || event.venue || event.city || 'TBA'}
+              {getEventVenueLabel(event)}
             </span>
           </div>
-          {!compact && event.time && (
+          {!compact && dateStr && (
             <div className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5 shrink-0" />
-              <span>{event.time}</span>
+              <span>{getEventTimeLabel(event)}</span>
             </div>
           )}
           {totalAttending > 0 && (

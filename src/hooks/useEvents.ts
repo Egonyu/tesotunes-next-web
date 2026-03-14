@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 import { apiGet, apiPost, apiDelete, apiPostForm } from "@/lib/api";
 
+const PLANNED_EVENT_FEATURE_MESSAGE =
+  "This Events feature is planned and not available in the current Tesotunes contract yet.";
+
 // ============================================================================
 // API Response Shapes (match Laravel paginator / EventResource format)
 // ============================================================================
@@ -75,29 +78,22 @@ export interface Event {
   slug: string;
   description: string;
 
-  // Media — EventResource returns `artwork` and `banner` as full URLs
-  image: string;          // normalised alias of artwork
-  artwork?: string;       // raw from EventResource
-  banner?: string;        // raw from EventResource
-  banner_image?: string;  // alias of banner for backward compat
+  // Media — canonical event asset fields from EventResource
+  artwork?: string;
+  banner?: string;
 
   category: string;
   event_type?: string;
 
-  // Schedule — EventResource returns ISO-8601 strings
-  date: string;           // normalised alias of starts_at
+  // Schedule — canonical ISO-8601 strings
   starts_at?: string;
   ends_at?: string;
-  end_date?: string;      // alias of ends_at for backward compat
   doors_open_at?: string;
-  time: string;           // derived from starts_at for display
   timezone?: string;
 
-  // Venue — EventResource returns flat fields + nested location object
-  venue: string;          // normalised: venue_name || location.name
+  // Venue — canonical flat fields plus optional related location object
   venue_name?: string;
   venue_address?: string;
-  location: string;       // normalised: city || location.city
   city: string;
   country: string;
   location_obj?: {
@@ -106,14 +102,9 @@ export interface Event {
     address?: string | null;
     city?: string | null;
   };
-  // Backward-compat aliases used by UI pages
-  location_name?: string;
-  location_address?: string;
-  location_city?: string;
 
   // Capacity & status
   attendee_limit?: number;
-  capacity?: number;      // alias of attendee_limit for backward compat
   status: 'draft' | 'published' | 'cancelled' | 'completed' | 'postponed';
   is_virtual?: boolean;
   virtual_link?: string;
@@ -127,8 +118,6 @@ export interface Event {
   currency?: string;
 
   // Organizer — EventResource returns nested { id, name, avatar }
-  organizer_id?: number;
-  organizer_name?: string;  // alias of organizer?.name for backward compat
   organizer?: {
     id: number;
     name: string;
@@ -299,29 +288,22 @@ function transformEvent(raw: Record<string, unknown>): Event {
     slug: (raw.slug as string) || '',
     description: (raw.description as string) || '',
 
-    // Media: EventResource returns `artwork` and `banner` as full URLs
-    image: (raw.artwork || '') as string,
+    // Media: canonical event media fields
     artwork: raw.artwork as string | undefined,
     banner: raw.banner as string | undefined,
-    banner_image: raw.banner as string | undefined,
 
     category: (raw.category || '') as string,
     event_type: raw.event_type as string | undefined,
 
-    // Schedule: EventResource returns starts_at, ends_at, doors_open_at
-    date: (raw.starts_at || '') as string,
+    // Schedule: canonical ISO-8601 fields
     starts_at: raw.starts_at as string | undefined,
     ends_at: raw.ends_at as string | undefined,
-    end_date: raw.ends_at as string | undefined,
     doors_open_at: raw.doors_open_at as string | undefined,
-    time: '',
     timezone: raw.timezone as string | undefined,
 
-    // Venue: EventResource returns flat venue_name/city + nested location object
-    venue: (raw.venue_name || rawLocation?.name || '') as string,
+    // Venue: canonical flat fields with optional related location
     venue_name: raw.venue_name as string | undefined,
     venue_address: raw.venue_address as string | undefined,
-    location: (raw.city || rawLocation?.city || '') as string,
     city: (raw.city || rawLocation?.city || '') as string,
     country: (raw.country || '') as string,
     location_obj: rawLocation ? {
@@ -330,14 +312,9 @@ function transformEvent(raw: Record<string, unknown>): Event {
       address: rawLocation.address,
       city: rawLocation.city,
     } : undefined,
-    // Backward-compat aliases
-    location_name: (rawLocation?.name || raw.venue_name) as string | undefined,
-    location_address: (rawLocation?.address || raw.venue_address) as string | undefined,
-    location_city: (rawLocation?.city || raw.city) as string | undefined,
 
     // Capacity & status
     attendee_limit: raw.attendee_limit as number | undefined,
-    capacity: raw.attendee_limit as number | undefined,
     status: (raw.status || 'draft') as Event['status'],
     is_virtual: raw.is_virtual as boolean | undefined,
     virtual_link: raw.virtual_link as string | undefined,
@@ -351,8 +328,6 @@ function transformEvent(raw: Record<string, unknown>): Event {
     currency: raw.currency as string | undefined,
 
     // Organizer
-    organizer_id: rawOrganizer?.id,
-    organizer_name: rawOrganizer?.name,
     organizer: rawOrganizer,
 
     // Artist — map organizer as performing artist for backward compat
@@ -378,6 +353,50 @@ function transformEvent(raw: Record<string, unknown>): Event {
     created_at: (raw.created_at || '') as string,
     updated_at: (raw.updated_at || '') as string,
   };
+}
+
+export function getEventImage(event: Event): string {
+  return event.artwork || event.banner || '/images/illustrations/default-event.jpg';
+}
+
+export function getEventStartDate(event: Event): string | undefined {
+  return event.starts_at;
+}
+
+export function getEventEndDate(event: Event): string | undefined {
+  return event.ends_at;
+}
+
+export function getEventVenueLabel(event: Event): string {
+  return event.venue_name || event.location_obj?.name || event.city || 'TBA';
+}
+
+export function getEventCityLabel(event: Event): string {
+  return event.city || event.location_obj?.city || '';
+}
+
+export function getEventLocationSummary(event: Event): string {
+  return [getEventCityLabel(event), event.country].filter(Boolean).join(', ');
+}
+
+export function getEventCapacity(event: Event): number {
+  return event.attendee_limit || 0;
+}
+
+export function getEventOrganizerName(event: Event): string | undefined {
+  return event.organizer?.name;
+}
+
+export function getEventTimeLabel(event: Event): string {
+  if (!event.starts_at) {
+    return 'TBA';
+  }
+
+  return new Date(event.starts_at).toLocaleTimeString('en', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 /**
@@ -822,10 +841,12 @@ export function useInitiateCheckout() {
     mutationFn: async (data: {
       event_id: number;
       tickets: Array<{ ticket_tier_id: number; quantity: number }>;
-      payment_method: string;
-      discount_code?: string;
-      credits_to_use?: number;
+      payment_method: PurchaseTicketRequest['payment_method'];
     }) => {
+      if (data.tickets.length !== 1) {
+        throw new Error("One ticket tier per checkout is currently supported.");
+      }
+
       // For the multi-step UI, we just validate availability via the event detail
       const res = await apiGet<{ data: Record<string, unknown> }>(`/events/${data.event_id}`);
       const event = transformEvent((res.data || res) as Record<string, unknown>);
@@ -864,7 +885,7 @@ export function useCompleteCheckout() {
     mutationFn: async (data: {
       event_id: number;
       checkout_id: string;
-      payment_provider: string;
+      payment_provider: PurchaseTicketRequest['payment_method'];
       payment_details: Record<string, unknown>;
       phone_number?: string;
       // The actual ticket info
@@ -900,18 +921,16 @@ export function useCompleteCheckout() {
 export function useCreateGroupBooking() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
+    mutationFn: async (_data: {
       event_id: number;
       ticket_tier_id: number;
       total_seats: number;
       payment_split: 'equal' | 'custom' | 'organizer_pays';
       deadline?: string;
-    }) => apiPost<{
-      id: string;
-      invite_link: string;
-      invite_code: string;
-    }>(`/events/${data.event_id}/group`, data),
-    onSuccess: () => {
+    }) => {
+      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
+    },
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["group-bookings"] });
     },
   });
@@ -920,35 +939,21 @@ export function useCreateGroupBooking() {
 export function useGroupBooking(eventId: number | string, groupId: string) {
   return useQuery({
     queryKey: ["group-booking", eventId, groupId],
-    queryFn: () => apiGet<{
-      data: {
-        id: string;
-        members: Array<{
-          id: number;
-          user: { id: number; name: string; avatar_url?: string };
-          status: string;
-          amount_owed: number;
-          amount_paid: number;
-        }>;
-        total_seats: number;
-        seats_booked: number;
-        deadline: string;
-        discount_percent: number;
-        total_amount: number;
-        per_person_amount: number;
-        invite_link: string;
-      };
-    }>(`/events/${eventId}/group/${groupId}`),
+    queryFn: async () => {
+      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
+    },
     enabled: !!eventId && !!groupId,
+    retry: false,
   });
 }
 
 export function useJoinGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { event_id: number; group_id: string }) =>
-      apiPost(`/events/${data.event_id}/group/${data.group_id}/join`),
-    onSuccess: () => {
+    mutationFn: async (_data: { event_id: number; group_id: string }) => {
+      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
+    },
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["group-bookings"] });
     },
   });
@@ -957,13 +962,9 @@ export function useJoinGroup() {
 // Discount Code Validation — no backend endpoint yet
 export function useValidateDiscountCode() {
   return useMutation({
-    mutationFn: (data: { event_id: number; code: string }) =>
-      apiPost<{
-        valid: boolean;
-        discount_percent?: number;
-        discount_amount?: number;
-        message: string;
-      }>(`/events/${data.event_id}/validate-discount`, data),
+    mutationFn: async (_data: { event_id: number; code: string }) => {
+      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
+    },
   });
 }
 
@@ -971,16 +972,14 @@ export function useValidateDiscountCode() {
 export function useLiveCheckIn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
+    mutationFn: async (_data: {
       event_id: number;
       latitude?: number;
       longitude?: number;
-    }) => apiPost<{
-      success: boolean;
-      credits_earned: number;
-      message: string;
-    }>(`/events/${data.event_id}/live/check-in`, data),
-    onSuccess: () => {
+    }) => {
+      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
+    },
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
   });

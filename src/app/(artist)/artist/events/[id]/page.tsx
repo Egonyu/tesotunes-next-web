@@ -20,7 +20,15 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api';
-import { Event } from '@/hooks/useEvents';
+import {
+  Event,
+  getEventCapacity,
+  getEventImage,
+  getEventLocationSummary,
+  getEventStartDate,
+  getEventTimeLabel,
+  getEventVenueLabel,
+} from '@/hooks/useEvents';
 import { toast } from 'sonner';
 
 export default function ArtistEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,11 +67,11 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
   };
 
   const ticketsSold = event.tickets_sold || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_sold || 0), 0) || 0;
-  const totalTickets = event.attendee_limit || event.capacity || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || t.quantity || 0), 0) || 0;
+  const totalTickets = getEventCapacity(event) || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || t.quantity || 0), 0) || 0;
   const sellThrough = totalTickets > 0 ? Math.round((ticketsSold / totalTickets) * 100) : 0;
-  const coverImage = event.artwork || event.banner || event.image;
-  const eventDate = event.starts_at || event.date;
-  const eventTime = event.time || (event.starts_at ? new Date(event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBA');
+  const coverImage = getEventImage(event);
+  const eventDate = getEventStartDate(event);
+  const eventTime = getEventTimeLabel(event);
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${id}`;
@@ -181,9 +189,9 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
-                  <p className="font-medium">{event.venue_name || event.venue || 'Venue TBA'}</p>
+                  <p className="font-medium">{getEventVenueLabel(event) || 'Venue TBA'}</p>
                   <p className="text-sm text-muted-foreground">
-                    {[event.city, event.country].filter(Boolean).join(', ') || event.location}
+                    {getEventLocationSummary(event)}
                   </p>
                 </div>
               </div>

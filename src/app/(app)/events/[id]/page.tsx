@@ -18,7 +18,18 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEvent, type EventTicketTier } from '@/hooks/useEvents'
+import {
+  getEventCapacity,
+  getEventCityLabel,
+  getEventEndDate,
+  getEventImage,
+  getEventLocationSummary,
+  getEventOrganizerName,
+  getEventStartDate,
+  getEventVenueLabel,
+  useEvent,
+  type EventTicketTier,
+} from '@/hooks/useEvents'
 import { toast } from 'sonner'
 import { SocialProof } from '@/components/events/SocialProof'
 import { TicketSelector } from '@/components/events/TicketSelector'
@@ -91,11 +102,9 @@ export default function EventDetailPage({
     )
   }
 
-  const isPastEvent = event.starts_at
-    ? new Date(event.starts_at) < new Date()
-    : event.date
-      ? new Date(event.date) < new Date()
-      : false
+  const startsAt = getEventStartDate(event)
+  const endsAt = getEventEndDate(event)
+  const isPastEvent = startsAt ? new Date(startsAt) < new Date() : false
 
   const totalSold =
     event.ticket_tiers?.reduce(
@@ -106,7 +115,7 @@ export default function EventDetailPage({
     event.ticket_tiers?.reduce(
       (sum: number, t: EventTicketTier) => sum + (t.quantity || 0),
       0,
-    ) || event.attendee_limit || event.capacity || 0
+    ) || getEventCapacity(event) || 0
   const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity
 
   function handleBookmark() {
@@ -123,11 +132,7 @@ export default function EventDetailPage({
       <div className="relative h-[400px] md:h-[500px]">
         <Image
           src={
-            event.artwork ||
-            event.banner ||
-            event.banner_image ||
-            event.image ||
-            '/images/illustrations/default-event.jpg'
+            getEventImage(event)
           }
           alt={event.title}
           fill
@@ -181,14 +186,14 @@ export default function EventDetailPage({
             <div className="flex flex-wrap items-center gap-4 text-white/80">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                <span>{formatDate(event.starts_at || event.date)}</span>
+                <span>{formatDate(startsAt)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
                 <span>
                   {formatTimeRange(
-                    event.starts_at || event.date,
-                    event.ends_at || event.end_date,
+                    startsAt,
+                    endsAt,
                   )}
                 </span>
               </div>
@@ -200,7 +205,7 @@ export default function EventDetailPage({
               ) : (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  <span>{event.venue_name || event.location_name || event.venue || event.city || event.location_city || 'TBA'}</span>
+                  <span>{getEventVenueLabel(event)}</span>
                 </div>
               )}
               {totalSold > 0 && (
@@ -318,15 +323,15 @@ export default function EventDetailPage({
                     </div>
                     <div>
                       <p className="font-semibold text-lg">
-                        {event.venue_name || event.location_name || event.venue || 'Venue TBA'}
+                        {getEventVenueLabel(event) || 'Venue TBA'}
                       </p>
-                      {(event.venue_address || event.location_address) && (
+                      {event.venue_address && (
                         <p className="text-muted-foreground text-sm">
-                          {event.venue_address || event.location_address}
+                          {event.venue_address}
                         </p>
                       )}
                       <p className="text-muted-foreground text-sm">
-                        {[event.city || event.location_city, event.country].filter(Boolean).join(', ')}
+                        {getEventLocationSummary(event)}
                       </p>
                     </div>
                   </div>
@@ -340,21 +345,21 @@ export default function EventDetailPage({
                 <DetailCard
                   icon={<Calendar className="h-5 w-5 text-primary" />}
                   label="Date"
-                  value={formatDate(event.starts_at || event.date)}
+                  value={formatDate(startsAt)}
                 />
                 <DetailCard
                   icon={<Clock className="h-5 w-5 text-primary" />}
                   label="Time"
                   value={formatTimeRange(
-                    event.starts_at || event.date,
-                    event.ends_at || event.end_date,
+                    startsAt,
+                    endsAt,
                   )}
                 />
-                {(event.attendee_limit || event.capacity) && (
+                {getEventCapacity(event) > 0 && (
                   <DetailCard
                     icon={<Users className="h-5 w-5 text-primary" />}
                     label="Capacity"
-                    value={`${(event.attendee_limit || event.capacity)?.toLocaleString()} attendees`}
+                    value={`${getEventCapacity(event).toLocaleString()} attendees`}
                   />
                 )}
                 {event.timezone && (
@@ -450,7 +455,7 @@ export default function EventDetailPage({
               )}
 
               {/* Fallback: show organizer_name if no organizer object */}
-              {!event.organizer && event.organizer_name && (
+              {!event.organizer && getEventOrganizerName(event) && (
                 <div className="p-4 rounded-xl border">
                   <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-medium">
                     Organized by
@@ -458,11 +463,11 @@ export default function EventDetailPage({
                   <div className="flex items-center gap-3">
                     <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-muted">
                       <div className="h-full w-full flex items-center justify-center text-lg font-bold text-muted-foreground">
-                        {event.organizer_name.charAt(0)}
+                        {getEventOrganizerName(event)?.charAt(0)}
                       </div>
                     </div>
                     <div>
-                      <p className="font-semibold">{event.organizer_name}</p>
+                      <p className="font-semibold">{getEventOrganizerName(event)}</p>
                       <p className="text-xs text-muted-foreground">Event Organizer</p>
                     </div>
                   </div>

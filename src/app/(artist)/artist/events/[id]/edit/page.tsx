@@ -6,7 +6,15 @@ import Link from 'next/link';
 import { ArrowLeft, Plus, Minus, Calendar, MapPin, DollarSign, Ticket, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api';
-import { useUpdateEvent, Event, UpdateEventRequest } from '@/hooks/useEvents';
+import {
+  useUpdateEvent,
+  Event,
+  UpdateEventRequest,
+  getEventCapacity,
+  getEventImage,
+  getEventStartDate,
+  getEventVenueLabel,
+} from '@/hooks/useEvents';
 import { cn, getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -59,27 +67,22 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
     setStatus(event.status || 'draft');
     setCountry(event.country || 'Uganda');
     setCity(event.city || '');
-    setVenue(event.venue_name || event.venue || '');
-    setLocation(event.location || '');
-    setCapacity(String(event.attendee_limit || event.capacity || ''));
+    setVenue(getEventVenueLabel(event));
+    setLocation(event.city || '');
+    setCapacity(String(getEventCapacity(event) || ''));
 
     // Parse date/time from starts_at
     if (event.starts_at) {
       const dt = new Date(event.starts_at);
       setDate(dt.toISOString().split('T')[0]);
       setTime(dt.toISOString().split('T')[1]?.substring(0, 5) || '');
-    } else if (event.date) {
-      setDate(event.date);
-      setTime(event.time || '');
     }
     if (event.ends_at) {
       setEndDate(new Date(event.ends_at).toISOString().split('T')[0]);
-    } else if (event.end_date) {
-      setEndDate(event.end_date);
     }
 
     // Image preview
-    setImagePreview(event.artwork || event.image || '');
+    setImagePreview(getEventImage(event));
 
     // Ticket tiers
     if (event.ticket_tiers && event.ticket_tiers.length > 0) {

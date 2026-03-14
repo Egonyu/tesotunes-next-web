@@ -1,15 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import {
   Ticket,
   Minus,
   Plus,
   CreditCard,
   Coins,
-  Zap,
   ShieldCheck,
-  Info,
   Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,7 +32,7 @@ export function TicketSelector({
   onProceedToCheckout,
   className,
 }: TicketSelectorProps) {
-  const { items, addToCart, removeFromCart, updateQuantity, setEventId, total } =
+  const { items, addToCart, removeFromCart, setEventId, total } =
     useEventCartStore()
 
   const isSoldOut = tiers.every((t) => (t.available ?? 0) <= 0)
@@ -85,6 +82,7 @@ export function TicketSelector({
       tiers.some((t) => t.id === item.ticket_tier_id),
   )
   const totalQuantity = cartForEvent.reduce((sum, item) => sum + item.quantity, 0)
+  const selectedTierId = cartForEvent[0]?.ticket_tier_id ?? null
 
   function handleQuantityChange(
     tier: EventTicketTier,
@@ -124,6 +122,7 @@ export function TicketSelector({
           const qty = cartItem?.quantity ?? 0
           const available = tier.available ?? 0
           const isTierSoldOut = available <= 0
+          const isLockedByAnotherTier = selectedTierId !== null && selectedTierId !== tier.id
 
           return (
             <div
@@ -132,6 +131,7 @@ export function TicketSelector({
                 'p-4 rounded-lg border transition-all',
                 qty > 0 && 'border-primary bg-primary/5',
                 isTierSoldOut && 'opacity-50',
+                isLockedByAnotherTier && 'opacity-60',
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -182,6 +182,8 @@ export function TicketSelector({
                 <div className="text-xs text-muted-foreground">
                   {isTierSoldOut ? (
                     <span className="text-red-500 font-medium">Sold out</span>
+                  ) : isLockedByAnotherTier ? (
+                    <span>Finish this checkout before mixing ticket tiers</span>
                   ) : available < 50 ? (
                     <span className="text-orange-500 font-medium">
                       {available} left
@@ -211,11 +213,15 @@ export function TicketSelector({
                     <button
                       onClick={() => handleQuantityChange(tier, 1)}
                       disabled={
-                        qty >= tier.max_per_order || qty >= available
+                        isLockedByAnotherTier ||
+                        qty >= tier.max_per_order ||
+                        qty >= available
                       }
                       className={cn(
                         'h-8 w-8 rounded-full border flex items-center justify-center transition-colors',
-                        qty >= tier.max_per_order || qty >= available
+                        isLockedByAnotherTier ||
+                        qty >= tier.max_per_order ||
+                        qty >= available
                           ? 'opacity-30 cursor-not-allowed'
                           : 'hover:bg-primary hover:text-primary-foreground hover:border-primary',
                       )}
@@ -257,16 +263,16 @@ export function TicketSelector({
           </button>
 
           {!allFree && (
-            <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CreditCard className="h-3 w-3" /> Mobile Money
-              </span>
-              <span className="flex items-center gap-1">
-                <Coins className="h-3 w-3" /> Credits
-              </span>
-              <span className="flex items-center gap-1">
-                <Zap className="h-3 w-3" /> Hybrid
-              </span>
+            <div className="space-y-2 text-center text-[10px] text-muted-foreground">
+              <p>Each checkout currently supports one ticket tier at a time.</p>
+              <div className="flex items-center justify-center gap-4">
+                <span className="flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" /> Wallet and card
+                </span>
+                <span className="flex items-center gap-1">
+                  <Coins className="h-3 w-3" /> Mobile money and credits
+                </span>
+              </div>
             </div>
           )}
         </div>

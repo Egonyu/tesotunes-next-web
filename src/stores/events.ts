@@ -58,7 +58,7 @@ export const useEventCartStore = create<EventCartState>()(
     (set, get) => ({
       items: [],
       eventId: null,
-      paymentMethod: 'ugx',
+      paymentMethod: 'wallet',
       discountCode: '',
       discountAmount: 0,
       hybridCalculation: null,
@@ -125,7 +125,7 @@ export const useEventCartStore = create<EventCartState>()(
         set({
           items: [],
           eventId: null,
-          paymentMethod: 'ugx',
+          paymentMethod: 'wallet',
           discountCode: '',
           discountAmount: 0,
           hybridCalculation: null,

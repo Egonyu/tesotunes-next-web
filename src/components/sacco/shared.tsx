@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 // ============================================================================
 // Stat Card
@@ -432,6 +433,62 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
           <div>{action}</div>
         )
       )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Planned Feature State
+// ============================================================================
+
+interface PlannedFeatureStateProps {
+  title: string
+  description: string
+  phase?: string
+}
+
+export function PlannedFeatureState({
+  title,
+  description,
+  phase = 'Planned rebuild',
+}: PlannedFeatureStateProps) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">{title}</h1>
+        <p className="text-muted-foreground mt-1">{description}</p>
+      </div>
+
+      <div className="rounded-2xl border bg-card p-6 lg:p-8 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          {phase}
+        </div>
+
+        <div className="mt-4 max-w-2xl space-y-3">
+          <h2 className="text-xl font-semibold">This area is not live yet</h2>
+          <p className="text-sm text-muted-foreground">
+            We paused this SACCO experience while we finish the finance-first rebuild. That keeps the visible product aligned with the backend features that are already stable.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Current priority remains membership, savings, loans, shares, and goals. This section will come back once its API contract and operating rules are fully defined.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/sacco/dashboard"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+          >
+            Back to Dashboard
+          </Link>
+          <Link
+            href="/sacco"
+            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            SACCO Home
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

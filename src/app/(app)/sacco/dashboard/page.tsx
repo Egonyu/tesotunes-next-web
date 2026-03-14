@@ -276,9 +276,9 @@ export default function SaccoDashboardPage() {
                 <Target className="h-6 w-6 mx-auto mb-2 text-blue-600" />
                 <p className="text-xs font-medium">New Goal</p>
               </Link>
-              <Link href="/sacco/resources" className="p-4 rounded-lg border hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:border-purple-200 text-center transition-colors">
+              <Link href="/sacco/shares" className="p-4 rounded-lg border hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:border-purple-200 text-center transition-colors">
                 <Warehouse className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                <p className="text-xs font-medium">Resources</p>
+                <p className="text-xs font-medium">Shares</p>
               </Link>
               <Link href="/sacco/loans/apply" className="p-4 rounded-lg border hover:bg-amber-50 dark:hover:bg-amber-900/10 hover:border-amber-200 text-center transition-colors">
                 <CreditCard className="h-6 w-6 mx-auto mb-2 text-amber-600" />

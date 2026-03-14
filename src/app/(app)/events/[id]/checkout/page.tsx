@@ -2,7 +2,6 @@
 
 import { use, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,
   Loader2,
@@ -12,11 +11,15 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEvent, useInitiateCheckout, useCompleteCheckout } from '@/hooks/useEvents'
+import {
+  getEventVenueLabel,
+  useEvent,
+  useInitiateCheckout,
+  useCompleteCheckout,
+} from '@/hooks/useEvents'
 import { useEventCartStore } from '@/stores/events'
 import { OrderSummary } from '@/components/events/OrderSummary'
 import { PaymentMethodSelector } from '@/components/events/PaymentMethodSelector'
-import { DiscountCodeInput } from '@/components/events/DiscountCodeInput'
 import { toast } from 'sonner'
 
 export default function CheckoutPage({
@@ -25,21 +28,17 @@ export default function CheckoutPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const router = useRouter()
   const [step, setStep] = useState<'review' | 'payment' | 'processing' | 'success'>('review')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
-  const [creditsEarned, setCreditedEarned] = useState(0)
+  const [creditsEarned, setCreditsEarned] = useState(0)
 
   const { data: event, isLoading: eventLoading } = useEvent(id)
   const {
     items,
     paymentMethod,
     total,
-    subtotal,
-    discountCode,
-    creditsToUse,
     clearCart,
   } = useEventCartStore()
 
@@ -89,6 +88,12 @@ export default function CheckoutPage({
   }
 
   async function handleCheckout() {
+    if (items.length !== 1) {
+      toast.error('Select one ticket tier per checkout for now')
+      setStep('review')
+      return
+    }
+
     if (!agreedToTerms) {
       toast.error('Please agree to the terms and conditions')
       return
@@ -111,8 +116,6 @@ export default function CheckoutPage({
           quantity: item.quantity,
         })),
         payment_method: paymentMethod,
-        discount_code: discountCode || undefined,
-        credits_to_use: creditsToUse || undefined,
       })
 
       // Step 2: Complete — pass first cart item's ticket info to the purchase endpoint
@@ -130,7 +133,7 @@ export default function CheckoutPage({
       })
 
       setOrderId(result.data?.order_id || null)
-      setCreditedEarned(0)
+      setCreditsEarned(0)
       setStep('success')
       clearCart()
     } catch (err: unknown) {
@@ -245,7 +248,7 @@ export default function CheckoutPage({
                 <div>
                   <h3 className="font-semibold">{event.title}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {event.venue_name || event.venue || event.city || 'TBA'}
+                    {getEventVenueLabel(event)}
                   </p>
                 </div>
               </div>
@@ -274,11 +277,22 @@ export default function CheckoutPage({
                 ))}
               </div>
 
-              {/* Discount Code */}
-              <DiscountCodeInput />
+              <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                Discount codes, mixed-payment checkout, and multi-tier orders are
+                planned for a later Events release. This checkout currently
+                completes one ticket tier at a time using a single payment
+                method.
+              </div>
 
               <button
-                onClick={() => setStep('payment')}
+                onClick={() => {
+                  if (items.length !== 1) {
+                    toast.error('Select one ticket tier per checkout for now')
+                    return
+                  }
+
+                  setStep('payment')
+                }}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
               >
                 Continue to Payment

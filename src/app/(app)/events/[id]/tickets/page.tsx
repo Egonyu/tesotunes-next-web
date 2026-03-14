@@ -19,7 +19,15 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEvent, usePurchaseTickets, PurchaseTicketRequest } from '@/hooks/useEvents';
+import {
+  getEventImage,
+  getEventStartDate,
+  getEventTimeLabel,
+  getEventVenueLabel,
+  useEvent,
+  usePurchaseTickets,
+  PurchaseTicketRequest,
+} from '@/hooks/useEvents';
 import { useValidatePhone } from '@/hooks/usePayments';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -145,7 +153,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       <div className="flex gap-4 p-4 rounded-xl border bg-card mb-8">
         <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
           <Image
-            src={event.artwork || event.image || '/images/event-placeholder.jpg'}
+            src={getEventImage(event)}
             alt={event.title}
             fill
             className="object-cover"
@@ -156,15 +164,15 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
           <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              {new Date(event.starts_at || event.date).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {new Date(getEventStartDate(event) || '').toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {event.time || (event.starts_at ? new Date(event.starts_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBA')}
+              {getEventTimeLabel(event)}
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
-              {event.venue_name || event.venue || event.city || 'TBA'}
+              {getEventVenueLabel(event)}
             </span>
           </div>
         </div>

@@ -49,7 +49,8 @@ const nextConfig: NextConfig = {
     const isHostedDeployment =
       process.env.VERCEL === '1' ||
       process.env.VERCEL === 'true' ||
-      process.env.APP_ENV === 'production';
+      process.env.APP_ENV === 'production' ||
+      process.env.NODE_ENV === 'production';
 
     const rawApiUrl =
       process.env.NEXT_PUBLIC_API_URL ||

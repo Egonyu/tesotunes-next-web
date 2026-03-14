@@ -21,6 +21,7 @@ const isHostedDeployment =
   process.env.VERCEL === "1" ||
   process.env.VERCEL === "true" ||
   process.env.APP_ENV === "production" ||
+  process.env.NODE_ENV === "production" ||
   process.env.NODE_ENV === "test";
 
 const rawCandidates = [

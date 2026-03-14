@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { API_URL } from "@/lib/api-config";
+import {
+  fetchAuthApi,
+  REGISTRATION_SERVICE_UNAVAILABLE_MESSAGE,
+} from "@/lib/auth-api";
 
 /**
  * Safely parse JSON from a fetch response.
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/auth/register`, {
+    const response = await fetchAuthApi("/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -92,14 +95,23 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[Register] Unexpected error:", error);
 
+    const message =
+      error instanceof Error &&
+      /fetch failed|failed to fetch|econnrefused|network/i.test(error.message)
+        ? REGISTRATION_SERVICE_UNAVAILABLE_MESSAGE
+        : "An unexpected error occurred during registration. Please try again.";
+
     return NextResponse.json(
       {
         success: false,
-        message: "An unexpected error occurred during registration. Please try again.",
+        message,
         errors: null,
         data: null,
       },
-      { status: 500 }
+      {
+        status:
+          message === REGISTRATION_SERVICE_UNAVAILABLE_MESSAGE ? 503 : 500,
+      }
     );
   }
 }

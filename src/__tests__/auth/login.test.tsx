@@ -31,6 +31,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import LoginPage from "@/app/(auth)/login/page";
+import { AUTH_SERVICE_UNAVAILABLE_MESSAGE } from "@/lib/auth-api";
 
 describe("LoginPage", () => {
   beforeEach(() => {
@@ -106,6 +107,29 @@ describe("LoginPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/account is suspended/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows a clear auth service error when the API is unreachable", async () => {
+    mockSignIn.mockResolvedValue({
+      ok: false,
+      error: AUTH_SERVICE_UNAVAILABLE_MESSAGE,
+      status: 503,
+      url: null,
+    });
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "benson@gmail.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Ben./12!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(AUTH_SERVICE_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
     });
   });
 

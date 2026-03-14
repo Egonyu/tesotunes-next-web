@@ -1,6 +1,11 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { API_URL } from "./api-config";
+import {
+  AUTH_SERVICE_UNAVAILABLE_MESSAGE,
+  buildAuthApiBaseUrls,
+  fetchAuthApi,
+} from "./auth-api";
 
 // Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
 const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
@@ -83,12 +88,26 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
  */
 async function fetchFreshUserData(accessToken: string): Promise<{ role: string } | { expired: true } | null> {
   try {
-    const response = await fetch(`${API_URL}/user/profile`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-      },
-    });
+    const baseUrls = buildAuthApiBaseUrls(API_URL);
+    let response: Response | null = null;
+
+    for (const baseUrl of baseUrls) {
+      try {
+        response = await fetch(`${baseUrl}/user/profile`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
+        });
+        break;
+      } catch (error) {
+        console.warn("[Auth] Error refreshing user data from", baseUrl, error);
+      }
+    }
+
+    if (!response) {
+      return null;
+    }
 
     if (response.status === 401) {
       console.warn("[Auth] Access token expired (401)");
@@ -114,6 +133,88 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
   } catch (error) {
     console.warn("[Auth] Error refreshing user data:", error);
     return null;
+  }
+}
+
+function extractAuthorizedUser(data: Record<string, unknown>) {
+  const dataObj = data.data as Record<string, unknown> | undefined;
+  const user = (data.user as Record<string, unknown>) ??
+    (dataObj?.user as Record<string, unknown>) ??
+    (dataObj?.id ? dataObj : undefined);
+  const token = (data.token as string) ??
+    (dataObj?.token as string) ??
+    (data.access_token as string);
+
+  if (!user || !token) {
+    return null;
+  }
+
+  return {
+    id: String(user.id),
+    email: user.email as string,
+    name: user.name as string,
+    role: (user.role as string) || "user",
+    accessToken: token,
+  };
+}
+
+export async function authorizeCredentials(
+  credentials: Record<string, string | boolean | undefined> | undefined
+) {
+  if (!credentials?.email || !credentials?.password) {
+    return null;
+  }
+
+  const rememberMe =
+    credentials.remember_me === true || credentials.remember_me === "true";
+
+  try {
+    const response = await fetchAuthApi("/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        remember_me: rememberMe,
+      }),
+    });
+
+    const data = await safeJsonParse(response);
+
+    if (!data) {
+      console.error("[Auth] Empty or non-JSON response from API");
+      throw new Error("The sign-in service returned an invalid response. Please try again.");
+    }
+
+    if (!response.ok) {
+      const message = (data.message as string) || "Unknown error";
+      console.error("[Auth] Login failed:", message);
+      throw new Error(message);
+    }
+
+    const authorizedUser = extractAuthorizedUser(data);
+
+    if (authorizedUser) {
+      return authorizedUser;
+    }
+
+    console.error("[Auth] Missing user or token in response");
+    throw new Error("The sign-in service returned an incomplete response. Please try again.");
+  } catch (error) {
+    console.error("[Auth] Exception during login:", error);
+
+    if (error instanceof Error && /fetch failed|failed to fetch|econnrefused|network/i.test(error.message)) {
+      throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
   }
 }
 
@@ -211,75 +312,7 @@ export const authConfig: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         remember_me: { label: "Remember me", type: "checkbox" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const rememberMe =
-          (credentials as Record<string, string | boolean | undefined>).remember_me === true ||
-          (credentials as Record<string, string | boolean | undefined>).remember_me === "true";
-
-        try {
-          const response = await fetch(`${API_URL}/auth/login`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-              remember_me: rememberMe,
-            }),
-          });
-
-          const data = await safeJsonParse(response);
-
-          if (!data) {
-            console.error("[Auth] Empty or non-JSON response from API");
-            return null;
-          }
-
-          if (!response.ok) {
-            const message = (data.message as string) || "Unknown error";
-            console.error("[Auth] Login failed:", message);
-            throw new Error(message);
-          }
-
-          // Support multiple Laravel response shapes:
-          // Shape 1: { user: {...}, token: "..." }
-          // Shape 2: { data: { user: {...}, token: "..." } }
-          // Shape 3: { success: true, data: { user: {...} }, token: "..." }
-          // Shape 4: { data: {...user fields...}, token: "..." } (UserResource)
-          const dataObj = data.data as Record<string, unknown> | undefined;
-          const user = (data.user as Record<string, unknown>) ??
-            (dataObj?.user as Record<string, unknown>) ??
-            (dataObj?.id ? dataObj : undefined);
-          const token = (data.token as string) ??
-            (dataObj?.token as string) ??
-            (data.access_token as string);
-
-          if (user && token) {
-            return {
-              id: String(user.id),
-              email: user.email as string,
-              name: user.name as string,
-              role: (user.role as string) || "user",
-              accessToken: token,
-            };
-          }
-
-          console.error("[Auth] Missing user or token in response");
-          return null;
-        } catch (error) {
-          console.error("[Auth] Exception during login:", error);
-          if (error instanceof Error && error.message !== "Unknown error") {
-            throw error;
-          }
-          return null;
-        }
-      },
+      authorize: authorizeCredentials,
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,

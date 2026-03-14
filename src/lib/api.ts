@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { API_URL } from "./api-config";
+import { buildLocalApiBaseUrls, fetchApiWithFallback } from "./api-fallback";
 
 // Browser requests go through the Next.js backend proxy so the Laravel access
 // token stays server-side inside the NextAuth JWT. Server-side code can still
@@ -143,9 +144,7 @@ export async function serverFetch<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
-
-  const response = await fetch(url, {
+  const response = await fetchApiWithFallback(endpoint, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -153,17 +152,19 @@ export async function serverFetch<T>(
       ...options?.headers,
     },
     next: { revalidate: 60 },
+  }, {
+    baseUrls: buildLocalApiBaseUrls(API_URL),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`API Error: ${response.status} - ${url}`, text.slice(0, 200));
+    console.error(`API Error: ${response.status} - ${endpoint}`, text.slice(0, 200));
     throw new Error(`API Error: ${response.status}`);
   }
 
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
-    console.error(`API returned non-JSON (${contentType}) for ${url}`);
+    console.error(`API returned non-JSON (${contentType}) for ${endpoint}`);
     throw new Error(`API returned non-JSON response for ${endpoint}`);
   }
 

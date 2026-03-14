@@ -1,155 +1,143 @@
 /**
- * Tests for registration API route logic
- * Tests the proxy behavior without depending on NextRequest
+ * @jest-environment node
  */
 
-describe('Registration API Route Logic', () => {
-  const mockFetch = jest.fn();
+import { NextRequest } from "next/server";
+import { POST } from "@/app/api/auth/register/route";
+import { REGISTRATION_SERVICE_UNAVAILABLE_MESSAGE } from "@/lib/auth-api";
+
+describe("register api route", () => {
   const originalFetch = global.fetch;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    global.fetch = mockFetch;
   });
 
-  afterAll(() => {
+  afterEach(() => {
     global.fetch = originalFetch;
   });
 
-  it('validates required fields before calling backend', async () => {
-    // Empty data should fail validation in the register page
-    const data = { name: '', email: '', password: '' };
-
-    // The register page checks these before sending
-    expect(data.name).toBeFalsy();
-    expect(data.email).toBeFalsy();
-    expect(data.password).toBeFalsy();
-  });
-
-  it('sends correct payload to backend', async () => {
-    const registrationData = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'Password123!',
-      password_confirmation: 'Password123!',
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({
-        success: true,
-        message: 'User registered successfully',
-        data: { id: 1, name: 'Test User', email: 'test@example.com', is_artist: false },
-        token: 'test_token',
-        token_type: 'Bearer',
-      }),
+  function buildRequest(body: Record<string, unknown>) {
+    return new NextRequest("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
+  }
 
-    // Simulate what the API route does
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(registrationData),
-    });
+  it("validates required fields before calling the backend", async () => {
+    global.fetch = jest.fn() as typeof fetch;
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(registrationData),
-    });
-
+    const response = await POST(buildRequest({}));
     const result = await response.json();
-    expect(result.success).toBe(true);
-    expect(result.data.name).toBe('Test User');
-    expect(result.token).toBeDefined();
-  });
 
-  it('handles duplicate email error (422)', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 422,
-      json: async () => ({
-        success: false,
-        message: 'Validation failed',
-        errors: { email: ['The email has already been taken.'] },
-      }),
-    });
-
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Test',
-        email: 'existing@example.com',
-        password: 'Password123!',
-        password_confirmation: 'Password123!',
-      }),
-    });
-
-    expect(response.ok).toBe(false);
     expect(response.status).toBe(422);
-
-    const result = await response.json();
-    expect(result.errors.email[0]).toBe('The email has already been taken.');
+    expect(result).toMatchObject({
+      success: false,
+      message: "Missing required fields",
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('handles server errors (500)', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({
-        success: false,
-        message: 'Registration failed',
-        error: 'An error occurred during registration',
-      }),
-    });
+  it("falls back to localhost when the configured API host is down", async () => {
+    const mockFetch = jest.fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { id: 1, name: "Test User", email: "test@example.com" },
+            token: "test_token",
+            token_type: "Bearer",
+          }),
+          {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
+      );
 
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Test',
-        email: 'test@example.com',
-        password: 'Password123!',
-        password_confirmation: 'Password123!',
-      }),
-    });
+    global.fetch = mockFetch as typeof fetch;
 
-    expect(response.ok).toBe(false);
-    expect(response.status).toBe(500);
-
-    const result = await response.json();
-    expect(result.success).toBe(false);
-  });
-
-  it('handles network failures', async () => {
-    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed'));
-
-    await expect(
-      fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Test',
-          email: 'test@example.com',
-          password: 'Password123!',
-          password_confirmation: 'Password123!',
-        }),
+    const response = await POST(
+      buildRequest({
+        name: "Test User",
+        email: "test@example.com",
+        password: "Password123!",
+        password_confirmation: "Password123!",
       })
-    ).rejects.toThrow('fetch failed');
+    );
+
+    const result = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(result).toMatchObject({
+      success: true,
+      data: { email: "test@example.com" },
+    });
+    expect(mockFetch.mock.calls[0]?.[0]).toMatch(/\/api\/auth\/register$/);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:8000/api/auth/register",
+      expect.any(Object)
+    );
   });
 
-  it('includes password_confirmation in request body', () => {
-    const formData = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'Password123!',
-      password_confirmation: 'Password123!',
-    };
+  it("passes Laravel validation errors through unchanged", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: "Validation failed",
+          errors: {
+            email: ["The email has already been taken."],
+          },
+        }),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    ) as typeof fetch;
 
-    const body = JSON.parse(JSON.stringify(formData));
-    expect(body.password_confirmation).toBe('Password123!');
-    expect(body.password).toBe(body.password_confirmation);
+    const response = await POST(
+      buildRequest({
+        name: "Test User",
+        email: "taken@example.com",
+        password: "Password123!",
+        password_confirmation: "Password123!",
+      })
+    );
+
+    const result = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(result).toMatchObject({
+      success: false,
+      errors: {
+        email: ["The email has already been taken."],
+      },
+    });
+  });
+
+  it("returns a clear 503 when every registration backend is unreachable", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError("fetch failed")) as typeof fetch;
+
+    const response = await POST(
+      buildRequest({
+        name: "Test User",
+        email: "test@example.com",
+        password: "Password123!",
+        password_confirmation: "Password123!",
+      })
+    );
+
+    const result = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(result).toMatchObject({
+      success: false,
+      message: REGISTRATION_SERVICE_UNAVAILABLE_MESSAGE,
+    });
   });
 });

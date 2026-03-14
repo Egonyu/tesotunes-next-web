@@ -71,11 +71,17 @@ const nextConfig: NextConfig = {
           source: "/api/auth/:path*",
           destination: "/api/auth/:path*",
         },
+        // Pin /api/backend/* to the filesystem so the local proxy route wins
+        // over the generic Laravel rewrite.
+        {
+          source: "/api/backend/:path*",
+          destination: "/api/backend/:path*",
+        },
       ],
       afterFiles: [
         // Proxy all other /api/* routes to the Laravel backend
         {
-          source: "/api/:path((?!auth).*)",
+          source: "/api/:path((?!(?:auth|backend)).*)",
           destination: `${apiBase}/api/:path*`,
         },
       ],

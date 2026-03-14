@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { API_URL } from "@/lib/api-config";
+import { buildLocalApiBaseUrls, fetchApiWithFallback } from "@/lib/api-fallback";
+
+const PROXY_RESPONSE_HEADERS_TO_STRIP = [
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+];
 
 async function proxyToBackend(
   request: NextRequest,
@@ -8,13 +17,8 @@ async function proxyToBackend(
 ) {
   const { path } = await context.params;
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-
   const upstreamPath = path.join("/");
-  const upstreamUrl = new URL(`${API_URL}/${upstreamPath}`);
-
-  request.nextUrl.searchParams.forEach((value, key) => {
-    upstreamUrl.searchParams.append(key, value);
-  });
+  const upstreamRequestPath = `/${upstreamPath}${request.nextUrl.search}`;
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -33,15 +37,20 @@ async function proxyToBackend(
     body = await request.arrayBuffer();
   }
 
-  const upstreamResponse = await fetch(upstreamUrl, {
+  const upstreamResponse = await fetchApiWithFallback(upstreamRequestPath, {
     method: request.method,
     headers,
     body,
     redirect: "manual",
     cache: "no-store",
+  }, {
+    baseUrls: buildLocalApiBaseUrls(API_URL),
   });
 
   const responseHeaders = new Headers(upstreamResponse.headers);
+  for (const header of PROXY_RESPONSE_HEADERS_TO_STRIP) {
+    responseHeaders.delete(header);
+  }
   responseHeaders.set("cache-control", "no-store");
 
   return new NextResponse(upstreamResponse.body, {

@@ -12,6 +12,8 @@ export interface FeaturedItem {
   song_id?: number;
   album_id?: number;
   artist_id?: number;
+  event_id?: number;
+  playlist_id?: number;
   is_active: boolean;
   sort_order: number;
   starts_at?: string;
@@ -30,6 +32,8 @@ export interface CreateFeaturedItemData {
   song_id?: number;
   album_id?: number;
   artist_id?: number;
+  event_id?: number;
+  playlist_id?: number;
   is_active?: boolean;
   sort_order?: number;
   starts_at?: string;
@@ -43,6 +47,11 @@ export interface UpdateFeaturedItemData {
   image_url?: string;
   link?: string;
   type?: FeaturedItem['type'];
+  song_id?: number;
+  album_id?: number;
+  artist_id?: number;
+  event_id?: number;
+  playlist_id?: number;
   is_active?: boolean;
   sort_order?: number;
   starts_at?: string;
@@ -64,8 +73,11 @@ export function useCreateFeaturedItem() {
   return useMutation({
     mutationFn: async (data: CreateFeaturedItemData) => {
       const formData = new FormData();
+      const nullableRelationFields = new Set(['song_id', 'album_id', 'artist_id', 'event_id', 'playlist_id']);
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (nullableRelationFields.has(key)) {
+          formData.append(key, value == null ? '' : String(value));
+        } else if (value !== undefined && value !== null) {
           if (value instanceof File) {
             formData.append(key, value);
           } else {
@@ -92,8 +104,11 @@ export function useUpdateFeaturedItem() {
     mutationFn: async ({ id, data }: { id: number; data: UpdateFeaturedItemData }) => {
       const formData = new FormData();
       formData.append('_method', 'PUT');
+      const nullableRelationFields = new Set(['song_id', 'album_id', 'artist_id', 'event_id', 'playlist_id']);
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (nullableRelationFields.has(key)) {
+          formData.append(key, value == null ? '' : String(value));
+        } else if (value !== undefined && value !== null) {
           if (value instanceof File) {
             formData.append(key, value);
           } else {

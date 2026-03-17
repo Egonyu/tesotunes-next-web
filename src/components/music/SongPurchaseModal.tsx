@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Coins, Music, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/lib/api";
 import { usePurchaseSong } from "@/hooks/api";
+import { useCreditBalance } from "@/hooks/usePayments";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils";
 import Link from "next/link";
@@ -20,12 +19,6 @@ interface SongPurchaseModalProps {
   onPurchased?: () => void;
 }
 
-interface CreditBalance {
-  credits: number;
-  wallet_balance: number;
-  currency: string;
-}
-
 export function SongPurchaseModal({
   open,
   onClose,
@@ -37,11 +30,7 @@ export function SongPurchaseModal({
 }: SongPurchaseModalProps) {
   const [purchased, setPurchased] = useState(false);
 
-  const { data: balance } = useQuery({
-    queryKey: ["credits", "balance"],
-    queryFn: () => apiGet<CreditBalance>("/credits/balance"),
-    enabled: open,
-  });
+  const { data: balance } = useCreditBalance();
 
   const purchaseMutation = usePurchaseSong();
 

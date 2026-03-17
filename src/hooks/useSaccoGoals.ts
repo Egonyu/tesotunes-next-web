@@ -10,6 +10,16 @@ import type {
   SaccoPaginatedResponse,
 } from '@/types/sacco'
 
+function normalizeGoalPayload<T extends CreateGoalData | UpdateGoalData>(data: T): T {
+  const normalized = { ...(data as Record<string, unknown>) } as Record<string, unknown>
+
+  if (normalized.currency === 'ugx') normalized.currency = 'UGX'
+  if (normalized.currency === 'hybrid') normalized.currency = 'UGX'
+  if (normalized.visibility === 'friends') normalized.visibility = 'members'
+
+  return normalized as T
+}
+
 // ============================================================================
 // Savings Goals Hooks
 // ============================================================================
@@ -41,7 +51,7 @@ export function useCreateGoal() {
 
   return useMutation({
     mutationFn: (data: CreateGoalData) =>
-      apiPost<SaccoApiResponse<SavingsGoal>>('/sacco/goals', data),
+      apiPost<SaccoApiResponse<SavingsGoal>>('/sacco/goals', normalizeGoalPayload(data)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sacco', 'goals'] })
       queryClient.invalidateQueries({ queryKey: ['sacco', 'dashboard'] })
@@ -54,7 +64,7 @@ export function useUpdateGoal() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateGoalData }) =>
-      apiPut<SaccoApiResponse<SavingsGoal>>(`/sacco/goals/${id}`, data),
+      apiPut<SaccoApiResponse<SavingsGoal>>(`/sacco/goals/${id}`, normalizeGoalPayload(data)),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sacco', 'goals'] })
       queryClient.invalidateQueries({

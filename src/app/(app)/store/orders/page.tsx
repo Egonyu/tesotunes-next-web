@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Package, Clock, Truck, CheckCircle, XCircle, ChevronRight, Search } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getStoreProductImage, getStoreProductName, getStoreProductPrice } from "@/lib/store-product-utils";
 
 interface Order {
   id: number;
@@ -17,17 +18,25 @@ interface Order {
   items: {
     id: number;
     product: {
-      title: string;
-      image_url: string | null;
+      title?: string | null;
+      name?: string | null;
+      image_url?: string | null;
+      featured_image_url?: string | null;
     };
     quantity: number;
     price: number;
+    price_ugx?: number;
+    product_name?: string | null;
   }[];
   created_at: string;
   shipping_address: {
     city: string;
     district: string;
   };
+}
+
+interface OrdersResponse {
+  data: Order[];
 }
 
 const statusConfig = {
@@ -43,8 +52,10 @@ export default function OrdersPage() {
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", filter],
-    queryFn: () =>
-      apiGet<Order[]>(`/store/orders${filter !== "all" ? `?status=${filter}` : ""}`),
+    queryFn: async () => {
+      const response = await apiGet<Order[] | OrdersResponse>(`/store/orders${filter !== "all" ? `?status=${filter}` : ""}`);
+      return Array.isArray(response) ? response : response.data;
+    },
   });
 
   if (isLoading) {
@@ -140,10 +151,10 @@ export default function OrdersPage() {
                         className="relative w-16 h-16 rounded-lg border-2 border-background bg-muted overflow-hidden"
                         style={{ zIndex: 3 - i }}
                       >
-                        {item.product.image_url ? (
+                        {getStoreProductImage(item.product) ? (
                           <Image
-                            src={item.product.image_url}
-                            alt={item.product.title}
+                            src={getStoreProductImage(item.product) || ""}
+                            alt={getStoreProductName(item.product)}
                             fill
                             className="object-cover"
                           />
@@ -166,7 +177,7 @@ export default function OrdersPage() {
                       {order.items_count} item{order.items_count !== 1 ? "s" : ""}
                     </p>
                     <p className="font-medium truncate">
-                      {order.items.map((i) => i.product.title).join(", ")}
+                      {order.items.map((item) => item.product_name || getStoreProductName(item.product)).join(", ")}
                     </p>
                   </div>
 

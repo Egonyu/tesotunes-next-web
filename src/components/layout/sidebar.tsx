@@ -39,6 +39,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { STORE_ENABLED } from "@/lib/features";
 
 const mainNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -130,6 +131,11 @@ export function Sidebar() {
 
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtist || isArtistByStatus;
+  const visibleModuleItems = moduleItems.filter((item) => {
+    if (item.href === "/store" && !STORE_ENABLED) return false;
+    if (item.href === "/sacco") return false;
+    return true;
+  });
 
   return (
     <aside
@@ -197,7 +203,7 @@ export function Sidebar() {
               Explore
             </h3>
           )}
-          {moduleItems.map((item) => (
+          {visibleModuleItems.map((item) => (
             <NavItem
               key={item.href}
               {...item}

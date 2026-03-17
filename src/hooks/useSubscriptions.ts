@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 // ============================================================================
 // Types — aligned with backend SubscriptionController responses
@@ -127,13 +128,19 @@ export function useSubscriptionPlans(options?: Partial<UseQueryOptions<Subscript
 // ============================================================================
 
 export function useMySubscription(options?: Partial<UseQueryOptions<CurrentSubscription | null>>) {
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const enabled = isAuthenticated && (options?.enabled ?? true);
+
   return useQuery({
+    ...options,
     queryKey: ["subscription", "current"],
     queryFn: () =>
       apiGet<{ success: boolean; data: CurrentSubscription }>("/user/subscription").then(
         (res) => res.data
       ),
-    ...options,
+    enabled,
+    retry: false,
   });
 }
 
@@ -271,4 +278,3 @@ export function useCanAccess(feature: SubscriptionFeature): boolean {
       return false;
   }
 }
-

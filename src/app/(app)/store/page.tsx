@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import { Search, ShoppingBag, ShoppingCart, ReceiptText, ArrowRight } from "lucide-react";
 import { StoreProductGrid } from "@/components/store/product-grid";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
+import { STORE_ENABLED } from "@/lib/features";
+import { useSession } from "next-auth/react";
 
 interface StoreCategory {
-  id: string;
+  id: number;
   name: string;
   slug: string;
 }
@@ -23,35 +26,93 @@ const defaultCategories = [
 export default function StorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const { status } = useSession();
 
   const { data: apiCategories } = useQuery({
     queryKey: ["store-categories"],
     queryFn: async () => {
       try {
-        const res = await apiGet<{ data: StoreCategory[] }>("/store/categories");
+        const res = await apiGet<{ data: StoreCategory[] }>("/store/public/categories");
         return [
           { id: "all", name: "All Products" },
-          ...res.data.map((c) => ({ id: c.slug || c.id, name: c.name })),
+          ...res.data.map((c) => ({ id: String(c.id), name: c.name })),
         ];
       } catch {
         return defaultCategories;
       }
     },
+    enabled: STORE_ENABLED,
     staleTime: 10 * 60 * 1000,
   });
 
+  const { data: cartSummary } = useQuery({
+    queryKey: ["cart-summary"],
+    queryFn: () =>
+      apiGet<{ data?: { items_count?: number } }>("/store/cart").then((response) => response.data),
+    enabled: STORE_ENABLED && status === "authenticated",
+    retry: false,
+  });
+
   const categories = apiCategories ?? defaultCategories;
+  const cartCount = cartSummary?.items_count ?? 0;
+
+  if (!STORE_ENABLED) {
+    return (
+      <div className="container mx-auto py-16 px-4 text-center">
+        <ShoppingBag className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+        <h1 className="text-3xl font-bold mb-2">Store Coming Soon</h1>
+        <p className="text-muted-foreground max-w-xl mx-auto">
+          Artist store management lives in Artist Studio, and the public storefront will appear here once the
+          consumer catalog contract is enabled.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <ShoppingBag className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Store</h1>
-          <p className="text-muted-foreground">
-            Shop for merchandise, music, and more
-          </p>
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <ShoppingBag className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Store</h1>
+            <p className="text-muted-foreground">
+              Shop for merchandise, music, and more
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {status === "authenticated" ? (
+            <>
+              <Link
+                href="/store/cart"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                View Cart
+                <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                  {cartCount}
+                </span>
+              </Link>
+              <Link
+                href="/store/orders"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                <ReceiptText className="h-4 w-4" />
+                My Orders
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/login?callbackUrl=%2Fstore"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Sign in for cart
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
 

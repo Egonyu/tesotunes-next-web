@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Heart, Coins, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/lib/api";
 import { useSendTip } from "@/hooks/api";
+import { useCreditBalance } from "@/hooks/usePayments";
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils";
 import Link from "next/link";
@@ -15,12 +14,6 @@ interface TipModalProps {
   recipientId: number;
   recipientType: "artist" | "song";
   recipientName: string;
-}
-
-interface CreditBalance {
-  credits: number;
-  wallet_balance: number;
-  currency: string;
 }
 
 const TIP_PRESETS = [10, 50, 100, 500, 1000];
@@ -37,11 +30,7 @@ export function TipModal({
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
 
-  const { data: balance } = useQuery({
-    queryKey: ["credits", "balance"],
-    queryFn: () => apiGet<CreditBalance>("/credits/balance"),
-    enabled: open,
-  });
+  const { data: balance } = useCreditBalance();
 
   const tipMutation = useSendTip();
 

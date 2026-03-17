@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Star,
@@ -23,7 +23,9 @@ import {
   X,
   Clock,
   CheckCircle2,
+  Search,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import {
   useFeaturedContent,
   useCreateFeaturedItem,
@@ -34,6 +36,7 @@ import {
   type FeaturedItem,
   type CreateFeaturedItemData,
 } from '@/hooks/useFeaturedContent';
+import { apiGet } from '@/lib/api';
 
 const typeConfig: Record<string, { label: string; icon: typeof Music; color: string }> = {
   song: { label: 'Song', icon: Music, color: 'text-blue-500 bg-blue-500/10' },
@@ -43,6 +46,213 @@ const typeConfig: Record<string, { label: string; icon: typeof Music; color: str
   event: { label: 'Event', icon: Calendar, color: 'text-pink-500 bg-pink-500/10' },
   custom: { label: 'Custom', icon: LinkIcon, color: 'text-gray-500 bg-gray-500/10' },
 };
+
+type LinkedEntityType = Exclude<FeaturedItem['type'], 'custom'>;
+
+interface FeaturedEntityOption {
+  id: number;
+  type: LinkedEntityType;
+  label: string;
+  subtitle: string;
+  link: string;
+  image_url: string | null;
+  title: string;
+  defaultSubtitle: string;
+  song_id?: number;
+  album_id?: number;
+  artist_id?: number;
+  event_id?: number;
+  playlist_id?: number;
+}
+
+function getString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function getNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+function getNestedString(source: Record<string, unknown>, key: string): string {
+  return key.split('.').reduce<unknown>((current, part) => {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) {
+      return undefined;
+    }
+
+    return (current as Record<string, unknown>)[part];
+  }, source) as string || '';
+}
+
+function formatCompactNumber(value?: number): string {
+  if (!value) return '0';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(value);
+}
+
+function formatEventSummary(item: Record<string, unknown>): string {
+  const city = getString(item.city);
+  const startsAt = getString(item.starts_at);
+  const dateLabel = startsAt
+    ? new Date(startsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : '';
+
+  return [city, dateLabel].filter(Boolean).join(' · ') || 'Upcoming event';
+}
+
+function parseEntityOptions(items: Record<string, unknown>[], type: LinkedEntityType): FeaturedEntityOption[] {
+  const parsed: Array<FeaturedEntityOption | null> = items
+    .map((item) => {
+      const id = getNumber(item.id);
+      if (!id) {
+        return null;
+      }
+
+      if (type === 'song') {
+        const title = getString(item.title);
+        const slug = getString(item.slug);
+        const artistName = getNestedString(item, 'artist.name');
+        const playCount = getNumber(item.play_count);
+        const subtitle = [artistName, playCount !== undefined ? `${formatCompactNumber(playCount)} plays` : 'Song']
+          .filter(Boolean)
+          .join(' · ');
+
+        return {
+          id,
+          type,
+          label: title,
+          title,
+          subtitle,
+          defaultSubtitle: subtitle,
+          link: `/songs/${slug}`,
+          image_url: getString(item.artwork_url) || getString(item.cover_url) || null,
+          song_id: id,
+        };
+      }
+
+      if (type === 'artist') {
+        const title = getString(item.name);
+        const slug = getString(item.slug);
+        const followers = getNumber(item.followers_count);
+        const subtitle = followers !== undefined ? `${formatCompactNumber(followers)} followers` : 'Artist spotlight';
+
+        return {
+          id,
+          type,
+          label: title,
+          title,
+          subtitle,
+          defaultSubtitle: subtitle,
+          link: `/artists/${slug}`,
+          image_url: getString(item.avatar_url) || null,
+          artist_id: id,
+        };
+      }
+
+      if (type === 'album') {
+        const title = getString(item.title);
+        const slug = getString(item.slug);
+        const artistName = getNestedString(item, 'artist.name');
+        const subtitle = artistName || 'Album spotlight';
+
+        return {
+          id,
+          type,
+          label: title,
+          title,
+          subtitle,
+          defaultSubtitle: subtitle,
+          link: `/albums/${slug}`,
+          image_url: getString(item.artwork_url) || null,
+          album_id: id,
+        };
+      }
+
+      if (type === 'event') {
+        const title = getString(item.title);
+        const subtitle = formatEventSummary(item);
+
+        return {
+          id,
+          type,
+          label: title,
+          title,
+          subtitle,
+          defaultSubtitle: subtitle,
+          link: `/events/${id}`,
+          image_url: getString(item.artwork) || getString(item.banner) || null,
+          event_id: id,
+        };
+      }
+
+      const title = getString(item.name);
+      const slug = getString(item.slug);
+      const songCount = getNumber(item.song_count);
+      const subtitle = songCount !== undefined ? `${formatCompactNumber(songCount)} tracks` : 'Playlist spotlight';
+
+      return {
+        id,
+        type,
+        label: title,
+        title,
+        subtitle,
+        defaultSubtitle: subtitle,
+        link: `/playlists/${slug}`,
+        image_url: getString(item.artwork_url) || null,
+        playlist_id: id,
+      };
+    });
+
+  return parsed.filter((item): item is FeaturedEntityOption => item !== null);
+}
+
+function buildEntitySearchEndpoint(type: LinkedEntityType, search: string): string {
+  const params = new URLSearchParams({ per_page: '8' });
+  if (search) {
+    params.set('search', search);
+  }
+
+  switch (type) {
+    case 'song':
+      params.set('sort', '-play_count');
+      return `/admin/songs?${params.toString()}`;
+    case 'artist':
+      return `/admin/artists?${params.toString()}`;
+    case 'album':
+      return `/admin/albums?${params.toString()}`;
+    case 'event':
+      params.set('status', 'all');
+      return `/admin/events?${params.toString()}`;
+    case 'playlist':
+      return `/playlists?${params.toString()}`;
+  }
+}
+
+function getSelectedEntityId(
+  type: FeaturedItem['type'],
+  ids: {
+    song_id?: number;
+    album_id?: number;
+    artist_id?: number;
+    event_id?: number;
+    playlist_id?: number;
+  }
+): number | undefined {
+  switch (type) {
+    case 'song':
+      return ids.song_id;
+    case 'album':
+      return ids.album_id;
+    case 'artist':
+      return ids.artist_id;
+    case 'event':
+      return ids.event_id;
+    case 'playlist':
+      return ids.playlist_id;
+    default:
+      return undefined;
+  }
+}
 
 export default function AdminFeaturedPage() {
   const { data: items = [], isLoading } = useFeaturedContent();
@@ -403,6 +613,57 @@ function FeaturedItemModal({
   const [sortOrder, setSortOrder] = useState(item?.sort_order ?? 0);
   const [startsAt, setStartsAt] = useState(item?.starts_at?.slice(0, 16) || '');
   const [endsAt, setEndsAt] = useState(item?.ends_at?.slice(0, 16) || '');
+  const [songId, setSongId] = useState<number | undefined>(item?.song_id);
+  const [albumId, setAlbumId] = useState<number | undefined>(item?.album_id);
+  const [artistId, setArtistId] = useState<number | undefined>(item?.artist_id);
+  const [eventId, setEventId] = useState<number | undefined>(item?.event_id);
+  const [playlistId, setPlaylistId] = useState<number | undefined>(item?.playlist_id);
+  const [entitySearch, setEntitySearch] = useState('');
+  const deferredEntitySearch = useDeferredValue(entitySearch.trim());
+
+  const currentLinkedIds = useMemo(
+    () => ({
+      song_id: songId,
+      album_id: albumId,
+      artist_id: artistId,
+      event_id: eventId,
+      playlist_id: playlistId,
+    }),
+    [songId, albumId, artistId, eventId, playlistId]
+  );
+
+  const searchType = type === 'custom' ? null : type;
+  const selectedEntityId = getSelectedEntityId(type, currentLinkedIds);
+
+  const { data: entityOptions = [], isFetching: isEntityLoading } = useQuery({
+    queryKey: ['featured', 'entity-search', searchType, deferredEntitySearch],
+    queryFn: async () => {
+      if (!searchType) return [];
+      const endpoint = buildEntitySearchEndpoint(searchType, deferredEntitySearch);
+      const response = await apiGet<{ data?: Record<string, unknown>[] }>(endpoint);
+      const items = Array.isArray(response?.data) ? response.data : [];
+      return parseEntityOptions(items, searchType);
+    },
+    enabled: !!searchType,
+    staleTime: 30_000,
+  });
+
+  const selectedEntity = useMemo(
+    () => entityOptions.find((option) => option.id === selectedEntityId) ?? null,
+    [entityOptions, selectedEntityId]
+  );
+
+  useEffect(() => {
+    setEntitySearch('');
+  }, [type]);
+
+  const setLinkedEntityIds = useCallback((option?: FeaturedEntityOption) => {
+    setSongId(option?.song_id);
+    setAlbumId(option?.album_id);
+    setArtistId(option?.artist_id);
+    setEventId(option?.event_id);
+    setPlaylistId(option?.playlist_id);
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -412,6 +673,26 @@ function FeaturedItemModal({
     }
   };
 
+  const handleTypeSelect = (nextType: FeaturedItem['type']) => {
+    setType(nextType);
+    setLinkedEntityIds(undefined);
+  };
+
+  const handleEntitySelect = (option: FeaturedEntityOption) => {
+    setLinkedEntityIds(option);
+    setTitle(option.title);
+    setSubtitle(option.defaultSubtitle);
+    setLink(option.link);
+    if (!imageFile) {
+      setImagePreview(option.image_url || '');
+    }
+  };
+
+  const clearEntitySelection = () => {
+    setLinkedEntityIds(undefined);
+    setEntitySearch('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: CreateFeaturedItemData = {
@@ -419,6 +700,11 @@ function FeaturedItemModal({
       subtitle,
       link,
       type,
+      song_id: songId,
+      album_id: albumId,
+      artist_id: artistId,
+      event_id: eventId,
+      playlist_id: playlistId,
       is_active: isActive,
       sort_order: sortOrder,
     };
@@ -451,7 +737,7 @@ function FeaturedItemModal({
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setType(key as FeaturedItem['type'])}
+                    onClick={() => handleTypeSelect(key as FeaturedItem['type'])}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       type === key
                         ? 'bg-primary text-primary-foreground'
@@ -465,6 +751,86 @@ function FeaturedItemModal({
               })}
             </div>
           </div>
+
+          {type !== 'custom' && (
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Linked Content</label>
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={entitySearch}
+                  onChange={(e) => setEntitySearch(e.target.value)}
+                  className="w-full rounded-lg border bg-background py-2 pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder={`Search ${typeConfig[type].label.toLowerCase()}s`}
+                />
+              </div>
+
+              {selectedEntityId && (
+                <div className="mb-2 flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {selectedEntity?.label || `${typeConfig[type].label} #${selectedEntityId}`}
+                    </p>
+                    <p className="truncate text-muted-foreground">
+                      {selectedEntity?.subtitle || 'Linked content selected'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearEntitySelection}
+                    className="ml-3 rounded-md px-2 py-1 text-muted-foreground hover:bg-muted"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+
+              <div className="max-h-56 overflow-y-auto rounded-lg border">
+                {isEntityLoading ? (
+                  <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading options...
+                  </div>
+                ) : entityOptions.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-muted-foreground">
+                    No matching {typeConfig[type].label.toLowerCase()}s found.
+                  </div>
+                ) : (
+                  entityOptions.map((option) => (
+                    <button
+                      key={`${option.type}-${option.id}`}
+                      type="button"
+                      onClick={() => handleEntitySelect(option)}
+                      className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/60 ${
+                        selectedEntityId === option.id ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                        {option.image_url ? (
+                          <Image
+                            src={option.image_url}
+                            alt={option.label}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{option.label}</p>
+                        <p className="truncate text-sm text-muted-foreground">{option.subtitle}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Title */}
           <div>

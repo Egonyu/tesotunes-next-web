@@ -183,15 +183,23 @@ export function useSaccoMembership() {
       const res = await apiGet<{ data: BackendProfile | null }>("/sacco/membership");
       const d = extractData(res);
       if (!d || !d.member_number) return null;
+
+      const sharesRecord = (d.shares as { total_shares?: number; total_value_ugx?: number; share_value_ugx?: number } | undefined);
+      const savingsAccounts = Array.isArray(d.savings_accounts)
+        ? (d.savings_accounts as Array<{ balance_ugx?: number }>)
+        : [];
+
       return {
         id: d.id ?? 0,
         member_number: d.member_number ?? "",
         user_id: 0,
         status: (d.status as SaccoMember["status"]) ?? "pending",
         joined_at: d.joined_at ?? "",
-        savings_balance: 0, // Not returned by profile endpoint
-        shares_count: 0,
-        shares_value: 0,
+        savings_balance:
+          Number((d as BackendProfile & { total_savings?: number }).total_savings ?? 0) ||
+          savingsAccounts.reduce((sum, account) => sum + Number(account.balance_ugx ?? 0), 0),
+        shares_count: Number(sharesRecord?.total_shares ?? 0),
+        shares_value: Number(sharesRecord?.total_value_ugx ?? 0),
         credit_score: d.credit_score,
       };
     },
@@ -468,7 +476,8 @@ export function useApplyForLoan() {
 
   return useMutation({
     mutationFn: (data: {
-      product_id: number;
+      product_id?: number;
+      loan_type?: "normal" | "emergency" | "development" | "school_fees";
       amount: number;
       term_months: number;
       purpose: string;

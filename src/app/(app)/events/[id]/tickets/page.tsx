@@ -28,7 +28,7 @@ import {
   usePurchaseTickets,
   PurchaseTicketRequest,
 } from '@/hooks/useEvents';
-import { useValidatePhone } from '@/hooks/usePayments';
+import { formatPhoneNumber, useValidatePhone } from '@/hooks/usePayments';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
@@ -79,6 +79,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     }
 
     // Validate phone number format
+    let validatedPhone: string | undefined;
     if (needsPhone) {
       try {
         const validation = await validatePhone.mutateAsync(phoneNumber);
@@ -86,6 +87,11 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
           toast.error('Invalid phone number format');
           return;
         }
+        if (validation.provider !== paymentMethod) {
+          toast.error(`That number looks like ${validation.provider === 'mtn_momo' ? 'MTN' : 'Airtel'}. Switch the payment method or number.`);
+          return;
+        }
+        validatedPhone = validation.phone;
       } catch (error) {
         toast.error('Failed to validate phone number');
         return;
@@ -97,10 +103,10 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
       ticket_tier_id: selectedTicket.id,
       quantity,
       payment_method: paymentMethod,
-      phone: needsPhone ? phoneNumber : undefined,
+      phone: needsPhone ? validatedPhone : undefined,
       holder_name: session.user.name || '',
       holder_email: session.user.email || '',
-      holder_phone: phoneNumber || undefined,
+      holder_phone: needsPhone ? validatedPhone : undefined,
     };
 
     try {
@@ -291,8 +297,8 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                       <Smartphone className="h-5 w-5 text-black" />
                     </div>
                     <div>
-                      <p className="font-medium">MTN Mobile Money</p>
-                      <p className="text-sm text-muted-foreground">Pay with your MTN MoMo account</p>
+                      <p className="font-medium">ZengaPay • MTN Mobile Money</p>
+                      <p className="text-sm text-muted-foreground">Collect through ZengaPay on your MTN MoMo account</p>
                     </div>
                   </div>
                 </div>
@@ -310,8 +316,8 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                       <Smartphone className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium">Airtel Money</p>
-                      <p className="text-sm text-muted-foreground">Pay with your Airtel Money account</p>
+                      <p className="font-medium">ZengaPay • Airtel Money</p>
+                      <p className="text-sm text-muted-foreground">Collect through ZengaPay on your Airtel Money account</p>
                     </div>
                   </div>
                 </div>
@@ -352,8 +358,13 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                     className="w-full px-4 py-3 rounded-lg border bg-background"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    You will receive a payment prompt on your phone
+                    You will receive a ZengaPay payment prompt on this number
                   </p>
+                  {phoneNumber ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Preview: {formatPhoneNumber(phoneNumber)}
+                    </p>
+                  ) : null}
                 </div>
               )}
             </section>

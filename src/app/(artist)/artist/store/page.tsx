@@ -1,502 +1,715 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
+import { Box, CheckCircle2, Package, Pencil, Plus, Store, Trash2, Upload } from "lucide-react";
+import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { toast } from "sonner";
 import {
-  Package,
-  Plus,
-  DollarSign,
-  ShoppingCart,
-  TrendingUp,
-  Eye,
-  Edit,
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
-  Search,
-  Filter,
-  MoreVertical,
-  ArrowUpDown,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Tag,
-  Image as ImageIcon,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
-import { formatCurrency, formatNumber, formatDate } from '@/lib/utils';
-import { toast } from 'sonner';
+  useActivateSellerProduct,
+  useArchiveSellerProduct,
+  useCreateSellerProduct,
+  useCreateSellerStore,
+  useDeleteSellerProduct,
+  useUpdateSellerProduct,
+  useSellerStoreCategories,
+  useSellerStoreOrders,
+  type SellerStoreProduct,
+  useSellerStoreProducts,
+  useSellerStores,
+  useSellerStoreStats,
+  useUpdateSellerOrderStatus,
+} from "@/hooks/useSellerStore";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-interface Product {
-  id: number;
+type ProductFormState = {
   name: string;
   description: string;
-  price: number;
-  compare_at_price: number | null;
-  image_url: string | null;
-  category: 'merchandise' | 'digital' | 'tickets' | 'bundles';
-  stock_quantity: number;
-  is_active: boolean;
-  total_sold: number;
-  total_revenue: number;
-  created_at: string;
-}
+  short_description: string;
+  category_id: string;
+  product_type: string;
+  price_ugx: string;
+  inventory_quantity: string;
+  images: File[];
+};
 
-interface Order {
-  id: number;
-  order_number: string;
-  customer: {
-    name: string;
-    email: string;
-    avatar_url: string | null;
-  };
-  items: { product_name: string; quantity: number; price: number }[];
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  created_at: string;
-}
+const emptyProductForm: ProductFormState = {
+  name: "",
+  description: "",
+  short_description: "",
+  category_id: "",
+  product_type: "physical",
+  price_ugx: "",
+  inventory_quantity: "0",
+  images: [],
+};
 
-interface StoreStats {
-  total_revenue: number;
-  revenue_change: number;
-  total_orders: number;
-  orders_change: number;
-  total_products: number;
-  total_views: number;
-}
+export default function ArtistStorePage() {
+  const [selectedStoreSlug, setSelectedStoreSlug] = useState("");
+  const [activeView, setActiveView] = useState<"overview" | "products" | "orders">("overview");
+  const [showCreateStore, setShowCreateStore] = useState(false);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<SellerStoreProduct | null>(null);
+  const [storeDraft, setStoreDraft] = useState({ name: "", description: "" });
+  const [productDraft, setProductDraft] = useState<ProductFormState>(emptyProductForm);
 
-// ============================================================================
-// Component
-// ============================================================================
-
-export default function SellerDashboardPage() {
-  const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<'overview' | 'products' | 'orders'>('overview');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '', description: '', price: '', category: 'merchandise' as Product['category'],
-  });
-
-  // Data fetching
-  const { data: stats } = useQuery({
-    queryKey: ['artist', 'store', 'stats'],
-    queryFn: () => apiGet<StoreStats>('/artist/store/stats'),
-  });
-
-  const { data: products, isLoading: loadingProducts } = useQuery({
-    queryKey: ['artist', 'store', 'products'],
-    queryFn: () => apiGet<Product[]>('/artist/store/products'),
-  });
-
-  const { data: orders, isLoading: loadingOrders } = useQuery({
-    queryKey: ['artist', 'store', 'orders'],
-    queryFn: () => apiGet<Order[]>('/artist/store/orders'),
-    enabled: activeView === 'orders' || activeView === 'overview',
-  });
-
-  // Mutations
-  const createProduct = useMutation({
-    mutationFn: (data: typeof newProduct) => apiPost('/artist/store/products', {
-      ...data,
-      price: parseFloat(data.price),
-    }),
-    onSuccess: () => {
-      toast.success('Product created');
-      queryClient.invalidateQueries({ queryKey: ['artist', 'store'] });
-      setShowAddProduct(false);
-      setNewProduct({ name: '', description: '', price: '', category: 'merchandise' });
-    },
-    onError: () => toast.error('Failed to create product'),
-  });
-
-  const toggleProduct = useMutation({
-    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
-      apiPut(`/artist/store/products/${id}`, { is_active }),
-    onSuccess: () => {
-      toast.success('Product updated');
-      queryClient.invalidateQueries({ queryKey: ['artist', 'store', 'products'] });
-    },
-  });
-
-  const deleteProduct = useMutation({
-    mutationFn: (id: number) => apiDelete(`/artist/store/products/${id}`),
-    onSuccess: () => {
-      toast.success('Product deleted');
-      queryClient.invalidateQueries({ queryKey: ['artist', 'store'] });
-    },
-    onError: () => toast.error('Failed to delete product'),
-  });
-
-  const updateOrderStatus = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: Order['status'] }) =>
-      apiPut(`/artist/store/orders/${id}`, { status }),
-    onSuccess: () => {
-      toast.success('Order status updated');
-      queryClient.invalidateQueries({ queryKey: ['artist', 'store', 'orders'] });
-    },
-  });
-
-  const filteredProducts = products?.filter(
-    (p) => p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const storesQuery = useSellerStores();
+  const categoriesQuery = useSellerStoreCategories();
+  const selectedStore = useMemo(
+    () => storesQuery.data?.find((store) => store.slug === selectedStoreSlug) ?? null,
+    [selectedStoreSlug, storesQuery.data]
   );
 
-  const statusConfig: Record<string, { icon: typeof CheckCircle; color: string }> = {
-    pending: { icon: Clock, color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-950' },
-    processing: { icon: Package, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950' },
-    shipped: { icon: TrendingUp, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950' },
-    delivered: { icon: CheckCircle, color: 'text-green-500 bg-green-100 dark:bg-green-950' },
-    cancelled: { icon: XCircle, color: 'text-red-500 bg-red-100 dark:bg-red-950' },
+  useEffect(() => {
+    if (!selectedStoreSlug && storesQuery.data?.length) {
+      setSelectedStoreSlug(storesQuery.data[0].slug);
+    }
+  }, [selectedStoreSlug, storesQuery.data]);
+
+  const statsQuery = useSellerStoreStats(selectedStoreSlug);
+  const productsQuery = useSellerStoreProducts(selectedStoreSlug);
+  const ordersQuery = useSellerStoreOrders(selectedStoreSlug);
+
+  const createStore = useCreateSellerStore();
+  const createProduct = useCreateSellerProduct(selectedStoreSlug);
+  const updateProduct = useUpdateSellerProduct(selectedStoreSlug);
+  const activateProduct = useActivateSellerProduct(selectedStoreSlug);
+  const archiveProduct = useArchiveSellerProduct(selectedStoreSlug);
+  const deleteProduct = useDeleteSellerProduct(selectedStoreSlug);
+  const updateOrderStatus = useUpdateSellerOrderStatus();
+
+  const products = productsQuery.data ?? [];
+  const orders = ordersQuery.data ?? [];
+  const stats = statsQuery.data;
+  const editingProductImage = editingProduct?.featured_image_url || editingProduct?.featured_image || "";
+
+  const handleCreateStore = async () => {
+    if (!storeDraft.name.trim()) {
+      toast.error("Store name is required");
+      return;
+    }
+
+    try {
+      const created = await createStore.mutateAsync({
+        name: storeDraft.name.trim(),
+        description: storeDraft.description.trim() || undefined,
+        owner_mode: "artist",
+      });
+      setSelectedStoreSlug(created.slug);
+      setStoreDraft({ name: "", description: "" });
+      setShowCreateStore(false);
+      toast.success("Storefront created");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create store");
+    }
+  };
+
+  const resetProductModal = () => {
+    setEditingProduct(null);
+    setProductDraft(emptyProductForm);
+    setShowCreateProduct(false);
+  };
+
+  const openCreateProductModal = () => {
+    setEditingProduct(null);
+    setProductDraft(emptyProductForm);
+    setShowCreateProduct(true);
+  };
+
+  const openEditProductModal = (product: SellerStoreProduct) => {
+    setEditingProduct(product);
+    setProductDraft({
+      name: product.name,
+      description: product.description ?? "",
+      short_description: product.short_description ?? "",
+      category_id: product.category?.id ? String(product.category.id) : "",
+      product_type: product.product_type,
+      price_ugx: String(product.price_ugx ?? ""),
+      inventory_quantity: String(product.inventory_quantity ?? 0),
+      images: [],
+    });
+    setShowCreateProduct(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!selectedStoreSlug) {
+      toast.error("Select a store first");
+      return;
+    }
+
+    if (!productDraft.name.trim() || !productDraft.description.trim() || !productDraft.category_id) {
+      toast.error("Fill in the required product fields");
+      return;
+    }
+
+    try {
+      const payload = {
+        name: productDraft.name.trim(),
+        description: productDraft.description.trim(),
+        short_description: productDraft.short_description.trim() || undefined,
+        category_id: Number(productDraft.category_id),
+        product_type: productDraft.product_type,
+        price_ugx: Number(productDraft.price_ugx || 0),
+        inventory_quantity: Number(productDraft.inventory_quantity || 0),
+        track_inventory: true,
+        allow_backorder: false,
+        images: productDraft.images.length ? productDraft.images : undefined,
+      };
+
+      if (editingProduct) {
+        await updateProduct.mutateAsync({
+          productId: editingProduct.id,
+          payload,
+        });
+        toast.success("Product updated");
+      } else {
+        await createProduct.mutateAsync(payload);
+        toast.success("Product created");
+      }
+
+      resetProductModal();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save product");
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Seller Dashboard</h1>
-          <p className="text-muted-foreground">Manage your merchandise and digital products</p>
-        </div>
-        <button
-          onClick={() => setShowAddProduct(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Product
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              label: 'Revenue',
-              value: formatCurrency(stats.total_revenue),
-              change: stats.revenue_change,
-              icon: DollarSign,
-              color: 'text-green-500',
-            },
-            { label: 'Orders', value: formatNumber(stats.total_orders), change: stats.orders_change, icon: ShoppingCart, color: 'text-blue-500' },
-            { label: 'Products', value: stats.total_products, icon: Package, color: 'text-purple-500' },
-            { label: 'Views', value: formatNumber(stats.total_views), icon: Eye, color: 'text-amber-500' },
-          ].map((stat) => (
-            <div key={stat.label} className="p-4 rounded-xl border bg-card">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
-                <stat.icon className={cn('h-4 w-4', stat.color)} />
-              </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              {'change' in stat && stat.change !== undefined && (
-                <p className={cn('text-xs mt-1', stat.change >= 0 ? 'text-green-500' : 'text-red-500')}>
-                  {stat.change >= 0 ? '+' : ''}{stat.change}% this month
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* View Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
-        {(['overview', 'products', 'orders'] as const).map((view) => (
-          <button
-            key={view}
-            onClick={() => setActiveView(view)}
-            className={cn(
-              'px-4 py-2 text-sm font-medium rounded-md capitalize transition-colors',
-              activeView === view ? 'bg-background shadow' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {view}
-          </button>
-        ))}
-      </div>
-
-      {/* Overview */}
-      {activeView === 'overview' && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Recent Orders */}
-          <div className="rounded-xl border bg-card">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold">Recent Orders</h3>
-              <button onClick={() => setActiveView('orders')} className="text-sm text-primary">View All</button>
-            </div>
-            <div className="divide-y">
-              {!orders?.length ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">No orders yet</div>
-              ) : orders.slice(0, 5).map((order) => {
-                const config = statusConfig[order.status];
-                const StatusIcon = config?.icon || Clock;
-                return (
-                  <div key={order.id} className="p-4 flex items-center gap-3">
-                    <div className={cn('p-2 rounded-lg', config?.color)}>
-                      <StatusIcon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{order.order_number}</p>
-                      <p className="text-xs text-muted-foreground">{order.customer.name} • {formatDate(order.created_at)}</p>
-                    </div>
-                    <span className="font-medium text-sm">{formatCurrency(order.total)}</span>
-                  </div>
-                );
-              })}
-            </div>
+      <section className="rounded-3xl border bg-card p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Artist Studio</p>
+            <h1 className="mt-2 text-3xl font-semibold">Storefronts</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Manage your Eduka storefronts inside the Esokoni marketplace using the live seller API.
+            </p>
           </div>
-
-          {/* Top Products */}
-          <div className="rounded-xl border bg-card">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold">Top Products</h3>
-              <button onClick={() => setActiveView('products')} className="text-sm text-primary">View All</button>
-            </div>
-            <div className="divide-y">
-              {!products?.length ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">No products yet</div>
-              ) : [...(products || [])].sort((a, b) => b.total_sold - a.total_sold).slice(0, 5).map((product) => (
-                <div key={product.id} className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden shrink-0">
-                    {product.image_url ? (
-                      <Image src={product.image_url} alt={product.name} width={40} height={40} className="object-cover" />
-                    ) : (
-                      <Package className="w-5 h-5 m-2.5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.total_sold} sold</p>
-                  </div>
-                  <span className="font-medium text-sm">{formatCurrency(product.total_revenue)}</span>
-                </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <select
+              value={selectedStoreSlug}
+              onChange={(event) => setSelectedStoreSlug(event.target.value)}
+              className="min-w-[240px] rounded-2xl border bg-background px-4 py-3 text-sm"
+            >
+              <option value="">Select storefront</option>
+              {(storesQuery.data ?? []).map((store) => (
+                <option key={store.id} value={store.slug}>
+                  {store.name}
+                </option>
               ))}
-            </div>
+            </select>
+            <button
+              onClick={() => setShowCreateStore(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-foreground px-4 py-3 text-sm font-medium text-background"
+            >
+              <Plus className="h-4 w-4" />
+              New Store
+            </button>
           </div>
         </div>
-      )}
-
-      {/* Products View */}
-      {activeView === 'products' && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-muted rounded-lg text-sm focus:ring-2 focus:ring-primary"
-              />
-            </div>
+        {selectedStore ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-muted/50 px-4 py-3 text-sm">
+            <span className="inline-flex items-center gap-2 font-medium">
+              <Store className="h-4 w-4" />
+              {selectedStore.name}
+            </span>
+            <span className="capitalize text-muted-foreground">{selectedStore.status}</span>
+            <span className="capitalize text-muted-foreground">{selectedStore.store_type} store</span>
+            <span className="capitalize text-muted-foreground">{selectedStore.subscription_tier} tier</span>
           </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
+            Create your first store to start listing products and managing orders.
+          </div>
+        )}
+      </section>
 
-          {loadingProducts ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />)}
-            </div>
-          ) : !filteredProducts?.length ? (
-            <div className="text-center py-12 rounded-xl border bg-card">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">No products found</p>
-              <button onClick={() => setShowAddProduct(true)} className="mt-3 text-primary text-sm hover:underline">
-                Add your first product
+      {selectedStore && (
+        <>
+          <div className="flex gap-1 rounded-2xl bg-muted p-1 w-fit">
+            {(["overview", "products", "orders"] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setActiveView(view)}
+                className={cn(
+                  "rounded-2xl px-4 py-2 text-sm font-medium capitalize",
+                  activeView === view ? "bg-background shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                {view}
               </button>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="rounded-xl border bg-card overflow-hidden">
-                  <div className="relative h-40 bg-muted">
-                    {product.image_url ? (
-                      <Image src={product.image_url} alt={product.name} fill className="object-cover" />
-                    ) : (
-                      <ImageIcon className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground" />
-                    )}
-                    <div className="absolute top-2 right-2">
-                      <span className={cn(
-                        'text-xs px-2 py-1 rounded-full font-medium',
-                        product.is_active ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400' : 'bg-muted text-muted-foreground'
-                      )}>
-                        {product.is_active ? 'Active' : 'Draft'}
-                      </span>
-                    </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Revenue" value={formatCurrency(Number(stats?.total_sales_ugx ?? 0))} />
+            <StatCard label="Orders" value={formatNumber(Number(stats?.total_orders ?? 0))} />
+            <StatCard label="Products" value={formatNumber(Number(stats?.products_count ?? 0))} />
+            <StatCard label="Pending" value={formatNumber(Number(stats?.pending_orders ?? 0))} />
+          </div>
+
+          {activeView === "overview" && (
+            <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
+              <section className="rounded-3xl border bg-card p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Recent products</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Products currently attached to {selectedStore.name}
+                    </p>
                   </div>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold truncate">{product.name}</h4>
-                        <p className="text-sm text-muted-foreground capitalize">{product.category}</p>
-                      </div>
-                      <span className="font-bold">{formatCurrency(product.price)}</span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                      <span>{product.total_sold} sold</span>
-                      <span>{product.stock_quantity} in stock</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-                      <button
-                        onClick={() => toggleProduct.mutate({ id: product.id, is_active: !product.is_active })}
-                        className="p-1.5 hover:bg-muted rounded"
-                        title={product.is_active ? 'Deactivate' : 'Activate'}
-                      >
-                        {product.is_active ? <ToggleRight className="h-4 w-4 text-green-500" /> : <ToggleLeft className="h-4 w-4" />}
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded" title="Edit">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Delete this product?')) deleteProduct.mutate(product.id);
-                        }}
-                        className="p-1.5 hover:bg-muted rounded text-red-500"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={openCreateProductModal}
+                    className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </button>
                 </div>
-              ))}
+                <div className="mt-4 space-y-3">
+                  {products.slice(0, 4).map((product) => (
+                    <div key={product.id} className="flex items-center gap-3 rounded-2xl border p-3">
+                      <ProductThumb name={product.name} image={product.featured_image_url || product.featured_image || ""} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {product.category?.name ?? "Uncategorized"} • {formatCurrency(Number(product.price_ugx ?? 0))}
+                        </p>
+                      </div>
+                      <span className="text-xs capitalize text-muted-foreground">{product.status}</span>
+                    </div>
+                  ))}
+                  {!products.length && (
+                    <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
+                      No products yet for this storefront.
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-3xl border bg-card p-5">
+                <h2 className="text-lg font-semibold">Recent orders</h2>
+                <p className="text-sm text-muted-foreground">Only orders for the selected storefront appear here.</p>
+                <div className="mt-4 space-y-3">
+                  {orders.slice(0, 5).map((order) => (
+                    <div key={order.id} className="rounded-2xl border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{order.order_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.user?.display_name || order.user?.email || "Customer"} • {formatDate(order.created_at)}
+                          </p>
+                        </div>
+                        <span className="text-xs capitalize text-muted-foreground">{order.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {!orders.length && (
+                    <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
+                      No orders for this storefront yet.
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Orders View */}
-      {activeView === 'orders' && (
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Order</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Customer</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Items</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="p-4"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {loadingOrders ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
-                ) : !orders?.length ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No orders yet</td></tr>
-                ) : orders.map((order) => {
-                  const config = statusConfig[order.status];
-                  return (
-                    <tr key={order.id} className="hover:bg-muted/50">
-                      <td className="p-4 font-medium text-sm">{order.order_number}</td>
-                      <td className="p-4 text-sm">{order.customer.name}</td>
-                      <td className="p-4 text-sm text-muted-foreground">
-                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                      </td>
-                      <td className="p-4 font-medium text-sm">{formatCurrency(order.total)}</td>
-                      <td className="p-4">
-                        <span className={cn('text-xs font-medium px-2 py-1 rounded-full capitalize', config?.color)}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-muted-foreground">{formatDate(order.created_at)}</td>
-                      <td className="p-4">
-                        <select
-                          value={order.status}
-                          onChange={(e) => updateOrderStatus.mutate({ id: order.id, status: e.target.value as Order['status'] })}
-                          className="text-xs bg-muted border rounded px-2 py-1"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
+          {activeView === "products" && (
+            <section className="rounded-3xl border bg-card p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Products</h2>
+                  <p className="text-sm text-muted-foreground">Manage inventory for {selectedStore.name}.</p>
+                </div>
+                <button
+                  onClick={openCreateProductModal}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-foreground px-4 py-2 text-sm font-medium text-background"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Product
+                </button>
+              </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {products.map((product) => (
+                  <article key={product.id} className="rounded-3xl border bg-background p-4">
+                    <div className="flex gap-4">
+                      <ProductThumb
+                        name={product.name}
+                        image={product.featured_image_url || product.featured_image || ""}
+                        large
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-semibold">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {product.category?.name ?? "Uncategorized"} • {product.product_type}
+                            </p>
+                          </div>
+                          <span className="text-xs capitalize text-muted-foreground">{product.status}</span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                          <span>{formatCurrency(Number(product.price_ugx ?? 0))}</span>
+                          <span className="text-muted-foreground">
+                            {formatNumber(Number(product.inventory_quantity ?? 0))} in stock
+                          </span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            onClick={() => openEditProductModal(product)}
+                            className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </button>
+                          {product.status !== "active" ? (
+                            <button
+                              onClick={() =>
+                                activateProduct.mutate(product.id, {
+                                  onSuccess: () => toast.success("Product activated"),
+                                  onError: () => toast.error("Could not activate product"),
+                                })
+                              }
+                              className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Activate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                archiveProduct.mutate(product.id, {
+                                  onSuccess: () => toast.success("Product archived"),
+                                  onError: () => toast.error("Could not archive product"),
+                                })
+                              }
+                              className="inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium"
+                            >
+                              <Package className="h-4 w-4" />
+                              Archive
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (!window.confirm(`Delete "${product.name}"?`)) return;
+                              deleteProduct.mutate(product.id, {
+                                onSuccess: () => toast.success("Product deleted"),
+                                onError: () => toast.error("Could not delete product"),
+                              });
+                            }}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-red-200 px-3 py-2 text-sm font-medium text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {activeView === "orders" && (
+            <section className="rounded-3xl border bg-card p-5">
+              <h2 className="text-lg font-semibold">Orders</h2>
+              <div className="mt-4 overflow-hidden rounded-2xl border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/60 text-left text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Order</th>
+                      <th className="px-4 py-3 font-medium">Customer</th>
+                      <th className="px-4 py-3 font-medium">Amount</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Date</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr key={order.id} className="border-t">
+                        <td className="px-4 py-4 font-medium">{order.order_number}</td>
+                        <td className="px-4 py-4 text-muted-foreground">
+                          {order.user?.display_name || order.user?.email || "Customer"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatCurrency(Number(order.total_ugx ?? order.total_amount ?? 0))}
+                        </td>
+                        <td className="px-4 py-4">
+                          <select
+                            value={order.status}
+                            onChange={(event) =>
+                              updateOrderStatus.mutate(
+                                {
+                                  storeSlug: selectedStoreSlug,
+                                  orderNumber: order.order_number,
+                                  status: event.target.value,
+                                },
+                                {
+                                  onSuccess: () => toast.success("Order status updated"),
+                                  onError: () => toast.error("Could not update order"),
+                                }
+                              )
+                            }
+                            className="rounded-xl border bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDate(order.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAddProduct(false)}>
-          <div className="bg-card rounded-xl border shadow-xl w-full max-w-md p-6 mx-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold mb-4">Add Product</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Name</label>
+      {showCreateStore && (
+        <ModalShell
+          title="Create storefront"
+          description="Set up a new Eduka storefront in the marketplace."
+          onClose={() => setShowCreateStore(false)}
+        >
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">Store name</span>
+            <input
+              value={storeDraft.name}
+              onChange={(event) => setStoreDraft((current) => ({ ...current, name: event.target.value }))}
+              className="w-full rounded-2xl border bg-background px-4 py-3"
+              placeholder="Official merch store"
+            />
+          </label>
+          <label className="mt-4 block text-sm">
+            <span className="mb-1 block font-medium">Description</span>
+            <textarea
+              value={storeDraft.description}
+              onChange={(event) => setStoreDraft((current) => ({ ...current, description: event.target.value }))}
+              className="min-h-[120px] w-full rounded-2xl border bg-background px-4 py-3"
+              placeholder="Tell fans what this storefront sells"
+            />
+          </label>
+          <div className="mt-6 flex justify-end gap-3">
+            <button onClick={() => setShowCreateStore(false)} className="rounded-2xl border px-4 py-2 text-sm font-medium">
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateStore}
+              disabled={createStore.isPending}
+              className="rounded-2xl bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-60"
+            >
+              {createStore.isPending ? "Creating..." : "Create Store"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {showCreateProduct && selectedStore && (
+        <ModalShell
+          title={editingProduct ? "Edit product" : "Add product"}
+          description={
+            editingProduct
+              ? `Update ${editingProduct.name} inside ${selectedStore.name}.`
+              : `Create a product inside ${selectedStore.name}.`
+          }
+          onClose={resetProductModal}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium">Product name</span>
+              <input
+                value={productDraft.name}
+                onChange={(event) => setProductDraft((current) => ({ ...current, name: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+                placeholder="Tour hoodie"
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium">Description</span>
+              <textarea
+                value={productDraft.description}
+                onChange={(event) => setProductDraft((current) => ({ ...current, description: event.target.value }))}
+                className="min-h-[120px] w-full rounded-2xl border bg-background px-4 py-3"
+                placeholder="Describe the product"
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium">Short description</span>
+              <input
+                value={productDraft.short_description}
+                onChange={(event) => setProductDraft((current) => ({ ...current, short_description: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+                placeholder="Quick storefront summary"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">Category</span>
+              <select
+                value={productDraft.category_id}
+                onChange={(event) => setProductDraft((current) => ({ ...current, category_id: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+              >
+                <option value="">Select category</option>
+                {(categoriesQuery.data ?? []).map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">Product type</span>
+              <select
+                value={productDraft.product_type}
+                onChange={(event) => setProductDraft((current) => ({ ...current, product_type: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+              >
+                <option value="physical">Physical</option>
+                <option value="digital">Digital</option>
+                <option value="service">Service</option>
+                <option value="experience">Experience</option>
+                <option value="promotion">Promotion</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">Price (UGX)</span>
+              <input
+                type="number"
+                min="0"
+                value={productDraft.price_ugx}
+                onChange={(event) => setProductDraft((current) => ({ ...current, price_ugx: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+                placeholder="15000"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium">Inventory</span>
+              <input
+                type="number"
+                min="0"
+                value={productDraft.inventory_quantity}
+                onChange={(event) => setProductDraft((current) => ({ ...current, inventory_quantity: event.target.value }))}
+                className="w-full rounded-2xl border bg-background px-4 py-3"
+                placeholder="20"
+              />
+            </label>
+            <div className="block text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium">Images</span>
+              {editingProductImage ? (
+                <div className="mb-3 flex items-center gap-3 rounded-2xl border bg-muted/20 p-3">
+                  <ProductThumb name={editingProduct?.name ?? "Product image"} image={editingProductImage} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Current featured image</p>
+                    <p className="text-xs text-muted-foreground">Upload new files to replace the current product gallery.</p>
+                  </div>
+                </div>
+              ) : null}
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+                <Upload className="h-4 w-4" />
+                <span>{productDraft.images.length ? `${productDraft.images.length} file(s) selected` : "Upload product images"}</span>
                 <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                  placeholder="Product name"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(event) =>
+                    setProductDraft((current) => ({
+                      ...current,
+                      images: Array.from(event.target.files ?? []),
+                    }))
+                  }
                 />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Description</label>
-                <textarea
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted rounded-lg text-sm focus:ring-2 focus:ring-primary resize-none"
-                  rows={3}
-                  placeholder="Product description"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Price (UGX)</label>
-                  <input
-                    type="number"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                    placeholder="0.00"
-                  />
+              </label>
+              {productDraft.images.length > 0 && (
+                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {productDraft.images.map((file) => (
+                    <p key={`${file.name}-${file.lastModified}`}>{file.name}</p>
+                  ))}
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Category</label>
-                  <select
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as Product['category'] })}
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="merchandise">Merchandise</option>
-                    <option value="digital">Digital</option>
-                    <option value="tickets">Tickets</option>
-                    <option value="bundles">Bundles</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowAddProduct(false)}
-                className="flex-1 py-2 border rounded-lg text-sm hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => newProduct.name && newProduct.price && createProduct.mutate(newProduct)}
-                disabled={!newProduct.name || !newProduct.price || createProduct.isPending}
-                className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50 hover:bg-primary/90"
-              >
-                {createProduct.isPending ? 'Creating...' : 'Create Product'}
-              </button>
+              )}
             </div>
           </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button onClick={resetProductModal} className="rounded-2xl border px-4 py-2 text-sm font-medium">
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveProduct}
+              disabled={createProduct.isPending || updateProduct.isPending}
+              className="rounded-2xl bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-60"
+            >
+              {createProduct.isPending || updateProduct.isPending
+                ? editingProduct
+                  ? "Saving..."
+                  : "Creating..."
+                : editingProduct
+                  ? "Save Changes"
+                  : "Create Product"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl border bg-card p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-3 text-3xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function ProductThumb({ name, image, large = false }: { name: string; image: string; large?: boolean }) {
+  const sizeClass = large ? "h-20 w-20" : "h-12 w-12";
+
+  return (
+    <div className={cn("relative overflow-hidden rounded-2xl bg-muted", sizeClass)}>
+      {image ? (
+        <Image src={image} alt={name} fill className="object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <Box className={large ? "h-7 w-7" : "h-5 w-5"} />
         </div>
       )}
+    </div>
+  );
+}
+
+function ModalShell({
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl rounded-3xl border bg-card p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">{title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+          <button onClick={onClose} className="rounded-2xl border px-3 py-2 text-sm font-medium">
+            Close
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

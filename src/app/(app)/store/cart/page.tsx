@@ -3,10 +3,19 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package } from "lucide-react";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { apiGet, apiPut, apiDelete, isApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import {
+  getStoreProductImage,
+  getStoreProductName,
+  getStoreProductPrice,
+  getStoreProductStock,
+} from "@/lib/store-product-utils";
+import { toast } from "sonner";
 
 interface CartItem {
   id: number;
@@ -14,12 +23,18 @@ interface CartItem {
   quantity: number;
   product: {
     id: number;
-    title: string;
+    title?: string;
+    name?: string;
     slug: string;
-    price: number;
+    price?: number;
+    price_ugx?: number;
     image_url: string | null;
-    stock_quantity: number;
+    featured_image_url?: string | null;
+    stock_quantity?: number;
+    inventory_quantity?: number;
   };
+  price?: number;
+  price_ugx?: number;
 }
 
 interface Cart {
@@ -30,23 +45,65 @@ interface Cart {
   total: number;
 }
 
+interface CartApiResponse {
+  data?: {
+    items?: CartItem[];
+    total?: number;
+    total_ugx?: number;
+    items_count?: number;
+  };
+}
+
+function normalizeCartResponse(response: Cart | CartApiResponse): Cart {
+  if ("items" in response && Array.isArray(response.items)) {
+    return response;
+  }
+
+  const payload = "data" in response ? response.data : undefined;
+  const items = payload?.items ?? [];
+  const total = Number(payload?.total_ugx ?? payload?.total ?? 0);
+
+  return {
+    items,
+    subtotal: total,
+    shipping: 0,
+    tax: 0,
+    total,
+  };
+}
+
 export default function CartPage() {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const { status } = useSession();
 
-  const { data: cart, isLoading } = useQuery({
+  const { data: cart, isLoading, error, isError } = useQuery({
     queryKey: ["cart"],
-    queryFn: () => apiGet<Cart>("/store/cart"),
+    queryFn: async () => normalizeCartResponse(await apiGet<Cart | CartApiResponse>("/store/cart")),
+    retry: false,
   });
 
   const updateQuantity = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
-      apiPost(`/store/cart/items/${itemId}`, { quantity }),
+      apiPut(`/store/cart/items/${itemId}`, { quantity }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+    onError: (mutationError) => {
+      const message = isApiError(mutationError)
+        ? mutationError.response?.data?.message || "Could not update cart quantity."
+        : "Could not update cart quantity.";
+      toast.error(message);
+    },
   });
 
   const removeItem = useMutation({
     mutationFn: (itemId: number) => apiDelete(`/store/cart/items/${itemId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+    onError: (mutationError) => {
+      const message = isApiError(mutationError)
+        ? mutationError.response?.data?.message || "Could not remove this item."
+        : "Could not remove this item.";
+      toast.error(message);
+    },
   });
 
   if (isLoading) {
@@ -57,6 +114,43 @@ export default function CartPage() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 bg-muted rounded-lg" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const isUnauthenticated =
+      status === "unauthenticated" ||
+      (isApiError(error) && error.response?.status === 401);
+
+    return (
+      <div className="container mx-auto py-16 px-4 text-center">
+        <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+        <h2 className="mb-2 text-2xl font-bold">
+          {isUnauthenticated ? "Sign in to view your cart" : "Cart unavailable right now"}
+        </h2>
+        <p className="mx-auto mb-6 max-w-xl text-muted-foreground">
+          {isUnauthenticated
+            ? "Store carts are tied to your account, so you need to sign in before you can review or check out your items."
+            : "We couldn't load your cart just now. Please refresh and try again."}
+        </p>
+        <div className="flex justify-center gap-3">
+          {isUnauthenticated ? (
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-primary-foreground hover:bg-primary/90"
+            >
+              Sign In
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : null}
+          <Link
+            href="/store"
+            className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 hover:bg-muted"
+          >
+            Continue Shopping
+          </Link>
         </div>
       </div>
     );
@@ -102,10 +196,10 @@ export default function CartPage() {
                 className="flex gap-4 p-4 bg-card rounded-lg border"
               >
                 <div className="relative w-24 h-24 bg-muted rounded-md overflow-hidden shrink-0">
-                  {item.product.image_url ? (
+                  {getStoreProductImage(item.product) ? (
                     <Image
-                      src={item.product.image_url}
-                      alt={item.product.title}
+                      src={getStoreProductImage(item.product) || ""}
+                      alt={getStoreProductName(item.product)}
                       fill
                       className="object-cover"
                     />
@@ -119,10 +213,10 @@ export default function CartPage() {
                     href={`/store/products/${item.product.slug}`}
                     className="font-medium hover:text-primary line-clamp-2"
                   >
-                    {item.product.title}
+                    {getStoreProductName(item.product)}
                   </Link>
                   <p className="text-primary font-medium mt-1">
-                    {formatCurrency(item.product.price)}
+                    {formatCurrency(getStoreProductPrice(item.product))}
                   </p>
 
                   <div className="flex items-center gap-3 mt-3">
@@ -149,7 +243,7 @@ export default function CartPage() {
                             quantity: item.quantity + 1,
                           })
                         }
-                        disabled={item.quantity >= item.product.stock_quantity}
+                        disabled={item.quantity >= getStoreProductStock(item.product)}
                         className="p-2 hover:bg-muted disabled:opacity-50"
                       >
                         <Plus className="h-4 w-4" />
@@ -167,7 +261,7 @@ export default function CartPage() {
 
                 <div className="text-right">
                   <p className="font-bold">
-                    {formatCurrency(item.product.price * item.quantity)}
+                    {formatCurrency((item.price_ugx ?? item.price ?? getStoreProductPrice(item.product)) * item.quantity)}
                   </p>
                 </div>
               </div>

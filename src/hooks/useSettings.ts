@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPut, apiPostForm } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 // ============================================================================
 // Types
@@ -82,10 +83,14 @@ export interface UserProfile {
 // ============================================================================
 
 export function useSettings() {
+  const { status } = useSession();
+
   return useQuery({
     queryKey: ["settings"],
     queryFn: () => apiGet<{ data: AllSettings }>("/settings")
       .then(res => res.data),
+    enabled: status === "authenticated",
+    retry: false,
   });
 }
 

@@ -19,13 +19,53 @@ import {
   type SaccoLoanProduct,
 } from '@/hooks/useSacco';
 
+const fallbackLoanProducts: SaccoLoanProduct[] = [
+  {
+    id: 0,
+    name: 'Normal Loan',
+    code: 'normal',
+    description: 'Standard SACCO loan for general needs.',
+    min_amount: 100000,
+    max_amount: 10000000,
+    interest_rate: 12,
+    term_months: [3, 6, 12, 24],
+    requirements: ['Active SACCO membership', 'Good repayment standing'],
+    processing_fee: 0,
+  },
+  {
+    id: -1,
+    name: 'Emergency Loan',
+    code: 'emergency',
+    description: 'Short-term support for urgent needs.',
+    min_amount: 100000,
+    max_amount: 3000000,
+    interest_rate: 10,
+    term_months: [3, 6, 12],
+    requirements: ['Active SACCO membership'],
+    processing_fee: 0,
+  },
+  {
+    id: -2,
+    name: 'Development Loan',
+    code: 'development',
+    description: 'For equipment, projects, and business growth.',
+    min_amount: 500000,
+    max_amount: 15000000,
+    interest_rate: 12,
+    term_months: [6, 12, 24],
+    requirements: ['Active SACCO membership', 'Clear repayment plan'],
+    processing_fee: 0,
+  },
+];
+
 export default function LoanApplyPage() {
   const router = useRouter();
   const { data: products, isLoading: loadingProducts } = useSaccoLoanProducts();
   const { data: membership } = useSaccoMembership();
   const applyMutation = useApplyForLoan();
 
-  const loanProducts: SaccoLoanProduct[] = products || [];
+  const hasBackendProducts = Boolean(products && products.length > 0);
+  const loanProducts: SaccoLoanProduct[] = hasBackendProducts ? (products || []) : fallbackLoanProducts;
   const [selectedProductId, setSelectedProductId] = useState<number>(0);
   const [amount, setAmount] = useState<number>(1000000);
   const [term, setTerm] = useState<number>(12);
@@ -53,7 +93,9 @@ export default function LoanApplyPage() {
     e.preventDefault();
     if (!selectedLoan || !phoneNumber) return;
     applyMutation.mutate({
-      product_id: selectedLoan.id,
+      ...(selectedLoan.id > 0
+        ? { product_id: selectedLoan.id }
+        : { loan_type: (selectedLoan.code as 'normal' | 'emergency' | 'development' | 'school_fees') || 'normal' }),
       amount,
       term_months: term,
       purpose,
@@ -91,6 +133,11 @@ export default function LoanApplyPage() {
         <p className="text-muted-foreground">
           Choose a loan product and complete your application
         </p>
+        {!hasBackendProducts && (
+          <p className="text-sm text-amber-600 mt-2">
+            Using the generic SACCO loan application flow while loan products are not configured on the backend.
+          </p>
+        )}
       </div>
       
       <form onSubmit={handleSubmit}>

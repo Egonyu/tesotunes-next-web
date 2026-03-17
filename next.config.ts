@@ -19,8 +19,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "http",
+        hostname: "tesotunes-api.test",
+        pathname: "/store-media/**",
+      },
+      {
+        protocol: "http",
         hostname: "beta.test",
         pathname: "/storage/**",
+      },
+      {
+        protocol: "http",
+        hostname: "beta.test",
+        pathname: "/store-media/**",
       },
       {
         protocol: "https",
@@ -29,8 +39,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "engine.tesotunes.com",
+        pathname: "/store-media/**",
+      },
+      {
+        protocol: "https",
         hostname: "*.tesotunes.com",
         pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.tesotunes.com",
+        pathname: "/store-media/**",
       },
       {
         protocol: "https",

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { apiGet } from '@/lib/api';
 import { useCanAccess } from '@/hooks/useSubscriptions';
+import { ADS_ENABLED } from '@/lib/features';
+import { useSession } from 'next-auth/react';
 
 // ============================================================================
 // Types
@@ -49,8 +51,14 @@ export const SONGS_BETWEEN_ADS = 4;
  * Free-tier users see ads; premium/artist/label users do not.
  */
 export function useShouldShowAds(): boolean {
+  const { status } = useSession();
   const streamWithAds = useCanAccess('stream_with_ads');
   const adFree = useCanAccess('ad_free');
+
+  if (!ADS_ENABLED || status !== 'authenticated') {
+    return false;
+  }
+
   // Free tier has stream_with_ads=true, ad_free=false
   return streamWithAds && !adFree;
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  CreditCard,
   Coins,
   Phone,
   Wallet,
@@ -22,7 +21,7 @@ const PAYMENT_METHODS: Array<{
   id: PaymentMethod
   label: string
   description: string
-  icon: typeof CreditCard
+  icon: typeof Wallet
   color: string
 }> = [
   {
@@ -34,15 +33,15 @@ const PAYMENT_METHODS: Array<{
   },
   {
     id: 'mtn_momo',
-    label: 'MTN Mobile Money',
-    description: 'Pay with MTN MoMo',
+    label: 'ZengaPay • MTN',
+    description: 'ZengaPay will collect from your MTN MoMo number',
     icon: Phone,
     color: 'text-yellow-500',
   },
   {
     id: 'airtel_money',
-    label: 'Airtel Money',
-    description: 'Pay with Airtel Money',
+    label: 'ZengaPay • Airtel',
+    description: 'ZengaPay will collect from your Airtel Money number',
     icon: Phone,
     color: 'text-red-500',
   },
@@ -52,13 +51,6 @@ const PAYMENT_METHODS: Array<{
     description: 'Pay with your credit balance',
     icon: Coins,
     color: 'text-primary',
-  },
-  {
-    id: 'card',
-    label: 'Card Payment',
-    description: 'Visa / Mastercard',
-    icon: CreditCard,
-    color: 'text-blue-500',
   },
 ]
 
@@ -128,9 +120,8 @@ export function PaymentMethodSelector({
       <div className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          Each checkout currently supports one payment method for one ticket
-          tier. Mixed wallet and credits payments will come in a later Events
-          update.
+          ZengaPay is the only external payment rail here. Wallet and credits
+          stay inside Tesotunes, while MTN and Airtel run through ZengaPay.
         </p>
       </div>
     </div>

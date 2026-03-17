@@ -4,7 +4,9 @@ import { useState } from "react";
 import { use } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import {
   ShoppingCart,
   Share2,
@@ -14,33 +16,89 @@ import {
   Package,
   Minus,
   Plus,
-  ChevronLeft,
   Check,
+  Images,
 } from "lucide-react";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, isApiError } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
+import { toast } from "sonner";
+
+interface ProductRecord {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  short_description?: string | null;
+  price_ugx?: number | string | null;
+  price_credits?: number | null;
+  featured_image?: string | null;
+  featured_image_url?: string | null;
+  image_urls?: string[];
+  category?: { name: string; slug?: string | null };
+  store: { name: string; slug: string };
+  inventory_quantity?: number | null;
+  average_rating?: number | string | null;
+  review_count?: number | null;
+  metadata?: Record<string, string> | null;
+  allow_hybrid_payment?: boolean;
+}
 
 interface Product {
   id: number;
-  title: string;
+  name: string;
   slug: string;
   description: string;
+  summary: string;
   price: number;
-  compare_at_price?: number;
+  priceCredits: number;
+  allowHybridPayment: boolean;
   images: { url: string; alt: string }[];
-  category: { name: string; slug: string };
+  category: { name: string; slug?: string };
   store: { name: string; slug: string };
   stock_quantity: number;
   rating: number;
   review_count: number;
-  is_featured: boolean;
   specifications?: Record<string, string>;
+}
+
+function normalizeProduct(product: ProductRecord): Product {
+  const imageUrls = [
+    product.featured_image_url || product.featured_image || "",
+    ...(product.image_urls ?? []),
+  ].filter((value, index, array) => value && array.indexOf(value) === index);
+
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description || product.short_description || "",
+    summary: product.short_description || product.description || "",
+    price: Number(product.price_ugx ?? 0),
+    priceCredits: Number(product.price_credits ?? 0),
+    allowHybridPayment: !!product.allow_hybrid_payment,
+    images: imageUrls.map((url, index) => ({
+      url,
+      alt: index === 0 ? product.name : `${product.name} image ${index + 1}`,
+    })),
+    category: {
+      name: product.category?.name ?? "Uncategorized",
+      slug: product.category?.slug ?? undefined,
+    },
+    store: product.store,
+    stock_quantity: Number(product.inventory_quantity ?? 0),
+    rating: Number(product.average_rating ?? 0),
+    review_count: Number(product.review_count ?? 0),
+    specifications: product.metadata ?? undefined,
+  };
 }
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const router = useRouter();
+  const pathname = usePathname();
+  const { status } = useSession();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -48,7 +106,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
-    queryFn: () => apiGet<Product>(`/store/products/${slug}`),
+    queryFn: async () => {
+      const response = await apiGet<{ data: ProductRecord }>(`/store/public/products/${slug}`);
+      return normalizeProduct(response.data);
+    },
   });
 
   const addToCart = useMutation({
@@ -57,7 +118,20 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       setAddedToCart(true);
+      toast.success(`${product?.name ?? "Product"} added to cart.`);
       setTimeout(() => setAddedToCart(false), 3000);
+    },
+    onError: (error) => {
+      if (isApiError(error) && error.response?.status === 401) {
+        toast.error("Sign in to add store items to your cart.");
+        router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+        return;
+      }
+
+      const message = isApiError(error)
+        ? error.response?.data?.message || "Could not add this item to your cart."
+        : "Could not add this item to your cart.";
+      toast.error(message);
     },
   });
 
@@ -92,9 +166,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     );
   }
 
-  const discount = product.compare_at_price
-    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
-    : 0;
+  const handleAddToCart = () => {
+    if (addedToCart) {
+      router.push("/store/cart");
+      return;
+    }
+
+    if (status === "loading") {
+      return;
+    }
+
+    if (status !== "authenticated") {
+      toast.error("Sign in to add store items to your cart.");
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    addToCart.mutate();
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -104,61 +193,75 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           Store
         </Link>
         <span>/</span>
-        <Link href={`/store/categories/${product.category.slug}`} className="hover:text-foreground">
+        <Link href="/store" className="hover:text-foreground">
           {product.category.name}
         </Link>
         <span>/</span>
-        <span className="text-foreground">{product.title}</span>
+        <span className="text-foreground">{product.name}</span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         {/* Images */}
         <div className="space-y-4">
-          <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-            {product.images[selectedImage] ? (
-              <Image
-                src={product.images[selectedImage].url}
-                alt={product.images[selectedImage].alt || product.title}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <Package className="absolute inset-0 m-auto h-24 w-24 text-muted-foreground" />
-            )}
-            {discount > 0 && (
-              <span className="absolute top-4 left-4 px-3 py-1 bg-red-500 text-white text-sm font-medium rounded">
-                -{discount}%
-              </span>
-            )}
-          </div>
+          <div className="rounded-3xl border bg-card p-4 md:p-5">
+            <div className="grid gap-4 md:grid-cols-[92px_minmax(0,1fr)]">
+              {product.images.length > 1 ? (
+                <div className="order-2 flex gap-3 overflow-x-auto pb-1 md:order-1 md:flex-col md:overflow-visible">
+                  {product.images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImage(i)}
+                      className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 bg-muted transition-colors ${
+                        i === selectedImage ? "border-primary" : "border-transparent"
+                      }`}
+                    >
+                      <Image src={img.url} alt={img.alt || ""} fill className="object-cover" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-          {product.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 ${
-                    i === selectedImage ? "border-primary" : "border-transparent"
-                  }`}
-                >
-                  <Image src={img.url} alt={img.alt || ""} fill className="object-cover" />
-                </button>
-              ))}
+              <div className="order-1 relative aspect-square overflow-hidden rounded-[28px] bg-linear-to-br from-primary/10 via-background to-primary/5 md:order-2">
+                {product.images[selectedImage] ? (
+                  <Image
+                    src={product.images[selectedImage].url}
+                    alt={product.images[selectedImage].alt || product.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                    <Package className="h-24 w-24" />
+                    <span className="text-sm font-medium">Product gallery coming soon</span>
+                  </div>
+                )}
+                <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-black/65 px-3 py-1.5 text-xs font-medium text-white">
+                  <Images className="h-3.5 w-3.5" />
+                  {Math.max(product.images.length, 1)} image{Math.max(product.images.length, 1) !== 1 ? "s" : ""}
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Details */}
         <div className="space-y-6">
           <div>
-            <Link
-              href={`/store/shops/${product.store.slug}`}
-              className="text-sm text-primary hover:underline"
-            >
-              {product.store.name}
-            </Link>
-            <h1 className="text-3xl font-bold mt-1">{product.title}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                {product.category.name}
+              </span>
+              <Link
+                href={`/store/shops/${product.store.slug}`}
+                className="rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                Sold by {product.store.name}
+              </Link>
+            </div>
+            <h1 className="mt-3 text-3xl font-bold lg:text-4xl">{product.name}</h1>
+            <p className="mt-3 max-w-2xl text-base text-muted-foreground">
+              {product.summary}
+            </p>
 
             {/* Rating */}
             <div className="flex items-center gap-2 mt-2">
@@ -179,15 +282,25 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-bold text-primary">
-              {formatCurrency(product.price)}
-            </span>
-            {product.compare_at_price && (
-              <span className="text-xl text-muted-foreground line-through">
-                {formatCurrency(product.compare_at_price)}
+          <div className="rounded-3xl border bg-card p-5">
+            <div className="flex flex-wrap items-end gap-3">
+              <span className="text-3xl font-bold text-primary">
+                {formatCurrency(product.price)}
               </span>
-            )}
+              {product.priceCredits > 0 ? (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">
+                  or {formatNumber(product.priceCredits)} credits
+                </span>
+              ) : null}
+              {product.allowHybridPayment ? (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-900">
+                  UGX + credits accepted
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Pay in UGX today, with credits and hybrid payment available on selected Store drops.
+            </p>
           </div>
 
           {/* Stock Status */}
@@ -228,14 +341,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
 
             <button
-              onClick={() => addToCart.mutate()}
+              onClick={handleAddToCart}
               disabled={product.stock_quantity === 0 || addToCart.isPending}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               {addedToCart ? (
                 <>
                   <Check className="h-5 w-5" />
-                  Added to Cart
+                  View Cart
                 </>
               ) : (
                 <>
@@ -288,11 +401,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           {product.specifications && Object.keys(product.specifications).length > 0 && (
             <div>
               <h2 className="font-bold mb-2">Specifications</h2>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
                 {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key} className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">{key}</span>
-                    <span>{value}</span>
+                  <div key={key} className="rounded-2xl border bg-card px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      {key}
+                    </p>
+                    <p className="mt-1 font-medium">{value}</p>
                   </div>
                 ))}
               </div>

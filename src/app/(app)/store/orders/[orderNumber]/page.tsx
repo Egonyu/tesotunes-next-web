@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getStoreProductImage, getStoreProductName } from "@/lib/store-product-utils";
 
 interface OrderDetail {
   id: number;
@@ -31,13 +32,18 @@ interface OrderDetail {
     id: number;
     product: {
       id: number;
-      title: string;
+      title?: string | null;
+      name?: string | null;
       slug: string;
-      image_url: string | null;
+      image_url?: string | null;
+      featured_image_url?: string | null;
     };
     quantity: number;
     price: number;
+    price_ugx?: number;
     total: number;
+    total_amount?: number;
+    product_name?: string | null;
   }[];
   shipping_address: {
     label: string;
@@ -64,6 +70,10 @@ interface OrderDetail {
   }[];
 }
 
+interface OrderDetailResponse {
+  data: OrderDetail;
+}
+
 const statusConfig = {
   pending: { icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500", label: "Pending" },
   processing: { icon: Package, color: "text-blue-500", bg: "bg-blue-500", label: "Processing" },
@@ -79,7 +89,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderNumber],
-    queryFn: () => apiGet<OrderDetail>(`/store/orders/${orderNumber}`),
+    queryFn: async () => {
+      const response = await apiGet<OrderDetail | OrderDetailResponse>(`/store/orders/${orderNumber}`);
+      return "data" in response ? response.data : response;
+    },
   });
 
   if (isLoading) {
@@ -241,10 +254,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               {order.items.map((item) => (
                 <div key={item.id} className="p-4 flex gap-4">
                   <div className="relative w-20 h-20 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                    {item.product.image_url ? (
+                    {getStoreProductImage(item.product) ? (
                       <Image
-                        src={item.product.image_url}
-                        alt={item.product.title}
+                        src={getStoreProductImage(item.product) || ""}
+                        alt={item.product_name || getStoreProductName(item.product)}
                         fill
                         className="object-cover"
                       />
@@ -257,13 +270,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                       href={`/store/products/${item.product.slug}`}
                       className="font-medium hover:text-primary"
                     >
-                      {item.product.title}
+                      {item.product_name || getStoreProductName(item.product)}
                     </Link>
                     <p className="text-sm text-muted-foreground">
-                      Qty: {item.quantity} × {formatCurrency(item.price)}
+                      Qty: {item.quantity} × {formatCurrency(item.price_ugx ?? item.price)}
                     </p>
                   </div>
-                  <p className="font-bold">{formatCurrency(item.total)}</p>
+                  <p className="font-bold">{formatCurrency(item.total_amount ?? item.total)}</p>
                 </div>
               ))}
             </div>

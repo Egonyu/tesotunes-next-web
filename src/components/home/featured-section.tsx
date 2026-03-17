@@ -8,6 +8,7 @@ import { apiGet } from "@/lib/api";
 import { useState, useEffect, useCallback } from "react";
 import type { Song, PaginatedResponse } from "@/types";
 import { usePlayerStore } from "@/stores";
+import { FEATURED_CONTENT_ENABLED } from "@/lib/features";
 
 interface FeaturedItem {
   id: number;
@@ -15,7 +16,7 @@ interface FeaturedItem {
   subtitle: string;
   image_url: string;
   link: string;
-  type: "song" | "album" | "artist" | "playlist";
+  type: "song" | "album" | "artist" | "playlist" | "event";
   song?: Song;
 }
 
@@ -30,6 +31,7 @@ export function FeaturedSection() {
       const res = await apiGet<{ data: FeaturedItem[] }>("/featured");
       return res.data;
     },
+    enabled: FEATURED_CONTENT_ENABLED,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });

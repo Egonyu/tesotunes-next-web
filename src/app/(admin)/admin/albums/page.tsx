@@ -29,7 +29,7 @@ interface Album {
   songs_count: number;
   release_date: string | null;
   total_plays: number;
-  status: 'released' | 'draft' | 'pending' | 'upcoming';
+  status: 'published' | 'released' | 'draft' | 'pending' | 'upcoming';
 }
 
 interface AlbumsResponse {
@@ -94,6 +94,7 @@ export default function AlbumsPage() {
   };
 
   const statusStyles: Record<string, string> = {
+    published: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     released: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
@@ -278,7 +279,7 @@ export default function AlbumsPage() {
                     'px-2 py-1 rounded-full text-xs font-medium capitalize',
                     statusStyles[album.status] || statusStyles.draft
                   )}>
-                    {album.status}
+                    {formatStatusLabel(album.status)}
                   </span>
                 </td>
                 <td className="p-4">
@@ -366,3 +367,5 @@ export default function AlbumsPage() {
     </div>
   );
 }
+  const formatStatusLabel = (status: Album['status']) =>
+    status === 'published' ? 'Released' : status.charAt(0).toUpperCase() + status.slice(1);

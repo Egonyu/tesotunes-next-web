@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
 import {
   Wallet,
   ArrowUpCircle,
@@ -18,44 +17,8 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { apiGet } from '@/lib/api';
-import { useWithdraw, formatPhoneNumber } from '@/hooks/usePayments';
+import { useWallet, useWalletTransactions, useWithdraw, formatPhoneNumber, normalizePhoneNumber } from '@/hooks/usePayments';
 import { toast } from 'sonner';
-
-interface Transaction {
-  id: number;
-  type: 'credit' | 'debit';
-  description: string;
-  amount: number;
-  created_at: string;
-  status: 'completed' | 'pending' | 'failed';
-}
-
-interface WalletData {
-  balance: number;
-  pending_balance: number;
-  currency: string;
-  currency_symbol: string;
-  monthly_topups: number;
-  monthly_spent: number;
-}
-
-interface PaymentMethod {
-  id: number;
-  type: string;
-  provider: string;
-  masked_number: string;
-  is_default: boolean;
-}
-
-interface WalletResponse {
-  data: WalletData;
-  payment_methods: PaymentMethod[];
-}
-
-interface TransactionsResponse {
-  data: Transaction[];
-}
 
 export default function WalletPage() {
   // Withdraw modal state
@@ -64,28 +27,36 @@ export default function WalletPage() {
   const [withdrawPhone, setWithdrawPhone] = useState('');
 
   // Fetch wallet data
-  const { data: walletData, isLoading } = useQuery({
-    queryKey: ['wallet'],
-    queryFn: () => apiGet<WalletResponse>('/payments/wallet'),
-  });
+  const { data: wallet, isLoading } = useWallet();
 
   // Fetch recent transactions
-  const { data: transactionsData } = useQuery({
-    queryKey: ['wallet-transactions'],
-    queryFn: () => apiGet<TransactionsResponse>('/payments/wallet/transactions?limit=5'),
-  });
+  const { data: transactionsData } = useWalletTransactions(1, 5);
 
   // Withdraw mutation
   const withdrawMutation = useWithdraw();
 
-  const wallet = walletData?.data;
-  const paymentMethods = walletData?.payment_methods || [];
+  const paymentMethods: Array<{ id: number; provider: string; masked_number: string; is_default: boolean }> = [];
   const recentTransactions = transactionsData?.data || [];
 
   const balance = wallet?.balance || 0;
-  const pendingBalance = wallet?.pending_balance || 0;
-  const monthlyTopups = wallet?.monthly_topups || 0;
-  const monthlySpent = wallet?.monthly_spent || 0;
+  const pendingBalance = 0;
+  const monthlyStats = useMemo(() => {
+    const now = new Date();
+    return recentTransactions.reduce(
+      (acc, tx) => {
+        const createdAt = new Date(tx.created_at);
+        const sameMonth = createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear();
+        if (!sameMonth) return acc;
+        if (tx.type === 'credit') acc.monthlyTopups += tx.amount;
+        if (tx.type === 'debit') acc.monthlySpent += tx.amount;
+        return acc;
+      },
+      { monthlyTopups: 0, monthlySpent: 0 }
+    );
+  }, [recentTransactions]);
+
+  const monthlyTopups = monthlyStats.monthlyTopups;
+  const monthlySpent = monthlyStats.monthlySpent;
 
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount.replace(/\D/g, ''));
@@ -109,7 +80,7 @@ export default function WalletPage() {
     try {
       await withdrawMutation.mutateAsync({
         amount,
-        phone: formatPhoneNumber(withdrawPhone),
+        phone: normalizePhoneNumber(withdrawPhone),
         provider: 'zengapay',
       });
 
@@ -126,7 +97,7 @@ export default function WalletPage() {
   const quickActions = [
     { label: 'Top Up', icon: Plus, href: '/wallet/topup', color: 'bg-green-500' },
     { label: 'Credits', icon: Gift, href: '/credits', color: 'bg-purple-500' },
-    { label: 'History', icon: History, href: '/transactions', color: 'bg-blue-500' },
+    { label: 'History', icon: History, href: '/wallet/history', color: 'bg-blue-500' },
     { label: 'Cards', icon: CreditCard, href: '/wallet/cards', color: 'bg-orange-500' },
   ];
 

@@ -46,6 +46,7 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { usePlayerStore, useUIStore } from "@/stores";
+import { STORE_ENABLED } from "@/lib/features";
 
 const mainTabs = [
   { href: "/", label: "Home", icon: Home },
@@ -202,6 +203,11 @@ export function MobileBottomNav() {
 
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtist || isArtistByStatus;
+  const visibleModuleItems = moduleItems.filter((item) => {
+    if (item.href === "/store" && !STORE_ENABLED) return false;
+    if (item.href === "/sacco") return false;
+    return true;
+  });
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -291,7 +297,7 @@ export function MobileBottomNav() {
                   More
                 </h3>
                 <div className="grid grid-cols-1 gap-0.5">
-                  {moduleItems.map((item) => (
+                  {visibleModuleItems.map((item) => (
                     <MenuItem key={item.href} {...item} onClick={closeMenu} />
                   ))}
                 </div>

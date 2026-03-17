@@ -6,21 +6,36 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Heart, Trash2, ShoppingCart, Package, Star } from "lucide-react";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import {
+  getStoreProductImage,
+  getStoreProductName,
+  getStoreProductPrice,
+  getStoreProductRating,
+  getStoreProductReviews,
+  getStoreProductStock,
+  isStoreProductInStock,
+} from "@/lib/store-product-utils";
 import { toast } from "sonner";
 
 interface WishlistItem {
   id: number;
   product: {
     id: number;
-    title: string;
+    title?: string;
+    name?: string;
     slug: string;
-    price: number;
+    price?: number;
+    price_ugx?: number;
     original_price?: number;
-    image_url: string | null;
-    rating: number;
-    reviews_count: number;
+    image_url?: string | null;
+    featured_image_url?: string | null;
+    rating?: number;
+    average_rating?: number;
+    reviews_count?: number;
+    review_count?: number;
     in_stock: boolean;
     stock_quantity: number;
+    inventory_quantity?: number;
   };
   added_at: string;
 }
@@ -28,9 +43,10 @@ interface WishlistItem {
 export default function WishlistPage() {
   const queryClient = useQueryClient();
 
-  const { data: wishlist, isLoading } = useQuery({
+  const { data: wishlist, isLoading, error } = useQuery({
     queryKey: ["wishlist"],
     queryFn: () => apiGet<WishlistItem[]>("/store/wishlist"),
+    retry: false,
   });
 
   const removeFromWishlist = useMutation({
@@ -71,6 +87,27 @@ export default function WishlistPage() {
               <div key={i} className="h-80 bg-muted rounded-lg" />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="text-center py-16 bg-card rounded-lg border">
+          <Heart className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-xl font-medium mb-2">Wishlist is being wired up</h2>
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            The public Store wishlist contract is not live on this backend yet, so this page is intentionally paused
+            instead of showing a broken experience.
+          </p>
+          <Link
+            href="/store"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg"
+          >
+            Browse Products
+          </Link>
         </div>
       </div>
     );
@@ -119,10 +156,10 @@ export default function WishlistPage() {
               className="bg-card rounded-lg border overflow-hidden group"
             >
               <div className="relative aspect-square bg-muted">
-                {item.product.image_url ? (
+                {getStoreProductImage(item.product) ? (
                   <Image
-                    src={item.product.image_url}
-                    alt={item.product.title}
+                    src={getStoreProductImage(item.product) || ""}
+                    alt={getStoreProductName(item.product)}
                     fill
                     className="object-cover"
                   />
@@ -134,7 +171,7 @@ export default function WishlistPage() {
                 {item.product.original_price && (
                   <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
                     {Math.round(
-                      ((item.product.original_price - item.product.price) /
+                      ((item.product.original_price - getStoreProductPrice(item.product)) /
                         item.product.original_price) *
                         100
                     )}
@@ -152,7 +189,7 @@ export default function WishlistPage() {
                 </button>
 
                 {/* Quick Add */}
-                {item.product.in_stock && (
+                {isStoreProductInStock(item.product) && (
                   <button
                     onClick={() => addToCart.mutate(item.product.id)}
                     disabled={addToCart.isPending}
@@ -169,22 +206,22 @@ export default function WishlistPage() {
                   href={`/store/products/${item.product.slug}`}
                   className="font-medium line-clamp-2 hover:text-primary"
                 >
-                  {item.product.title}
+                  {getStoreProductName(item.product)}
                 </Link>
 
                 {/* Rating */}
                 <div className="flex items-center gap-1 mt-2">
                   <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-sm font-medium">{item.product.rating}</span>
+                  <span className="text-sm font-medium">{getStoreProductRating(item.product)}</span>
                   <span className="text-sm text-muted-foreground">
-                    ({item.product.reviews_count})
+                    ({getStoreProductReviews(item.product)})
                   </span>
                 </div>
 
                 {/* Price */}
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-lg font-bold">
-                    {formatCurrency(item.product.price)}
+                    {formatCurrency(getStoreProductPrice(item.product))}
                   </span>
                   {item.product.original_price && (
                     <span className="text-sm text-muted-foreground line-through">
@@ -194,12 +231,12 @@ export default function WishlistPage() {
                 </div>
 
                 {/* Stock Status */}
-                {!item.product.in_stock && (
+                {!isStoreProductInStock(item.product) && (
                   <p className="text-sm text-red-500 mt-2">Out of Stock</p>
                 )}
-                {item.product.in_stock && item.product.stock_quantity <= 5 && (
+                {isStoreProductInStock(item.product) && getStoreProductStock(item.product) <= 5 && (
                   <p className="text-sm text-yellow-500 mt-2">
-                    Only {item.product.stock_quantity} left!
+                    Only {getStoreProductStock(item.product)} left!
                   </p>
                 )}
               </div>

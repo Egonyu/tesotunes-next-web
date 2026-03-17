@@ -356,7 +356,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
 }
 
 export function getEventImage(event: Event): string {
-  return event.artwork || event.banner || '/images/illustrations/default-event.jpg';
+  return event.artwork || event.banner || '/images/placeholder-event.jpg';
 }
 
 export function getEventStartDate(event: Event): string | undefined {

@@ -8,6 +8,29 @@ if (typeof window !== 'undefined') {
 
 let echoInstance: Echo<'pusher'> | null = null;
 
+function resolveRealtimeOptions() {
+  const reverbHost = process.env.NEXT_PUBLIC_REVERB_HOST;
+  const reverbPort = Number(process.env.NEXT_PUBLIC_REVERB_PORT || 8080);
+  const reverbScheme = process.env.NEXT_PUBLIC_REVERB_SCHEME || 'http';
+  const usingReverb = Boolean(reverbHost);
+
+  return {
+    broadcaster: 'pusher' as const,
+    key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || process.env.NEXT_PUBLIC_REVERB_APP_KEY || '',
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
+    forceTLS: usingReverb ? reverbScheme === 'https' : true,
+    enabledTransports: ['ws', 'wss'] as ('ws' | 'wss')[],
+    authEndpoint: '/api/backend/broadcasting/auth',
+    ...(usingReverb
+      ? {
+          wsHost: reverbHost,
+          wsPort: reverbPort,
+          wssPort: reverbPort,
+        }
+      : {}),
+  };
+}
+
 /**
  * Return a configured Echo instance.
  * Private-channel auth goes through the Next.js backend proxy so the Laravel
@@ -17,14 +40,7 @@ export function getEchoInstance(): Echo<'pusher'> | null {
   if (typeof window === 'undefined') return null;
 
   if (!echoInstance) {
-    echoInstance = new Echo({
-      broadcaster: 'pusher',
-      key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '',
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
-      forceTLS: true,
-      enabledTransports: ['ws', 'wss'],
-      authEndpoint: '/api/backend/broadcasting/auth',
-    });
+    echoInstance = new Echo(resolveRealtimeOptions());
   }
 
   return echoInstance;

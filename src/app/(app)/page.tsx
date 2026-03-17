@@ -118,11 +118,12 @@ export default function HomePage() {
         <DiscoverSections />
       </section>
 
-      {/* Recently Played - only for authenticated users */}
+      {/* Recently Updated */}
       <section>
         <SectionHeader
-          title="Recently Played"
-          href="/history"
+          title="Freshly Updated"
+          href="/songs"
+          subtitle="Latest updates from the catalog"
         />
         <Suspense fallback={<LoadingSkeleton />}>
           <SongGrid type="recent" limit={10} />

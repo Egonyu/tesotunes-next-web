@@ -9,6 +9,7 @@ import {
 
 // Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
 const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
+const ACCESS_TOKEN_REFRESH_INTERVAL = 12 * 60 * 60 * 1000;
 
 // Detect production/HTTPS environment
 const isProduction = process.env.NODE_ENV === "production";
@@ -132,6 +133,50 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
     return null;
   } catch (error) {
     console.warn("[Auth] Error refreshing user data:", error);
+    return null;
+  }
+}
+
+async function refreshApiAccessToken(
+  accessToken: string
+): Promise<{ accessToken: string } | { expired: true } | null> {
+  try {
+    const response = await fetchAuthApi("/auth/refresh", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (response.status === 401) {
+      console.warn("[Auth] API token refresh rejected with 401");
+      return { expired: true };
+    }
+
+    if (!response.ok) {
+      console.warn("[Auth] Failed to refresh API token, status:", response.status);
+      return null;
+    }
+
+    const data = await safeJsonParse(response);
+    if (!data) {
+      return null;
+    }
+
+    const refreshedToken =
+      (data.token as string | undefined) ??
+      ((data.data as Record<string, unknown> | undefined)?.token as string | undefined) ??
+      (data.access_token as string | undefined);
+
+    if (!refreshedToken) {
+      console.warn("[Auth] Refresh endpoint returned no token");
+      return null;
+    }
+
+    return { accessToken: refreshedToken };
+  } catch (error) {
+    console.warn("[Auth] Error refreshing API token:", error);
     return null;
   }
 }
@@ -273,24 +318,48 @@ export const authConfig: NextAuthOptions = {
         token.name = user.name;
         token.role = user.role;
         token.accessToken = user.accessToken;
+        token.accessTokenRefreshedAt = Date.now();
         token.roleRefreshedAt = Date.now();
       }
 
-      // Periodically refresh role from API (every 5 minutes)
-      // This ensures role changes made by admin are reflected without re-login
       const now = Date.now();
+      const lastAccessTokenRefresh = (token.accessTokenRefreshedAt as number) || 0;
       const lastRefresh = (token.roleRefreshedAt as number) || 0;
 
-      if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
-        const freshData = await fetchFreshUserData(token.accessToken as string);
-        if (freshData && 'expired' in freshData) {
-          // Token expired — clear it so TokenSync removes from in-memory store
-          // User will be redirected to login on next protected API call
-          console.warn("[Auth] Clearing expired access token");
+      if (token.accessToken && (now - lastAccessTokenRefresh > ACCESS_TOKEN_REFRESH_INTERVAL)) {
+        const refreshedToken = await refreshApiAccessToken(token.accessToken as string);
+
+        if (refreshedToken && 'accessToken' in refreshedToken) {
+          token.accessToken = refreshedToken.accessToken;
+          token.accessTokenRefreshedAt = now;
+        } else if (refreshedToken && 'expired' in refreshedToken) {
+          console.warn("[Auth] Clearing expired access token after refresh failure");
           token.accessToken = undefined;
+        }
+      }
+
+      if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
+        let freshData = await fetchFreshUserData(token.accessToken as string);
+
+        if (freshData && 'expired' in freshData) {
+          const refreshedToken = await refreshApiAccessToken(token.accessToken as string);
+
+          if (refreshedToken && 'accessToken' in refreshedToken) {
+            token.accessToken = refreshedToken.accessToken;
+            token.accessTokenRefreshedAt = now;
+            freshData = await fetchFreshUserData(refreshedToken.accessToken);
+          } else if (refreshedToken && 'expired' in refreshedToken) {
+            console.warn("[Auth] Clearing expired access token");
+            token.accessToken = undefined;
+          }
         } else if (freshData && 'role' in freshData) {
           token.role = freshData.role;
         }
+
+        if (freshData && 'role' in freshData) {
+          token.role = freshData.role;
+        }
+
         token.roleRefreshedAt = now;
       }
 
@@ -300,6 +369,7 @@ export const authConfig: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.apiAuthorized = Boolean(token.accessToken);
       }
       return session;
     },

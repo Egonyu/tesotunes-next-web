@@ -7,7 +7,7 @@ import {
   buildAuthApiBaseUrls,
   fetchAuthApi,
 } from "@/lib/auth-api";
-import { authorizeCredentials } from "@/lib/auth";
+import { authConfig, authorizeCredentials } from "@/lib/auth";
 
 describe("login auth integration", () => {
   const originalFetch = global.fetch;
@@ -143,5 +143,102 @@ describe("login auth integration", () => {
         password: "wrong-password",
       })
     ).rejects.toThrow("Invalid credentials");
+  });
+
+  it("refreshes the API access token before it expires", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: "22|refreshed-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    ) as typeof fetch;
+
+    const jwt = authConfig.callbacks?.jwt;
+    expect(jwt).toBeDefined();
+
+    const now = Date.now();
+    const token = await jwt!({
+      token: {
+        accessToken: "21|stale-token",
+        accessTokenRefreshedAt: now - (13 * 60 * 60 * 1000),
+        roleRefreshedAt: now,
+        role: "admin",
+      },
+      user: undefined,
+      account: null,
+      profile: undefined,
+      trigger: "update",
+      isNewUser: false,
+      session: undefined,
+    } as never);
+
+    expect(token.accessToken).toBe("22|refreshed-token");
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/auth/refresh"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer 21|stale-token",
+        }),
+      })
+    );
+  });
+
+  it("marks the session as API unauthorized when the token is missing", async () => {
+    const session = authConfig.callbacks?.session?.({
+      session: {
+        user: {
+          id: "1",
+          name: "Admin",
+          email: "admin@test.com",
+          role: "admin",
+        },
+        expires: "2099-01-01T00:00:00.000Z",
+      },
+      token: {
+        id: "1",
+        role: "admin",
+        accessToken: undefined,
+      },
+      user: undefined,
+      newSession: undefined,
+      trigger: "update",
+    } as never);
+
+    expect(session).toMatchObject({
+      user: {
+        apiAuthorized: false,
+      },
+    });
+  });
+
+  it("clears the API token when refresh returns 401", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "Unauthenticated." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      })
+    ) as typeof fetch;
+
+    const jwt = authConfig.callbacks?.jwt;
+    expect(jwt).toBeDefined();
+
+    const now = Date.now();
+    const token = await jwt!({
+      token: {
+        accessToken: "21|expired-token",
+        accessTokenRefreshedAt: now - (13 * 60 * 60 * 1000),
+        roleRefreshedAt: now,
+        role: "admin",
+      },
+      user: undefined,
+      account: null,
+      profile: undefined,
+      trigger: "update",
+      isNewUser: false,
+      session: undefined,
+    } as never);
+
+    expect(token.accessToken).toBeUndefined();
   });
 });

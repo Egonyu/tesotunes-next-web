@@ -14,6 +14,24 @@ interface Genre {
   name: string;
 }
 
+function normalizeGenreList(response: unknown): Genre[] {
+  if (Array.isArray(response)) {
+    return response as Genre[];
+  }
+
+  const wrapper = response as { data?: unknown };
+  if (Array.isArray(wrapper?.data)) {
+    return wrapper.data as Genre[];
+  }
+
+  const nested = wrapper?.data as { data?: unknown } | undefined;
+  if (Array.isArray(nested?.data)) {
+    return nested.data as Genre[];
+  }
+
+  return [];
+}
+
 interface ArtistFormData {
   email: string;
   password: string;
@@ -21,7 +39,6 @@ interface ArtistFormData {
   name: string;
   slug: string;
   bio: string;
-  short_bio: string;
   genre_ids: string[];
   country: string;
   city: string;
@@ -36,11 +53,8 @@ interface ArtistFormData {
   status: string;
   is_active: boolean;
   is_verified: boolean;
-  is_featured: boolean;
   profile_image: File | null;
   cover_image: File | null;
-  meta_title: string;
-  meta_description: string;
 }
 
 interface CreateUserResponse {
@@ -51,6 +65,10 @@ interface CreateUserResponse {
     user?: {
       id?: number;
     };
+    artist?: {
+      id?: number;
+      slug?: string;
+    } | null;
   };
 }
 
@@ -72,7 +90,6 @@ export default function CreateArtistPage() {
     name: '',
     slug: '',
     bio: '',
-    short_bio: '',
     genre_ids: [],
     country: '',
     city: '',
@@ -87,20 +104,25 @@ export default function CreateArtistPage() {
     status: 'active',
     is_active: true,
     is_verified: false,
-    is_featured: false,
     profile_image: null,
     cover_image: null,
-    meta_title: '',
-    meta_description: '',
   });
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { data: genres } = useQuery({
+  const { data: genres, isLoading: genresLoading, error: genresError } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: async () => {
+      const adminResponse = await apiGet<unknown>('/admin/genres');
+      return { data: normalizeGenreList(adminResponse) };
+    },
   });
+
+  const genreErrorMessage =
+    (genresError as { response?: { data?: { message?: string } }; message?: string } | null)?.response?.data?.message ||
+    (genresError as { message?: string } | null)?.message ||
+    null;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -122,16 +144,25 @@ export default function CreateArtistPage() {
         throw new Error('Artist user created but user ID was not returned by API.');
       }
 
-      const userDetail = await apiGet<AdminUserWithArtistResponse>(`/admin/users/${userId}`);
-      const artistId = userDetail?.data?.artist?.id;
+      const directArtistId = createUserResponse?.data?.artist?.id;
+      const backendArtistSlug = createUserResponse?.data?.artist?.slug;
+      const artistId = directArtistId
+        ? directArtistId
+        : (await apiGet<AdminUserWithArtistResponse>(`/admin/users/${userId}`))?.data?.artist?.id;
 
       if (!artistId) {
         throw new Error('Artist user created, but linked artist profile was not found.');
       }
 
       const payload = new FormData();
+      const generatedSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const requestedSlug = formData.slug.trim();
+      const payloadSlug = requestedSlug && requestedSlug !== generatedSlug
+        ? requestedSlug
+        : (backendArtistSlug || requestedSlug || generatedSlug);
+
       payload.append('name', formData.name);
-      payload.append('slug', formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+      payload.append('slug', payloadSlug);
       payload.append('status', formData.status);
       payload.append('is_verified', formData.is_verified ? '1' : '0');
 
@@ -332,17 +363,6 @@ export default function CreateArtistPage() {
                 </FormField>
               </div>
 
-              <FormField label="Short Bio" error={errors.short_bio}>
-                <input
-                  type="text"
-                  value={formData.short_bio}
-                  onChange={(e) => updateField('short_bio', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="One-line description (max 160 chars)"
-                  maxLength={160}
-                />
-              </FormField>
-
               <FormField label="Full Bio" error={errors.bio}>
                 <textarea
                   value={formData.bio}
@@ -445,26 +465,6 @@ export default function CreateArtistPage() {
               </div>
             </FormSection>
 
-            <FormSection title="SEO">
-              <FormField label="Meta Title" error={errors.meta_title}>
-                <input
-                  type="text"
-                  value={formData.meta_title}
-                  onChange={(e) => updateField('meta_title', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  placeholder="SEO title"
-                />
-              </FormField>
-              <FormField label="Meta Description" error={errors.meta_description}>
-                <textarea
-                  value={formData.meta_description}
-                  onChange={(e) => updateField('meta_description', e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  rows={2}
-                  placeholder="SEO description"
-                />
-              </FormField>
-            </FormSection>
           </div>
 
           {/* Sidebar */}
@@ -557,7 +557,11 @@ export default function CreateArtistPage() {
 
             <FormSection title="Genres">
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {genres?.data?.map(genre => (
+                {genresLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading genres...</p>
+                ) : genreErrorMessage ? (
+                  <p className="text-sm text-red-600">Failed to load genres: {genreErrorMessage}</p>
+                ) : genres?.data?.map(genre => (
                   <label key={genre.id} className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -586,10 +590,10 @@ export default function CreateArtistPage() {
                     updateField('status', status);
                     updateField('is_active', status === 'active');
                   }}
-                  className="w-null px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
                   <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
                   <option value="pending">Pending Verification</option>
                 </select>
               </FormField>
@@ -603,15 +607,6 @@ export default function CreateArtistPage() {
                     className="rounded border-gray-300"
                   />
                   <span className="text-sm">Verified Artist</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_featured}
-                    onChange={(e) => updateField('is_featured', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Featured Artist</span>
                 </label>
               </div>
             </FormSection>

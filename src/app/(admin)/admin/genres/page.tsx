@@ -54,7 +54,7 @@ export default function GenresPage() {
   const [deleteTarget, setDeleteTarget] = useState<Genre | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: genresData, isLoading } = useQuery({
+  const { data: genresData, isLoading, error } = useQuery({
     queryKey: ['admin', 'genres', { page: currentPage, search: searchQuery }],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -93,6 +93,10 @@ export default function GenresPage() {
 
   const genres = genresData?.data || [];
   const meta = genresData?.meta;
+  const queryErrorMessage =
+    (error as { response?: { data?: { message?: string } }; message?: string } | null)?.response?.data?.message ||
+    (error as { message?: string } | null)?.message ||
+    null;
 
   return (
     <div className="space-y-6">
@@ -136,6 +140,12 @@ export default function GenresPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : queryErrorMessage ? (
+          <div className="text-center py-16 px-6">
+            <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium">Failed to load genres</h3>
+            <p className="text-sm text-muted-foreground mt-1">{queryErrorMessage}</p>
           </div>
         ) : genres.length === 0 ? (
           <div className="text-center py-16">

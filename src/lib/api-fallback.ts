@@ -54,7 +54,7 @@ function buildApiRequestUrl(baseUrl: string, path: string): string {
   return `${baseUrl}${normalizedPath}`;
 }
 
-function isRetryableNetworkError(error: unknown): boolean {
+export function isRetryableNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }

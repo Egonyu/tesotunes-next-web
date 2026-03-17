@@ -6,6 +6,7 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      apiAuthorized?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -20,5 +21,6 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     accessToken?: string;
+    accessTokenRefreshedAt?: number;
   }
 }

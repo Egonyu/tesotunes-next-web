@@ -9,7 +9,8 @@ jest.mock("next-auth/jwt", () => ({
 }));
 
 import { NextRequest } from "next/server";
-import { GET } from "@/app/api/backend/[...path]/route";
+import { getToken } from "next-auth/jwt";
+import { GET, POST } from "@/app/api/backend/[...path]/route";
 
 describe("backend proxy route", () => {
   const originalFetch = global.fetch;
@@ -85,5 +86,63 @@ describe("backend proxy route", () => {
     expect(response.headers.get("content-encoding")).toBeNull();
     expect(response.headers.get("content-length")).toBeNull();
     expect(response.headers.get("transfer-encoding")).toBeNull();
+  });
+
+  it("returns a structured 502 response when upstream fetch retries are exhausted", async () => {
+    const mockFetch = jest.fn().mockRejectedValue(new TypeError("fetch failed"));
+
+    global.fetch = mockFetch as typeof fetch;
+
+    const request = new NextRequest("http://localhost:3000/api/backend/artist/apply", {
+      method: "POST",
+      body: "stage_name=Test+Artist",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const response = await POST(request, {
+      params: Promise.resolve({ path: ["artist", "apply"] }),
+    });
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      message: "Backend service is currently unavailable. Please try again.",
+      error_code: "UPSTREAM_UNAVAILABLE",
+    });
+  });
+
+  it("does not rewrite non-retryable upstream errors as upstream outages", async () => {
+    const mockFetch = jest.fn().mockRejectedValue(new Error("aborted"));
+
+    global.fetch = mockFetch as typeof fetch;
+
+    const request = new NextRequest("http://localhost:3000/api/backend/artist/apply", {
+      method: "POST",
+      body: "stage_name=Test+Artist",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    await expect(
+      POST(request, {
+        params: Promise.resolve({ path: ["artist", "apply"] }),
+      })
+    ).rejects.toThrow("aborted");
+  });
+
+  it("does not rewrite non-upstream handler failures as upstream outages", async () => {
+    jest.mocked(getToken).mockRejectedValueOnce(new Error("jwt misconfigured"));
+
+    const request = new NextRequest("http://localhost:3000/api/backend/genres");
+
+    await expect(
+      GET(request, {
+        params: Promise.resolve({ path: ["genres"] }),
+      })
+    ).rejects.toThrow("jwt misconfigured");
   });
 });

@@ -19,6 +19,24 @@ interface Genre {
   name: string;
 }
 
+function normalizeGenreList(response: unknown): Genre[] {
+  if (Array.isArray(response)) {
+    return response as Genre[];
+  }
+
+  const wrapper = response as { data?: unknown };
+  if (Array.isArray(wrapper?.data)) {
+    return wrapper.data as Genre[];
+  }
+
+  const nested = wrapper?.data as { data?: unknown } | undefined;
+  if (Array.isArray(nested?.data)) {
+    return nested.data as Genre[];
+  }
+
+  return [];
+}
+
 interface Album {
   id: string;
   title: string;
@@ -64,7 +82,7 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  
+
   const [formData, setFormData] = useState<AlbumFormData>({
     title: '',
     slug: '',
@@ -99,7 +117,10 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const { data: genres } = useQuery({
     queryKey: ['admin', 'genres', 'list'],
-    queryFn: () => apiGet<{ data: Genre[] }>('/admin/genres'),
+    queryFn: async () => {
+      const adminResponse = await apiGet<unknown>('/admin/genres');
+      return { data: normalizeGenreList(adminResponse) };
+    },
   });
 
   // Populate form when album data loads
@@ -169,7 +190,7 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = new FormData();
     data.append('_method', 'PUT');
     data.append('title', formData.title);
@@ -186,12 +207,12 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
     data.append('explicit', formData.explicit ? '1' : '0');
     data.append('meta_title', formData.meta_title);
     data.append('meta_description', formData.meta_description);
-    
+
     formData.genre_ids.forEach(gid => data.append('genre_ids[]', gid));
     formData.featured_artists.forEach(aid => data.append('featured_artists[]', aid));
-    
+
     if (formData.cover_image) data.append('cover_image', formData.cover_image);
-    
+
     updateMutation.mutate(data);
   };
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { API_URL } from "@/lib/api-config";
-import { buildLocalApiBaseUrls, fetchApiWithFallback } from "@/lib/api-fallback";
+import { buildLocalApiBaseUrls, fetchApiWithFallback, isRetryableNetworkError } from "@/lib/api-fallback";
 
 const PROXY_RESPONSE_HEADERS_TO_STRIP = [
   "content-encoding",
@@ -10,6 +10,28 @@ const PROXY_RESPONSE_HEADERS_TO_STRIP = [
   "connection",
   "keep-alive",
 ];
+
+function buildProxyErrorResponse(error: unknown) {
+  const details =
+    process.env.NODE_ENV !== "production" && error instanceof Error
+      ? { details: error.message }
+      : {};
+
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Backend service is currently unavailable. Please try again.",
+      error_code: "UPSTREAM_UNAVAILABLE",
+      ...details,
+    },
+    {
+      status: 502,
+      headers: {
+        "cache-control": "no-store",
+      },
+    }
+  );
+}
 
 async function proxyToBackend(
   request: NextRequest,
@@ -37,15 +59,26 @@ async function proxyToBackend(
     body = await request.arrayBuffer();
   }
 
-  const upstreamResponse = await fetchApiWithFallback(upstreamRequestPath, {
-    method: request.method,
-    headers,
-    body,
-    redirect: "manual",
-    cache: "no-store",
-  }, {
-    baseUrls: buildLocalApiBaseUrls(API_URL),
-  });
+  let upstreamResponse: Response;
+
+  try {
+    upstreamResponse = await fetchApiWithFallback(upstreamRequestPath, {
+      method: request.method,
+      headers,
+      body,
+      redirect: "manual",
+      cache: "no-store",
+    }, {
+      baseUrls: buildLocalApiBaseUrls(API_URL),
+    });
+
+  } catch (error) {
+    if (!isRetryableNetworkError(error)) {
+      throw error;
+    }
+
+    return buildProxyErrorResponse(error);
+  }
 
   const responseHeaders = new Headers(upstreamResponse.headers);
   for (const header of PROXY_RESPONSE_HEADERS_TO_STRIP) {

@@ -11,12 +11,23 @@ export default async function AdminLayout({
 }) {
   const session = await getServerSession(authConfig);
   const userRole = session?.user?.role ?? null;
+  const hasApiAccess = session?.user?.apiAuthorized ?? false;
 
   if (!session?.user) {
     return (
       <AccessNotice
         title="Sign In Required"
         description="Admin pages are protected. Please sign in with an admin account to continue."
+        callbackUrl="/admin"
+      />
+    );
+  }
+
+  if (!hasApiAccess) {
+    return (
+      <AccessNotice
+        title="Session Expired"
+        description="Your sign-in session no longer has API access. Please sign in again to continue using admin pages."
         callbackUrl="/admin"
       />
     );

@@ -867,7 +867,7 @@ export interface ArtistApplicationData {
   phone: string;
 
   // Step 3: Payout Setup
-  payout_method: 'mtn_momo' | 'airtel_money' | 'bank';
+  payout_method: 'mtn_momo' | 'airtel_money' | 'bank' | 'zengapay';
   mobile_money_number?: string;
   mobile_money_provider?: 'mtn' | 'airtel';
   bank_name?: string;

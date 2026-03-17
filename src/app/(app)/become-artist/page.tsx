@@ -72,8 +72,7 @@ export default function BecomeArtistPage() {
     secondary_genres: [],
     full_name: userName, // Pre-fill with user's name
     phone: "",
-    payout_method: "mtn_momo",
-    mobile_money_provider: "mtn",
+    payout_method: "zengapay",
     country: "UG",
     terms_accepted: false,
     artist_agreement_accepted: false,
@@ -163,6 +162,9 @@ export default function BecomeArtistPage() {
         if (formData.payout_method === "bank") {
           return !!(formData.phone && formData.bank_name && formData.bank_account);
         }
+        if (formData.payout_method === "zengapay") {
+          return !!formData.phone;
+        }
         return !!(formData.phone && formData.mobile_money_number);
       case 3: // Review (terms)
         return !!(formData.terms_accepted && formData.artist_agreement_accepted);
@@ -203,8 +205,10 @@ export default function BecomeArtistPage() {
         full_name: formData.full_name ?? "",
         nin_number: formData.nin_number,
         phone: formData.phone ?? "",
-        payout_method: formData.payout_method ?? "mtn_momo",
-        mobile_money_number: formData.mobile_money_number,
+        payout_method: formData.payout_method ?? "zengapay",
+        mobile_money_number:
+          formData.mobile_money_number ||
+          (formData.payout_method === "zengapay" ? formData.phone : undefined),
         mobile_money_provider: formData.mobile_money_provider,
         bank_name: formData.bank_name,
         bank_account: formData.bank_account,
@@ -755,7 +759,19 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
         <input
           type="tel"
           value={formData.phone ?? ""}
-          onChange={(e) => updateForm({ phone: e.target.value })}
+          onChange={(e) => {
+            const phone = e.target.value;
+            const previousPhone = formData.phone ?? "";
+            const currentMobileNumber = formData.mobile_money_number ?? "";
+            const shouldSyncMobileNumber =
+              formData.payout_method !== "bank" &&
+              (!currentMobileNumber || currentMobileNumber === previousPhone);
+
+            updateForm({
+              phone,
+              ...(shouldSyncMobileNumber ? { mobile_money_number: phone } : {}),
+            });
+          }}
           placeholder="e.g. 0770 123 456"
           className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
         />
@@ -771,6 +787,7 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
         </label>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
+            { id: "zengapay", label: "ZengaPay", icon: "💳", desc: "Recommended one-tap payouts" },
             { id: "mtn_momo", label: "MTN Mobile Money", icon: "📱", desc: "Instant payouts" },
             { id: "airtel_money", label: "Airtel Money", icon: "📱", desc: "Instant payouts" },
             { id: "bank", label: "Bank Transfer", icon: "🏦", desc: "1-3 business days" },
@@ -781,6 +798,10 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
               onClick={() => {
                 updateForm({
                   payout_method: method.id as ArtistApplicationData["payout_method"],
+                  mobile_money_number:
+                    method.id !== "bank"
+                      ? (formData.mobile_money_number ?? formData.phone ?? "")
+                      : formData.mobile_money_number,
                   mobile_money_provider:
                     method.id === "mtn_momo" ? "mtn" : method.id === "airtel_money" ? "airtel" : undefined,
                 });
@@ -804,6 +825,15 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
       </div>
 
       {/* Mobile Money Fields */}
+      {formData.payout_method === "zengapay" && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-primary">ZengaPay will use your phone number above.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            No extra payout number needed. You can still switch to MTN/Airtel or bank if you prefer.
+          </p>
+        </div>
+      )}
+
       {(formData.payout_method === "mtn_momo" || formData.payout_method === "airtel_money") && (
         <div>
           <label className="mb-1.5 block text-sm font-medium">
@@ -954,7 +984,9 @@ function StepReview({ formData, updateForm, avatarPreview, genres }: StepReviewP
           <ReviewItem
             label="Method"
             value={
-              formData.payout_method === "mtn_momo"
+              formData.payout_method === "zengapay"
+                ? "ZengaPay"
+                : formData.payout_method === "mtn_momo"
                 ? "MTN Mobile Money"
                 : formData.payout_method === "airtel_money"
                 ? "Airtel Money"
@@ -963,7 +995,13 @@ function StepReview({ formData, updateForm, avatarPreview, genres }: StepReviewP
           />
           <ReviewItem
             label={formData.payout_method === "bank" ? "Account #" : "Phone #"}
-            value={formData.payout_method === "bank" ? formData.bank_account : formData.mobile_money_number}
+            value={
+              formData.payout_method === "bank"
+                ? formData.bank_account
+                : formData.payout_method === "zengapay"
+                ? formData.phone
+                : formData.mobile_money_number
+            }
           />
         </ReviewSection>
       </div>

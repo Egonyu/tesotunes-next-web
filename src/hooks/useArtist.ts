@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import {
@@ -525,16 +526,16 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
         : 'https://api.tesotunes.com/api';
 
       // Call Laravel API directly, bypassing Next.js payload limit
-      const axios = require('axios').default;
       const instance = axios.create({
         baseURL: laravelApiUrl,
         timeout: 300000, // 5 minute timeout for large uploads
         withCredentials: true,
       });
 
-      // Add auth token from session
-      if (session?.accessToken) {
-        instance.defaults.headers.common['Authorization'] = `Bearer ${session.accessToken}`;
+      // Add auth token from session if available.
+      const accessToken = (session as { accessToken?: string } | null)?.accessToken;
+      if (accessToken) {
+        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       }
 
       return instance.post<UploadSongResponse>('/artist/songs', formData, {

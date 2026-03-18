@@ -80,14 +80,6 @@ const moduleItems = [
   { href: "/forums", label: "Forums", icon: MessageSquare },
 ];
 
-const activityItems = [
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/messages", label: "Messages", icon: MessageCircle },
-  { href: "/history", label: "History", icon: Clock },
-  { href: "/wallet", label: "Wallet", icon: CreditCard },
-  { href: "/credits", label: "Credits", icon: Coins },
-];
-
 interface MobileNavItemProps {
   href: string;
   label: string;
@@ -161,21 +153,21 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+        "flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-center transition-all duration-200",
         isActive
-          ? "bg-primary/10 text-primary font-semibold"
-          : "text-foreground hover:bg-muted"
+          ? "border-primary/40 bg-primary/12 text-primary"
+          : "border-border/60 bg-muted/30 text-foreground hover:bg-muted/60"
       )}
     >
       <div
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg",
-          isActive ? "bg-primary/15" : "bg-muted"
+          "flex h-9 w-9 items-center justify-center rounded-full",
+          isActive ? "bg-primary/20" : "bg-background/70"
         )}
       >
         <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
       </div>
-      <span className="text-sm">{label}</span>
+      <span className="text-[11px] font-medium leading-tight">{label}</span>
     </Link>
   );
 }
@@ -218,6 +210,7 @@ export function MobileBottomNav() {
     { href: "/artist/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
     { href: "/artist/wallet", label: "Wallet", icon: Wallet },
+    { href: "/credits", label: "Credits", icon: Coins },
   ];
 
   // Side action buttons (right-side vertical stack)
@@ -241,7 +234,7 @@ export function MobileBottomNav() {
         >
           {/* Menu Panel — slides up from bottom */}
           <div
-            className="absolute bottom-24 left-4 right-4 bg-background border rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-24 left-4 right-4 rounded-2xl border border-border/80 bg-background/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/10 dark:bg-neutral-900/95 dark:shadow-[0_24px_56px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag indicator */}
@@ -264,14 +257,14 @@ export function MobileBottomNav() {
             </div>
 
             {/* Menu Content */}
-            <div className="max-h-[60vh] overflow-y-auto px-4 pb-4 space-y-4">
+            <div className="max-h-[68vh] overflow-y-auto px-4 pb-4 space-y-4">
               {/* Artist Section */}
               {hasArtistAccess && (
                 <div>
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
                     Artist Studio
                   </h3>
-                  <div className="grid grid-cols-1 gap-0.5">
+                  <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
                     {artistMenuItems.map((item) => (
                       <MenuItem key={item.href} {...item} onClick={closeMenu} />
                     ))}
@@ -284,7 +277,7 @@ export function MobileBottomNav() {
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
                   Browse
                 </h3>
-                <div className="grid grid-cols-1 gap-0.5">
+                <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
                   {browseItems.map((item) => (
                     <MenuItem key={item.href} {...item} onClick={closeMenu} />
                   ))}
@@ -296,30 +289,16 @@ export function MobileBottomNav() {
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
                   More
                 </h3>
-                <div className="grid grid-cols-1 gap-0.5">
+                <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
                   {visibleModuleItems.map((item) => (
                     <MenuItem key={item.href} {...item} onClick={closeMenu} />
                   ))}
                 </div>
               </div>
 
-              {/* Your Activity — authenticated only */}
-              {session && (
-                <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-2">
-                    Your Activity
-                  </h3>
-                  <div className="grid grid-cols-1 gap-0.5">
-                    {activityItems.map((item) => (
-                      <MenuItem key={item.href} {...item} onClick={closeMenu} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* User Section */}
               <div className="border-t pt-3">
-                <div className="grid grid-cols-1 gap-0.5">
+                <div className="space-y-2">
                   {session ? (
                     <>
                       {!hasArtistAccess && !isAdmin && (
@@ -334,11 +313,20 @@ export function MobileBottomNav() {
                           <span>Become an Artist</span>
                         </Link>
                       )}
-                      <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />
-                      <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />
+                      <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
+                        <MenuItem href="/notifications" label="Notifications" icon={Bell} onClick={closeMenu} />
+                        <MenuItem href="/messages" label="Messages" icon={MessageCircle} onClick={closeMenu} />
+                        <MenuItem href="/history" label="History" icon={Clock} onClick={closeMenu} />
+                        {!hasArtistAccess && <MenuItem href="/wallet" label="Wallet" icon={CreditCard} onClick={closeMenu} />}
+                        {!hasArtistAccess && <MenuItem href="/credits" label="Credits" icon={Coins} onClick={closeMenu} />}
+                        <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />
+                        <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />
+                      </div>
                     </>
                   ) : (
-                    <MenuItem href="/login" label="Sign In" icon={User} onClick={closeMenu} />
+                    <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
+                      <MenuItem href="/login" label="Sign In" icon={User} onClick={closeMenu} />
+                    </div>
                   )}
                 </div>
               </div>

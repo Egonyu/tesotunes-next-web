@@ -1,8 +1,10 @@
 "use client";
 
-import { Search, Bell, User, Mail, MessageSquare, Sparkles, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { signOut, useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,6 +26,22 @@ export function Header() {
   const { data: session } = useSession();
   const router = useRouter();
   const roleLabel = formatRoleLabel(session?.user?.role);
+  const userRole = (session?.user as { role?: string } | undefined)?.role || "";
+  const isAdmin = ["admin", "super_admin", "Admin", "Super Admin"].some((r) =>
+    userRole.toLowerCase().includes(r.toLowerCase())
+  );
+
+  const { data: artistStatus } = useQuery({
+    queryKey: ["artist", "application-status", "header"],
+    queryFn: () => apiGet<{ data?: { status?: string; is_artist?: boolean } }>("/artist/application-status"),
+    enabled: !!session?.user && !isAdmin,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const isArtistByRole = userRole.toLowerCase().includes("artist");
+  const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
+  const hasArtistAccess = isArtistByRole || isArtistByStatus;
 
   return (
     <header
@@ -123,8 +141,8 @@ export function Header() {
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                   onClick={() => router.push("/notifications")}
                 >
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="flex-1 text-left">Inbox</span>
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 text-left">Notifications</span>
                   <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
                     1
                   </span>
@@ -134,8 +152,33 @@ export function Header() {
                   onClick={() => router.push("/messages")}
                 >
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span>Chat</span>
+                  <span>Messages</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  onClick={() => router.push("/history")}
+                >
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>History</span>
+                </DropdownMenuItem>
+                {!hasArtistAccess && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/wallet")}
+                  >
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span>Wallet</span>
+                  </DropdownMenuItem>
+                )}
+                {!hasArtistAccess && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/credits")}
+                  >
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                    <span>Credits</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                   onClick={() => router.push("/settings/subscription")}

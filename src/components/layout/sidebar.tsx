@@ -26,13 +26,9 @@ import {
   Music,
   TrendingUp,
   Heart,
-  Bell,
-  Clock,
   Coins,
-  CreditCard,
   Megaphone,
   ThumbsUp,
-  MessageCircle,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -71,14 +67,6 @@ const moduleItems = [
   { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
-];
-
-const activityItems = [
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/messages", label: "Messages", icon: MessageCircle },
-  { href: "/history", label: "History", icon: Clock },
-  { href: "/wallet", label: "Wallet", icon: CreditCard },
-  { href: "/credits", label: "Credits", icon: Coins },
 ];
 
 interface NavItemProps {
@@ -212,27 +200,10 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* Your Activity — authenticated only */}
-        {session?.user && (
-          <div className="space-y-1">
-            {!sidebarCollapsed && (
-              <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">
-                Your Activity
-              </h3>
-            )}
-            {activityItems.map((item) => (
-              <NavItem
-                key={item.href}
-                {...item}
-                collapsed={sidebarCollapsed}
-              />
-            ))}
-          </div>
-        )}
       </nav>
 
       {/* User Section */}
-      <div className="border-t p-4">
+      <div className="max-h-[44vh] overflow-y-auto border-t p-4">
         {session?.user ? (
           <div className={cn("space-y-1", sidebarCollapsed && "space-y-2")}>
             {/* Become an Artist CTA — hidden for artists & admins */}
@@ -252,17 +223,69 @@ export function Sidebar() {
 
             {/* Artist Studio link — only for artists */}
             {hasArtistAccess && (
-              <Link
-                href="/artist"
-                className={cn(
-                  "flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-3 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all shadow-sm mb-2",
-                  sidebarCollapsed && "justify-center px-2"
-                )}
-                title={sidebarCollapsed ? "Artist Studio" : undefined}
-              >
-                <Sparkles className="h-4 w-4 shrink-0" />
-                {!sidebarCollapsed && <span>Artist Studio</span>}
-              </Link>
+              <>
+                <Link
+                  href="/artist"
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-3 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all shadow-sm mb-2",
+                    sidebarCollapsed && "justify-center px-2"
+                  )}
+                  title={sidebarCollapsed ? "Artist Studio" : undefined}
+                >
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>Artist Studio</span>}
+                </Link>
+
+                <Link
+                  href="/artist/wallet"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    sidebarCollapsed && "justify-center px-2"
+                  )}
+                  title={sidebarCollapsed ? "Studio Wallet" : undefined}
+                >
+                  <Wallet className="h-5 w-5 shrink-0" />
+                  {!sidebarCollapsed && <span>Studio Wallet</span>}
+                </Link>
+                <Link
+                  href="/credits"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    sidebarCollapsed && "justify-center px-2"
+                  )}
+                  title={sidebarCollapsed ? "Credits" : undefined}
+                >
+                  <Coins className="h-5 w-5 shrink-0" />
+                  {!sidebarCollapsed && <span>Credits</span>}
+                </Link>
+              </>
+            )}
+
+            {!hasArtistAccess && (
+              <>
+                <Link
+                  href="/wallet"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    sidebarCollapsed && "justify-center px-2"
+                  )}
+                  title={sidebarCollapsed ? "Wallet" : undefined}
+                >
+                  <Wallet className="h-5 w-5 shrink-0" />
+                  {!sidebarCollapsed && <span>Wallet</span>}
+                </Link>
+                <Link
+                  href="/credits"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    sidebarCollapsed && "justify-center px-2"
+                  )}
+                  title={sidebarCollapsed ? "Credits" : undefined}
+                >
+                  <Coins className="h-5 w-5 shrink-0" />
+                  {!sidebarCollapsed && <span>Credits</span>}
+                </Link>
+              </>
             )}
 
             {/* Admin panel link — only for admins */}

@@ -513,13 +513,35 @@ export interface UploadProgress {
 
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
       const formData = buildArtistSongUploadFormData(data);
 
-      return apiPostForm<UploadSongResponse>('/artist/songs', formData, {
-        onUploadProgress: (progressEvent) => {
+      // Get the Laravel API URL from env
+      const laravelApiUrl = process.env.NEXT_PUBLIC_API_URL 
+        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '') 
+        : 'https://api.tesotunes.com/api';
+
+      // Call Laravel API directly, bypassing Next.js payload limit
+      const axios = require('axios').default;
+      const instance = axios.create({
+        baseURL: laravelApiUrl,
+        timeout: 300000, // 5 minute timeout for large uploads
+        withCredentials: true,
+      });
+
+      // Add auth token from session
+      if (session?.accessToken) {
+        instance.defaults.headers.common['Authorization'] = `Bearer ${session.accessToken}`;
+      }
+
+      return instance.post<UploadSongResponse>('/artist/songs', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
           if (onProgress && progressEvent.total) {
             onProgress({
               percent: Math.round((progressEvent.loaded * 100) / progressEvent.total),
@@ -528,7 +550,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             });
           }
         },
-      });
+      }).then(res => res.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });

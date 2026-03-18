@@ -370,6 +370,7 @@ export const authConfig: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.apiAuthorized = Boolean(token.accessToken);
+        session.user.accessToken = token.accessToken as string | undefined;
       }
       return session;
     },

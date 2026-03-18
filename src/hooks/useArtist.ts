@@ -533,7 +533,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       });
 
       // Add auth token from session if available.
-      const accessToken = (session as { accessToken?: string } | null)?.accessToken;
+      const accessToken = (session as { user?: { accessToken?: string } } | null)?.user?.accessToken;
       if (accessToken) {
         instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       }

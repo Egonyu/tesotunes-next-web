@@ -93,6 +93,13 @@ export default function ArtistPage() {
   };
 
   const handlePlaySong = (song: Song) => {
+    const playableUrl = song.audio_url || song.stream_url || song.file_url || song.preview_url;
+    if (!playableUrl) {
+      toast.error('This track is not currently streamable for your account.');
+
+      return;
+    }
+
     if (currentSong?.id === song.id) {
       if (isPlaying) pause();
       else resume();
@@ -323,7 +330,7 @@ export default function ArtistPage() {
           </div>
           <div className="space-y-1">
             {songs.slice(0, 10).map((song, index) => {
-              const songArtworkUrl = song.artwork_url;
+              const songArtworkUrl = song.artwork_url || song.cover_url || song.album?.artwork_url;
               const isCurrentSong = currentSong?.id === song.id;
               const isSongPlaying = isCurrentSong && isPlaying;
 
@@ -416,7 +423,7 @@ export default function ArtistPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {albums.map((album) => {
-              const albumArtworkUrl = album.artwork_url;
+              const albumArtworkUrl = album.artwork_url || (album as { cover_url?: string }).cover_url;
               return (
                 <Link
                   key={album.id}

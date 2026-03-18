@@ -39,7 +39,9 @@ export interface Song {
   audio_url: string;
   stream_url?: string;
   file_url?: string;
+  preview_url?: string;
   artwork_url?: string;
+  cover_url?: string;
   waveform_data?: number[];
   genres: Genre[];
   artist: Artist;

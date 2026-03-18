@@ -51,6 +51,8 @@ export function PlayerBar() {
     return null;
   }
 
+  const currentArtwork = currentSong.artwork_url || currentSong.cover_url || currentSong.album?.artwork_url;
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -72,9 +74,9 @@ export function PlayerBar() {
     return (
       <div className="fixed bottom-20 right-4 lg:bottom-4 z-40 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
-          {currentSong.artwork_url ? (
+          {currentArtwork ? (
             <Image
-              src={currentSong.artwork_url}
+              src={currentArtwork}
               alt={currentSong.title}
               fill
               unoptimized
@@ -127,9 +129,9 @@ export function PlayerBar() {
             className="relative h-12 w-12 lg:h-14 lg:w-14 shrink-0 overflow-hidden rounded-md bg-muted cursor-pointer group"
             onClick={togglePlayerExpanded}
           >
-            {currentSong.artwork_url ? (
+            {currentArtwork ? (
               <Image
-                src={currentSong.artwork_url}
+                src={currentArtwork}
                 alt={currentSong.title}
                 fill
                 unoptimized

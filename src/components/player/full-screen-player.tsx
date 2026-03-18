@@ -86,6 +86,8 @@ export function FullScreenPlayer() {
 
   if (!currentSong || !playerExpanded) return null;
 
+  const currentArtwork = currentSong.artwork_url || currentSong.cover_url || currentSong.album?.artwork_url;
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -207,9 +209,9 @@ export function FullScreenPlayer() {
         >
           {/* Artwork */}
           <div className="relative mb-8 aspect-square w-full max-w-[min(400px,50vh)] overflow-hidden rounded-lg shadow-2xl shadow-black/50">
-            {currentSong.artwork_url ? (
+            {currentArtwork ? (
               <Image
-                src={currentSong.artwork_url}
+                src={currentArtwork}
                 alt={currentSong.title}
                 fill
                 className={cn(

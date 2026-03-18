@@ -80,9 +80,9 @@ export function AudioPlayer() {
 
   /** Resolve the best audio URL for a song, enforcing subscription quality. */
   const resolveAudioUrl = useCallback(
-    (song: { audio_url?: string; stream_url?: string; file_url?: string } | null): string => {
+    (song: { audio_url?: string; stream_url?: string; file_url?: string; preview_url?: string } | null): string => {
       if (!song) return "";
-      const raw = song.audio_url || song.stream_url || song.file_url || "";
+      const raw = song.audio_url || song.stream_url || song.file_url || song.preview_url || "";
       if (!raw) return "";
       return applyQualityToUrl(raw, qualityParam);
     },
@@ -232,7 +232,15 @@ export function AudioPlayer() {
       crossfadeAudioRef.current.src = "";
     }
 
-    audioRef.current.src = resolveAudioUrl(currentSong);
+    const resolvedUrl = resolveAudioUrl(currentSong);
+    if (!resolvedUrl) {
+      setIsLoading(false);
+      pause();
+
+      return;
+    }
+
+    audioRef.current.src = resolvedUrl;
     audioRef.current.volume = effectiveVolume;
     audioRef.current.load();
 

@@ -521,8 +521,8 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       const formData = buildArtistSongUploadFormData(data);
 
       // Get the Laravel API URL from env
-      const laravelApiUrl = process.env.NEXT_PUBLIC_API_URL 
-        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '') 
+      const laravelApiUrl = process.env.NEXT_PUBLIC_API_URL
+        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')
         : 'https://api.tesotunes.com/api';
 
       // Call Laravel API directly, bypassing Next.js payload limit

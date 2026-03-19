@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  Activity,
   Search,
   LogOut,
   Menu,
@@ -66,6 +67,7 @@ const navItems = [
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
   { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag },
   { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield },
+  { href: '/admin/system', label: 'System Health', icon: Activity },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 

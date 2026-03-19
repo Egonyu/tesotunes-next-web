@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import {
   Camera,
   Link as LinkIcon,
@@ -22,6 +21,8 @@ import {
   useUpdateArtistAvatar,
   useUpdateArtistBanner,
 } from '@/hooks/useArtist';
+import { pickMediaUrl } from '@/lib/media';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 
 export default function ArtistProfilePage() {
   const { data: profile, isLoading } = useArtistProfile();
@@ -182,8 +183,13 @@ export default function ArtistProfilePage() {
 
       {/* Cover Image */}
       <div className="relative h-48 rounded-xl overflow-hidden bg-linear-to-r from-primary/20 to-primary/5">
-        {profile?.banner && (
-          <Image src={profile.banner} alt="Cover" fill className="object-cover" />
+        {pickMediaUrl(profile?.banner) && (
+          <SafeImage
+            src={pickMediaUrl(profile?.banner)}
+            alt="Cover"
+            fill
+            className="object-cover"
+          />
         )}
         <button
           type="button"
@@ -213,12 +219,17 @@ export default function ArtistProfilePage() {
       <div className="flex items-end gap-6 -mt-12 ml-6 relative z-10">
         <div className="relative group">
           <div className="h-24 w-24 rounded-full border-4 border-background overflow-hidden bg-muted">
-            {profile?.avatar ? (
-              <Image src={profile.avatar} alt="Avatar" width={96} height={96} className="object-cover" />
+            {pickMediaUrl(profile?.avatar) ? (
+              <SafeImage
+                src={pickMediaUrl(profile?.avatar)}
+                alt="Avatar"
+                width={96}
+                height={96}
+                className="object-cover"
+                fallback={<InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />}
+              />
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-2xl font-bold text-muted-foreground">
-                {profile?.stage_name?.[0] || 'A'}
-              </div>
+              <InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />
             )}
           </div>
           <button

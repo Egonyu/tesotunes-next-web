@@ -2,7 +2,6 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api';
@@ -26,6 +25,8 @@ import {
   Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import { pickMediaUrl } from '@/lib/media';
 
 type Artist = {
   id: number;
@@ -334,15 +335,28 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Hero / Cover */}
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="relative h-52 md:h-64">
-          {artist.cover_url && (
-            <Image src={artist.cover_url} alt={`${artist.name} cover`} fill className="object-cover" />
+        <div className="relative h-52 bg-linear-to-r from-primary/15 via-primary/5 to-transparent md:h-64">
+          {pickMediaUrl(artist.cover_url) && (
+            <SafeImage
+              src={pickMediaUrl(artist.cover_url)}
+              alt={`${artist.name} cover`}
+              fill
+              className="object-cover"
+            />
           )}
           <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4 flex items-end gap-4">
             <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white">
-              {artist.profile_url && (
-                <Image src={artist.profile_url} alt={artist.name} fill className="object-cover" />
+              {pickMediaUrl(artist.profile_url) ? (
+                <SafeImage
+                  src={pickMediaUrl(artist.profile_url)}
+                  alt={artist.name}
+                  fill
+                  className="object-cover"
+                  fallback={<InitialsAvatar name={artist.name} className="bg-white/90 text-slate-700" textClassName="text-3xl" />}
+                />
+              ) : (
+                <InitialsAvatar name={artist.name} className="bg-white/90 text-slate-700" textClassName="text-3xl" />
               )}
             </div>
             <div className="flex-1 text-white">

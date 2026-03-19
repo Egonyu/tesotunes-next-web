@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import { pickMediaUrl } from '@/lib/media';
 
 interface User {
   id: number;
@@ -30,6 +32,9 @@ interface User {
   full_name?: string;
   email: string;
   username: string;
+  avatar_url?: string | null;
+  avatar?: string | null;
+  profile_image_url?: string | null;
   role?: 'user' | 'artist' | 'admin' | 'super_admin' | string;
   status?: 'active' | 'inactive' | 'suspended' | 'banned' | string;
   is_active?: boolean;
@@ -274,10 +279,19 @@ export default function UsersPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('') : user.name ? user.name.split(' ').map((n: string) => n[0]).join('') : user.username?.charAt(0) || '?'}
-                        </span>
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                        {pickMediaUrl(user.avatar_url, user.profile_image_url, user.avatar) ? (
+                          <SafeImage
+                            src={pickMediaUrl(user.avatar_url, user.profile_image_url, user.avatar)}
+                            alt={user.full_name || user.name || user.username}
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-cover"
+                            fallback={<InitialsAvatar name={user.full_name || user.name || user.username} textClassName="text-sm" />}
+                          />
+                        ) : (
+                          <InitialsAvatar name={user.full_name || user.name || user.username} textClassName="text-sm" />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{user.full_name || user.name || user.username}</p>

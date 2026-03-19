@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   Search,
   Plus,
@@ -26,6 +25,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useMyArtistSongs, useDeleteSong, useBulkDeleteSongs, useBulkUpdateSongStatus } from '@/hooks/useArtist';
 import { toast } from 'sonner';
+import { pickMediaUrl } from '@/lib/media';
+import { SafeImage } from '@/components/ui/safe-image';
 
 export default function ArtistSongsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,6 +278,10 @@ export default function ArtistSongsPage() {
             <p>No songs found</p>
           </div>
         ) : songs.map((song) => (
+          (() => {
+            const artworkUrl = pickMediaUrl(song.artwork_url, song.cover);
+
+            return (
           <div
             key={song.id}
             className={cn(
@@ -297,13 +302,17 @@ export default function ArtistSongsPage() {
             {/* Play Button & Cover */}
             <div className="relative group">
               <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-muted">
-                {(song.artwork_url || song.cover) ? (
-                  <Image
-                    src={song.artwork_url || song.cover || ''}
+                {artworkUrl ? (
+                  <SafeImage
+                    src={artworkUrl}
                     alt={song.title}
                     fill
                     className="object-cover"
-                    unoptimized
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <Play className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -380,6 +389,8 @@ export default function ArtistSongsPage() {
               </button>
             </div>
           </div>
+            );
+          })()
         ))}
       </div>
 

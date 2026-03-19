@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { User, Filter, CheckCircle2, Sparkles } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Artist, PaginatedResponse } from "@/types";
+import { pickMediaUrl } from "@/lib/media";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 // Render on-demand so the build doesn't depend on the API being available
 export const dynamic = "force-dynamic";
@@ -31,23 +32,29 @@ async function getClaimableArtists(limit = 6) {
 }
 
 function ArtistCard({ artist }: { artist: Artist }) {
+  const imageSrc = pickMediaUrl(
+    artist.avatar_url,
+    artist.profile_image_url,
+    artist.cover_url,
+    artist.cover_image_url
+  );
+
   return (
     <Link
       href={`/artists/${artist.slug || artist.id}`}
       className="group p-4 rounded-lg bg-card/50 hover:bg-card transition-colors text-center"
     >
       <div className="relative mx-auto w-32 h-32 md:w-40 md:h-40 mb-4 overflow-hidden rounded-full bg-muted shadow-md">
-        {artist.avatar_url || artist.profile_image_url ? (
-          <Image
-            src={artist.avatar_url || artist.profile_image_url || ""}
+        {imageSrc ? (
+          <SafeImage
+            src={imageSrc}
             alt={artist.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
+            fallback={<InitialsAvatar name={artist.name} textClassName="text-5xl font-normal" />}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <User className="h-12 w-12 text-muted-foreground" />
-          </div>
+          <InitialsAvatar name={artist.name} textClassName="text-5xl font-normal" />
         )}
       </div>
       <div className="flex items-center justify-center gap-1">

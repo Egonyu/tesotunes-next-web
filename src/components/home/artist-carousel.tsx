@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Play, User, Headphones } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { useRef } from "react";
 import type { Artist, PaginatedResponse } from "@/types";
 import { formatNumber } from "@/lib/utils";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
+import { pickMediaUrl } from "@/lib/media";
 
 export function ArtistCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -78,7 +79,12 @@ export function ArtistCarousel() {
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {artists.map((artist) => {
-          const imageSrc = artist.avatar_url || artist.profile_image_url || artist.cover_image_url || artist.cover_url;
+          const imageSrc = pickMediaUrl(
+            artist.avatar_url,
+            artist.profile_image_url,
+            artist.cover_image_url,
+            artist.cover_url
+          );
 
           return (
           <Link
@@ -89,17 +95,15 @@ export function ArtistCarousel() {
             {/* Artist Image */}
             <div className="relative aspect-square mb-3 overflow-hidden rounded-full bg-muted">
               {imageSrc ? (
-                <Image
+                <SafeImage
                   src={imageSrc}
                   alt={artist.name}
                   fill
-                  unoptimized
                   className="object-cover transition-transform group-hover/card:scale-105"
+                  fallback={<InitialsAvatar name={artist.name} textClassName="text-5xl font-normal" />}
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <User className="h-12 w-12 text-muted-foreground" />
-                </div>
+                <InitialsAvatar name={artist.name} textClassName="text-5xl font-normal" />
               )}
 
               {/* Play Button */}

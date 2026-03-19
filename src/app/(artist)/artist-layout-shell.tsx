@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
@@ -29,6 +28,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import { pickMediaUrl } from '@/lib/media';
 
 const navItems = [
   { href: '/artist', label: 'Dashboard', icon: LayoutDashboard },
@@ -65,7 +66,7 @@ export default function ArtistLayoutShell({
   const { data: profile } = useArtistProfile({ enabled: true });
 
   const artistName = profile?.stage_name || userName || 'Artist';
-  const artistAvatar = profile?.avatar || userImage || null;
+  const artistAvatar = pickMediaUrl(profile?.avatar, userImage);
   const isVerified = profile?.is_verified || false;
 
   return (
@@ -100,7 +101,14 @@ export default function ArtistLayoutShell({
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
               {artistAvatar ? (
-                <Image src={artistAvatar} alt={artistName} width={48} height={48} className="object-cover" />
+                <SafeImage
+                  src={artistAvatar}
+                  alt={artistName}
+                  width={48}
+                  height={48}
+                  className="object-cover"
+                  fallback={<InitialsAvatar name={artistName} textClassName="text-base" />}
+                />
               ) : (
                 <User className="h-6 w-6 text-muted-foreground" />
               )}
@@ -179,7 +187,14 @@ export default function ArtistLayoutShell({
               >
                 <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                   {artistAvatar ? (
-                    <Image src={artistAvatar} alt={artistName} width={32} height={32} className="object-cover" />
+                    <SafeImage
+                      src={artistAvatar}
+                      alt={artistName}
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                      fallback={<InitialsAvatar name={artistName} textClassName="text-xs" />}
+                    />
                   ) : (
                     <User className="h-4 w-4" />
                   )}

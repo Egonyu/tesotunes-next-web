@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -32,12 +31,8 @@ import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
 import { TipModal } from "@/components/music/TipModal";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-
-// Helper to check if URL is external (for unoptimized loading)
-function isExternalUrl(url: string | undefined | null): boolean {
-  if (!url) return false;
-  return url.startsWith('http://') || url.startsWith('https://');
-}
+import { pickMediaUrl } from "@/lib/media";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 export default function ArtistPage() {
   const params = useParams();
@@ -122,11 +117,8 @@ export default function ArtistPage() {
   };
 
   // Image URLs
-  const avatarUrl = artist.avatar_url || artist.profile_image_url;
-  const bannerUrl = artist.banner_url || artist.cover_url || artist.cover_image_url;
-
-  const avatarIsExternal = isExternalUrl(avatarUrl);
-  const bannerIsExternal = isExternalUrl(bannerUrl);
+  const avatarUrl = pickMediaUrl(artist.avatar_url, artist.profile_image_url);
+  const bannerUrl = pickMediaUrl(artist.banner_url, artist.cover_url, artist.cover_image_url);
 
   const isCurrentArtistPlaying = currentSong?.artist?.id === artist.id && isPlaying;
 
@@ -137,13 +129,12 @@ export default function ArtistPage() {
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/20 to-background">
           {bannerUrl && (
-            <Image
+            <SafeImage
               src={bannerUrl}
               alt=""
               fill
               className="object-cover opacity-30"
               priority
-              unoptimized={bannerIsExternal}
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
@@ -154,18 +145,16 @@ export default function ArtistPage() {
           {/* Profile Image */}
           <div className="relative h-32 w-32 md:h-48 md:w-48 shrink-0 overflow-hidden rounded-full bg-muted shadow-xl ring-4 ring-background">
             {avatarUrl ? (
-              <Image
+              <SafeImage
                 src={avatarUrl}
                 alt={artist.name}
                 fill
                 className="object-cover"
                 priority
-                unoptimized={avatarIsExternal}
+                fallback={<InitialsAvatar name={artist.name} className="bg-primary/10" textClassName="text-5xl font-normal" />}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-primary/10">
-                <User className="h-16 w-16 text-muted-foreground" />
-              </div>
+              <InitialsAvatar name={artist.name} className="bg-primary/10" textClassName="text-5xl font-normal" />
             )}
           </div>
 
@@ -353,7 +342,7 @@ export default function ArtistPage() {
           </div>
           <div className="space-y-1">
             {songs.slice(0, 10).map((song, index) => {
-              const songArtworkUrl = song.artwork_url || song.cover_url || song.album?.artwork_url;
+              const songArtworkUrl = pickMediaUrl(song.artwork_url, song.cover_url, song.album?.artwork_url);
               const isCurrentSong = currentSong?.id === song.id;
               const isSongPlaying = isCurrentSong && isPlaying;
 
@@ -389,12 +378,16 @@ export default function ArtistPage() {
                   {/* Artwork */}
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
                     {songArtworkUrl ? (
-                      <Image
+                      <SafeImage
                         src={songArtworkUrl}
                         alt={song.title}
                         fill
                         className="object-cover"
-                        unoptimized={isExternalUrl(songArtworkUrl)}
+                        fallback={
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Music className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
@@ -446,7 +439,7 @@ export default function ArtistPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {albums.map((album) => {
-              const albumArtworkUrl = album.artwork_url || (album as { cover_url?: string }).cover_url;
+              const albumArtworkUrl = pickMediaUrl(album.artwork_url, (album as { cover_url?: string }).cover_url);
               return (
                 <Link
                   key={album.id}
@@ -455,12 +448,16 @@ export default function ArtistPage() {
                 >
                   <div className="relative aspect-square mb-3 overflow-hidden rounded-md bg-muted">
                     {albumArtworkUrl ? (
-                      <Image
+                      <SafeImage
                         src={albumArtworkUrl}
                         alt={album.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform"
-                        unoptimized={isExternalUrl(albumArtworkUrl)}
+                        fallback={
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Disc3 className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">

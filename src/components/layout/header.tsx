@@ -7,10 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
+import { pickMediaUrl } from "@/lib/media";
 
 function formatRoleLabel(role: string | undefined): string {
   if (!role) return "Listener";
@@ -42,6 +43,10 @@ export function Header() {
   const isArtistByRole = userRole.toLowerCase().includes("artist");
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtistByRole || isArtistByStatus;
+  const sessionImage = pickMediaUrl(
+    session?.user?.image,
+    (session?.user as { avatar_url?: string } | undefined)?.avatar_url
+  );
 
   return (
     <header
@@ -94,12 +99,13 @@ export function Header() {
               trigger={
                 <button className="flex items-center gap-2 rounded-full p-1 pr-2 transition-colors hover:bg-muted">
                   <div className="relative h-9 w-9 overflow-hidden rounded-full bg-muted ring-2 ring-background">
-                    {session.user.image ? (
-                      <Image
-                        src={session.user.image}
+                    {sessionImage ? (
+                      <SafeImage
+                        src={sessionImage}
                         alt={session.user.name || "User"}
                         fill
                         className="object-cover"
+                        fallback={<InitialsAvatar name={session.user.name} textClassName="text-xs" />}
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
@@ -122,12 +128,13 @@ export function Header() {
                   className="mt-3 flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/80 px-3 py-3 text-left transition-colors hover:bg-muted"
                 >
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
-                    {session.user.image ? (
-                      <Image
-                        src={session.user.image}
+                    {sessionImage ? (
+                      <SafeImage
+                        src={sessionImage}
                         alt={session.user.name || "User"}
                         fill
                         className="object-cover"
+                        fallback={<InitialsAvatar name={session.user.name} textClassName="text-sm" />}
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">

@@ -15,6 +15,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistProfile, useUpdateArtistProfile } from '@/hooks/useArtist';
 import { toast } from 'sonner';
+import { pickMediaUrl } from '@/lib/media';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 
 export default function ArtistSettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -160,10 +162,17 @@ export default function ArtistSettingsPage() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                    {profile?.avatar ? (
-                      <img src={profile.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                    {pickMediaUrl(profile?.avatar) ? (
+                      <SafeImage
+                        src={pickMediaUrl(profile?.avatar)}
+                        alt="Avatar"
+                        width={96}
+                        height={96}
+                        className="h-full w-full object-cover"
+                        fallback={<InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />}
+                      />
                     ) : (
-                      <User className="h-12 w-12 text-muted-foreground" />
+                      <InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />
                     )}
                   </div>
                   <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">

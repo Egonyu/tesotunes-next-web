@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api';
 import {
@@ -24,6 +23,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import { pickMediaUrl } from '@/lib/media';
 
 interface Artist {
   id: number;
@@ -206,16 +207,23 @@ export default function ArtistsPage() {
           </div>
         ) : artists.map((artist) => (
           <div key={artist.id} className="p-4 rounded-xl border bg-card">
+            {(() => {
+              const avatarUrl = pickMediaUrl(artist.avatar_url);
+
+              return (
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="relative h-14 w-14 rounded-full overflow-hidden bg-muted">
-                  {artist.avatar_url && (
-                    <Image
-                      src={artist.avatar_url}
+                  {avatarUrl ? (
+                    <SafeImage
+                      src={avatarUrl}
                       alt={artist.name}
                       fill
                       className="object-cover"
+                      fallback={<InitialsAvatar name={artist.name} textClassName="text-lg" />}
                     />
+                  ) : (
+                    <InitialsAvatar name={artist.name} textClassName="text-lg" />
                   )}
                 </div>
                 <div>
@@ -243,6 +251,8 @@ export default function ArtistsPage() {
                 {artist.status}
               </span>
             </div>
+              );
+            })()}
 
             <div className="grid grid-cols-4 gap-2 mb-4 text-center">
               <div>

@@ -56,6 +56,32 @@ interface SystemHealthResponse {
       path: string;
       healthy: boolean;
     };
+    integrations: {
+      mail: {
+        status: string;
+        mailer: string;
+        host: string | null;
+        port: number | string | null;
+        from_address: string | null;
+        configured: boolean;
+      };
+      broadcasting: {
+        status: string;
+        connection: string;
+        host: string | null;
+        port: number | string | null;
+        app_id_present: boolean;
+        key_present: boolean;
+      };
+      sentry: {
+        status: string;
+        enabled: boolean;
+        environment: string | null;
+        release: string | null;
+        traces_sample_rate: number | null;
+        profiles_sample_rate: number | null;
+      };
+    };
     alerts: Array<{
       level: 'critical' | 'warning' | 'info';
       title: string;
@@ -193,6 +219,36 @@ export default function AdminSystemPage() {
         <MetricCard title="Environment" value={health.deployment.environment} icon={Server} />
         <MetricCard title="Queue Driver" value={String(health.components.queue?.metrics?.driver ?? 'unknown')} icon={RefreshCw} />
         <MetricCard title="Backups" value={`${health.backup.total_backups}`} subtitle={health.backup.total_size} icon={HardDrive} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <IntegrationCard
+          title="Mail"
+          status={health.integrations.mail.status}
+          rows={[
+            ['Mailer', health.integrations.mail.mailer],
+            ['Host', health.integrations.mail.host ?? 'Not set'],
+            ['From', health.integrations.mail.from_address ?? 'Not set'],
+          ]}
+        />
+        <IntegrationCard
+          title="Broadcasting"
+          status={health.integrations.broadcasting.status}
+          rows={[
+            ['Connection', health.integrations.broadcasting.connection],
+            ['Host', health.integrations.broadcasting.host ?? 'Not set'],
+            ['App Credentials', health.integrations.broadcasting.app_id_present && health.integrations.broadcasting.key_present ? 'Present' : 'Incomplete'],
+          ]}
+        />
+        <IntegrationCard
+          title="Sentry"
+          status={health.integrations.sentry.status}
+          rows={[
+            ['Enabled', health.integrations.sentry.enabled ? 'Yes' : 'No'],
+            ['Environment', health.integrations.sentry.environment ?? 'Not set'],
+            ['Release', health.integrations.sentry.release ?? 'Not set'],
+          ]}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -385,6 +441,30 @@ function EmptyState({ icon: Icon, text }: { icon: typeof Activity; text: string 
     <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
       <Icon className="mx-auto mb-3 h-5 w-5" />
       {text}
+    </div>
+  );
+}
+
+function IntegrationCard({
+  title,
+  status,
+  rows,
+}: {
+  title: string;
+  status: string;
+  rows: Array<[string, string]>;
+}) {
+  return (
+    <div className="rounded-3xl border bg-card p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold">{title}</h2>
+        <Badge className={cn('border capitalize', statusTone(status))}>{status}</Badge>
+      </div>
+      <div className="space-y-2 text-sm">
+        {rows.map(([label, value]) => (
+          <Row key={label} label={label} value={value} />
+        ))}
+      </div>
     </div>
   );
 }

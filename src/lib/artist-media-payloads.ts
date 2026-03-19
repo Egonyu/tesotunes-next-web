@@ -1,5 +1,6 @@
 export interface ArtistSongPayload {
   title: string;
+  slug?: string;
   album_id?: number;
   genre?: string;
   featured_artists?: string;
@@ -75,6 +76,7 @@ function appendArtistSongFields(formData: FormData, payload: Partial<ArtistSongP
 export function buildArtistSongUploadFormData(payload: ArtistSongUploadPayload) {
   const formData = new FormData();
   formData.append("title", payload.title.trim());
+  appendTrimmed(formData, "slug", payload.slug);
   formData.append("audio", payload.audio_file);
 
   if (payload.cover_image) {

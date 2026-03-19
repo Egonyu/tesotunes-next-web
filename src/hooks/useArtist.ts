@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 import { useSession } from "next-auth/react";
+import { slugify } from "@/lib/utils";
 import {
   buildArtistAlbumCreateFormData,
   buildArtistAlbumUpdateFormData,
@@ -512,14 +513,42 @@ export interface UploadProgress {
   total: number;
 }
 
+function isRetryableDuplicateSongUploadError(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const status = error.response?.status;
+  const responseData = error.response?.data as { message?: string; error?: string; errors?: Record<string, unknown> } | undefined;
+  const messageParts = [
+    error.message,
+    responseData?.message,
+    responseData?.error,
+    JSON.stringify(responseData?.errors ?? {}),
+  ].filter(Boolean);
+  const combinedMessage = messageParts.join(" ").toLowerCase();
+
+  const looksLikeDuplicate =
+    combinedMessage.includes("duplicate") ||
+    combinedMessage.includes("already exists") ||
+    combinedMessage.includes("integrity constraint") ||
+    combinedMessage.includes("sqlstate") ||
+    combinedMessage.includes("slug");
+
+  return looksLikeDuplicate && (status === 500 || status === 422 || status === 409);
+}
+
+function buildRetrySongSlug(title: string) {
+  const baseSlug = slugify(title) || "song";
+  return `${baseSlug}-${Date.now()}`;
+}
+
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
 
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
-      const formData = buildArtistSongUploadFormData(data);
-
       // Get the Laravel API URL from env
       const laravelApiUrl = process.env.NEXT_PUBLIC_API_URL
         ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')
@@ -538,20 +567,37 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
         instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      return instance.post<UploadSongResponse>('/artist/songs', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
-          if (onProgress && progressEvent.total) {
-            onProgress({
-              percent: Math.round((progressEvent.loaded * 100) / progressEvent.total),
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-            });
-          }
-        },
-      }).then(res => res.data);
+      const submitUpload = (payload: UploadSongData) => {
+        const uploadFormData = buildArtistSongUploadFormData(payload);
+
+        return instance.post<UploadSongResponse>('/artist/songs', uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
+            if (onProgress && progressEvent.total) {
+              onProgress({
+                percent: Math.round((progressEvent.loaded * 100) / progressEvent.total),
+                loaded: progressEvent.loaded,
+                total: progressEvent.total,
+              });
+            }
+          },
+        }).then(res => res.data);
+      };
+
+      try {
+        return await submitUpload(data);
+      } catch (error) {
+        if (!data.slug && isRetryableDuplicateSongUploadError(error)) {
+          return submitUpload({
+            ...data,
+            slug: buildRetrySongSlug(data.title),
+          });
+        }
+
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "songs"] });

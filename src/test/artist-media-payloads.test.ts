@@ -12,6 +12,7 @@ describe("artist media payload builders", () => {
 
     const formData = buildArtistSongUploadFormData({
       title: "  Test Song  ",
+      slug: "test-song-123",
       audio_file: audio,
       cover_image: cover,
       album_id: 5,
@@ -29,6 +30,7 @@ describe("artist media payload builders", () => {
     });
 
     expect(formData.get("title")).toBe("Test Song");
+    expect(formData.get("slug")).toBe("test-song-123");
     expect(formData.get("audio")).toBe(audio);
     expect(formData.get("cover")).toBe(cover);
     expect(formData.get("album_id")).toBe("5");

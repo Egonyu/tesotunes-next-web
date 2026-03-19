@@ -3,3 +3,4 @@ export { FormField, FormSection, FormActions } from './FormField';
 export { PageHeader } from './PageHeader';
 export { StatusBadge } from './StatusBadge';
 export { ConfirmDialog } from './ConfirmDialog';
+export { GenreIconPicker } from './GenreIconPicker';

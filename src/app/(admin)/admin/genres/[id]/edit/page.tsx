@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPut } from '@/lib/api';
 import { Music } from 'lucide-react';
 import Link from 'next/link';
-import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import { PageHeader, FormField, FormSection, FormActions, GenreIconPicker } from '@/components/admin';
 import { toast } from 'sonner';
 
 interface GenreData {
@@ -205,13 +205,10 @@ export default function EditGenrePage({ params }: { params: Promise<{ id: string
           </FormField>
 
           <FormField label="Icon / Emoji" error={errors.icon}>
-            <input
-              type="text"
+            <GenreIconPicker
               value={formData.icon}
-              onChange={(e) => updateField('icon', e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary max-w-32"
-              placeholder="🎵"
-              maxLength={10}
+              onChange={(value) => updateField('icon', value)}
+              error={errors.icon}
             />
           </FormField>
         </FormSection>

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock3,
+  Download,
   Eye,
   FileAudio,
   FileSpreadsheet,
@@ -144,6 +145,16 @@ export default function CatalogPage() {
       <PageHeader
         title="Catalog Intake"
         description="Bulk upload music for offline artists using one CSV plus many files."
+        actions={(
+          <a
+            href="/templates/catalog-intake-template.csv"
+            download
+            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            Download CSV Template
+          </a>
+        )}
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Catalog Intake' },

@@ -1,0 +1,3 @@
+audio_filename,artist_name,song_title,cover_filename,phone_number,email,national_id,external_reference,genre,release_date,featured_artists,notes
+song-one.mp3,Offline Star,Song One,offline-star-cover.jpg,+256700000001,artist@example.com,CM12345678,BATCH-001,Teso Hip-Hop,2026-03-19,"Guest One, Guest Two",Uploaded by district field team
+song-two.mp3,Another Voice,Song Two,,+256700000002,,,Dancehall,2026-03-19,,No cover supplied yet

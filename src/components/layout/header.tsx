@@ -65,6 +65,13 @@ export function Header() {
           <Search className="h-4 w-4" />
           <span className="hidden md:inline">Search songs, artists, albums...</span>
         </Link>
+
+        <Link
+          href="/claim-artist"
+          className="hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
+        >
+          Claim Artist
+        </Link>
       </div>
 
       {/* Right Section */}
@@ -193,6 +200,13 @@ export function Header() {
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   <span>Settings</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  onClick={() => router.push("/claim-artist")}
+                >
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <span>Claim Artist Profile</span>
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator className="my-2" />
 
@@ -208,6 +222,12 @@ export function Header() {
           </>
         ) : (
           <div className="flex items-center gap-2">
+            <Link
+              href="/claim-artist"
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Claim Artist
+            </Link>
             <Link
               href="/register"
               className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"

@@ -34,6 +34,10 @@ type Artist = {
   bio: string | null;
   status: string;
   is_verified: boolean;
+  is_placeholder?: boolean;
+  claim_status?: string | null;
+  claimed_user_id?: number | null;
+  catalog_manager_user_id?: number | null;
   verification_status?: string;
   rejection_reason?: string | null;
   is_featured: boolean;
@@ -345,6 +349,11 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
               <div className="mb-1 flex items-center gap-2">
                 <h2 className="text-2xl font-bold">{artist.name}</h2>
                 {artist.is_verified && <CheckCircle className="h-5 w-5 text-blue-400" fill="currentColor" />}
+                {artist.is_placeholder ? (
+                  <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                    Placeholder Artist
+                  </span>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-white/85">
                 {artist.website && (
@@ -396,6 +405,38 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bio</h3>
             <p className="text-sm leading-6 text-foreground/90">{artist.bio || 'No bio provided.'}</p>
           </div>
+
+          {(artist.is_placeholder || artist.claim_status) && (
+            <div className="rounded-xl border bg-card p-6">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Claimability</h3>
+                <Link
+                  href="/admin/catalog/claims"
+                  className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+                >
+                  Open Claim Queue
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Placeholder Status</p>
+                  <p className="mt-1 text-lg font-semibold">{artist.is_placeholder ? 'Placeholder artist' : 'Claimed artist'}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Claim Status</p>
+                  <p className="mt-1 text-lg font-semibold capitalize">{artist.claim_status || 'not-set'}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Operational Notes</p>
+                  <p className="mt-1 text-sm text-foreground/80">
+                    {artist.is_placeholder
+                      ? 'This profile was created for catalog intake and can be claimed later.'
+                      : 'This profile is already linked to a claimed artist account.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Songs Management Table */}
           <div className="rounded-xl border bg-card p-6">

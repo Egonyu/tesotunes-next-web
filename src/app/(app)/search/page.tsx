@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearch } from "@/hooks";
-import { Search as SearchIcon, X, Loader2, Music, User, Disc } from "lucide-react";
+import { Search as SearchIcon, X, Loader2, Music, User, Disc, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePlayerStore } from "@/stores";
@@ -42,6 +42,23 @@ export default function SearchPage() {
       {isLoading && (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {query.length < 2 && (
+        <div className="mx-auto mb-8 max-w-2xl rounded-2xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium">Looking for music uploaded on your behalf?</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Use the artist claim flow to find placeholder profiles and request ownership.
+              </p>
+              <Link href="/claim-artist" className="mt-3 inline-flex items-center text-sm font-medium text-primary hover:underline">
+                Open artist claims
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 

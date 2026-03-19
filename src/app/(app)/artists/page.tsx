@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { User, Filter, CheckCircle2 } from "lucide-react";
+import { User, Filter, CheckCircle2, Sparkles } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Artist, PaginatedResponse } from "@/types";
 
@@ -15,6 +15,17 @@ async function getArtists(page = 1, limit = 24) {
     );
   } catch (error) {
     console.error('Failed to fetch artists:', error);
+    return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };
+  }
+}
+
+async function getClaimableArtists(limit = 6) {
+  try {
+    return await serverFetch<PaginatedResponse<Artist>>(
+      `/catalog/claimable-artists?claimable_only=1&per_page=${limit}`
+    );
+  } catch (error) {
+    console.error('Failed to fetch claimable artists:', error);
     return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } };
   }
 }
@@ -47,6 +58,11 @@ function ArtistCard({ artist }: { artist: Artist }) {
           <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
         )}
       </div>
+      {artist.is_placeholder && artist.claim_status === "unclaimed" && (
+        <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-amber-600">
+          Claimable profile
+        </p>
+      )}
       <p className="text-sm text-muted-foreground mt-1">
         {artist.follower_count?.toLocaleString() || 0} followers
       </p>
@@ -75,8 +91,9 @@ function ArtistGridSkeleton() {
 
 async function ArtistGrid() {
   const { data: artists } = await getArtists();
+  const { data: claimableArtists } = await getClaimableArtists();
 
-  if (artists.length === 0) {
+  if (artists.length === 0 && claimableArtists.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -86,10 +103,46 @@ async function ArtistGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-      {artists.map((artist) => (
-        <ArtistCard key={artist.id} artist={artist} />
-      ))}
+    <div className="space-y-10">
+      {claimableArtists.length > 0 && (
+        <section className="rounded-3xl border border-primary/20 bg-primary/5 p-6">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Claimable Profiles
+              </div>
+              <h2 className="text-2xl font-bold">Artists uploaded on behalf of offline talent</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                If one of these profiles belongs to you, open it and submit a claim request for review.
+              </p>
+            </div>
+            <Link href="/claim-artist" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Start a claim
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-6">
+            {claimableArtists.map((artist) => (
+              <ArtistCard key={`claimable-${artist.id}`} artist={artist} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold">All Artists</h2>
+          <Link href="/claim-artist" className="text-sm font-medium text-primary hover:underline">
+            Need to claim a profile?
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {artists.map((artist) => (
+            <ArtistCard key={artist.id} artist={artist} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -105,10 +158,19 @@ export default function ArtistsPage() {
             Discover talented East African artists and musicians
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors">
-          <Filter className="h-4 w-4" />
-          Filters
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/claim-artist"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Sparkles className="h-4 w-4" />
+            Claim Artist
+          </Link>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors">
+            <Filter className="h-4 w-4" />
+            Filters
+          </button>
+        </div>
       </div>
 
       {/* Filter Tags */}

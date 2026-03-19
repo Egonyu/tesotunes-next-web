@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api';
 import { getEchoInstance, reconnectEcho } from '@/lib/echo';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 // ============================================================================
 
 export interface Notification {
-  id: number;
+  id: number | string;
   type:
     | 'like'
     | 'comment'
@@ -29,13 +29,19 @@ export interface Notification {
     | 'song_approved'
     | 'song_pending_review'
     | 'song_moderation'
+    | 'artist_application'
+    | 'catalog_claim'
+    | 'admin_artist_application_pending'
+    | 'admin_catalog_claim_pending'
     | 'subscription_expiring'
     | 'weekly_digest'
     | 'playlist_share'
     | 'tip';
   title: string;
   message: string;
-  link: string;
+  link?: string | null;
+  action_url?: string | null;
+  is_read?: boolean;
   read_at: string | null;
   created_at: string;
   actor?: {
@@ -110,11 +116,20 @@ export function useNotifications(options?: { filter?: 'all' | 'unread'; page?: n
   
   return useQuery({
     queryKey: ['notifications', { filter, page }],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
-      if (filter === 'unread') params.append('unread', 'true');
+      if (filter === 'unread') params.append('unread_only', 'true');
       params.append('page', String(page));
-      return apiGet<NotificationsResponse>(`/notifications?${params.toString()}`);
+      const response = await apiGet<NotificationsResponse>(`/notifications?${params.toString()}`);
+
+      return {
+        ...response,
+        data: (response.data || []).map((notification) => ({
+          ...notification,
+          link: notification.link ?? notification.action_url ?? null,
+          read_at: notification.read_at ?? (notification.is_read ? notification.created_at : null),
+        })),
+      };
     },
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -123,7 +138,14 @@ export function useNotifications(options?: { filter?: 'all' | 'unread'; page?: n
 export function useUnreadCount() {
   return useQuery({
     queryKey: ['notifications-unread'],
-    queryFn: () => apiGet<UnreadCountsResponse>('/notifications/unread-counts'),
+    queryFn: async (): Promise<UnreadCountsResponse> => {
+      const response = await apiGet<{ data?: UnreadCountsResponse } | UnreadCountsResponse>('/notifications/unread-counts');
+      if ('data' in response && response.data) {
+        return response.data;
+      }
+
+      return response as UnreadCountsResponse;
+    },
     staleTime: 30 * 1000,
     refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 1 minute
     refetchOnWindowFocus: false,
@@ -146,7 +168,7 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: number) => apiPost(`/notifications/${id}/mark-read`, {}),
+    mutationFn: (id: number | string) => apiPost(`/notifications/${id}/mark-read`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications-unread'] });
@@ -172,7 +194,7 @@ export function useDeleteNotification() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: number) => apiDelete(`/notifications/${id}`),
+    mutationFn: (id: number | string) => apiDelete(`/notifications/${id}`),
     onSuccess: () => {
       toast.success('Notification deleted');
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -187,7 +209,7 @@ export function useUpdateNotificationPreferences() {
   
   return useMutation({
     mutationFn: (preferences: NotificationPreferences) => 
-      apiPost('/notifications/settings', preferences),
+      apiPut('/notifications/settings', preferences),
     onSuccess: () => {
       toast.success('Notification preferences updated');
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
@@ -238,13 +260,14 @@ export function useRealtimeNotifications() {
   
   const handleNewNotification = useCallback((event: RealtimeNotificationEvent) => {
     const notification = event.notification;
+    const actionLink = notification.link ?? notification.action_url ?? null;
     
     // Show toast for new notification
     toast(notification.title, {
       description: notification.message,
-      action: notification.link ? {
+      action: actionLink ? {
         label: 'View',
-        onClick: () => window.location.href = notification.link,
+        onClick: () => window.location.href = actionLink,
       } : undefined,
     });
     

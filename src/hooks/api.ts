@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
-import type { Song, Artist, Album, Genre, Playlist, PaginatedResponse } from "@/types";
+import type { Song, Artist, Album, Genre, Playlist, PaginatedResponse, CatalogClaimRequest } from "@/types";
 
 // ============================================================================
 // Songs Hooks
@@ -70,6 +70,50 @@ export function useArtists(params?: { page?: number; limit?: number }) {
     queryKey: ["artists", params],
     queryFn: () => apiGet<PaginatedResponse<Artist>>("/artists", { params }),
     retry: 1,
+  });
+}
+
+export function useClaimableArtistsSearch(query: string) {
+  return useQuery({
+    queryKey: ["artists", "claimable", query],
+    queryFn: async () => {
+      const res = await apiGet<PaginatedResponse<Artist>>("/catalog/claimable-artists", {
+        params: {
+          claimable_only: 1,
+          per_page: 24,
+          search: query,
+        },
+      });
+      return res.data;
+    },
+    enabled: query.trim().length >= 2,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useSubmitCatalogClaim() {
+  return useMutation({
+    mutationFn: (data: {
+      artist_id: number;
+      song_ids?: number[];
+      phone_number?: string;
+      message: string;
+      evidence?: string[];
+    }) => apiPost<{ message?: string; data?: unknown }>("/catalog/claim-requests", data),
+  });
+}
+
+export function useMyCatalogClaims() {
+  return useQuery({
+    queryKey: ["catalog", "claims", "mine"],
+    queryFn: async () => {
+      const res = await apiGet<{
+        data: {
+          data: CatalogClaimRequest[];
+        };
+      }>("/catalog/claim-requests");
+      return res.data.data;
+    },
   });
 }
 
@@ -454,4 +498,3 @@ export function useSendTip() {
     },
   });
 }
-

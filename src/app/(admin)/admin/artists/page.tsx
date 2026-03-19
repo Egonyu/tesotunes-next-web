@@ -31,6 +31,8 @@ interface Artist {
   slug: string;
   avatar_url: string | null;
   is_verified: boolean;
+  is_placeholder?: boolean;
+  claim_status?: 'unclaimed' | 'claimed' | string | null;
   songs_count: number;
   albums_count: number;
   followers_count: number;
@@ -222,8 +224,16 @@ export default function ArtistsPage() {
                     {artist.is_verified && (
                       <CheckCircle className="h-4 w-4 text-primary fill-primary" />
                     )}
+                    {artist.is_placeholder && (
+                      <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                        Placeholder
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">@{artist.slug}</p>
+                  <p className="text-sm text-muted-foreground">
+                    @{artist.slug}
+                    {artist.is_placeholder && artist.claim_status ? ` • ${artist.claim_status}` : ''}
+                  </p>
                 </div>
               </div>
               <span className={cn(

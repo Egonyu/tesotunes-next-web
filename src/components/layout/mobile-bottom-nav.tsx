@@ -63,6 +63,7 @@ const browseItems = [
   { href: "/playlists", label: "Playlists", icon: Library },
   { href: "/charts", label: "Charts", icon: TrendingUp },
   { href: "/new-releases", label: "New Releases", icon: Sparkles },
+  { href: "/claim-artist", label: "Claim Artist", icon: Sparkles },
   { href: "/moods", label: "Moods", icon: Heart },
   { href: "/radio", label: "Radio", icon: Radio },
 ];

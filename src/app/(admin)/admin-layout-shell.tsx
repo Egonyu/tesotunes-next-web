@@ -35,6 +35,8 @@ import {
   Crown,
   Building2,
   Star,
+  FolderUp,
+  BadgeCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
@@ -46,6 +48,8 @@ const navItems = [
   { href: '/admin/songs', label: 'Songs', icon: Music },
   { href: '/admin/albums', label: 'Albums', icon: Disc3 },
   { href: '/admin/artists', label: 'Artists', icon: Mic2 },
+  { href: '/admin/catalog', label: 'Catalog Intake', icon: FolderUp },
+  { href: '/admin/catalog/claims', label: 'Claim Review', icon: BadgeCheck },
   { href: '/admin/genres', label: 'Genres', icon: Tags },
   { href: '/admin/featured', label: 'Featured', icon: Star },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },

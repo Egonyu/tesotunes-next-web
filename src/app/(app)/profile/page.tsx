@@ -6,11 +6,9 @@ import {
   User,
   Mail,
   Calendar,
-  MapPin,
   Music,
   Heart,
   ListMusic,
-  Clock,
   Settings,
   Edit,
   Loader2,
@@ -18,9 +16,12 @@ import {
   Wifi,
   Volume2,
   CheckCircle,
+  ArrowRight,
+  BadgeCheck,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
-import { useLibrary, useRecentlyPlayed, useFollowedArtists } from "@/hooks/api";
+import { useLibrary, useRecentlyPlayed, useMyCatalogClaims } from "@/hooks/api";
 import { useWallet } from "@/hooks/usePayments";
 import { useMySubscription } from "@/hooks/useSubscriptions";
 
@@ -28,6 +29,7 @@ export default function ProfilePage() {
   const { data: session, status } = useSession();
   const { playlists, likedSongs, followedArtists: libArtists, isLoading: libraryLoading } = useLibrary();
   const { data: recentSongs, isLoading: recentLoading } = useRecentlyPlayed(5);
+  const { data: myClaims = [], isLoading: claimsLoading } = useMyCatalogClaims();
   const { data: walletData } = useWallet();
   const { data: currentSub } = useMySubscription();
 
@@ -63,6 +65,9 @@ export default function ProfilePage() {
       ? formatTimeAgo(song.created_at)
       : "",
   }));
+
+  const activeClaims = myClaims.filter((claim) => ["pending", "under_review"].includes(claim.status));
+  const approvedClaims = myClaims.filter((claim) => claim.status === "approved");
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -190,6 +195,80 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Artist Claims</h2>
+            <Link href="/settings/claims" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+          <div className="rounded-xl bg-card border p-5">
+            {claimsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : myClaims.length === 0 ? (
+              <div className="text-center text-muted-foreground">
+                <ShieldAlert className="h-8 w-8 mx-auto mb-3 opacity-60" />
+                <p className="font-medium text-foreground">No artist claims yet</p>
+                <p className="text-sm mt-1">
+                  If music was uploaded for you, search for your placeholder profile and request ownership.
+                </p>
+                <Link
+                  href="/claim-artist"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Claim an artist
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="text-2xl font-bold">{activeClaims.length}</div>
+                    <div className="text-sm text-muted-foreground">Active claims</div>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="text-2xl font-bold">{approvedClaims.length}</div>
+                    <div className="text-sm text-muted-foreground">Approved</div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {myClaims.slice(0, 2).map((claim) => (
+                    <div key={claim.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{claim.artist?.name || "Unknown artist"}</p>
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {claim.status.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                        <BadgeCheck className={`h-5 w-5 ${claim.status === "approved" ? "text-emerald-600" : claim.status === "rejected" ? "text-rose-600" : "text-amber-600"}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/settings/claims"
+                    className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    Manage claims
+                  </Link>
+                  <Link
+                    href="/claim-artist"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Start another claim
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Recent Activity */}
         <div>
           <h2 className="text-xl font-bold mb-4">Recently Played</h2>

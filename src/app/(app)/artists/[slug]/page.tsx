@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Play,
   Pause,
@@ -40,6 +41,7 @@ function isExternalUrl(url: string | undefined | null): boolean {
 
 export default function ArtistPage() {
   const params = useParams();
+  const pathname = usePathname();
   const slug = params?.slug as string;
   const [tipModalOpen, setTipModalOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -288,6 +290,27 @@ export default function ArtistPage() {
             {artist.genre.name}
           </Link>
         </div>
+      )}
+
+      {artist.is_placeholder && artist.claim_status === 'unclaimed' && (
+        <section className="px-6 pb-6">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-5 dark:bg-amber-950/20">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Claimable Artist Profile</p>
+                <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80">
+                  This profile was uploaded on behalf of an offline artist and can be claimed by its rightful owner.
+                </p>
+              </div>
+              <Link
+                href={`/claim-artist?artist=${artist.id}&from=${encodeURIComponent(pathname || `/artists/${slug}`)}`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+              >
+                Claim This Artist
+              </Link>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Bio */}

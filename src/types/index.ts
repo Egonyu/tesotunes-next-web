@@ -74,11 +74,24 @@ export interface Artist {
   monthly_listeners: number;
   total_plays?: number;
   is_verified: boolean;
+  is_placeholder?: boolean;
+  claim_status?: "unclaimed" | "claimed" | string;
   verification_badge?: string;
   status: ArtistStatus;
   genres: Genre[];
   genre?: Genre;
   social_links?: SocialLinks;
+}
+
+export interface CatalogClaimRequest {
+  id: number;
+  status: "pending" | "under_review" | "approved" | "rejected" | "cancelled" | string;
+  phone_number?: string | null;
+  message: string;
+  rejection_reason?: string | null;
+  created_at?: string;
+  reviewed_at?: string | null;
+  artist?: Artist | null;
 }
 
 export type ArtistStatus = "pending" | "active" | "verified" | "suspended";

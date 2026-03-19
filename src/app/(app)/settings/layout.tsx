@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { User, CreditCard, Bell, Shield, Palette, LogOut, Lock, Loader2 } from 'lucide-react';
+import { User, CreditCard, Bell, Shield, Palette, LogOut, Lock, Loader2, BadgeCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsNav = [
   { href: '/settings', label: 'General', icon: User },
   { href: '/settings/profile', label: 'Profile', icon: User },
+  { href: '/settings/claims', label: 'My Claims', icon: BadgeCheck },
   { href: '/settings/subscription', label: 'Subscription', icon: CreditCard },
   { href: '/settings/notifications', label: 'Notifications', icon: Bell },
   { href: '/settings/security', label: 'Security & 2FA', icon: Lock },

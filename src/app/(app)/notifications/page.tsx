@@ -30,6 +30,7 @@ import {
   PlayCircle,
   DollarSign,
   ListMusic,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotificationsWithRealtime, type Notification } from '@/hooks/useNotifications';
@@ -63,6 +64,12 @@ export default function NotificationsPage() {
     award_nomination: { icon: Trophy, color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-950' },
     referral_reward: { icon: Gift, color: 'text-teal-500 bg-teal-100 dark:bg-teal-950' },
     song_approved: { icon: CheckCircle2, color: 'text-green-500 bg-green-100 dark:bg-green-950' },
+    song_pending_review: { icon: Music, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950' },
+    song_moderation: { icon: Music, color: 'text-primary bg-primary/10' },
+    artist_application: { icon: CheckCircle2, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950' },
+    catalog_claim: { icon: Bell, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950' },
+    admin_artist_application_pending: { icon: Clock, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950' },
+    admin_catalog_claim_pending: { icon: Clock, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950' },
     subscription_expiring: { icon: AlertTriangle, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950' },
     weekly_digest: { icon: Mail, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950' },
     playlist_share: { icon: ListMusic, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950' },

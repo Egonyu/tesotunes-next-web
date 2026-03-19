@@ -54,6 +54,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "emuria.syd1.digitaloceanspaces.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "*.cloudinary.com",
       },
       {

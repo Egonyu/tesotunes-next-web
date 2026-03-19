@@ -78,6 +78,47 @@ interface SettingsResponse {
   data: PlatformSettings;
 }
 
+interface NotificationHealthResponse {
+  data: {
+    mail: {
+      mailer: string;
+      from_address_configured: boolean;
+      smtp_host_configured: boolean;
+      smtp_port_configured: boolean;
+      is_log_mailer: boolean;
+      is_array_mailer: boolean;
+    };
+    queue: {
+      connection: string;
+      is_async: boolean;
+      pending_jobs: number | null;
+      failed_jobs: number | null;
+      recent_failures: Array<{
+        id: string | number;
+        queue: string | null;
+        failed_at: string | null;
+        exception_summary: string | null;
+      }>;
+    };
+    push: {
+      active_device_tokens: number | null;
+    };
+    notifications: {
+      sent_last_24h: number;
+      unread_total: number;
+      top_types_last_7d: Array<{
+        type: string;
+        count: number;
+      }>;
+    };
+    checks: {
+      mail_ready: boolean;
+      queue_ready: boolean;
+      push_ready: boolean;
+    };
+  };
+}
+
 // ── Component ────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
   const queryClient = useQueryClient();
@@ -101,6 +142,13 @@ export default function AdminSettingsPage() {
     queryFn: () => apiGet<SettingsResponse>('/admin/settings'),
     retry: 1,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: notificationHealthData, isLoading: notificationHealthLoading } = useQuery({
+    queryKey: ['admin-notification-health'],
+    queryFn: () => apiGet<NotificationHealthResponse>('/notifications/health'),
+    retry: 1,
+    staleTime: 60 * 1000,
   });
 
   useEffect(() => {
@@ -331,6 +379,111 @@ export default function AdminSettingsPage() {
                     <option value="never">Never</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="pt-6 border-t space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold">Delivery Health</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Quick diagnostics for notification delivery, queues, and mail configuration.
+                    </p>
+                  </div>
+                  {notificationHealthLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+
+                {notificationHealthData?.data ? (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">Mail</p>
+                          <CheckCircle className={cn('h-4 w-4', notificationHealthData.data.checks.mail_ready ? 'text-green-600' : 'text-amber-600')} />
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">Mailer: {notificationHealthData.data.mail.mailer}</p>
+                        <p className="text-sm text-muted-foreground">
+                          From address: {notificationHealthData.data.mail.from_address_configured ? 'configured' : 'missing'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          SMTP host: {notificationHealthData.data.mail.smtp_host_configured ? 'configured' : 'missing'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">Queue</p>
+                          <CheckCircle className={cn('h-4 w-4', notificationHealthData.data.checks.queue_ready ? 'text-green-600' : 'text-amber-600')} />
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">Connection: {notificationHealthData.data.queue.connection}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Mode: {notificationHealthData.data.queue.is_async ? 'async' : 'sync'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Failed jobs: {notificationHealthData.data.queue.failed_jobs ?? 'n/a'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">Push</p>
+                          <CheckCircle className={cn('h-4 w-4', notificationHealthData.data.checks.push_ready ? 'text-green-600' : 'text-amber-600')} />
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Active device tokens: {notificationHealthData.data.push.active_device_tokens ?? 'n/a'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Notifications sent (24h): {notificationHealthData.data.notifications.sent_last_24h}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Unread total: {notificationHealthData.data.notifications.unread_total}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div className="rounded-lg border p-4">
+                        <h4 className="font-medium mb-3">Recent Failed Jobs</h4>
+                        {notificationHealthData.data.queue.recent_failures.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No failed jobs recorded.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {notificationHealthData.data.queue.recent_failures.map((failure) => (
+                              <div key={failure.id} className="rounded-md bg-muted/40 p-3">
+                                <p className="text-sm font-medium">Queue: {failure.queue || 'default'}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {failure.failed_at || 'Unknown time'}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  {failure.exception_summary || 'No exception summary available.'}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <h4 className="font-medium mb-3">Top Notification Types (7d)</h4>
+                        {notificationHealthData.data.notifications.top_types_last_7d.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No recent notifications recorded.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {notificationHealthData.data.notifications.top_types_last_7d.map((item) => (
+                              <div key={item.type} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                                <span className="font-medium">{item.type}</span>
+                                <span className="text-muted-foreground">{item.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    Notification diagnostics are unavailable right now.
+                  </div>
+                )}
               </div>
             </div>
           )}

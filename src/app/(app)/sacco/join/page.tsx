@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useJoinSacco } from '@/hooks/useSacco';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 interface JoinFormData {
   initial_deposit: number;
@@ -27,18 +28,30 @@ interface JoinFormData {
 
 export default function SaccoJoinPage() {
   const router = useRouter();
+  const { data: platformSettings } = usePlatformSettings();
+  const saccoSettings = platformSettings?.sacco;
+  const minimumSavings = saccoSettings?.minimum_savings_balance_ugx ?? 50000;
+  const sharePrice = saccoSettings?.share_price_ugx ?? 50000;
+  const defaultJoinDeposit = saccoSettings?.default_join_deposit_ugx ?? minimumSavings;
+  const minimumInitialShares = saccoSettings?.minimum_initial_shares ?? 5;
+  const defaultJoinShares = Math.max(saccoSettings?.default_join_shares ?? minimumInitialShares, minimumInitialShares);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<JoinFormData>({
-    initial_deposit: 50000,
-    initial_shares: 5,
+    initial_deposit: defaultJoinDeposit,
+    initial_shares: defaultJoinShares,
     phone_number: '',
     accept_terms: false,
     payment_method: 'mtn_momo',
   });
-
-  const sharePrice = 10000;
-  const minimumSavings = 50000;
   const totalAmount = formData.initial_deposit + (formData.initial_shares * sharePrice);
+
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      initial_deposit: current.phone_number ? current.initial_deposit : Math.max(current.initial_deposit, defaultJoinDeposit),
+      initial_shares: current.phone_number ? current.initial_shares : Math.max(current.initial_shares, defaultJoinShares),
+    }));
+  }, [defaultJoinDeposit, defaultJoinShares]);
 
   const joinMutation = useJoinSacco();
 
@@ -54,7 +67,7 @@ export default function SaccoJoinPage() {
         {
           onSuccess: () => {
             setStep(3);
-            toast.success('Welcome to TesoTunes SACCO!');
+            toast.success(`Welcome to ${saccoSettings?.sacco_name || 'TesoTunes SACCO'}!`);
           },
           onError: (err: Error) => {
             toast.error(err.message || 'Failed to join SACCO');
@@ -65,8 +78,8 @@ export default function SaccoJoinPage() {
   };
 
   const membershipBenefits = [
-    'Save and earn 12% interest annually',
-    'Access loans up to 3x your savings',
+    `Save and earn ${saccoSettings?.annual_interest_rate ?? 12}% interest annually`,
+    `Access loans up to ${saccoSettings?.max_loan_multiplier ?? 3}x your savings`,
     'Earn dividends on your shares',
     'Participate in member voting',
     'Access to emergency funds',
@@ -84,7 +97,7 @@ export default function SaccoJoinPage() {
           <ChevronLeft className="h-4 w-4" />
           Back to SACCO
         </Link>
-        <h1 className="text-2xl font-bold">Join TesoTunes SACCO</h1>
+        <h1 className="text-2xl font-bold">Join {saccoSettings?.sacco_name || 'TesoTunes SACCO'}</h1>
         <p className="text-muted-foreground">
           Become a member and start building your financial future
         </p>
@@ -171,7 +184,7 @@ export default function SaccoJoinPage() {
               />
             </div>
             <div className="flex gap-2">
-              {[50000, 100000, 250000, 500000].map((amount) => (
+              {[minimumSavings, minimumSavings * 2, minimumSavings * 5, minimumSavings * 10].map((amount) => (
                 <button
                   key={amount}
                   type="button"
@@ -199,7 +212,7 @@ export default function SaccoJoinPage() {
                 <div>
                   <h3 className="font-semibold">Shares to Purchase</h3>
                   <p className="text-sm text-muted-foreground">
-                    UGX {sharePrice.toLocaleString()} per share (min 5)
+                    UGX {sharePrice.toLocaleString()} per share (min {minimumInitialShares})
                   </p>
                 </div>
               </div>
@@ -210,7 +223,7 @@ export default function SaccoJoinPage() {
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, initial_shares: Math.max(5, formData.initial_shares - 5) })}
+                onClick={() => setFormData({ ...formData, initial_shares: Math.max(minimumInitialShares, formData.initial_shares - minimumInitialShares) })}
                 className="h-12 w-12 rounded-lg border text-lg font-medium hover:bg-muted"
               >
                 −
@@ -220,14 +233,14 @@ export default function SaccoJoinPage() {
                 value={formData.initial_shares}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  initial_shares: Math.max(5, parseInt(e.target.value) || 5)
+                  initial_shares: Math.max(minimumInitialShares, parseInt(e.target.value) || minimumInitialShares)
                 })}
-                min={5}
+                min={minimumInitialShares}
                 className="flex-1 text-center py-3 border rounded-lg bg-background text-xl font-semibold"
               />
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, initial_shares: formData.initial_shares + 5 })}
+                onClick={() => setFormData({ ...formData, initial_shares: formData.initial_shares + minimumInitialShares })}
                 className="h-12 w-12 rounded-lg border text-lg font-medium hover:bg-muted"
               >
                 +
@@ -334,9 +347,9 @@ export default function SaccoJoinPage() {
           <div className="p-6 rounded-xl border bg-card">
             <h3 className="font-semibold mb-4">Terms & Conditions</h3>
             <div className="h-48 overflow-y-auto p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground mb-4">
-              <p className="mb-3">By joining TesoTunes Artist SACCO, you agree to the following:</p>
+              <p className="mb-3">By joining {saccoSettings?.sacco_name || 'TesoTunes Artist SACCO'}, you agree to the following:</p>
               <ol className="list-decimal list-inside space-y-2">
-                <li>Minimum savings balance of UGX 50,000 must be maintained at all times.</li>
+                <li>Minimum savings balance of UGX {minimumSavings.toLocaleString()} must be maintained at all times.</li>
                 <li>Shares cannot be sold or transferred for the first 12 months.</li>
                 <li>Loans are subject to approval and require a minimum of 3 months membership.</li>
                 <li>Dividends are paid annually based on share holdings and SACCO performance.</li>
@@ -396,7 +409,7 @@ export default function SaccoJoinPage() {
           <div className="mx-auto h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-6">
             <Check className="h-10 w-10 text-emerald-600" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Welcome to TesoTunes SACCO!</h2>
+          <h2 className="text-2xl font-bold mb-2">Welcome to {saccoSettings?.sacco_name || 'TesoTunes SACCO'}!</h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
             Your membership has been activated. You can now access savings, purchase shares, 
             and apply for loans after 3 months.

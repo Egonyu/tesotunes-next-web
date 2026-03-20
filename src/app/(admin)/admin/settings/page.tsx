@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPut } from '@/lib/api';
+import { normalizePlatformSettings, type PlatformSettings } from '@/lib/platform-settings';
 import { toast } from 'sonner';
 import {
   Settings,
@@ -12,6 +13,7 @@ import {
   CreditCard,
   Mail,
   Palette,
+  Wallet,
   Database,
   Save,
   RotateCcw,
@@ -20,62 +22,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ── Types ────────────────────────────────────────────────────────────
-interface PlatformSettings {
-  general: {
-    platform_name: string;
-    tagline: string;
-    support_email: string;
-    default_currency: string;
-    timezone: string;
-    maintenance_mode: boolean;
-    registration_enabled: boolean;
-  };
-  appearance: {
-    primary_color: string;
-    logo_light: string;
-    logo_dark: string;
-    favicon: string;
-  };
-  notifications: {
-    push_enabled: boolean;
-    email_enabled: boolean;
-    sms_enabled: boolean;
-    digest_frequency: string;
-  };
-  security: {
-    two_factor_required: boolean;
-    password_min_length: number;
-    session_timeout_minutes: number;
-    max_login_attempts: number;
-    lockout_duration_minutes: number;
-  };
-  payments: {
-    mtn_enabled: boolean;
-    mtn_api_key: string;
-    airtel_enabled: boolean;
-    airtel_api_key: string;
-    zengapay_enabled: boolean;
-    zengapay_merchant_id: string;
-    zengapay_api_key: string;
-  };
-  email: {
-    smtp_host: string;
-    smtp_port: number;
-    smtp_username: string;
-    smtp_from_name: string;
-    smtp_from_email: string;
-  };
-  storage: {
-    driver: string;
-    max_upload_mb: number;
-    allowed_audio_formats: string;
-    allowed_image_formats: string;
-  };
-}
-
 interface SettingsResponse {
-  data: PlatformSettings;
+  data: Partial<PlatformSettings>;
 }
 
 interface NotificationHealthResponse {
@@ -129,6 +77,7 @@ export default function AdminSettingsPage() {
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'sacco', label: 'SACCO', icon: Wallet },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'payments', label: 'Payments', icon: CreditCard },
@@ -153,7 +102,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     if (settingsData?.data) {
-      setSettings(settingsData.data);
+      setSettings(normalizePlatformSettings(settingsData.data));
     }
   }, [settingsData]);
 
@@ -192,7 +141,7 @@ export default function AdminSettingsPage() {
 
   function handleReset() {
     if (settingsData?.data) {
-      setSettings(settingsData.data);
+      setSettings(normalizePlatformSettings(settingsData.data));
       setIsDirty(false);
       toast.info('Settings reset to last saved state');
     }
@@ -350,6 +299,41 @@ export default function AdminSettingsPage() {
                 <div><label className="block text-sm font-medium mb-2">Logo (Light Mode) URL</label><input type="text" value={settings.appearance.logo_light} onChange={(e) => updateField('appearance', 'logo_light', e.target.value)} placeholder="https://..." className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
                 <div><label className="block text-sm font-medium mb-2">Logo (Dark Mode) URL</label><input type="text" value={settings.appearance.logo_dark} onChange={(e) => updateField('appearance', 'logo_dark', e.target.value)} placeholder="https://..." className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
                 <div><label className="block text-sm font-medium mb-2">Favicon URL</label><input type="text" value={settings.appearance.favicon} onChange={(e) => updateField('appearance', 'favicon', e.target.value)} placeholder="https://..." className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Frontend App Name</label><input type="text" value={settings.appearance.app_name} onChange={(e) => updateField('appearance', 'app_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Admin Panel Name</label><input type="text" value={settings.appearance.admin_panel_name} onChange={(e) => updateField('appearance', 'admin_panel_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Admin Panel Subtitle</label><input type="text" value={settings.appearance.admin_panel_subtitle} onChange={(e) => updateField('appearance', 'admin_panel_subtitle', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Logo Alt Text</label><input type="text" value={settings.appearance.logo_alt} onChange={(e) => updateField('appearance', 'logo_alt', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Compact Logo Label</label><input type="text" value={settings.appearance.logo_compact_label} onChange={(e) => updateField('appearance', 'logo_compact_label', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">SACCO Header Name</label><input type="text" value={settings.appearance.sacco_name} onChange={(e) => updateField('appearance', 'sacco_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">SACCO Header Tagline</label><input type="text" value={settings.appearance.sacco_tagline} onChange={(e) => updateField('appearance', 'sacco_tagline', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+              </div>
+            </div>
+          )}
+
+          {/* SACCO */}
+          {activeTab === 'sacco' && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold">SACCO Settings</h2>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div><label className="block text-sm font-medium mb-2">SACCO Name</label><input type="text" value={settings.sacco.sacco_name} onChange={(e) => updateField('sacco', 'sacco_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">SACCO Tagline</label><input type="text" value={settings.sacco.sacco_tagline} onChange={(e) => updateField('sacco', 'sacco_tagline', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Share Price (UGX)</label><input type="number" min={0} value={settings.sacco.share_price_ugx} onChange={(e) => updateField('sacco', 'share_price_ugx', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Minimum Savings Balance (UGX)</label><input type="number" min={0} value={settings.sacco.minimum_savings_balance_ugx} onChange={(e) => updateField('sacco', 'minimum_savings_balance_ugx', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Default Join Deposit (UGX)</label><input type="number" min={0} value={settings.sacco.default_join_deposit_ugx} onChange={(e) => updateField('sacco', 'default_join_deposit_ugx', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Default Join Shares</label><input type="number" min={1} value={settings.sacco.default_join_shares} onChange={(e) => updateField('sacco', 'default_join_shares', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Minimum Initial Shares</label><input type="number" min={1} value={settings.sacco.minimum_initial_shares} onChange={(e) => updateField('sacco', 'minimum_initial_shares', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Monthly Savings Target (UGX)</label><input type="number" min={0} value={settings.sacco.monthly_savings_target_ugx} onChange={(e) => updateField('sacco', 'monthly_savings_target_ugx', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Annual Savings Interest Rate (%)</label><input type="number" min={0} step="0.1" value={settings.sacco.annual_interest_rate} onChange={(e) => updateField('sacco', 'annual_interest_rate', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Annual Dividend Rate (%)</label><input type="number" min={0} step="0.1" value={settings.sacco.annual_dividend_rate} onChange={(e) => updateField('sacco', 'annual_dividend_rate', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Maximum Loan Multiplier</label><input type="number" min={1} step="0.1" value={settings.sacco.max_loan_multiplier} onChange={(e) => updateField('sacco', 'max_loan_multiplier', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+              </div>
+              <div className="grid gap-6">
+                <div><label className="block text-sm font-medium mb-2">Guest Hero Title</label><input type="text" value={settings.sacco.guest_title} onChange={(e) => updateField('sacco', 'guest_title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Guest Hero Description</label><textarea value={settings.sacco.guest_description} onChange={(e) => updateField('sacco', 'guest_description', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background min-h-24" /></div>
+                <div><label className="block text-sm font-medium mb-2">Member Hero Title</label><input type="text" value={settings.sacco.member_title} onChange={(e) => updateField('sacco', 'member_title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">Member Hero Description</label><textarea value={settings.sacco.member_description} onChange={(e) => updateField('sacco', 'member_description', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background min-h-24" /></div>
+                <div><label className="block text-sm font-medium mb-2">CTA Title</label><input type="text" value={settings.sacco.cta_title} onChange={(e) => updateField('sacco', 'cta_title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                <div><label className="block text-sm font-medium mb-2">CTA Description</label><textarea value={settings.sacco.cta_description} onChange={(e) => updateField('sacco', 'cta_description', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background min-h-24" /></div>
               </div>
             </div>
           )}

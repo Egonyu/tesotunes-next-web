@@ -36,6 +36,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { STORE_ENABLED } from "@/lib/features";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 const mainNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -101,6 +103,7 @@ function NavItem({ href, label, icon: Icon, collapsed }: NavItemProps) {
 export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const { data: session } = useSession();
+  const { data: platformSettings } = usePlatformSettings();
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
   // Case-insensitive check for artist role
@@ -119,6 +122,11 @@ export function Sidebar() {
 
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtist || isArtistByStatus;
+  const brand = platformSettings?.appearance;
+  const brandName = brand?.app_name || platformSettings?.general.platform_name || "TesoTunes";
+  const brandAlt = brand?.logo_alt || brandName;
+  const compactLabel = brand?.logo_compact_label || brandName.charAt(0);
+  const logoSrc = brand?.logo_light || brand?.logo_dark || "";
   const visibleModuleItems = moduleItems.filter((item) => {
     if (item.href === "/store" && !STORE_ENABLED) return false;
     if (item.href === "/sacco") return false;
@@ -137,10 +145,16 @@ export function Sidebar() {
       <div className="flex h-16 items-center justify-between border-b px-4">
         {!sidebarCollapsed && (
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
-              T
+            <div className="relative h-8 w-8 overflow-hidden rounded-full bg-primary/10">
+              <SafeImage
+                src={logoSrc}
+                alt={brandAlt}
+                fill
+                className="object-contain p-1"
+                fallback={<InitialsAvatar name={compactLabel} textClassName="text-sm" className="bg-primary text-primary-foreground" />}
+              />
             </div>
-            <span className="text-xl font-bold">TesoTunes</span>
+            <span className="text-xl font-bold">{brandName}</span>
           </Link>
         )}
         <button

@@ -24,6 +24,7 @@ import {
   useSaccoDeposit,
   useSaccoWithdraw
 } from '@/hooks/useSacco';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 // Additional interfaces for this page
 interface SavingsGoal {
@@ -46,8 +47,10 @@ export default function SavingsPage() {
   // Use the new SACCO hooks
   const { data: savingsData, isLoading, error } = useSaccoSavings();
   const { data: transactionsData } = useSaccoTransactions({ limit: 10 });
+  const { data: platformSettings } = usePlatformSettings();
   const depositMutation = useSaccoDeposit();
   const withdrawMutation = useSaccoWithdraw();
+  const saccoSettings = platformSettings?.sacco;
 
   // Handle deposit
   const handleDeposit = async () => {
@@ -75,7 +78,7 @@ export default function SavingsPage() {
       await withdrawMutation.mutateAsync({
         amount: Number(withdrawAmount),
         phone_number: phoneNumber,
-        payment_method: depositMethod,
+        payment_method: withdrawMethod,
       });
       setShowWithdrawModal(false);
       setWithdrawAmount('');
@@ -90,9 +93,9 @@ export default function SavingsPage() {
   // Use data from hooks with safe defaults
   const balance = savingsData?.balance ?? 0;
   const interestEarned = savingsData?.interest_earned ?? 0;
-  const interestRate = savingsData?.interest_rate ?? 8;
-  const minimumBalance = 50000;
-  const monthlyTarget = 500000;
+  const interestRate = savingsData?.interest_rate ?? saccoSettings?.annual_interest_rate ?? 8;
+  const minimumBalance = saccoSettings?.minimum_savings_balance_ugx ?? 50000;
+  const monthlyTarget = saccoSettings?.monthly_savings_target_ugx ?? 500000;
   const thisMonth = savingsData?.this_month ?? 0;
 
   const savingsGoals: SavingsGoal[] = savingsData?.goals || [];

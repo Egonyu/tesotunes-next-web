@@ -11,6 +11,42 @@ const PROXY_RESPONSE_HEADERS_TO_STRIP = [
   "keep-alive",
 ];
 
+const NEXTAUTH_SESSION_COOKIE_CANDIDATES = [
+  "__Secure-next-auth.session-token",
+  "next-auth.session-token",
+];
+
+async function resolveProxyToken(request: NextRequest) {
+  const baseOptions = {
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  };
+
+  const directToken = await getToken(baseOptions);
+  if (directToken) {
+    return directToken;
+  }
+
+  for (const cookieName of NEXTAUTH_SESSION_COOKIE_CANDIDATES) {
+    const hasCookie = request.cookies.has(cookieName);
+    if (!hasCookie) {
+      continue;
+    }
+
+    const token = await getToken({
+      ...baseOptions,
+      cookieName,
+      secureCookie: cookieName.startsWith("__Secure-"),
+    });
+
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+}
+
 function buildProxyErrorResponse(error: unknown) {
   const details =
     process.env.NODE_ENV !== "production" && error instanceof Error
@@ -38,7 +74,7 @@ async function proxyToBackend(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const token = await resolveProxyToken(request);
   const upstreamPath = path.join("/");
   const upstreamRequestPath = `/${upstreamPath}${request.nextUrl.search}`;
 

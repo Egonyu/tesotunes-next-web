@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSaccoShares, useBuyShares, useSaccoDividends } from '@/hooks/useSacco';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { toast } from 'sonner';
 
 // View-layer interfaces
@@ -48,16 +49,18 @@ export default function SharesPage() {
 
   const { data: sharesResponse, isLoading, error } = useSaccoShares();
   const { data: dividendsData } = useSaccoDividends();
+  const { data: platformSettings } = usePlatformSettings();
   const buySharesMutation = useBuyShares();
+  const saccoSettings = platformSettings?.sacco;
 
-  const dividendRate = dividendsData && dividendsData.length > 0 ? dividendsData[0].rate : 8;
+  const dividendRate = dividendsData && dividendsData.length > 0 ? dividendsData[0].rate : (saccoSettings?.annual_dividend_rate ?? 8);
   const lastDividend = dividendsData && dividendsData.length > 0 ? dividendsData[0].amount : 0;
   const nextDividendDate = dividendsData && dividendsData.length > 0 && dividendsData[0].paid_at
     ? '' : 'December 2026';
 
   const sharesData = {
     total_shares: sharesResponse?.total_shares ?? 0,
-    price_per_share: sharesResponse?.share_value ?? 10000,
+    price_per_share: sharesResponse?.share_value ?? saccoSettings?.share_price_ugx ?? 50000,
     total_value: sharesResponse?.total_value ?? 0,
     dividend_rate: dividendRate,
     last_dividend: lastDividend,
@@ -99,7 +102,7 @@ export default function SharesPage() {
         <div>
           <h2 className="text-2xl font-bold">Shares</h2>
           <p className="text-sm text-muted-foreground">
-            Own a piece of TesoTunes SACCO
+            Own a piece of {saccoSettings?.sacco_name || 'TesoTunes SACCO'}
           </p>
         </div>
         <button

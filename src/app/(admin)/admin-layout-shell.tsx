@@ -41,6 +41,8 @@ import {
 import { cn } from '@/lib/utils';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { api } from '@/lib/api';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,6 +92,14 @@ export default function AdminLayoutShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [apiVersion, setApiVersion] = useState<string | null>(null);
+  const { data: platformSettings } = usePlatformSettings();
+
+  const appearance = platformSettings?.appearance;
+  const adminPanelName = appearance?.admin_panel_name || 'Admin Panel';
+  const adminPanelSubtitle = appearance?.admin_panel_subtitle || 'Platform operations';
+  const adminLogo = appearance?.logo_light || appearance?.logo_dark || '';
+  const adminLogoAlt = appearance?.logo_alt || adminPanelName;
+  const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
 
   useEffect(() => {
     api.get('/health', { timeout: 5000 }).then(res => {
@@ -104,7 +114,7 @@ export default function AdminLayoutShell({
         <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-muted rounded-lg">
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-bold">TesoTunes Admin</span>
+        <span className="font-bold">{adminPanelName}</span>
         <button className="p-2 hover:bg-muted rounded-lg">
           <Bell className="h-5 w-5" />
         </button>
@@ -123,7 +133,23 @@ export default function AdminLayoutShell({
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
         <div className="h-16 flex items-center justify-between px-4 border-b">
-          {!collapsed && <span className="font-bold text-lg">Admin Panel</span>}
+          {!collapsed && (
+            <div className="flex items-center gap-3">
+              <div className="relative h-9 w-9 overflow-hidden rounded-lg bg-primary/10">
+                <SafeImage
+                  src={adminLogo}
+                  alt={adminLogoAlt}
+                  fill
+                  className="object-contain p-1.5"
+                  fallback={<InitialsAvatar name={compactLabel} textClassName="text-sm" className="bg-primary text-primary-foreground" />}
+                />
+              </div>
+              <div className="min-w-0">
+                <span className="block truncate font-bold text-lg">{adminPanelName}</span>
+                <span className="block truncate text-xs text-muted-foreground">{adminPanelSubtitle}</span>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => {
               setCollapsed(!collapsed);

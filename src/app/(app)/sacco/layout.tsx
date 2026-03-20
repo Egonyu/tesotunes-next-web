@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 
 interface NavItem {
   href: string;
@@ -117,10 +119,17 @@ function NavItemComponent({
 export default function SaccoLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: platformSettings } = usePlatformSettings();
 
   const currentPage = saccoNav.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   );
+  const appearance = platformSettings?.appearance;
+  const saccoName = appearance?.sacco_name || platformSettings?.sacco.sacco_name || 'TesoTunes SACCO';
+  const saccoTagline = appearance?.sacco_tagline || platformSettings?.sacco.sacco_tagline || 'Artist Finance Platform';
+  const saccoLogo = appearance?.logo_light || appearance?.logo_dark || '';
+  const saccoLogoAlt = appearance?.logo_alt || saccoName;
+  const compactLabel = appearance?.logo_compact_label || saccoName.charAt(0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,13 +146,19 @@ export default function SaccoLayout({ children }: { children: React.ReactNode })
 
           {/* Logo */}
           <Link href="/sacco" className="flex items-center gap-2.5 shrink-0">
-            <div className="h-8 w-8 rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-              <PiggyBank className="h-4 w-4 text-white" />
+            <div className="relative h-8 w-8 overflow-hidden rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <SafeImage
+                src={saccoLogo}
+                alt={saccoLogoAlt}
+                fill
+                className="object-contain p-1"
+                fallback={<InitialsAvatar name={compactLabel} textClassName="text-sm" className="bg-transparent text-white" />}
+              />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-sm font-bold leading-tight">TesoTunes SACCO</h1>
+              <h1 className="text-sm font-bold leading-tight">{saccoName}</h1>
               <p className="text-[10px] text-muted-foreground leading-tight">
-                Artist Finance Platform
+                {saccoTagline}
               </p>
             </div>
           </Link>

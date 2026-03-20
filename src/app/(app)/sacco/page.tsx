@@ -16,13 +16,28 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSaccoMembership } from '@/hooks/useSacco';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 export default function SaccoPage() {
   const { data: memberData, isLoading, error } = useSaccoMembership();
+  const { data: platformSettings } = usePlatformSettings();
 
   // Treat API errors (e.g. missing SACCO tables) as "not a member" state
   // rather than showing a hard error page
   const isMember = !error && !!memberData;
+  const saccoSettings = platformSettings?.sacco;
+  const appearance = platformSettings?.appearance;
+  const saccoName = appearance?.sacco_name || saccoSettings?.sacco_name || 'TesoTunes Artist SACCO';
+  const guestTitle = saccoSettings?.guest_title || 'Join Our Artist SACCO';
+  const memberTitle = saccoSettings?.member_title || 'Welcome Back, Member!';
+  const guestDescription = saccoSettings?.guest_description || 'A savings and credit cooperative designed exclusively for music artists. Save together, grow together.';
+  const memberDescription = saccoSettings?.member_description || 'Manage your savings, shares, and loans. Build your financial future with fellow artists.';
+  const interestRate = saccoSettings?.annual_interest_rate ?? 12;
+  const loanMultiplier = saccoSettings?.max_loan_multiplier ?? 3;
+  const ctaTitle = saccoSettings?.cta_title || 'Ready to Join?';
+  const ctaDescription = saccoSettings?.cta_description || 'Becoming a member is easy. Start with a minimum of UGX 50,000 and begin your journey to financial growth with fellow artists.';
+  const minimumSavings = saccoSettings?.minimum_savings_balance_ugx ?? 50000;
+  const dividendRate = saccoSettings?.annual_dividend_rate ?? 8;
 
   const features = [
     {
@@ -60,12 +75,12 @@ export default function SaccoPage() {
     {
       icon: TrendingUp,
       title: 'Competitive Returns',
-      description: '12% interest on savings plus annual dividends',
+      description: `${interestRate}% interest on savings plus annual dividends`,
     },
     {
       icon: Target,
       title: 'Easy Loans',
-      description: 'Borrow up to 3x your savings with low interest',
+      description: `Borrow up to ${loanMultiplier}x your savings with low interest`,
     },
     {
       icon: Award,
@@ -90,15 +105,13 @@ export default function SaccoPage() {
         <div className="relative">
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-6 w-6" />
-            <span className="text-emerald-100 font-medium">TesoTunes Artist SACCO</span>
+            <span className="text-emerald-100 font-medium">{saccoName}</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {isMember ? 'Welcome Back, Member!' : 'Join Our Artist SACCO'}
+            {isMember ? memberTitle : guestTitle}
           </h1>
           <p className="text-lg text-emerald-100 max-w-2xl mb-6">
-            {isMember
-              ? 'Manage your savings, shares, and loans. Build your financial future with fellow artists.'
-              : 'A savings and credit cooperative designed exclusively for music artists. Save together, grow together.'}
+            {isMember ? memberDescription : guestDescription}
           </p>
           <div className="flex flex-wrap gap-3">
             {isMember ? (
@@ -226,16 +239,16 @@ export default function SaccoPage() {
             <p className="text-sm text-muted-foreground">Active Members</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-purple-600">12%</p>
+            <p className="text-3xl font-bold text-purple-600">{interestRate}%</p>
             <p className="text-sm text-muted-foreground">Interest Rate</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-blue-600">3x</p>
+            <p className="text-3xl font-bold text-blue-600">{loanMultiplier}x</p>
             <p className="text-sm text-muted-foreground">Max Loan Multiplier</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-orange-600">Annual</p>
-            <p className="text-sm text-muted-foreground">Dividend Payout</p>
+            <p className="text-3xl font-bold text-orange-600">{dividendRate}%</p>
+            <p className="text-sm text-muted-foreground">Dividend Rate</p>
           </div>
         </div>
       </div>
@@ -243,10 +256,9 @@ export default function SaccoPage() {
       {/* CTA Section (for non-members) */}
       {!isMember && (
         <div className="p-8 lg:p-10 rounded-xl bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-900/50 text-center shadow-sm">
-          <h2 className="text-2xl font-bold mb-2">Ready to Join?</h2>
+          <h2 className="text-2xl font-bold mb-2">{ctaTitle}</h2>
           <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-            Becoming a member is easy. Start with a minimum of UGX 50,000 and begin your journey
-            to financial growth with fellow artists.
+            {ctaDescription.replace('UGX 50,000', `UGX ${minimumSavings.toLocaleString()}`)}
           </p>
           <Link
             href="/sacco/join"

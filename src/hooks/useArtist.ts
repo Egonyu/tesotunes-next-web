@@ -460,6 +460,7 @@ export function useUpdateArtistAvatar() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("avatar", file);
+      formData.append("profile_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/avatar",
         formData
@@ -479,6 +480,7 @@ export function useUpdateArtistBanner() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("banner", file);
+      formData.append("cover_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/banner",
         formData
@@ -938,7 +940,7 @@ export interface ArtistApplicationData {
   // Step 3: Payout Setup
   payout_method: 'mtn_momo' | 'airtel_money' | 'bank' | 'zengapay';
   mobile_money_number?: string;
-  mobile_money_provider?: 'mtn' | 'airtel';
+  mobile_money_provider?: 'mtn' | 'airtel' | 'zengapay';
   bank_name?: string;
   bank_account?: string;
 
@@ -1007,6 +1009,7 @@ export function useSubmitArtistApplication() {
       formData.append('full_name', data.full_name);
       formData.append('phone', data.phone);
       formData.append('payout_method', data.payout_method);
+      formData.append('payment_option', data.payout_method);
       formData.append('terms_accepted', '1');
       formData.append('artist_agreement_accepted', '1');
 
@@ -1016,7 +1019,11 @@ export function useSubmitArtistApplication() {
       if (data.city) formData.append('city', data.city);
       if (data.website_url) formData.append('website_url', data.website_url);
       if (data.mobile_money_number) formData.append('mobile_money_number', data.mobile_money_number);
-      if (data.mobile_money_provider) formData.append('mobile_money_provider', data.mobile_money_provider);
+      if (data.mobile_money_provider) {
+        formData.append('mobile_money_provider', data.mobile_money_provider);
+      } else if (data.payout_method === 'zengapay') {
+        formData.append('mobile_money_provider', 'zengapay');
+      }
       if (data.bank_name) formData.append('bank_name', data.bank_name);
       if (data.bank_account) formData.append('bank_account', data.bank_account);
 

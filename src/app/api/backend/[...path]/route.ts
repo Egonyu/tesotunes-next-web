@@ -54,10 +54,8 @@ async function proxyToBackend(
     headers.delete("authorization");
   }
 
-  let body: BodyInit | undefined;
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    body = await request.arrayBuffer();
-  }
+  const canHaveBody = request.method !== "GET" && request.method !== "HEAD";
+  const body = canHaveBody ? request.body : undefined;
 
   let upstreamResponse: Response;
 
@@ -68,6 +66,7 @@ async function proxyToBackend(
       body,
       redirect: "manual",
       cache: "no-store",
+      ...(body ? ({ duplex: "half" } as RequestInit & { duplex: "half" }) : {}),
     }, {
       baseUrls: buildLocalApiBaseUrls(API_URL),
     });

@@ -209,7 +209,9 @@ export default function BecomeArtistPage() {
         mobile_money_number:
           formData.mobile_money_number ||
           (formData.payout_method === "zengapay" ? formData.phone : undefined),
-        mobile_money_provider: formData.mobile_money_provider,
+        mobile_money_provider:
+          formData.mobile_money_provider ||
+          (formData.payout_method === "zengapay" ? "zengapay" : undefined),
         bank_name: formData.bank_name,
         bank_account: formData.bank_account,
         // Only include files if they exist

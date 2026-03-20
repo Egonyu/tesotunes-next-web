@@ -120,8 +120,8 @@ export default function CatalogPage() {
       formData.append('csv_file', csvFile as File);
       if (sourceName.trim()) formData.append('source_name', sourceName.trim());
       if (notes.trim()) formData.append('notes', notes.trim());
-      audioFiles.forEach((file) => formData.append('audio_files[]', file));
-      coverFiles.forEach((file) => formData.append('cover_files[]', file));
+      audioFiles.forEach((file, index) => formData.append(`audio_files[${index}]`, file));
+      coverFiles.forEach((file, index) => formData.append(`cover_files[${index}]`, file));
 
       return apiPostForm<{ message?: string }>('/catalog/submissions', formData);
     },

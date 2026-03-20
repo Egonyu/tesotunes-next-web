@@ -59,6 +59,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "*.digitaloceanspaces.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "*.cloudinary.com",
       },
       {

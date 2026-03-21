@@ -25,3 +25,8 @@ export const FEATURED_CONTENT_ENABLED = parseEnvFlag(
   process.env.NEXT_PUBLIC_ENABLE_FEATURED,
   true
 );
+
+export const ADMIN_REPORTS_ENABLED = parseEnvFlag(
+  process.env.NEXT_PUBLIC_ENABLE_ADMIN_REPORTS,
+  false
+);

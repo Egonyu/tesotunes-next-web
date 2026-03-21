@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
 
 interface Report {
   id: number;
@@ -67,6 +68,21 @@ const typeIcons: Record<string, typeof Flag> = {
 };
 
 export default function AdminReportsPage() {
+  if (!ADMIN_REPORTS_ENABLED) {
+    return (
+      <div className="rounded-2xl border border-dashed bg-card p-8">
+        <h1 className="text-2xl font-bold">Reports & Moderation</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Reports are hidden until the backend rollout is confirmed live. Set `NEXT_PUBLIC_ENABLE_ADMIN_REPORTS=true` after the new admin reports APIs are deployed.
+        </p>
+      </div>
+    );
+  }
+
+  return <EnabledAdminReportsPage />;
+}
+
+function EnabledAdminReportsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -286,3 +302,5 @@ export default function AdminReportsPage() {
     </div>
   );
 }
+
+

@@ -43,6 +43,7 @@ import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { api } from '@/lib/api';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -100,6 +101,7 @@ export default function AdminLayoutShell({
   const adminLogo = appearance?.logo_light || appearance?.logo_dark || '';
   const adminLogoAlt = appearance?.logo_alt || adminPanelName;
   const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
+  const visibleNavItems = ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports');
 
   useEffect(() => {
     api.get('/health', { timeout: 5000 }).then(res => {
@@ -162,7 +164,7 @@ export default function AdminLayoutShell({
         </div>
 
         <nav className="p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href ||
               (item.href !== '/admin' && pathname.startsWith(item.href));
@@ -246,3 +248,4 @@ export default function AdminLayoutShell({
     </div>
   );
 }
+

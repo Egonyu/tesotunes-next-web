@@ -185,20 +185,20 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   const toneClass = {
-    default: 'border-slate-200 bg-white text-slate-900',
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-    warning: 'border-amber-200 bg-amber-50 text-amber-950',
-    danger: 'border-rose-200 bg-rose-50 text-rose-950',
+    default: 'border-border/70 bg-gradient-to-br from-background via-background to-muted/40 text-foreground',
+    success: 'border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-background to-emerald-100/70 text-emerald-950 dark:border-emerald-900/70 dark:from-emerald-950/60 dark:via-background dark:to-emerald-900/30 dark:text-emerald-100',
+    warning: 'border-amber-200/70 bg-gradient-to-br from-amber-50 via-background to-amber-100/70 text-amber-950 dark:border-amber-900/70 dark:from-amber-950/50 dark:via-background dark:to-amber-900/30 dark:text-amber-100',
+    danger: 'border-rose-200/70 bg-gradient-to-br from-rose-50 via-background to-rose-100/70 text-rose-950 dark:border-rose-900/70 dark:from-rose-950/50 dark:via-background dark:to-rose-900/30 dark:text-rose-100',
   }[tone];
 
   return (
-    <div className={cn('rounded-2xl border p-5 shadow-sm', toneClass)}>
+    <div className={cn('rounded-2xl border p-5 shadow-sm shadow-black/5', toneClass)}>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm font-medium">{label}</p>
         <Icon className="h-5 w-5 opacity-70" />
       </div>
       <p className="text-3xl font-semibold tracking-tight">{value}</p>
-      {detail ? <p className="mt-2 text-sm opacity-80">{detail}</p> : null}
+      {detail ? <p className="mt-2 text-sm text-muted-foreground dark:text-current/75">{detail}</p> : null}
     </div>
   );
 }
@@ -262,7 +262,7 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-foreground">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">Payments Command Center</p>
@@ -279,7 +279,7 @@ export default function AdminPaymentsPage() {
             void issuesQuery.refetch();
             void entryPointsQuery.refetch();
           }}
-          className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/80 px-4 py-2 text-sm font-medium shadow-sm shadow-black/5 transition-colors hover:bg-muted"
         >
           <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
           Refresh
@@ -318,8 +318,8 @@ export default function AdminPaymentsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 border-b pb-5 md:flex-row md:items-center md:justify-between">
+        <section className="rounded-3xl border border-border/70 bg-card/95 p-6 shadow-sm shadow-black/5 backdrop-blur-sm">
+          <div className="flex flex-col gap-4 border-b border-border/70 pb-5 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold">Recent Payment Stream</h2>
               <p className="text-sm text-muted-foreground">
@@ -333,13 +333,13 @@ export default function AdminPaymentsPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search user, phone, or reference"
-                  className="w-full rounded-xl border bg-background py-2 pl-10 pr-4 text-sm"
+                  className="w-full rounded-xl border border-border/70 bg-background/80 py-2 pl-10 pr-4 text-sm text-foreground shadow-sm shadow-black/5 outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
-                className="rounded-xl border bg-background px-4 py-2 text-sm"
+                className="rounded-xl border border-border/70 bg-background/80 px-4 py-2 text-sm text-foreground shadow-sm shadow-black/5 outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
               >
                 <option value="all">All statuses</option>
                 <option value="completed">Completed</option>
@@ -363,7 +363,7 @@ export default function AdminPaymentsPage() {
                   <th className="pb-3 font-medium">Timeline</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-border/60">
                 {payments.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-muted-foreground">
@@ -371,7 +371,7 @@ export default function AdminPaymentsPage() {
                     </td>
                   </tr>
                 ) : payments.map((payment) => (
-                  <tr key={payment.id} className="align-top">
+                  <tr key={payment.id} className="align-top transition-colors hover:bg-muted/35">
                     <td className="py-4 pr-4">
                       <div className="font-medium">{payment.user?.name ?? 'Unknown user'}</div>
                       <div className="mt-1 text-xs text-muted-foreground">{payment.user?.email ?? payment.phone_number ?? 'No contact captured'}</div>
@@ -387,7 +387,7 @@ export default function AdminPaymentsPage() {
                     <td className="py-4 pr-4">
                       <StatusBadge status={payment.status} />
                       {payment.latest_issue ? (
-                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100/80 px-2 py-1 text-[11px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
                           <AlertTriangle className="h-3 w-3" />
                           {payment.latest_issue.issue_type.replace(/_/g, ' ')}
                         </div>
@@ -419,24 +419,24 @@ export default function AdminPaymentsPage() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border border-border/70 bg-card/95 p-6 shadow-sm shadow-black/5 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Issue Queue</h2>
                 <p className="text-sm text-muted-foreground">Payments that need investigation first</p>
               </div>
-              <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+              <div className="rounded-full bg-amber-100/80 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
                 {issues.length} visible
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
               {issues.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-sm text-muted-foreground">
                   No open payment issues right now.
                 </div>
               ) : issues.map((issue) => (
-                <div key={issue.id} className="rounded-2xl border p-4">
+                <div key={issue.id} className="rounded-2xl border border-border/70 bg-background/70 p-4 shadow-sm shadow-black/5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{issue.title}</p>
@@ -457,30 +457,30 @@ export default function AdminPaymentsPage() {
             </div>
           </section>
 
-          <section className="rounded-3xl border bg-[linear-gradient(135deg,#0f172a,#1e293b)] p-6 text-white shadow-sm">
+          <section className="rounded-3xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-cyan-50 to-background p-6 text-slate-900 shadow-sm shadow-black/5 dark:border-sky-900/60 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950/70 dark:text-slate-50">
             <div className="flex items-center gap-3">
-              <Wallet className="h-5 w-5 text-sky-300" />
+              <Wallet className="h-5 w-5 text-sky-600 dark:text-sky-300" />
               <div>
                 <h2 className="text-lg font-semibold">Live Alerts</h2>
-                <p className="text-sm text-slate-300">Most recent operational warnings in the payment layer</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">Most recent operational warnings in the payment layer</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
               {alerts.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                <div className="rounded-2xl border border-sky-200/70 bg-white/70 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                   No active payment alerts.
                 </div>
               ) : alerts.map((alert) => (
-                <div key={alert.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div key={alert.id} className="rounded-2xl border border-sky-200/70 bg-white/75 p-4 dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{alert.title}</p>
-                      <p className="mt-1 text-xs text-slate-300">{alert.payment?.payment_reference ?? 'No payment reference'} • {formatDate(alert.created_at)}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{alert.payment?.payment_reference ?? 'No payment reference'} • {formatDate(alert.created_at)}</p>
                     </div>
-                    <ArrowUpRight className="h-4 w-4 text-sky-300" />
+                    <ArrowUpRight className="h-4 w-4 text-sky-600 dark:text-sky-300" />
                   </div>
-                  <p className="mt-2 text-sm text-slate-300">{alert.user?.name ?? 'Unknown user'} • {alert.issue_type.replace(/_/g, ' ')}</p>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{alert.user?.name ?? 'Unknown user'} • {alert.issue_type.replace(/_/g, ' ')}</p>
                 </div>
               ))}
             </div>
@@ -488,7 +488,7 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
 
-      <section className="rounded-3xl border bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-border/70 bg-card/95 p-6 shadow-sm shadow-black/5 backdrop-blur-sm">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Payment Entry-Point Map</h2>
@@ -503,7 +503,7 @@ export default function AdminPaymentsPage() {
 
         <div className="mt-6 grid gap-4 xl:grid-cols-2">
           {entryPoints.map((entryPoint) => (
-            <div key={entryPoint.key} className="rounded-2xl border p-5">
+            <div key={entryPoint.key} className="rounded-2xl border border-border/70 bg-background/70 p-5 shadow-sm shadow-black/5">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">{entryPoint.label}</h3>
@@ -520,21 +520,21 @@ export default function AdminPaymentsPage() {
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                <div className="rounded-2xl bg-slate-50 p-3">
+                <div className="rounded-2xl border border-border/60 bg-muted/30 p-3">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Tracked</p>
                   <p className="mt-2 text-2xl font-semibold">{entryPoint.metrics.total}</p>
                 </div>
-                <div className="rounded-2xl bg-emerald-50 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-700">Completed</p>
-                  <p className="mt-2 text-2xl font-semibold text-emerald-900">{entryPoint.metrics.completed}</p>
+                <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/80 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Completed</p>
+                  <p className="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">{entryPoint.metrics.completed}</p>
                 </div>
-                <div className="rounded-2xl bg-amber-50 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-amber-700">In Flight</p>
-                  <p className="mt-2 text-2xl font-semibold text-amber-900">{entryPoint.metrics.in_flight}</p>
+                <div className="rounded-2xl border border-amber-200/60 bg-amber-50/80 p-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">In Flight</p>
+                  <p className="mt-2 text-2xl font-semibold text-amber-900 dark:text-amber-100">{entryPoint.metrics.in_flight}</p>
                 </div>
-                <div className="rounded-2xl bg-rose-50 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-rose-700">Open Issues</p>
-                  <p className="mt-2 text-2xl font-semibold text-rose-900">{entryPoint.metrics.open_issues}</p>
+                <div className="rounded-2xl border border-rose-200/60 bg-rose-50/80 p-3 dark:border-rose-900/60 dark:bg-rose-950/30">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-rose-700 dark:text-rose-300">Open Issues</p>
+                  <p className="mt-2 text-2xl font-semibold text-rose-900 dark:text-rose-100">{entryPoint.metrics.open_issues}</p>
                 </div>
               </div>
 
@@ -543,7 +543,7 @@ export default function AdminPaymentsPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Initiate</p>
                   <div className="mt-2 space-y-2">
                     {entryPoint.initiation_endpoints.map((endpoint) => (
-                      <code key={endpoint} className="block rounded-xl bg-slate-950 px-3 py-2 text-xs text-slate-100">
+                      <code key={endpoint} className="block rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-xs text-foreground">
                         {endpoint}
                       </code>
                     ))}
@@ -553,9 +553,9 @@ export default function AdminPaymentsPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</p>
                   <div className="mt-2 space-y-2">
                     {entryPoint.status_endpoints.length === 0 ? (
-                      <div className="rounded-xl border border-dashed px-3 py-2 text-xs text-muted-foreground">No shared status endpoint</div>
+                      <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">No shared status endpoint</div>
                     ) : entryPoint.status_endpoints.map((endpoint) => (
-                      <code key={endpoint} className="block rounded-xl bg-slate-950 px-3 py-2 text-xs text-slate-100">
+                      <code key={endpoint} className="block rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-xs text-foreground">
                         {endpoint}
                       </code>
                     ))}
@@ -565,9 +565,9 @@ export default function AdminPaymentsPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Webhook</p>
                   <div className="mt-2 space-y-2">
                     {entryPoint.webhook_endpoints.length === 0 ? (
-                      <div className="rounded-xl border border-dashed px-3 py-2 text-xs text-muted-foreground">No webhook coverage</div>
+                      <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">No webhook coverage</div>
                     ) : entryPoint.webhook_endpoints.map((endpoint) => (
-                      <code key={endpoint} className="block rounded-xl bg-slate-950 px-3 py-2 text-xs text-slate-100">
+                      <code key={endpoint} className="block rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-xs text-foreground">
                         {endpoint}
                       </code>
                     ))}
@@ -576,11 +576,11 @@ export default function AdminPaymentsPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   Success rate: {entryPoint.success_rate === null ? 'n/a' : `${entryPoint.success_rate}%`}
                 </div>
                 {entryPoint.known_gap ? (
-                  <div className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
+                  <div className="rounded-full bg-rose-100/80 px-3 py-1 text-xs font-medium text-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
                     Known gap: {entryPoint.known_gap}
                   </div>
                 ) : null}

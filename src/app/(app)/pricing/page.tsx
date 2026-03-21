@@ -35,12 +35,15 @@ export default function PricingPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
       {/* Header */}
-      <div className="text-center space-y-3">
+      <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Choose Your Plan</h1>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Unlock the full TesoTunes experience. Stream African music in high quality,
-          download for offline, and support your favorite artists.
+          Start free, then upgrade only when the difference feels real. Enjoy clearer audio,
+          offline listening, fewer limits, and creator tools when you are ready.
         </p>
+        <div className="mx-auto max-w-3xl rounded-2xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-sm text-muted-foreground">
+          New to online subscriptions? Look for plans with a trial so you can experience the value first before paying long-term.
+        </div>
       </div>
 
       {/* Plans Grid */}
@@ -80,6 +83,13 @@ export default function PricingPage() {
                 {price > 0 && (
                   <span className="text-muted-foreground text-sm">/month</span>
                 )}
+                {plan.trial_days ? (
+                  <div className="mt-2">
+                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      {plan.trial_days}-day trial
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               {/* Plan Limits */}
@@ -143,7 +153,7 @@ export default function PricingPage() {
                       : 'border hover:bg-muted'
                   )}
                 >
-                  Get Started
+                  {plan.trial_days ? `Start ${plan.trial_days}-day trial` : 'Get Started'}
                 </Link>
               )}
             </div>

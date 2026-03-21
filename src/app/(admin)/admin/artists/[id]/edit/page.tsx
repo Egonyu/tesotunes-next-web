@@ -384,6 +384,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                     )}
                     <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
                       <input
+                        data-testid="artist-profile-image-input"
                         type="file"
                         accept="image/*"
                         className="hidden"
@@ -405,6 +406,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                     )}
                     <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
                       <input
+                        data-testid="artist-cover-image-input"
                         type="file"
                         accept="image/*"
                         className="hidden"

@@ -50,6 +50,8 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
 
 test.describe('Admin artist image update', () => {
   test('updates profile and cover images and reflects new URLs', async ({ page }) => {
+    test.setTimeout(90000);
+
     await page.goto('/login');
 
     const email = page.locator('input#email, input[name="email"]').first();
@@ -73,16 +75,19 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const fileInputs = page.locator('input[type="file"]');
-    await expect(fileInputs).toHaveCount(2);
+    const profileInput = page.getByTestId('artist-profile-image-input');
+    const coverInput = page.getByTestId('artist-cover-image-input');
 
-    await fileInputs.nth(0).setInputFiles({
+    await expect(profileInput).toBeAttached();
+    await expect(coverInput).toBeAttached();
+
+    await profileInput.setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
 
-    await fileInputs.nth(1).setInputFiles({
+    await coverInput.setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),

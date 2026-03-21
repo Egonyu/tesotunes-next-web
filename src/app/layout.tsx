@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { getServerSession } from "next-auth";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { authConfig } from "@/lib/auth";
 import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
@@ -55,11 +57,13 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession(authConfig);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -77,7 +81,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers session={session}>{children}</Providers>
         <Analytics />
       </body>
     </html>

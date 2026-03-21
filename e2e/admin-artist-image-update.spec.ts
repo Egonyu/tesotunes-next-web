@@ -27,7 +27,6 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
   }
 
   await page.goto('/admin/artists');
-  await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible();
 
   const editLink = page.locator('a[href*="/admin/artists/"][href$="/edit"]').first();
@@ -60,13 +59,12 @@ test.describe('Admin artist image update', () => {
     await password.fill(ADMIN_PASSWORD);
 
     await page.locator('button[type="submit"]').first().click();
-    await page.waitForLoadState('networkidle');
     await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+    await expect(page.getByRole('link', { name: 'Artists' })).toBeVisible();
 
     const artistId = await resolveArtistId(page);
 
     await page.goto(`/admin/artists/${artistId}/edit`);
-    await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: 'Edit Artist' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible();
 
@@ -132,7 +130,6 @@ test.describe('Admin artist image update', () => {
     const artistName = updatePayload.data?.name || 'Artist';
 
     await page.goto(`/admin/artists/${artistId}`);
-    await page.waitForLoadState('networkidle');
 
     const coverImg = page.locator(`img[alt="${artistName} cover"]`).first();
     const avatarImg = page.locator(`img[alt="${artistName}"]`).first();

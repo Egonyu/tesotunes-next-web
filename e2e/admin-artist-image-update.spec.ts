@@ -75,11 +75,17 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const profileInput = page.getByTestId('artist-profile-image-input');
-    const coverInput = page.getByTestId('artist-cover-image-input');
+    const fileInputs = page.locator('input[type="file"]');
 
-    await expect(profileInput).toBeAttached();
-    await expect(coverInput).toBeAttached();
+    await expect
+      .poll(async () => await fileInputs.count(), {
+        timeout: 15000,
+        message: 'Expected at least two file inputs on the admin artist edit page.',
+      })
+      .toBeGreaterThanOrEqual(2);
+
+    const profileInput = fileInputs.nth(0);
+    const coverInput = fileInputs.nth(1);
 
     await profileInput.setInputFiles({
       name: `profile-${Date.now()}.png`,

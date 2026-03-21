@@ -556,7 +556,12 @@ export function useBuyShares() {
     }) =>
       apiPost<{
         message: string;
-        data: { reference: string; status: "pending" | "processing" };
+        data: {
+          reference?: string;
+          status?: "pending" | "processing" | "completed";
+          total_shares?: number;
+          total_value?: number;
+        };
       }>("/sacco/shares/buy", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sacco"] });

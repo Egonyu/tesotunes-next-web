@@ -434,8 +434,20 @@ export default function SharesPage() {
                   buySharesMutation.mutate(
                     { quantity: sharesToBuy, phone_number: phoneNumber, payment_method: paymentMethod },
                     {
-                      onSuccess: () => {
-                        toast.success(`Successfully purchased ${sharesToBuy} shares!`);
+                      onSuccess: (response) => {
+                        const status = response.data?.status;
+                        const reference = response.data?.reference;
+
+                        if (status === 'pending' || status === 'processing') {
+                          toast.info(
+                            reference
+                              ? `Share payment started. Confirm on your phone. Ref: ${reference}`
+                              : 'Share payment started. Confirm on your phone.'
+                          );
+                        } else {
+                          toast.success(`Successfully purchased ${sharesToBuy} shares!`);
+                        }
+
                         setShowBuyModal(false);
                         setSharesToBuy(1);
                         setPhoneNumber('');

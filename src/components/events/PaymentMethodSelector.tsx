@@ -15,6 +15,7 @@ interface PaymentMethodSelectorProps {
   creditsBalance?: number
   onSelect: (method: PaymentMethod) => void
   className?: string
+  disabledMethods?: PaymentMethod[]
 }
 
 const PAYMENT_METHODS: Array<{
@@ -58,6 +59,7 @@ export function PaymentMethodSelector({
   creditsBalance = 0,
   onSelect,
   className,
+  disabledMethods = [],
 }: PaymentMethodSelectorProps) {
   const { paymentMethod, setPaymentMethod, total } = useEventCartStore()
 
@@ -74,7 +76,8 @@ export function PaymentMethodSelector({
 
       <div className="space-y-2">
         {PAYMENT_METHODS.map((method) => {
-          const isDisabled = method.id === 'credits' && !canPayWithCredits
+          const isDisabled = disabledMethods.includes(method.id)
+            || (method.id === 'credits' && !canPayWithCredits)
 
           return (
             <button

@@ -18,6 +18,29 @@ interface TicketTier {
   sales_end_date?: string;
 }
 
+const TICKETING_MODE_OPTIONS = [
+  {
+    value: 'tesotunes_managed',
+    label: 'Tesotunes ticketing',
+    description: 'Sell and validate tickets fully through Tesotunes.',
+  },
+  {
+    value: 'hybrid',
+    label: 'Hybrid ticketing',
+    description: 'Use Tesotunes alongside your own external or printed allocation.',
+  },
+  {
+    value: 'external_only',
+    label: 'External only',
+    description: 'Promote here, but send buyers to your own ticketing channel.',
+  },
+  {
+    value: 'free_rsvp',
+    label: 'Free RSVP',
+    description: 'Collect attendance without paid checkout.',
+  },
+] as const;
+
 export default function CreateEventPage() {
   const router = useRouter();
   const createEvent = useCreateEvent();
@@ -34,6 +57,17 @@ export default function CreateEventPage() {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('Uganda');
   const [capacity, setCapacity] = useState<string>('');
+  const [ticketingMode, setTicketingMode] = useState<CreateEventRequest['ticketing_mode']>('tesotunes_managed');
+  const [registrationDeadline, setRegistrationDeadline] = useState('');
+  const [refundPolicy, setRefundPolicy] = useState('');
+  const [cancellationPolicy, setCancellationPolicy] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
+  const [ageRestriction, setAgeRestriction] = useState('');
+  const [doorNotes, setDoorNotes] = useState('');
+  const [taxVatNotes, setTaxVatNotes] = useState('');
+  const [requirementsText, setRequirementsText] = useState('');
+  const [website, setWebsite] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [bannerImage, setBannerImage] = useState<File | null>(null);
 
@@ -73,6 +107,8 @@ export default function CreateEventPage() {
     setTicketTiers(updated);
   };
 
+  const isFreeRsvp = ticketingMode === 'free_rsvp';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -103,10 +139,30 @@ export default function CreateEventPage() {
       location,
       city,
       country,
+      is_free: isFreeRsvp,
+      ticketing_mode: ticketingMode,
       capacity: capacity ? parseInt(capacity) : undefined,
+      registration_deadline: registrationDeadline || undefined,
+      refund_policy: refundPolicy || undefined,
+      cancellation_policy: cancellationPolicy || undefined,
+      requirements: requirementsText
+        .split('\n')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      contact_info: {
+        support_email: supportEmail || undefined,
+        support_phone: supportPhone || undefined,
+        age_restriction: ageRestriction || undefined,
+        door_notes: doorNotes || undefined,
+        tax_vat_notes: taxVatNotes || undefined,
+      },
+      website: website || undefined,
       image: image || undefined,
       banner_image: bannerImage || undefined,
-      ticket_tiers: ticketTiers,
+      ticket_tiers: ticketTiers.map((tier) => ({
+        ...tier,
+        price: isFreeRsvp ? 0 : tier.price,
+      })),
     };
 
     try {
@@ -195,6 +251,161 @@ export default function CreateEventPage() {
                 onChange={(e) => setCapacity(e.target.value)}
                 placeholder="1000"
                 min="1"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Ticketing Mode *
+              </label>
+              <select
+                value={ticketingMode}
+                onChange={(e) => setTicketingMode(e.target.value as CreateEventRequest['ticketing_mode'])}
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              >
+                {TICKETING_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {TICKETING_MODE_OPTIONS.find((option) => option.value === ticketingMode)?.description}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Business Rules & Support</h2>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Registration Deadline
+              </label>
+              <input
+                type="datetime-local"
+                value={registrationDeadline}
+                onChange={(e) => setRegistrationDeadline(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Event Website
+              </label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Support Email
+              </label>
+              <input
+                type="email"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                placeholder="tickets@yourevent.com"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Support Phone
+              </label>
+              <input
+                type="text"
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                placeholder="+256..."
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Age Restriction
+              </label>
+              <input
+                type="text"
+                value={ageRestriction}
+                onChange={(e) => setAgeRestriction(e.target.value)}
+                placeholder="18+ only"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Tax / VAT Notes
+              </label>
+              <input
+                type="text"
+                value={taxVatNotes}
+                onChange={(e) => setTaxVatNotes(e.target.value)}
+                placeholder="VAT included in ticket price"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Refund Policy
+              </label>
+              <textarea
+                value={refundPolicy}
+                onChange={(e) => setRefundPolicy(e.target.value)}
+                rows={3}
+                placeholder="State your refund terms clearly..."
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Cancellation Policy
+              </label>
+              <textarea
+                value={cancellationPolicy}
+                onChange={(e) => setCancellationPolicy(e.target.value)}
+                rows={3}
+                placeholder="Explain what happens if the event is postponed or cancelled..."
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Door Notes
+              </label>
+              <textarea
+                value={doorNotes}
+                onChange={(e) => setDoorNotes(e.target.value)}
+                rows={3}
+                placeholder="Entry rules, gate times, security notes..."
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Attendee Requirements
+              </label>
+              <textarea
+                value={requirementsText}
+                onChange={(e) => setRequirementsText(e.target.value)}
+                rows={4}
+                placeholder={"One requirement per line\nBring ID\nNo outside food"}
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
             </div>
@@ -407,13 +618,19 @@ export default function CreateEventPage() {
                     </label>
                     <input
                       type="number"
-                      value={tier.price}
-                      onChange={(e) => updateTicketTier(index, 'price', parseInt(e.target.value))}
+                      value={isFreeRsvp ? 0 : tier.price}
+                      onChange={(e) => updateTicketTier(index, 'price', parseInt(e.target.value) || 0)}
                       placeholder="50000"
                       min="0"
                       required
+                      disabled={isFreeRsvp}
                       className="w-full px-4 py-3 rounded-lg border bg-background"
                     />
+                    {isFreeRsvp && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Free RSVP mode forces ticket prices to 0.
+                      </p>
+                    )}
                   </div>
 
                   <div className="md:col-span-2">

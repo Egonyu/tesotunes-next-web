@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const ARTIST_ID = process.env.E2E_ARTIST_ID || '11';
+const ARTIST_ID = process.env.E2E_ARTIST_ID;
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@tesotunes.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'password';
 
@@ -21,6 +21,33 @@ function extractRealImageUrl(rawSrc: string | null, currentPageUrl: string): str
   return decodeURIComponent(encoded);
 }
 
+async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promise<string> {
+  if (ARTIST_ID) {
+    return ARTIST_ID;
+  }
+
+  await page.goto('/admin/artists');
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible();
+
+  const editLink = page.locator('a[href*="/admin/artists/"][href$="/edit"]').first();
+  await expect(editLink).toBeVisible();
+
+  const href = await editLink.getAttribute('href');
+
+  if (!href) {
+    throw new Error('Expected at least one admin artist edit link, but none was found.');
+  }
+
+  const match = href.match(/\/admin\/artists\/(\d+)\/edit$/);
+
+  if (!match) {
+    throw new Error(`Could not extract artist id from href: ${href}`);
+  }
+
+  return match[1];
+}
+
 test.describe('Admin artist image update', () => {
   test('updates profile and cover images and reflects new URLs', async ({ page }) => {
     await page.goto('/login');
@@ -32,8 +59,13 @@ test.describe('Admin artist image update', () => {
 
     await page.locator('button[type="submit"]').first().click();
     await page.waitForLoadState('networkidle');
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
-    await page.goto(`/admin/artists/${ARTIST_ID}/edit`);
+    const artistId = await resolveArtistId(page);
+
+    await page.goto(`/admin/artists/${artistId}/edit`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Edit Artist' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible();
 
     const beforeCoverSrcRaw = await page.locator('img[alt="Cover preview"]').first().getAttribute('src').catch(() => null);
@@ -60,7 +92,7 @@ test.describe('Admin artist image update', () => {
       const req = response.request();
       return (
         req.method() === 'POST' &&
-        response.url().includes(`/api/admin/artists/${ARTIST_ID}`) &&
+        response.url().includes(`/api/admin/artists/${artistId}`) &&
         response.status() === 200
       );
     });
@@ -88,7 +120,7 @@ test.describe('Admin artist image update', () => {
 
     const artistName = updatePayload.data?.name || 'Artist';
 
-    await page.goto(`/admin/artists/${ARTIST_ID}`);
+    await page.goto(`/admin/artists/${artistId}`);
     await page.waitForLoadState('networkidle');
 
     const coverImg = page.locator(`img[alt="${artistName} cover"]`).first();

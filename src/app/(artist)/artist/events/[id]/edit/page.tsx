@@ -28,6 +28,29 @@ interface TicketTierForm {
   max_per_order: number;
 }
 
+const TICKETING_MODE_OPTIONS = [
+  {
+    value: 'tesotunes_managed',
+    label: 'Tesotunes ticketing',
+    description: 'Sell and validate tickets fully through Tesotunes.',
+  },
+  {
+    value: 'hybrid',
+    label: 'Hybrid ticketing',
+    description: 'Use Tesotunes alongside your own external or printed allocation.',
+  },
+  {
+    value: 'external_only',
+    label: 'External only',
+    description: 'Promote here, but send buyers to your own ticketing channel.',
+  },
+  {
+    value: 'free_rsvp',
+    label: 'Free RSVP',
+    description: 'Collect attendance without paid checkout.',
+  },
+] as const;
+
 export default function EditArtistEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -51,7 +74,18 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('Uganda');
   const [capacity, setCapacity] = useState('');
+  const [ticketingMode, setTicketingMode] = useState<UpdateEventRequest['ticketing_mode']>('tesotunes_managed');
   const [status, setStatus] = useState('draft');
+  const [registrationDeadline, setRegistrationDeadline] = useState('');
+  const [refundPolicy, setRefundPolicy] = useState('');
+  const [cancellationPolicy, setCancellationPolicy] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
+  const [ageRestriction, setAgeRestriction] = useState('');
+  const [doorNotes, setDoorNotes] = useState('');
+  const [taxVatNotes, setTaxVatNotes] = useState('');
+  const [requirementsText, setRequirementsText] = useState('');
+  const [website, setWebsite] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
 
@@ -70,6 +104,17 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
     setVenue(getEventVenueLabel(event));
     setLocation(event.city || '');
     setCapacity(String(getEventCapacity(event) || ''));
+    setTicketingMode(event.ticketing_mode || (event.is_free ? 'free_rsvp' : 'tesotunes_managed'));
+    setRegistrationDeadline(event.registration_deadline ? event.registration_deadline.slice(0, 16) : '');
+    setRefundPolicy(event.refund_policy || '');
+    setCancellationPolicy(event.cancellation_policy || '');
+    setSupportEmail(event.contact_info?.support_email || '');
+    setSupportPhone(event.contact_info?.support_phone || '');
+    setAgeRestriction(event.contact_info?.age_restriction || '');
+    setDoorNotes(event.contact_info?.door_notes || '');
+    setTaxVatNotes(event.contact_info?.tax_vat_notes || '');
+    setRequirementsText((event.requirements || []).join('\n'));
+    setWebsite(event.website || '');
 
     // Parse date/time from starts_at
     if (event.starts_at) {
@@ -97,6 +142,8 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
       })));
     }
   }, [event]);
+
+  const isFreeRsvp = ticketingMode === 'free_rsvp';
 
   const addTicketTier = () => {
     setTicketTiers([...ticketTiers, { name: '', description: '', price: 0, price_credits: 0, quantity: 0, max_per_order: 10 }]);
@@ -145,12 +192,30 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
         location: location || `${city}, ${country}`,
         city,
         country,
+        is_free: isFreeRsvp,
+        ticketing_mode: ticketingMode,
+        status,
         capacity: capacity ? parseInt(capacity) : undefined,
+        registration_deadline: registrationDeadline || undefined,
+        refund_policy: refundPolicy || undefined,
+        cancellation_policy: cancellationPolicy || undefined,
+        requirements: requirementsText
+          .split('\n')
+          .map((item) => item.trim())
+          .filter(Boolean),
+        contact_info: {
+          support_email: supportEmail || undefined,
+          support_phone: supportPhone || undefined,
+          age_restriction: ageRestriction || undefined,
+          door_notes: doorNotes || undefined,
+          tax_vat_notes: taxVatNotes || undefined,
+        },
+        website: website || undefined,
         image: image || undefined,
         ticket_tiers: ticketTiers.map(t => ({
           name: t.name,
           description: t.description,
-          price: t.price,
+          price: isFreeRsvp ? 0 : t.price,
           quantity: t.quantity,
           max_per_order: t.max_per_order,
         })),
@@ -251,6 +316,24 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
               </select>
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Ticketing Mode</label>
+              <select
+                value={ticketingMode}
+                onChange={(e) => setTicketingMode(e.target.value as UpdateEventRequest['ticketing_mode'])}
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              >
+                {TICKETING_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {TICKETING_MODE_OPTIONS.find((option) => option.value === ticketingMode)?.description}
+              </p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Start Date *</label>
               <input
@@ -291,6 +374,108 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
                 onChange={(e) => setCapacity(e.target.value)}
                 min={0}
                 className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Business Rules & Support</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium mb-2">Registration Deadline</label>
+              <input
+                type="datetime-local"
+                value={registrationDeadline}
+                onChange={(e) => setRegistrationDeadline(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Event Website</label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Support Email</label>
+              <input
+                type="email"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                placeholder="tickets@yourevent.com"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Support Phone</label>
+              <input
+                type="text"
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                placeholder="+256..."
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Age Restriction</label>
+              <input
+                type="text"
+                value={ageRestriction}
+                onChange={(e) => setAgeRestriction(e.target.value)}
+                placeholder="18+ only"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Tax / VAT Notes</label>
+              <input
+                type="text"
+                value={taxVatNotes}
+                onChange={(e) => setTaxVatNotes(e.target.value)}
+                placeholder="VAT included in ticket price"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Refund Policy</label>
+              <textarea
+                value={refundPolicy}
+                onChange={(e) => setRefundPolicy(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Cancellation Policy</label>
+              <textarea
+                value={cancellationPolicy}
+                onChange={(e) => setCancellationPolicy(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Door Notes</label>
+              <textarea
+                value={doorNotes}
+                onChange={(e) => setDoorNotes(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Attendee Requirements</label>
+              <textarea
+                value={requirementsText}
+                onChange={(e) => setRequirementsText(e.target.value)}
+                rows={4}
+                placeholder={"One requirement per line\nBring ID\nNo outside food"}
+                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
               />
             </div>
           </div>
@@ -416,11 +601,17 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
                     <label className="block text-xs font-medium mb-1">Price (UGX) *</label>
                     <input
                       type="number"
-                      value={tier.price}
+                      value={isFreeRsvp ? 0 : tier.price}
                       onChange={(e) => updateTier(index, 'price', parseInt(e.target.value) || 0)}
                       min={0}
+                      disabled={isFreeRsvp}
                       className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
                     />
+                    {isFreeRsvp && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Free RSVP mode forces ticket prices to 0.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1">Quantity *</label>

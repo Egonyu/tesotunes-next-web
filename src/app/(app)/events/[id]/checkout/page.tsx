@@ -1,7 +1,9 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   ChevronLeft,
   Loader2,
@@ -9,18 +11,35 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
+  BadgeCheck,
+  Receipt,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   getEventVenueLabel,
+  type TicketQuote,
   useEvent,
+  useSavedAttendeeProfiles,
   useInitiateCheckout,
   useCompleteCheckout,
+  useValidateDiscountCode,
 } from '@/hooks/useEvents'
 import { useEventCartStore } from '@/stores/events'
 import { OrderSummary } from '@/components/events/OrderSummary'
 import { PaymentMethodSelector } from '@/components/events/PaymentMethodSelector'
+import { DiscountCodeInput } from '@/components/events/DiscountCodeInput'
 import { toast } from 'sonner'
+
+interface AttendeeAssignmentRow {
+  key: string
+  ticketTierId: number
+  tierName: string
+  ticketIndex: number
+  name: string
+  email: string
+  phone: string
+  saveProfile: boolean
+}
 
 export default function CheckoutPage({
   params,
@@ -28,22 +47,122 @@ export default function CheckoutPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<'review' | 'payment' | 'processing' | 'success'>('review')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [creditsEarned, setCreditsEarned] = useState(0)
+  const [quote, setQuote] = useState<TicketQuote | null>(null)
+  const [attendeeRows, setAttendeeRows] = useState<AttendeeAssignmentRow[]>([])
+  const [guestBuyerName, setGuestBuyerName] = useState('')
+  const [guestBuyerEmail, setGuestBuyerEmail] = useState('')
+  const [guestBuyerPhone, setGuestBuyerPhone] = useState('')
 
+  const { status: sessionStatus } = useSession()
+  const isAuthenticated = sessionStatus === 'authenticated'
+  const isGuestCheckout = sessionStatus !== 'authenticated'
   const { data: event, isLoading: eventLoading } = useEvent(id)
+  const { data: savedAttendeeProfiles = [] } = useSavedAttendeeProfiles(10, isAuthenticated)
   const {
     items,
     paymentMethod,
     total,
+    discountCode,
     clearCart,
+    setPaymentMethod,
   } = useEventCartStore()
 
   const initiateCheckout = useInitiateCheckout()
   const completeCheckout = useCompleteCheckout()
+  const validateDiscountCode = useValidateDiscountCode()
+  const attribution = {
+    source: searchParams.get('source') || searchParams.get('utm_source') || searchParams.get('ref') || undefined,
+    channel: searchParams.get('channel') || searchParams.get('utm_medium') || undefined,
+    campaign_code: searchParams.get('campaign_code') || searchParams.get('campaign') || searchParams.get('promo') || undefined,
+    referral_code: searchParams.get('referral_code') || searchParams.get('ref') || undefined,
+    promoter_code: searchParams.get('promoter_code') || searchParams.get('promoter') || undefined,
+    utm_source: searchParams.get('utm_source') || undefined,
+    utm_medium: searchParams.get('utm_medium') || undefined,
+    utm_campaign: searchParams.get('utm_campaign') || undefined,
+    utm_term: searchParams.get('utm_term') || undefined,
+    utm_content: searchParams.get('utm_content') || undefined,
+    landing_page: `/events/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+  }
+
+  useEffect(() => {
+    setAttendeeRows((current) => {
+      const currentByKey = new Map(current.map((row) => [row.key, row]))
+      const nextRows: AttendeeAssignmentRow[] = []
+
+      items.forEach((item) => {
+        Array.from({ length: item.quantity }).forEach((_, index) => {
+          const key = `${item.ticket_tier_id}-${index}`
+          nextRows.push(currentByKey.get(key) ?? {
+            key,
+            ticketTierId: item.ticket_tier_id,
+            tierName: item.ticket_tier.name,
+            ticketIndex: index,
+            name: '',
+            email: '',
+            phone: '',
+            saveProfile: true,
+          })
+        })
+      })
+
+      return nextRows
+    })
+  }, [items])
+
+  useEffect(() => {
+    if (isGuestCheckout && (paymentMethod === 'wallet' || paymentMethod === 'credits')) {
+      setPaymentMethod('mtn_momo')
+    }
+  }, [isGuestCheckout, paymentMethod, setPaymentMethod])
+
+  const updateAttendeeRow = (key: string, field: keyof AttendeeAssignmentRow, value: string | boolean) => {
+    setAttendeeRows((current) => current.map((row) => (
+      row.key === key ? { ...row, [field]: value } : row
+    )))
+  }
+
+  const applySavedProfile = (key: string, profileIndex: number) => {
+    const profile = savedAttendeeProfiles[profileIndex]
+    if (!profile) return
+
+    setAttendeeRows((current) => current.map((row) => (
+      row.key === key
+        ? {
+            ...row,
+            name: profile.name || row.name,
+            email: profile.email || '',
+            phone: profile.phone || '',
+            saveProfile: true,
+          }
+        : row
+    )))
+  }
+
+  const buildAttendeeAssignments = () => {
+    const grouped = new Map<number, Array<{ name?: string; email?: string; phone?: string; save_profile?: boolean }>>()
+
+    attendeeRows.forEach((row) => {
+      const attendees = grouped.get(row.ticketTierId) ?? []
+      attendees.push({
+        name: row.name || undefined,
+        email: row.email || undefined,
+        phone: row.phone || undefined,
+        save_profile: row.saveProfile,
+      })
+      grouped.set(row.ticketTierId, attendees)
+    })
+
+    return Array.from(grouped.entries()).map(([ticketTierId, attendees]) => ({
+      ticket_tier_id: ticketTierId,
+      attendees,
+    }))
+  }
 
   if (eventLoading) {
     return (
@@ -63,6 +182,25 @@ export default function CheckoutPage({
           className="text-primary hover:underline"
         >
           Browse Events
+        </Link>
+      </div>
+    )
+  }
+
+  if (event.ticketing_mode === 'external_only') {
+    return (
+      <div className="container py-16 text-center">
+        <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Checkout Happens Off Tesotunes</h2>
+        <p className="text-muted-foreground mb-6">
+          This event uses organizer-managed ticketing, so Tesotunes checkout is not available for it.
+        </p>
+        <Link
+          href={`/events/${id}`}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Event
         </Link>
       </div>
     )
@@ -88,8 +226,9 @@ export default function CheckoutPage({
   }
 
   async function handleCheckout() {
-    if (items.length !== 1) {
-      toast.error('Select one ticket tier per checkout for now')
+    const missingNames = attendeeRows.filter((row) => row.name.trim() === '')
+    if (missingNames.length > 0) {
+      toast.error('Add a ticket holder name for each ticket before paying')
       setStep('review')
       return
     }
@@ -105,6 +244,18 @@ export default function CheckoutPage({
       return
     }
 
+    if (isGuestCheckout) {
+      if (!guestBuyerName.trim() || !guestBuyerEmail.trim()) {
+        toast.error('Enter your name and email to continue as a guest')
+        return
+      }
+
+      if (paymentMethod === 'wallet' || paymentMethod === 'credits') {
+        toast.error('Guest checkout currently supports MTN or Airtel payments only')
+        return
+      }
+    }
+
     setStep('processing')
 
     try {
@@ -116,10 +267,11 @@ export default function CheckoutPage({
           quantity: item.quantity,
         })),
         payment_method: paymentMethod,
+        discount_code: discountCode || undefined,
+        attribution,
       })
+      setQuote(checkout.quote)
 
-      // Step 2: Complete — pass first cart item's ticket info to the purchase endpoint
-      const firstItem = items[0]
       const result = await completeCheckout.mutateAsync({
         event_id: Number(id),
         checkout_id: checkout.checkout_id,
@@ -128,8 +280,16 @@ export default function CheckoutPage({
           phone_number: phoneNumber,
         },
         phone_number: phoneNumber || undefined,
-        ticket_tier_id: firstItem.ticket_tier_id,
-        quantity: firstItem.quantity,
+        discount_code: discountCode || undefined,
+        tickets: items.map((item) => ({
+          ticket_tier_id: item.ticket_tier_id,
+          quantity: item.quantity,
+        })),
+        holder_name: isGuestCheckout ? guestBuyerName.trim() : undefined,
+        holder_email: isGuestCheckout ? guestBuyerEmail.trim() : undefined,
+        holder_phone: isGuestCheckout ? (guestBuyerPhone.trim() || phoneNumber || undefined) : undefined,
+        attendee_assignments: buildAttendeeAssignments(),
+        attribution,
       })
 
       setOrderId(result.data?.order_id || null)
@@ -153,6 +313,11 @@ export default function CheckoutPage({
         <p className="text-muted-foreground mb-2">
           Your tickets for <span className="font-semibold text-foreground">{event.title}</span> are confirmed.
         </p>
+        {isGuestCheckout && (
+          <p className="text-sm text-muted-foreground mb-4">
+            We used your guest details to issue the tickets. Keep your order ID handy until full guest ticket retrieval lands.
+          </p>
+        )}
         {orderId && (
           <p className="text-sm text-muted-foreground mb-4">
             Order ID: <span className="font-mono">{orderId}</span>
@@ -164,13 +329,23 @@ export default function CheckoutPage({
           </div>
         )}
         <div className="flex flex-col gap-3">
-          <Link
-            href="/tickets"
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
-          >
-            View My Tickets
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/tickets"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
+            >
+              View My Tickets
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <Link
+              href={`/events/${id}`}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
+            >
+              Back to Event
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
           <Link
             href="/events"
             className="text-sm text-muted-foreground hover:text-foreground"
@@ -277,24 +452,157 @@ export default function CheckoutPage({
                 ))}
               </div>
 
-              <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-                Discount codes, mixed-payment checkout, and multi-tier orders are
-                planned for a later Events release. This checkout currently
-                completes one ticket tier at a time using a single payment
-                method.
+              <div className="rounded-xl border bg-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-sm">Assign Ticket Holders</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Add the actual attendee details for each ticket so Tesotunes issues the right names from the start.
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    {attendeeRows.length} ticket holder{attendeeRows.length === 1 ? '' : 's'}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  {attendeeRows.map((row) => (
+                    <div key={row.key} className="rounded-xl border bg-muted/20 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-sm">{row.tierName}</p>
+                          <p className="text-xs text-muted-foreground">Ticket {row.ticketIndex + 1}</p>
+                        </div>
+                        {savedAttendeeProfiles.length > 0 && (
+                          <select
+                            defaultValue=""
+                            onChange={(e) => {
+                              if (e.target.value !== '') {
+                                applySavedProfile(row.key, Number(e.target.value))
+                                e.currentTarget.value = ''
+                              }
+                            }}
+                            className="rounded-lg border bg-background px-3 py-2 text-xs"
+                          >
+                            <option value="">Quick fill from saved attendee</option>
+                            {savedAttendeeProfiles.slice(0, 5).map((profile, index) => (
+                              <option key={`${profile.name}-${profile.email || index}`} value={index}>
+                                {profile.name}{profile.email ? ` • ${profile.email}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <input
+                          type="text"
+                          value={row.name}
+                          onChange={(e) => updateAttendeeRow(row.key, 'name', e.target.value)}
+                          placeholder="Ticket holder name"
+                          className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                        />
+                        <input
+                          type="email"
+                          value={row.email}
+                          onChange={(e) => updateAttendeeRow(row.key, 'email', e.target.value)}
+                          placeholder="Email (optional)"
+                          className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                        />
+                        <input
+                          type="tel"
+                          value={row.phone}
+                          onChange={(e) => updateAttendeeRow(row.key, 'phone', e.target.value)}
+                          placeholder="Phone (optional)"
+                          className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                        />
+                      </div>
+
+                      <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={row.saveProfile}
+                          onChange={(e) => updateAttendeeRow(row.key, 'saveProfile', e.target.checked)}
+                        />
+                        Save this attendee for faster checkout next time
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <button
-                onClick={() => {
-                  if (items.length !== 1) {
-                    toast.error('Select one ticket tier per checkout for now')
-                    return
-                  }
+              <div className="rounded-xl border bg-card p-4">
+                <DiscountCodeInput
+                  onApply={async (code) => {
+                    const response = await validateDiscountCode.mutateAsync({
+                      event_id: Number(id),
+                      code,
+                      tickets: items.map((item) => ({
+                        ticket_tier_id: item.ticket_tier_id,
+                        quantity: item.quantity,
+                      })),
+                    })
 
+                    setQuote(response.data.quote)
+
+                    return {
+                      valid: response.valid,
+                      discount: response.data.discount_amount,
+                      message: response.message,
+                    }
+                  }}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Event promo codes apply live Tesotunes quote math before payment, so your fees and final total stay accurate.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                Multi-tier orders, promo codes, and attendee assignment are already live here.
+                Guest checkout is MVP right now, so guest buyers use MTN or Airtel while Tesotunes wallet and credits stay signed-in only.
+              </div>
+
+              <div className="rounded-xl border bg-card p-4 text-sm">
+                <p className="font-medium">Before you pay</p>
+                <div className="mt-2 space-y-1 text-muted-foreground">
+                  <p>Refunds: {event.refund_policy || 'Tickets are non-refundable unless the organizer or event terms say otherwise.'}</p>
+                  <p>Organizer: {event.organizer?.name || 'Tesotunes event organizer'}</p>
+                  <p>Support: {event.contact_info?.support_email || event.contact_info?.support_phone || 'Contact details will appear on your ticket after purchase.'}</p>
+                  {discountCode && <div>Promo code: {discountCode}</div>}
+                </div>
+              </div>
+
+              {(attribution.campaign_code || attribution.referral_code || attribution.utm_source) && (
+                <div className="rounded-xl border bg-card p-4 text-sm">
+                  <p className="font-medium">Tracked promotion</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {attribution.campaign_code || attribution.referral_code || attribution.utm_source}
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={async () => {
+                try {
+                  const checkout = await initiateCheckout.mutateAsync({
+                   event_id: Number(id),
+                   tickets: items.map((item) => ({
+                      ticket_tier_id: item.ticket_tier_id,
+                      quantity: item.quantity,
+                     })),
+                     payment_method: paymentMethod,
+                     discount_code: discountCode || undefined,
+                     attribution,
+                   })
+                  setQuote(checkout.quote)
                   setStep('payment')
-                }}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
-              >
+                } catch (err: unknown) {
+                  const message = err instanceof Error ? err.message : 'Failed to prepare checkout'
+                  toast.error(message)
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+            >
                 Continue to Payment
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -303,10 +611,73 @@ export default function CheckoutPage({
 
           {step === 'payment' && (
             <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border bg-card p-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <BadgeCheck className="mt-0.5 h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium">Organizer credibility</p>
+                      <div className="mt-2 space-y-1 text-muted-foreground">
+                        <p>Organizer: {event.organizer?.name || 'Tesotunes event organizer'}</p>
+                        <p>Venue: {getEventVenueLabel(event)}</p>
+                        <p>Support: {event.contact_info?.support_email || event.contact_info?.support_phone || 'Shared after purchase'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border bg-card p-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <Receipt className="mt-0.5 h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium">Fee transparency</p>
+                      <div className="mt-2 space-y-1 text-muted-foreground">
+                        <p>Base ticket total: UGX {(quote?.base_amount ?? total).toLocaleString()}</p>
+                        <p>Tesotunes fees: UGX {(quote?.total_fee_amount ?? 0).toLocaleString()}</p>
+                        <p>You pay: UGX {(quote?.total_amount ?? total).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {isGuestCheckout && (
+                <div className="rounded-xl border bg-card p-4">
+                  <h3 className="font-semibold text-sm">Guest buyer details</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add the buyer details Tesotunes should use for this order. Ticket holder names stay separate above.
+                  </p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <input
+                      type="text"
+                      value={guestBuyerName}
+                      onChange={(e) => setGuestBuyerName(e.target.value)}
+                      placeholder="Your full name"
+                      className="w-full rounded-lg border bg-background px-4 py-3 text-sm"
+                    />
+                    <input
+                      type="email"
+                      value={guestBuyerEmail}
+                      onChange={(e) => setGuestBuyerEmail(e.target.value)}
+                      placeholder="Your email address"
+                      className="w-full rounded-lg border bg-background px-4 py-3 text-sm"
+                    />
+                    <input
+                      type="tel"
+                      value={guestBuyerPhone}
+                      onChange={(e) => setGuestBuyerPhone(e.target.value)}
+                      placeholder="Buyer phone (optional)"
+                      className="w-full rounded-lg border bg-background px-4 py-3 text-sm md:col-span-2"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Payment Method */}
               <PaymentMethodSelector
                 creditsBalance={0}
                 onSelect={() => {}}
+                disabledMethods={isGuestCheckout ? ['wallet', 'credits'] : []}
               />
 
               {/* Phone Number for MoMo */}
@@ -370,7 +741,7 @@ export default function CheckoutPage({
                   )}
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  Pay UGX {total.toLocaleString()}
+                  Pay UGX {(quote?.total_amount ?? total).toLocaleString()}
                 </button>
               </div>
             </>
@@ -380,7 +751,7 @@ export default function CheckoutPage({
         {/* Sidebar */}
         <div>
           <div className="sticky top-24">
-            <OrderSummary />
+            <OrderSummary quote={quote} />
           </div>
         </div>
       </div>

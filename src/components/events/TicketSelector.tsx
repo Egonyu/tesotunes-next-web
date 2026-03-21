@@ -20,6 +20,10 @@ interface TicketSelectorProps {
   eventId: number
   isPastEvent?: boolean
   isCancelled?: boolean
+  waitlistCount?: number
+  waitlistJoined?: boolean
+  isJoiningWaitlist?: boolean
+  onJoinWaitlist?: () => void
   onProceedToCheckout?: () => void
   className?: string
 }
@@ -29,6 +33,10 @@ export function TicketSelector({
   eventId,
   isPastEvent = false,
   isCancelled = false,
+  waitlistCount = 0,
+  waitlistJoined = false,
+  isJoiningWaitlist = false,
+  onJoinWaitlist,
   onProceedToCheckout,
   className,
 }: TicketSelectorProps) {
@@ -72,6 +80,24 @@ export function TicketSelector({
           <p className="text-sm text-muted-foreground mt-1">
             All tickets have been sold.
           </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {waitlistCount > 0 ? `${waitlistCount} fan${waitlistCount === 1 ? '' : 's'} already on the waitlist.` : 'Join the waitlist to get notified if inventory opens up.'}
+          </p>
+          {onJoinWaitlist && (
+            <button
+              onClick={onJoinWaitlist}
+              disabled={waitlistJoined || isJoiningWaitlist}
+              className={cn(
+                'mt-4 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                waitlistJoined
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                isJoiningWaitlist && 'opacity-70'
+              )}
+            >
+              {waitlistJoined ? 'On Waitlist' : isJoiningWaitlist ? 'Joining Waitlist...' : 'Notify Me'}
+            </button>
+          )}
         </div>
       </div>
     )
@@ -82,7 +108,6 @@ export function TicketSelector({
       tiers.some((t) => t.id === item.ticket_tier_id),
   )
   const totalQuantity = cartForEvent.reduce((sum, item) => sum + item.quantity, 0)
-  const selectedTierId = cartForEvent[0]?.ticket_tier_id ?? null
 
   function handleQuantityChange(
     tier: EventTicketTier,
@@ -122,7 +147,6 @@ export function TicketSelector({
           const qty = cartItem?.quantity ?? 0
           const available = tier.available ?? 0
           const isTierSoldOut = available <= 0
-          const isLockedByAnotherTier = selectedTierId !== null && selectedTierId !== tier.id
 
           return (
             <div
@@ -131,7 +155,6 @@ export function TicketSelector({
                 'p-4 rounded-lg border transition-all',
                 qty > 0 && 'border-primary bg-primary/5',
                 isTierSoldOut && 'opacity-50',
-                isLockedByAnotherTier && 'opacity-60',
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -182,8 +205,6 @@ export function TicketSelector({
                 <div className="text-xs text-muted-foreground">
                   {isTierSoldOut ? (
                     <span className="text-red-500 font-medium">Sold out</span>
-                  ) : isLockedByAnotherTier ? (
-                    <span>Finish this checkout before mixing ticket tiers</span>
                   ) : available < 50 ? (
                     <span className="text-orange-500 font-medium">
                       {available} left
@@ -213,15 +234,12 @@ export function TicketSelector({
                     <button
                       onClick={() => handleQuantityChange(tier, 1)}
                       disabled={
-                        isLockedByAnotherTier ||
                         qty >= tier.max_per_order ||
                         qty >= available
                       }
                       className={cn(
                         'h-8 w-8 rounded-full border flex items-center justify-center transition-colors',
-                        isLockedByAnotherTier ||
-                        qty >= tier.max_per_order ||
-                        qty >= available
+                        qty >= tier.max_per_order || qty >= available
                           ? 'opacity-30 cursor-not-allowed'
                           : 'hover:bg-primary hover:text-primary-foreground hover:border-primary',
                       )}
@@ -264,7 +282,7 @@ export function TicketSelector({
 
           {!allFree && (
             <div className="space-y-2 text-center text-[10px] text-muted-foreground">
-              <p>Each checkout currently supports one ticket tier at a time.</p>
+              <p>Add multiple tiers to one Tesotunes checkout. One payment still applies per order.</p>
               <div className="flex items-center justify-center gap-4">
                 <span className="flex items-center gap-1">
                   <CreditCard className="h-3 w-3" /> Wallet and card

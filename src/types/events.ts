@@ -10,6 +10,7 @@ import type { Artist, Genre, User } from './index'
 
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed' | 'postponed' | 'sold_out'
 export type EventCategory = 'concert' | 'festival' | 'party' | 'workshop' | 'conference' | 'meetup' | 'exhibition' | 'sports' | 'comedy' | 'theater' | 'other'
+export type EventTicketingMode = 'tesotunes_managed' | 'hybrid' | 'external_only' | 'free_rsvp'
 export type TicketStatus = 'valid' | 'used' | 'cancelled' | 'expired' | 'transferred' | 'refunded'
 export type GroupBookingStatus = 'draft' | 'active' | 'confirmed' | 'cancelled' | 'expired'
 export type GroupMemberStatus = 'invited' | 'confirmed' | 'paid' | 'declined'
@@ -132,6 +133,7 @@ export interface Event {
   attendee_count: number
   tickets_sold: number
   is_free: boolean
+  ticketing_mode?: EventTicketingMode
   cheapest_ticket_price?: number
   currency: string
 
@@ -685,6 +687,7 @@ export interface CreateEventRequest {
   country: string
   is_virtual?: boolean
   virtual_link?: string
+  ticketing_mode?: EventTicketingMode
   capacity?: number
   image?: File
   banner_image?: File

@@ -24,7 +24,7 @@ export function GroupBookingCTA({ eventId, className }: GroupBookingCTAProps) {
         <div>
           <h3 className="font-semibold text-sm">Going with friends?</h3>
           <p className="text-xs text-muted-foreground">
-            Group booking is planned for a future Events release
+            Group lead checkout is live for Tesotunes-managed tickets
           </p>
         </div>
       </div>
@@ -33,15 +33,15 @@ export function GroupBookingCTA({ eventId, className }: GroupBookingCTAProps) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock3 className="h-3.5 w-3.5 text-primary" />
           <span>
-            One-person checkout is live today and already matches the backend
-            ticket contract
+            One buyer can now reserve multiple seats and assign attendee names
+            before paying
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock3 className="h-3.5 w-3.5 text-primary" />
           <span>
-            Shared invite links, split payments, and group discounts are still
-            product-tracked work
+            Split payments, invite coordination, and shared group discounts are
+            still future work
           </span>
         </div>
       </div>
@@ -51,7 +51,7 @@ export function GroupBookingCTA({ eventId, className }: GroupBookingCTAProps) {
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border-2 border-primary text-primary font-medium text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
       >
         <Users className="h-4 w-4" />
-        View Planned Group Booking
+        Start Group Lead Booking
         <ArrowRight className="h-4 w-4" />
       </Link>
     </div>

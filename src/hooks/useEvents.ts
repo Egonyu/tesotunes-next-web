@@ -64,6 +64,38 @@ export interface EventTicketTier {
   tier_early_access_hours?: number | null;
 }
 
+export interface EventDiscountCode {
+  id: number;
+  name?: string | null;
+  code: string;
+  discount_type: 'percentage' | 'fixed_amount';
+  discount_value: number;
+  max_discount_ugx?: number | null;
+  usage_limit?: number | null;
+  usage_count?: number;
+  min_order_amount_ugx?: number | null;
+  applies_to_ticket_ids?: number[];
+  starts_at?: string | null;
+  ends_at?: string | null;
+  is_active: boolean;
+}
+
+export interface EventStaffMember {
+  id: number | string;
+  user_id: number;
+  role: 'organizer' | 'finance' | 'check_in_staff' | 'promoter' | 'analyst';
+  role_label: string;
+  notes?: string | null;
+  assigned_at?: string | null;
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+    username?: string;
+    avatar?: string;
+  } | null;
+}
+
 /**
  * Event interface — aligned with EventResource.php from tesotunes-api.
  *
@@ -109,6 +141,7 @@ export interface Event {
   is_virtual?: boolean;
   virtual_link?: string;
   is_free?: boolean;
+  ticketing_mode?: 'tesotunes_managed' | 'hybrid' | 'external_only' | 'free_rsvp';
   is_featured: boolean;
   is_published?: boolean;
   requires_approval?: boolean;
@@ -134,6 +167,10 @@ export interface Event {
 
   // Ticket tiers — included when tickets relation is loaded (show endpoint)
   ticket_tiers?: EventTicketTier[];
+  discount_codes?: EventDiscountCode[];
+  staff_members?: EventStaffMember[];
+  waitlist_count?: number;
+  waitlist_joined?: boolean;
 
   // Stats
   tickets_sold?: number;
@@ -144,6 +181,58 @@ export interface Event {
   // Metadata
   tags?: string[];
   registration_deadline?: string;
+  refund_policy?: string;
+  cancellation_policy?: string;
+  requirements?: string[];
+  contact_info?: {
+    support_email?: string;
+    support_phone?: string;
+    age_restriction?: string;
+    door_notes?: string;
+    tax_vat_notes?: string;
+  };
+  website?: string;
+  social_links?: Record<string, string>;
+  marketing_settings?: {
+    campaign_spend?: Array<{
+      key?: string;
+      label: string;
+      amount: number;
+      notes?: string | null;
+      currency?: string;
+    }>;
+  };
+  operations?: {
+    registration_deadline?: string;
+    refund_policy?: string;
+    cancellation_policy?: string;
+    support_email?: string;
+    support_phone?: string;
+    age_restriction?: string;
+    door_notes?: string;
+    tax_vat_notes?: string;
+    requirements?: string[];
+    website?: string;
+  };
+  payout_center?: {
+    setup_complete: boolean;
+    money_payout_enabled: boolean;
+    minimum_payout: number;
+    verification_status: string;
+    method?: string | null;
+    method_label?: string | null;
+    mobile_money_provider?: string | null;
+    mobile_money_number?: string | null;
+    bank_name?: string | null;
+    bank_account_masked?: string | null;
+    pending_balance: number;
+    ready_balance: number;
+    settled_balance: number;
+    failed_balance: number;
+    entry_count: number;
+    latest_ready_at?: string | null;
+    latest_paid_out_at?: string | null;
+  };
   published_at?: string;
   created_at: string;
   updated_at: string;
@@ -184,7 +273,39 @@ export interface Ticket {
     venue_name?: string;
     city?: string;
   } | null;
+  metadata?: {
+    order_id?: string;
+    attribution?: Record<string, unknown> | null;
+    fee_breakdown?: TicketQuote | null;
+    wallet_actions?: {
+      resend_count?: number;
+      last_resent_at?: string;
+      last_resent_to?: string;
+      transfer_history?: Array<{
+        transferred_at: string;
+        from?: {
+          name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+        };
+        to?: {
+          name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+        };
+        message?: string | null;
+      }>;
+      last_transferred_at?: string;
+    };
+  } | null;
   created_at: string;
+}
+
+export interface SavedAttendeeProfile {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  last_used_at?: string | null;
 }
 
 export interface TicketsResponse {
@@ -202,13 +323,40 @@ export interface TicketsResponse {
  */
 export interface PurchaseTicketRequest {
   event_id: number;
-  ticket_tier_id: number;
-  quantity: number;
+  ticket_tier_id?: number;
+  quantity?: number;
+  discount_code?: string;
+  tickets?: Array<{
+    ticket_tier_id: number;
+    quantity: number;
+  }>;
   payment_method: 'wallet' | 'mtn_momo' | 'airtel_money' | 'card' | 'credits';
   phone?: string;
   holder_name?: string;
   holder_email?: string;
   holder_phone?: string;
+  attendee_assignments?: Array<{
+    ticket_tier_id: number;
+    attendees: Array<{
+      name?: string;
+      email?: string;
+      phone?: string;
+      save_profile?: boolean;
+    }>;
+  }>;
+  attribution?: {
+    source?: string;
+    channel?: string;
+    campaign_code?: string;
+    referral_code?: string;
+    promoter_code?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_term?: string;
+    utm_content?: string;
+    landing_page?: string;
+  };
 }
 
 /**
@@ -225,14 +373,88 @@ export interface PurchaseTicketResponse {
       tier: string;
       price: number;
       holder_name: string;
+      holder_email?: string;
     }>;
     total_amount: number;
+    base_amount: number;
     service_fee: number;
+    fee_breakdown: TicketQuote;
+    line_items?: TicketQuoteItem[];
     payment_method: string;
     payment_reference: string | null;
     status: 'completed' | 'pending_payment';
   };
   message: string;
+}
+
+export interface TicketQuoteItem {
+  ticket_tier_id: number;
+  ticket_tier_name: string;
+  quantity: number;
+  currency: string;
+  unit_price_ugx: number;
+  unit_price_credits: number;
+  base_amount: number;
+  discount_amount?: number;
+  discounted_base_amount?: number;
+  total_credits: number;
+  platform_commission_percent: number;
+  platform_commission_amount: number;
+  processing_fee_percent: number;
+  processing_fee_amount: number;
+  total_fee_amount: number;
+  total_amount: number;
+  organizer_net_amount: number;
+  fee_source: string;
+  organizer_plan?: {
+    id: number;
+    name: string;
+    slug?: string;
+    tier?: string;
+  } | null;
+  discount_code?: {
+    id: number;
+    code: string;
+    name?: string | null;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+  } | null;
+}
+
+export interface TicketQuote {
+  event_id?: number;
+  ticket_tier_id?: number;
+  ticket_tier_name?: string;
+  items?: TicketQuoteItem[];
+  quantity: number;
+  currency: string;
+  unit_price_ugx: number;
+  unit_price_credits: number;
+  base_amount: number;
+  discount_amount?: number;
+  discounted_base_amount?: number;
+  total_credits: number;
+  platform_commission_percent: number;
+  platform_commission_amount: number;
+  processing_fee_percent: number;
+  processing_fee_amount: number;
+  total_fee_amount: number;
+  total_amount: number;
+  organizer_net_amount: number;
+  fee_source: string;
+  organizer_plan?: {
+    id: number;
+    name: string;
+    slug?: string;
+    tier?: string;
+  } | null;
+  discount_code?: {
+    id: number;
+    code: string;
+    name?: string | null;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+  } | null;
 }
 
 export interface CheckInRequest {
@@ -280,6 +502,14 @@ function transformEvent(raw: Record<string, unknown>): Event {
 
   // Ticket tiers are included when tickets relation is loaded
   const rawTiers = raw.ticket_tiers as EventTicketTier[] | undefined;
+  const rawDiscountCodes = raw.discount_codes as EventDiscountCode[] | undefined;
+  const rawStaffMembers = raw.staff_members as EventStaffMember[] | undefined;
+  const rawRequirements = Array.isArray(raw.requirements) ? raw.requirements as string[] : undefined;
+  const rawContactInfo = (raw.contact_info && typeof raw.contact_info === 'object' ? raw.contact_info : undefined) as Event['contact_info'];
+  const rawOperations = (raw.operations && typeof raw.operations === 'object' ? raw.operations : undefined) as Event['operations'];
+  const rawSocialLinks = (raw.social_links && typeof raw.social_links === 'object' ? raw.social_links : undefined) as Record<string, string> | undefined;
+  const rawMarketingSettings = (raw.marketing_settings && typeof raw.marketing_settings === 'object' ? raw.marketing_settings : undefined) as Event['marketing_settings'];
+  const rawPayoutCenter = (raw.payout_center && typeof raw.payout_center === 'object' ? raw.payout_center : undefined) as Event['payout_center'];
 
   return {
     id: raw.id as number,
@@ -319,6 +549,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
     is_virtual: raw.is_virtual as boolean | undefined,
     virtual_link: raw.virtual_link as string | undefined,
     is_free: raw.is_free as boolean | undefined,
+    ticketing_mode: raw.ticketing_mode as Event['ticketing_mode'],
     is_featured: (raw.is_featured || false) as boolean,
     is_published: raw.is_published as boolean | undefined,
     requires_approval: raw.requires_approval as boolean | undefined,
@@ -339,6 +570,10 @@ function transformEvent(raw: Record<string, unknown>): Event {
 
     // Ticket tiers (from show endpoint)
     ticket_tiers: rawTiers,
+    discount_codes: rawDiscountCodes,
+    staff_members: rawStaffMembers,
+    waitlist_count: raw.waitlist_count as number | undefined,
+    waitlist_joined: raw.waitlist_joined as boolean | undefined,
 
     // Stats
     tickets_sold: raw.tickets_sold as number | undefined,
@@ -349,6 +584,15 @@ function transformEvent(raw: Record<string, unknown>): Event {
     // Metadata
     tags,
     registration_deadline: raw.registration_deadline as string | undefined,
+    refund_policy: raw.refund_policy as string | undefined,
+    cancellation_policy: raw.cancellation_policy as string | undefined,
+    requirements: rawRequirements,
+    contact_info: rawContactInfo,
+    website: raw.website as string | undefined,
+    social_links: rawSocialLinks,
+    marketing_settings: rawMarketingSettings,
+    operations: rawOperations,
+    payout_center: rawPayoutCenter,
     published_at: raw.published_at as string | undefined,
     created_at: (raw.created_at || '') as string,
     updated_at: (raw.updated_at || '') as string,
@@ -436,7 +680,22 @@ export interface CreateEventRequest {
   attendee_limit?: number;
   max_capacity?: number;
   min_age?: number;
+  registration_deadline?: string;
+  refund_policy?: string;
+  cancellation_policy?: string;
+  requirements?: string[];
+  contact_info?: {
+    support_email?: string;
+    support_phone?: string;
+    age_restriction?: string;
+    door_notes?: string;
+    tax_vat_notes?: string;
+  };
+  website?: string;
+  social_links?: Record<string, string>;
+  marketing_settings?: Event['marketing_settings'];
   is_free?: boolean;
+  ticketing_mode?: Event['ticketing_mode'];
   status?: string;
   // Files — sent via FormData
   image?: File;           // alias → mapped to cover_image in FormData
@@ -577,6 +836,46 @@ export function useTicket(ticketId: number | string) {
   });
 }
 
+export function useResendTicket(ticketId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => apiPost<{ message: string; data: Ticket }>(`/tickets/${ticketId}/resend`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
+export function useTransferTicket(ticketId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      holder_name: string;
+      holder_email?: string;
+      holder_phone?: string;
+      message?: string;
+    }) => apiPost<{ message: string; data: Ticket }>(`/tickets/${ticketId}/transfer`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
+export function useSavedAttendeeProfiles(limit = 10, enabled = true) {
+  return useQuery({
+    queryKey: ["tickets", "attendee-profiles", limit],
+    queryFn: () =>
+      apiGet<{ data: SavedAttendeeProfile[] }>("/tickets/attendee-profiles", {
+        params: { limit },
+      }).then((res) => res.data || []),
+    enabled,
+  });
+}
+
 // ============================================================================
 // Check-in Hooks — aligned with TicketController
 // ============================================================================
@@ -648,6 +947,10 @@ export function useCreateEvent() {
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'ticket_tiers') {
           formData.append(key, JSON.stringify(value));
+        } else if (key === 'requirements' || key === 'contact_info' || key === 'social_links') {
+          formData.append(key, JSON.stringify(value));
+        } else if (key === 'marketing_settings') {
+          formData.append(key, JSON.stringify(value));
         } else if (key === 'location') {
           // 'location' is used as city fallback
           if (!data.city && typeof value === 'string') {
@@ -677,13 +980,29 @@ export function useUpdateEvent() {
     mutationFn: ({ id, ...data }: UpdateEventRequest) => {
       const formData = new FormData();
       formData.append('_method', 'PUT');
+
+      const fieldMap: Record<string, string> = {
+        date: 'start_date',
+        time: 'start_time',
+        venue: 'venue_name',
+        capacity: 'attendee_limit',
+        image: 'cover_image',
+        banner_image: 'cover_image',
+      };
+
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'ticket_tiers') {
           formData.append(key, JSON.stringify(value));
+        } else if (key === 'requirements' || key === 'contact_info' || key === 'social_links' || key === 'marketing_settings') {
+          formData.append(key, JSON.stringify(value));
+        } else if (key === 'location') {
+          if (!data.city && typeof value === 'string') {
+            formData.append('city', value);
+          }
         } else if (value instanceof File) {
-          formData.append(key, value);
+          formData.append(fieldMap[key] || key, value);
         } else if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
+          formData.append(fieldMap[key] || key, String(value));
         }
       });
       return apiPostForm<{ message: string; data: Record<string, unknown> }>(`/artist/events/${id}`, formData);
@@ -719,11 +1038,149 @@ export function useEventAnalytics(eventId: number | string) {
     queryFn: () => apiGet<{
       data: {
         tickets_sold: number;
+        confirmed_orders: number;
+        gross_revenue: number;
+        customer_paid_total: number;
         revenue: number;
         revenue_credits: number;
+        tesotunes_fee_revenue: number;
+        platform_commission_revenue: number;
+        processing_fee_revenue: number;
+        estimated_organizer_payout: number;
+        average_order_value: number;
+        fee_contract_coverage: {
+          orders_with_fee_breakdown: number;
+          legacy_orders_without_fee_breakdown: number;
+        };
+        payouts: {
+          pending_balance: number;
+          ready_balance: number;
+          settled_balance: number;
+          failed_balance: number;
+          entry_count: number;
+          status_breakdown: {
+            pending: number;
+            ready: number;
+            paid: number;
+            failed: number;
+          };
+          latest_ready_at?: string | null;
+          latest_paid_out_at?: string | null;
+        };
+        marketing: {
+          attributed_orders: number;
+          unattributed_orders: number;
+          attributed_revenue: number;
+          top_sources: Array<{
+            source: string;
+            channel?: string | null;
+            campaign_code?: string | null;
+            referral_code?: string | null;
+            orders: number;
+            tickets_sold: number;
+            gross_revenue: number;
+            customer_paid_total: number;
+            estimated_organizer_payout: number;
+            tesotunes_fee_revenue: number;
+          }>;
+        };
+        sales_channels: {
+          channels: Array<{
+            key: 'tesotunes_native' | 'tracked_promo' | 'manual_offline' | 'external';
+            label: string;
+            orders: number;
+            tickets_sold: number;
+            gross_revenue: number;
+            customer_paid_total: number;
+            estimated_organizer_payout: number;
+            tesotunes_fee_revenue: number;
+            order_share_percent: number;
+          }>;
+        };
+        roi: {
+          total_spend: number;
+          total_gross_revenue: number;
+          total_organizer_payout: number;
+          total_net_profit: number;
+          tracked_sources: number;
+          by_source: Array<{
+            key: string;
+            label: string;
+            channel?: string | null;
+            campaign_code?: string | null;
+            referral_code?: string | null;
+            orders: number;
+            tickets_sold: number;
+            spend: number;
+            gross_revenue: number;
+            customer_paid_total: number;
+            estimated_organizer_payout: number;
+            tesotunes_fee_revenue: number;
+            net_profit: number;
+            roas: number | null;
+            payout_roi_percent: number | null;
+            notes?: string | null;
+          }>;
+        };
+        settlements: {
+          event_totals: {
+            gross_revenue: number;
+            organizer_net_amount: number;
+            settled_balance: number;
+            failed_balance: number;
+          };
+          by_tier: Array<{
+            tier: string;
+            sold: number;
+            gross_revenue: number;
+            organizer_net_amount: number;
+            tesotunes_fee_revenue: number;
+          }>;
+          by_campaign: Array<{
+            label: string;
+            channel?: string | null;
+            campaign_code?: string | null;
+            referral_code?: string | null;
+            orders: number;
+            tickets_sold: number;
+            gross_revenue: number;
+            customer_paid_total: number;
+            tesotunes_fee_revenue: number;
+            organizer_net_amount: number;
+          }>;
+          by_payout_cycle: Array<{
+            cycle_date?: string | null;
+            entry_count: number;
+            gross_revenue: number;
+            customer_paid_total: number;
+            tesotunes_fee_revenue: number;
+            organizer_net_amount: number;
+            dominant_status: string;
+          }>;
+        };
         check_ins: number;
-        by_tier: Array<{ name: string; sold: number; total: number | null; revenue: number }>;
-        by_date: Array<{ date: string; revenue: number; count: number }>;
+        interested_count: number;
+        total_attendees: number;
+        conversion_rate: number;
+        sell_through_rate: number;
+        by_tier: Array<{
+          id: number;
+          name: string;
+          sold: number;
+          total: number | null;
+          revenue: number;
+          estimated_organizer_payout: number;
+          tesotunes_fee_revenue: number;
+          available: number;
+        }>;
+        by_date: Array<{
+          date: string;
+          revenue: number;
+          tickets_sold: number;
+          customer_paid_total: number;
+          estimated_organizer_payout: number;
+          tesotunes_fee_revenue: number;
+        }>;
       };
     }>(`/artist/events/${eventId}/analytics`),
     enabled: !!eventId,
@@ -803,6 +1260,21 @@ export function useToggleEventInterest() {
   });
 }
 
+export function useJoinEventWaitlist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { eventId: number; email?: string; phone?: string }) =>
+      apiPost<{ message: string; data: { event_id: number; waitlist_count: number; waitlist_joined: boolean } }>(`/events/${data.eventId}/waitlist`, {
+        email: data.email,
+        phone: data.phone,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["event", variables.eventId] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
 export function useToggleEventBookmark() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -842,34 +1314,24 @@ export function useInitiateCheckout() {
       event_id: number;
       tickets: Array<{ ticket_tier_id: number; quantity: number }>;
       payment_method: PurchaseTicketRequest['payment_method'];
+      discount_code?: string;
+      attribution?: PurchaseTicketRequest['attribution'];
     }) => {
-      if (data.tickets.length !== 1) {
-        throw new Error("One ticket tier per checkout is currently supported.");
-      }
-
-      // For the multi-step UI, we just validate availability via the event detail
-      const res = await apiGet<{ data: Record<string, unknown> }>(`/events/${data.event_id}`);
-      const event = transformEvent((res.data || res) as Record<string, unknown>);
-      const tiers = event.ticket_tiers || [];
-
-      let totalUgx = 0;
-      let totalCredits = 0;
-      for (const item of data.tickets) {
-        const tier = tiers.find(t => t.id === item.ticket_tier_id);
-        if (tier) {
-          totalUgx += (tier.price || 0) * item.quantity;
-          totalCredits += (tier.price_credits || 0) * item.quantity;
-        }
-      }
-      const platformFee = Math.round(totalUgx * 0.05);
+      const quoteResponse = await apiPost<{ data: TicketQuote }>("/tickets/quote", {
+        event_id: data.event_id,
+        tickets: data.tickets,
+        discount_code: data.discount_code,
+      });
+      const quote = quoteResponse.data;
 
       return {
         checkout_id: `checkout_${Date.now()}`,
-        total_ugx: totalUgx + platformFee,
-        total_credits: totalCredits,
-        platform_fee: platformFee,
-        discount_amount: 0,
+        total_ugx: quote.total_amount,
+        total_credits: quote.total_credits,
+        platform_fee: quote.total_fee_amount,
+        discount_amount: quote.discount_amount ?? 0,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        quote,
       };
     },
   });
@@ -888,20 +1350,28 @@ export function useCompleteCheckout() {
       payment_provider: PurchaseTicketRequest['payment_method'];
       payment_details: Record<string, unknown>;
       phone_number?: string;
-      // The actual ticket info
-      ticket_tier_id: number;
-      quantity: number;
+      discount_code?: string;
+      tickets: Array<{
+        ticket_tier_id: number;
+        quantity: number;
+      }>;
       holder_name?: string;
       holder_email?: string;
+      holder_phone?: string;
+      attendee_assignments?: PurchaseTicketRequest['attendee_assignments'];
+      attribution?: PurchaseTicketRequest['attribution'];
     }) => {
       const purchaseData: PurchaseTicketRequest = {
         event_id: data.event_id,
-        ticket_tier_id: data.ticket_tier_id,
-        quantity: data.quantity,
+        tickets: data.tickets,
         payment_method: data.payment_provider as PurchaseTicketRequest['payment_method'],
         phone: data.phone_number,
+        discount_code: data.discount_code,
         holder_name: data.holder_name,
         holder_email: data.holder_email,
+        holder_phone: data.holder_phone,
+        attendee_assignments: data.attendee_assignments,
+        attribution: data.attribution,
       };
       return apiPost<PurchaseTicketResponse>("/tickets/purchase", purchaseData);
     },
@@ -962,9 +1432,24 @@ export function useJoinGroup() {
 // Discount Code Validation — no backend endpoint yet
 export function useValidateDiscountCode() {
   return useMutation({
-    mutationFn: async (_data: { event_id: number; code: string }) => {
-      throw new Error(PLANNED_EVENT_FEATURE_MESSAGE);
-    },
+    mutationFn: async (data: {
+      event_id: number;
+      code: string;
+      tickets: Array<{ ticket_tier_id: number; quantity: number }>;
+    }) =>
+      apiPost<{
+        valid: boolean;
+        message: string;
+        data: {
+          code: string;
+          discount_amount: number;
+          quote: TicketQuote;
+        };
+      }>("/tickets/discounts/validate", {
+        event_id: data.event_id,
+        tickets: data.tickets,
+        code: data.code,
+      }),
   });
 }
 

@@ -3,7 +3,7 @@
 import { use, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Calendar,
   MapPin,
@@ -28,9 +28,11 @@ import {
   getEventStartDate,
   getEventVenueLabel,
   useEvent,
+  useJoinEventWaitlist,
   type EventTicketTier,
 } from '@/hooks/useEvents'
 import { toast } from 'sonner'
+import { isApiError } from '@/lib/api'
 import { SocialProof } from '@/components/events/SocialProof'
 import { TicketSelector } from '@/components/events/TicketSelector'
 import { GroupBookingCTA } from '@/components/events/GroupBookingCTA'
@@ -73,8 +75,12 @@ export default function EventDetailPage({
 }) {
   const { id } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: event, isLoading, error } = useEvent(id)
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistPhone, setWaitlistPhone] = useState('')
+  const joinWaitlist = useJoinEventWaitlist()
 
   if (isLoading) {
     return (
@@ -105,6 +111,7 @@ export default function EventDetailPage({
   const startsAt = getEventStartDate(event)
   const endsAt = getEventEndDate(event)
   const isPastEvent = startsAt ? new Date(startsAt) < new Date() : false
+  const isExternalOnly = event.ticketing_mode === 'external_only'
 
   const totalSold =
     event.ticket_tiers?.reduce(
@@ -124,7 +131,30 @@ export default function EventDetailPage({
   }
 
   function handleProceedToCheckout() {
-    router.push(`/events/${id}/checkout`)
+    const params = new URLSearchParams(searchParams.toString())
+    const suffix = params.toString()
+    router.push(`/events/${id}/checkout${suffix ? `?${suffix}` : ''}`)
+  }
+
+  async function handleJoinWaitlist() {
+    if (!event) return
+
+    try {
+      const response = await joinWaitlist.mutateAsync({
+        eventId: event.id,
+        email: waitlistEmail || undefined,
+        phone: waitlistPhone || undefined,
+      })
+      toast.success(response.message)
+    } catch (error: unknown) {
+      if (isApiError(error) && error.response?.status === 401) {
+        const redirect = encodeURIComponent(`/events/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`)
+        router.push(`/login?redirect=${redirect}`)
+        return
+      }
+
+      toast.error(error instanceof Error ? error.message : 'Failed to join waitlist')
+    }
   }
   return (
     <div>
@@ -396,12 +426,23 @@ export default function EventDetailPage({
             <div className="sticky top-24 space-y-6">
               <SocialProof event={event} />
 
-              {event.ticket_tiers && event.ticket_tiers.length > 0 ? (
+              {isExternalOnly ? (
+                <div className="p-6 rounded-xl border bg-card">
+                  <h2 className="text-lg font-semibold mb-3">Ticketing</h2>
+                  <p className="text-sm text-muted-foreground">
+                    This event is being promoted on Tesotunes, but checkout happens through the organizer&apos;s own ticketing channel.
+                  </p>
+                </div>
+              ) : event.ticket_tiers && event.ticket_tiers.length > 0 ? (
                 <TicketSelector
                   tiers={event.ticket_tiers}
                   eventId={event.id}
                   isPastEvent={isPastEvent}
                   isCancelled={event.status === 'cancelled'}
+                  waitlistCount={event.waitlist_count || 0}
+                  waitlistJoined={event.waitlist_joined || false}
+                  isJoiningWaitlist={joinWaitlist.isPending}
+                  onJoinWaitlist={isSoldOut ? handleJoinWaitlist : undefined}
                   onProceedToCheckout={handleProceedToCheckout}
                 />
               ) : (
@@ -422,8 +463,52 @@ export default function EventDetailPage({
                 </div>
               )}
 
-              {!isPastEvent && !isSoldOut && event.status !== 'cancelled' && (
+              {!isExternalOnly && !isPastEvent && !isSoldOut && event.status !== 'cancelled' && (
                 <GroupBookingCTA eventId={event.id} />
+              )}
+
+              {!isExternalOnly && isSoldOut && event.status !== 'cancelled' && (
+                <div className="rounded-xl border bg-card p-4">
+                  <h3 className="font-semibold">Sold-Out Waitlist</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Join the waitlist and Tesotunes will keep this event on your radar if tickets open up again.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Sign in with your Tesotunes account so your waitlist alert follows you across devices.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <input
+                      type="email"
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                      placeholder="Notification email"
+                      className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                    />
+                    <input
+                      type="tel"
+                      value={waitlistPhone}
+                      onChange={(e) => setWaitlistPhone(e.target.value)}
+                      placeholder="Phone number (optional)"
+                      className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                    />
+                    <button
+                      onClick={handleJoinWaitlist}
+                      disabled={joinWaitlist.isPending || !!event.waitlist_joined}
+                      className={cn(
+                        'w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                        event.waitlist_joined
+                          ? 'bg-green-500/10 text-green-600'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                        joinWaitlist.isPending && 'opacity-70'
+                      )}
+                    >
+                      {event.waitlist_joined ? 'You are on the waitlist' : joinWaitlist.isPending ? 'Joining Waitlist...' : 'Join Waitlist'}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {event.waitlist_count || 0} fan{(event.waitlist_count || 0) === 1 ? '' : 's'} currently waiting.
+                  </p>
+                </div>
               )}
 
               {event.organizer && (

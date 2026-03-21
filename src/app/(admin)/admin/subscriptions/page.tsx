@@ -91,6 +91,8 @@ interface SubscriptionPlan {
   rates?: {
     stream_rate_ugx?: string | number | null;
     credit_to_ugx_rate?: string | number | null;
+    event_platform_commission_percent?: string | number | null;
+    event_processing_fee_percent?: string | number | null;
     effective?: { effective_stream_rate_ugx?: string | number | null };
   };
 }
@@ -127,6 +129,8 @@ interface PlanFormState {
   maxAudioQualityKbps: string;
   streamRateUgx: string;
   creditToUgxRate: string;
+  eventPlatformCommissionPercent: string;
+  eventProcessingFeePercent: string;
   sortOrder: string;
   features: string;
   hasAds: boolean;
@@ -165,6 +169,8 @@ const defaultPlanForm = (): PlanFormState => ({
   maxAudioQualityKbps: '320',
   streamRateUgx: '',
   creditToUgxRate: '',
+  eventPlatformCommissionPercent: '',
+  eventProcessingFeePercent: '',
   sortOrder: '0',
   features: '',
   hasAds: false,
@@ -216,6 +222,8 @@ const buildPlanForm = (plan: SubscriptionPlan): PlanFormState => ({
   maxAudioQualityKbps: asString(plan.max_audio_quality_kbps ?? 320, '320'),
   streamRateUgx: asString(plan.rates?.stream_rate_ugx),
   creditToUgxRate: asString(plan.rates?.credit_to_ugx_rate),
+  eventPlatformCommissionPercent: asString(plan.rates?.event_platform_commission_percent),
+  eventProcessingFeePercent: asString(plan.rates?.event_processing_fee_percent),
   sortOrder: asString(plan.sort_order ?? 0, '0'),
   features: Array.isArray(plan.features) ? plan.features.join('\n') : '',
   hasAds: Boolean(plan.has_ads),
@@ -397,6 +405,8 @@ export default function AdminSubscriptionsPage() {
         rates: {
           stream_rate_ugx: toNullableNumber(planForm.streamRateUgx),
           credit_to_ugx_rate: toNullableNumber(planForm.creditToUgxRate),
+          event_platform_commission_percent: toNullableNumber(planForm.eventPlatformCommissionPercent),
+          event_processing_fee_percent: toNullableNumber(planForm.eventProcessingFeePercent),
         },
       },
     });
@@ -738,6 +748,8 @@ export default function AdminSubscriptionsPage() {
               <div><label className="mb-1 block text-sm font-medium">Audio Quality (kbps)</label><select value={planForm.maxAudioQualityKbps} onChange={(e) => setPlanForm((current) => ({ ...current, maxAudioQualityKbps: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2">{[128, 192, 256, 320].map((value) => <option key={value} value={String(value)}>{value}</option>)}</select></div>
               <div><label className="mb-1 block text-sm font-medium">Stream Rate (UGX)</label><input type="number" min="0" step="0.01" value={planForm.streamRateUgx} onChange={(e) => setPlanForm((current) => ({ ...current, streamRateUgx: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" /></div>
               <div><label className="mb-1 block text-sm font-medium">Credit to UGX Rate</label><input type="number" min="0.0001" step="0.0001" value={planForm.creditToUgxRate} onChange={(e) => setPlanForm((current) => ({ ...current, creditToUgxRate: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" /></div>
+              <div><label className="mb-1 block text-sm font-medium">Event Commission (%)</label><input type="number" min="0" max="100" step="0.01" value={planForm.eventPlatformCommissionPercent} onChange={(e) => setPlanForm((current) => ({ ...current, eventPlatformCommissionPercent: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="Fallback to event default if blank" /></div>
+              <div><label className="mb-1 block text-sm font-medium">Event Processing Fee (%)</label><input type="number" min="0" max="100" step="0.01" value={planForm.eventProcessingFeePercent} onChange={(e) => setPlanForm((current) => ({ ...current, eventProcessingFeePercent: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="Payment handling markup for this package" /></div>
               <div className="md:col-span-2"><label className="mb-1 block text-sm font-medium">Visible Value Points</label><textarea rows={5} value={planForm.features} onChange={(e) => setPlanForm((current) => ({ ...current, features: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="One feature per line. Keep these plain and persuasive for first-time subscribers." /></div>
             </div>
 

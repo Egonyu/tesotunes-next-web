@@ -60,7 +60,7 @@ test.describe('Admin artist image update', () => {
 
     await page.locator('button[type="submit"]').first().click();
     await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-    await expect(page.getByRole('link', { name: 'Artists' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Artists', exact: true })).toBeVisible();
 
     const artistId = await resolveArtistId(page);
 

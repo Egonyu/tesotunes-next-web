@@ -42,6 +42,16 @@ jobs:
       - name: Wait for app
         run: npx wait-on http://127.0.0.1:3000
 
+      - name: Validate E2E admin secrets
+        env:
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$E2E_ADMIN_EMAIL" ] || [ -z "$E2E_ADMIN_PASSWORD" ]; then
+            echo "::error::Missing E2E admin credentials. Configure E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD secrets for this workflow."
+            exit 1
+          fi
+
       - name: Run artist image E2E
         env:
           BASE_URL: http://127.0.0.1:3000

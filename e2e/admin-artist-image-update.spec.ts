@@ -73,20 +73,13 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const profileUpload = page.locator('div').filter({
-      has: page.getByText('Profile Image', { exact: true }),
-    }).first();
-    const coverUpload = page.locator('div').filter({
-      has: page.getByText('Cover Image', { exact: true }),
-    }).first();
-
-    await profileUpload.locator('input[type="file"]').setInputFiles({
+    await page.locator('input[data-testid="artist-profile-image-input"]').setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
 
-    await coverUpload.locator('input[type="file"]').setInputFiles({
+    await page.locator('input[data-testid="artist-cover-image-input"]').setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),

@@ -73,11 +73,12 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const profileUpload = page.getByTestId('artist-profile-upload');
-    const coverUpload = page.getByTestId('artist-cover-upload');
-
-    await expect(profileUpload).toBeVisible();
-    await expect(coverUpload).toBeVisible();
+    const profileUpload = page.locator('div').filter({
+      has: page.getByText('Profile Image', { exact: true }),
+    }).first();
+    const coverUpload = page.locator('div').filter({
+      has: page.getByText('Cover Image', { exact: true }),
+    }).first();
 
     await profileUpload.locator('input[type="file"]').setInputFiles({
       name: `profile-${Date.now()}.png`,

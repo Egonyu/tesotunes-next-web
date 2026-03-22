@@ -72,7 +72,7 @@ export function PlayerBar() {
   // Minimized: small floating pill above mobile nav
   if (playerMinimized) {
     return (
-      <div className="fixed bottom-20 right-4 lg:bottom-4 z-40 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="fixed bottom-[6.75rem] right-4 lg:bottom-4 z-40 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
           {currentArtwork ? (
             <Image
@@ -108,21 +108,90 @@ export function PlayerBar() {
     );
   }
 
-  // Full player bar — sits above mobile nav (bottom-16 on mobile, bottom-0 on desktop)
+  // Expanded player: compact vertical card on mobile, full bar on desktop
   return (
-    <div className="fixed bottom-[4.5rem] left-0 right-0 lg:bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-t-xl lg:rounded-none shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
-      {/* Thin progress bar at top of player */}
-      <div
-        className="h-0.5 bg-muted cursor-pointer lg:hidden"
-        onClick={handleProgressClick}
-      >
+    <>
+      {/* Mobile expanded player: horizontal lane beside FAB */}
+      <div className="fixed bottom-[6.75rem] left-[calc(1rem+3.5rem+0.75rem)] right-4 z-40 rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
         <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${progress}%` }}
-        />
+          className="h-0.5 bg-muted cursor-pointer"
+          onClick={handleProgressClick}
+        >
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <div className="flex h-12 items-center gap-2 px-2.5">
+          <div
+            className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md bg-muted cursor-pointer group"
+            onClick={togglePlayerExpanded}
+          >
+            {currentArtwork ? (
+              <Image
+                src={currentArtwork}
+                alt={currentSong.title}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <ListMusic className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/songs/${currentSong.slug || currentSong.id}`}
+              className="block truncate text-xs font-semibold hover:underline"
+            >
+              {currentSong.title}
+            </Link>
+            {currentSong.artist && (
+              <Link
+                href={`/artists/${currentSong.artist.slug || currentSong.artist.id}`}
+                className="block truncate text-[11px] text-muted-foreground hover:underline"
+              >
+                {currentSong.artist.name}
+              </Link>
+            )}
+          </div>
+          <button
+            onClick={previous}
+            className="text-muted-foreground hover:text-foreground"
+            title="Previous"
+          >
+            <SkipBack className="h-4 w-4" />
+          </button>
+          <button
+            onClick={isPlaying ? pause : resume}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background"
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+          </button>
+          <button
+            onClick={next}
+            className="text-muted-foreground hover:text-foreground"
+            title="Next"
+          >
+            <SkipForward className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            title="Minimize player"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex h-[72px] items-center justify-between px-3 lg:px-4">
+      {/* Desktop full player bar */}
+      <div className="fixed hidden lg:block bottom-[4.5rem] left-0 right-0 lg:bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-t-xl lg:rounded-none shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+        <div className="flex h-[72px] items-center justify-between px-3 lg:px-4">
         {/* Song Info */}
         <div className="flex flex-1 lg:w-[30%] min-w-0 items-center gap-3">
           <div
@@ -240,28 +309,6 @@ export function PlayerBar() {
           </div>
         </div>
 
-        {/* Mobile Controls */}
-        <div className="flex lg:hidden items-center gap-2">
-          <button
-            onClick={previous}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <SkipBack className="h-5 w-5" />
-          </button>
-          <button
-            onClick={isPlaying ? pause : resume}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background"
-          >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-          </button>
-          <button
-            onClick={next}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <SkipForward className="h-5 w-5" />
-          </button>
-        </div>
-
         {/* Volume & Additional Controls */}
         <div className="hidden lg:flex w-[30%] items-center justify-end gap-3">
           <button className="text-muted-foreground hover:text-foreground">
@@ -304,15 +351,8 @@ export function PlayerBar() {
           </button>
         </div>
 
-        {/* Mobile minimize/close */}
-        <button
-          onClick={handleDismiss}
-          className="lg:hidden ml-2 text-muted-foreground hover:text-foreground"
-          title="Minimize player"
-        >
-          <Minimize2 className="h-4 w-4" />
-        </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

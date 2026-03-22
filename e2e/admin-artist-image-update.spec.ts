@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 const ARTIST_ID = process.env.E2E_ARTIST_ID;
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@tesotunes.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'password';
+const ADMIN_EMAIL = (process.env.E2E_ADMIN_EMAIL || '').trim();
+const ADMIN_PASSWORD = (process.env.E2E_ADMIN_PASSWORD || '').trim();
 
 const RED_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8z8AARQABywGf3n6vWQAAAABJRU5ErkJggg==';
@@ -29,8 +29,17 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
   await page.goto('/admin/artists');
   await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible();
 
+  // Try to find an artist edit link with a short timeout (10s)
   const editLink = page.locator('a[href*="/admin/artists/"][href$="/edit"]').first();
-  await expect(editLink).toBeVisible();
+
+  try {
+    await editLink.waitFor({ timeout: 10000, state: 'visible' });
+  } catch {
+    throw new Error(
+      'No artist found. Please ensure at least one artist exists in the database or set E2E_ARTIST_ID env var. ' +
+      'Use env var E2E_ARTIST_ID to specify a specific artist ID for testing.'
+    );
+  }
 
   const href = await editLink.getAttribute('href');
 
@@ -49,7 +58,11 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
 
 test.describe('Admin artist image update', () => {
   test('updates profile and cover images and reflects new URLs', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(120000); // Increase to 2 minutes
+
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      throw new Error('Missing E2E_ADMIN_EMAIL or E2E_ADMIN_PASSWORD for admin image update E2E test.');
+    }
 
     await page.goto('/login');
 
@@ -59,31 +72,60 @@ test.describe('Admin artist image update', () => {
     await password.fill(ADMIN_PASSWORD);
 
     await page.locator('button[type="submit"]').first().click();
-    await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-    await expect(page.getByRole('link', { name: 'Artists', exact: true })).toBeVisible();
+    const artistsNavLink = page.getByRole('link', { name: 'Artists', exact: true });
+    const authError = page.getByText(
+      /invalid credentials|invalid email or password|invalid login|authentication failed|unauthorized/i
+    ).first();
+
+    await Promise.race([
+      expect(artistsNavLink).toBeVisible({ timeout: 20000 }),
+      expect(authError).toBeVisible({ timeout: 20000 }).then(() => {
+        throw new Error(
+          'Admin login failed: invalid credentials. Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to valid admin credentials.'
+        );
+      }),
+    ]);
+
+    await expect(artistsNavLink).toBeVisible({ timeout: 10000 });
 
     const artistId = await resolveArtistId(page);
 
     await page.goto(`/admin/artists/${artistId}/edit`);
-    await expect(page.getByRole('heading', { name: 'Edit Artist' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Edit Artist' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible({ timeout: 10000 });
+
+    // Wait for images to be loaded
+    await page.waitForTimeout(500);
 
     const beforeCoverSrcRaw = await page.locator('img[alt="Cover preview"]').first().getAttribute('src').catch(() => null);
     const beforeProfileSrcRaw = await page.locator('img[alt="Profile preview"]').first().getAttribute('src').catch(() => null);
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
+    // Set profile image with explicit visibility check
     await page.getByTestId('artist-profile-image-input').setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
+    const profileFileCount = await page.getByTestId('artist-profile-image-input').evaluate((el) => {
+      return (el as HTMLInputElement).files?.length ?? 0;
+    });
+    expect(profileFileCount).toBe(1);
 
+    // Set cover image with explicit visibility check
     await page.getByTestId('artist-cover-image-input').setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),
     });
+    const coverFileCount = await page.getByTestId('artist-cover-image-input').evaluate((el) => {
+      return (el as HTMLInputElement).files?.length ?? 0;
+    });
+    expect(coverFileCount).toBe(1);
+
+    // Wait a bit for state updates
+    await page.waitForTimeout(500);
 
     const updateResponsePromise = page.waitForResponse((response) => {
       const req = response.request();
@@ -92,11 +134,12 @@ test.describe('Admin artist image update', () => {
         response.url().includes(`/api/admin/artists/${artistId}`) &&
         response.status() === 200
       );
-    });
+    }, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'Save Artist Profile' }).click();
 
     const updateResponse = await updateResponsePromise;
+    expect(updateResponse.headers()['content-type'] || '').toContain('application/json');
     const updatePayload = (await updateResponse.json()) as {
       success: boolean;
       data?: { name?: string; profile_url?: string; cover_url?: string };

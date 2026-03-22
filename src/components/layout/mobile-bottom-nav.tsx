@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -98,7 +98,7 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
         onClick={onClick}
         className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/60 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/8 dark:bg-white/[0.06] dark:group-hover:bg-white/[0.12]">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/60 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/10 dark:bg-[#161a22]/95 dark:group-hover:bg-[#1d2230]">
           <Icon className="h-4.5 w-4.5 text-foreground/65 group-hover:text-foreground transition-colors" />
         </div>
         <span className="mt-1 text-[10px] font-semibold tracking-[0.01em] text-foreground/55 group-hover:text-foreground transition-colors">
@@ -111,6 +111,7 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
     >
       <div
@@ -118,7 +119,7 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
           "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200",
           isActive
             ? "border-primary/20 bg-primary/12 shadow-[0_8px_18px_rgba(220,38,90,0.16)] dark:border-primary/30 dark:bg-primary/20"
-            : "border-black/5 bg-white/60 shadow-sm group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/8 dark:bg-white/[0.06] dark:group-hover:bg-white/[0.12]"
+            : "border-black/5 bg-white/60 shadow-sm group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/10 dark:bg-[#181a1f]/90 dark:group-hover:bg-[#1d2026]"
         )}
       >
         <Icon
@@ -158,8 +159,8 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
       className={cn(
         "flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-center transition-all duration-200 shadow-sm",
         isActive
-          ? "border-primary/30 bg-linear-to-br from-primary/14 via-primary/10 to-orange-400/10 text-primary shadow-[0_12px_28px_rgba(220,38,90,0.14)] dark:border-primary/30 dark:from-primary/25 dark:via-primary/18 dark:to-orange-400/10"
-          : "border-black/6 bg-white/88 text-foreground hover:-translate-y-0.5 hover:bg-white dark:border-white/8 dark:bg-white/[0.05] dark:hover:bg-white/[0.08]"
+          ? "border-primary/30 bg-linear-to-br from-primary/14 via-primary/10 to-orange-400/10 text-primary shadow-[0_12px_28px_rgba(220,38,90,0.14)] dark:border-primary/35 dark:from-[#2a1421] dark:via-[#241826] dark:to-[#1f1f2c]"
+          : "border-black/6 bg-white/88 text-foreground hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-[#11151d]/96 dark:hover:bg-[#171d29]"
       )}
     >
       <div
@@ -167,7 +168,7 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
           "flex h-10 w-10 items-center justify-center rounded-full border",
           isActive
             ? "border-primary/15 bg-primary/15 dark:border-primary/20 dark:bg-primary/18"
-            : "border-black/6 bg-white text-foreground/80 dark:border-white/8 dark:bg-white/[0.08]"
+            : "border-black/6 bg-white text-foreground/80 dark:border-white/10 dark:bg-[#181d28]"
         )}
       >
         <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-foreground/70 dark:text-foreground/80")} />
@@ -178,6 +179,7 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
 }
 
 export function MobileBottomNav() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [fabExpanded, setFabExpanded] = useState(false);
   const { data: session } = useSession();
@@ -205,7 +207,15 @@ export function MobileBottomNav() {
     return true;
   });
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setFabExpanded(false);
+  };
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setFabExpanded(false);
+  }, [pathname]);
 
   const artistMenuItems = [
     { href: "/artist", label: "Artist Dashboard", icon: LayoutDashboard },
@@ -235,27 +245,23 @@ export function MobileBottomNav() {
           { href: "/login", label: "Sign In", icon: User },
         ];
 
-  const fabBottomClass = hasAnyPlayer
-    ? playerMinimized
-      ? "bottom-[8.5rem]"
-      : "bottom-[11.25rem]"
-    : "bottom-[6rem]";
+  const fabBottomClass = "bottom-[6.75rem]";
 
   return (
     <>
       {/* Expanded Menu Overlay */}
       {menuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/65 z-40 lg:hidden backdrop-blur-sm animate-in fade-in duration-200"
           onClick={closeMenu}
         >
           {/* Menu Panel — slides up from bottom */}
           <div
-            className="absolute bottom-24 left-4 right-4 rounded-2xl border border-border/80 bg-background/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/10 dark:bg-neutral-900/95 dark:shadow-[0_24px_56px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-24 left-4 right-4 rounded-2xl border border-border/80 bg-background/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/10 dark:bg-[#0b0f16]/96 dark:shadow-[0_24px_56px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
           <div
-            className="absolute inset-0 rounded-2xl bg-linear-to-br from-white via-rose-50/90 to-orange-50/80 dark:from-[#161316] dark:via-[#1a1519] dark:to-[#20181a]"
+            className="absolute inset-0 rounded-2xl bg-linear-to-br from-white via-rose-50/90 to-orange-50/80 dark:from-[#0d121b] dark:via-[#101826] dark:to-[#131a2b]"
             aria-hidden="true"
           />
             {/* Drag indicator */}
@@ -274,7 +280,7 @@ export function MobileBottomNav() {
               </div>
               <button
                 onClick={closeMenu}
-                className="rounded-full border border-black/5 bg-white/70 p-2 text-foreground/70 shadow-sm transition-colors hover:bg-white dark:border-white/8 dark:bg-white/[0.06] dark:text-foreground/80 dark:hover:bg-white/[0.12]"
+                className="rounded-full border border-black/5 bg-white/70 p-2 text-foreground/70 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-[#141b27] dark:text-foreground/80 dark:hover:bg-[#1b2433]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -362,14 +368,14 @@ export function MobileBottomNav() {
       {/* FAB Expanded Overlay */}
       {fabExpanded && (
         <div
-          className="fixed inset-0 z-40 lg:hidden"
+          className="fixed inset-0 z-50 lg:hidden"
           onClick={() => setFabExpanded(false)}
         />
       )}
 
       {/* Right-side Vertical Action Buttons */}
       <div className={cn(
-        "fixed left-4 z-50 flex flex-col items-start gap-2.5 transition-all duration-300 lg:hidden",
+        "fixed left-4 z-[55] flex flex-col items-start gap-2.5 transition-all duration-300 lg:hidden",
         fabBottomClass
       )}>
         {fabExpanded && fabActions.map((action, i) => (
@@ -381,8 +387,8 @@ export function MobileBottomNav() {
               "flex min-h-11 items-center gap-2.5 rounded-full pl-3 pr-4",
               "bg-white/92 text-foreground shadow-[0_16px_34px_rgba(15,23,42,0.16)]",
               "border border-black/[0.06] backdrop-blur-2xl",
-              "dark:border-white/[0.08] dark:bg-[#161316]/88 dark:text-foreground dark:shadow-[0_18px_38px_rgba(0,0,0,0.4)]",
-              "hover:-translate-y-0.5 hover:bg-white dark:hover:bg-[#211a1f]",
+              "dark:border-white/[0.1] dark:bg-[#101722]/92 dark:text-foreground dark:shadow-[0_18px_38px_rgba(0,0,0,0.45)]",
+              "hover:-translate-y-0.5 hover:bg-white dark:hover:bg-[#172031]",
               "transition-all duration-200",
               "animate-in slide-in-from-bottom fade-in"
             )}
@@ -412,22 +418,35 @@ export function MobileBottomNav() {
       </div>
 
       {/* Floating Bottom Navigation Bar — always at the very bottom */}
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 lg:hidden w-[min(92vw,22rem)]"
+      <nav className={cn(
+        "fixed bottom-6 left-1/2 -translate-x-1/2 lg:hidden w-[min(92vw,22rem)]",
+        menuOpen ? "z-[60]" : "z-30"
+      )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className={cn(
           "flex items-center justify-around rounded-full px-1.5 py-1.5",
-          "bg-linear-to-r from-white/92 via-white/88 to-rose-50/82 dark:from-[#141114]/90 dark:via-[#181418]/88 dark:to-[#1d1617]/84",
+          "bg-linear-to-r from-white/92 via-white/88 to-rose-50/82 dark:from-[#0b121d]/96 dark:via-[#0f1726]/94 dark:to-[#151427]/92",
           "backdrop-blur-2xl backdrop-saturate-150",
-          "shadow-[0_10px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_14px_36px_rgba(0,0,0,0.34)]",
-          "border border-black/[0.05] dark:border-white/[0.07]",
+          "shadow-[0_10px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_14px_36px_rgba(0,0,0,0.45)]",
+          "border border-black/[0.05] dark:border-white/[0.1]",
           "pb-[max(0.25rem,env(safe-area-inset-bottom))]"
         )}>
           {mainTabs.map((tab) => (
             <MobileNavItem
               key={tab.href}
               {...tab}
-              onClick={tab.href === "#menu" ? () => setMenuOpen(true) : undefined}
+              onClick={
+                tab.href === "#menu"
+                  ? () => {
+                      setFabExpanded(false);
+                      setMenuOpen(true);
+                    }
+                  : () => {
+                      setMenuOpen(false);
+                      setFabExpanded(false);
+                    }
+              }
             />
           ))}
         </div>

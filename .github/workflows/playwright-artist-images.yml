@@ -8,14 +8,16 @@ on:
 
 jobs:
   playwright-artist-images:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       NEXTAUTH_URL: http://127.0.0.1:3000
       NEXTAUTH_SECRET: ci-playwright-nextauth-secret
       AUTH_TRUST_HOST: "true"
-      NEXT_PUBLIC_API_URL: https://api.tesotunes.com/api
-      API_URL: https://api.tesotunes.com/api
+      E2E_API_URL: ${{ secrets.E2E_API_URL || 'https://api.tesotunes.com/api' }}
+      NEXT_PUBLIC_API_URL: ${{ secrets.E2E_API_URL || 'https://api.tesotunes.com/api' }}
+      API_URL: ${{ secrets.E2E_API_URL || 'https://api.tesotunes.com/api' }}
 
     steps:
       - name: Checkout
@@ -51,6 +53,62 @@ jobs:
             echo "::error::Missing E2E admin credentials. Configure E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD secrets for this workflow."
             exit 1
           fi
+
+      - name: Verify E2E admin login against API
+        env:
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          API_URL: ${{ secrets.E2E_API_URL || 'https://api.tesotunes.com/api' }}
+        run: |
+          node <<'NODE'
+          const email = (process.env.E2E_ADMIN_EMAIL || '').trim();
+          const password = (process.env.E2E_ADMIN_PASSWORD || '').trim();
+          const apiUrl = (process.env.API_URL || '').replace(/\/+$/, '');
+
+          if (!apiUrl) {
+            console.error('::error::API_URL is empty for E2E login preflight.');
+            process.exit(1);
+          }
+
+          const endpoint = `${apiUrl}/auth/login`;
+          const body = { email, password, remember_me: false };
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+
+          (async () => {
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify(body),
+              signal: controller.signal,
+            });
+            clearTimeout(timeout);
+
+            const text = await res.text();
+            let message = '';
+            try {
+              const parsed = JSON.parse(text);
+              message = parsed?.message || parsed?.error || '';
+            } catch {
+              message = text.slice(0, 200);
+            }
+
+            if (!res.ok) {
+              console.error(`::error::E2E admin preflight login failed (${res.status}) at ${endpoint}. ${message}`);
+              process.exit(1);
+            }
+
+            console.log(`E2E admin preflight login succeeded against ${apiUrl}`);
+          })().catch((error) => {
+            clearTimeout(timeout);
+            if (error?.name === 'AbortError') {
+              console.error(`::error::E2E admin preflight login timed out after 15s at ${endpoint}.`);
+              process.exit(1);
+            }
+            console.error(`::error::E2E admin preflight login error: ${error?.message || error}`);
+            process.exit(1);
+          });
+          NODE
 
       - name: Run artist image E2E
         env:

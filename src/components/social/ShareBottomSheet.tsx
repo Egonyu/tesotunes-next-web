@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-interface SharePayload {
+export interface SharePayload {
   share_url: string;
   og_title: string;
   og_description: string | null;
@@ -26,6 +26,8 @@ interface SharePayload {
     instagram: null;
   };
 }
+
+type PlatformKey = keyof SharePayload["platform_links"];
 
 interface ShareBottomSheetProps {
   open: boolean;
@@ -83,6 +85,15 @@ const PLATFORMS = [
   },
 ];
 
+function isSafeShareUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, typeof window !== "undefined" ? window.location.origin : "https://www.tesotunes.com");
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBottomSheetProps) {
   const [copied, setCopied] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -120,12 +131,11 @@ export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBot
     if (!open) setCopied(false);
   }, [open]);
 
-  async function handlePlatformClick(key: string) {
+  async function handlePlatformClick(key: PlatformKey) {
     if (!payload) return;
 
     if (key === "copy") {
-      // Copy caption + URL to clipboard
-      const text = payload.caption;
+      const text = payload.platform_links.copy || payload.share_url || payload.caption;
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -137,11 +147,28 @@ export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBot
       return;
     }
 
-    // Open platform deep-link
-    const links = payload.platform_links;
-    const url = links[key as keyof typeof links];
-    if (url) {
+    let url = payload.platform_links[key];
+
+    if (!url) {
+      const canonicalUrl = payload.share_url;
+      const shareTitle = payload.og_title || "Listen on TesoTunes";
+      const shareText = `${canonicalUrl}\n\n${shareTitle}`;
+
+      if (key === "whatsapp") {
+        url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      } else if (key === "twitter") {
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(canonicalUrl)}&hashtags=TesoTunes`;
+      } else if (key === "facebook") {
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl)}`;
+      } else if (key === "telegram") {
+        url = `https://t.me/share/url?url=${encodeURIComponent(canonicalUrl)}&text=${encodeURIComponent(shareTitle)}`;
+      }
+    }
+
+    if (url && isSafeShareUrl(url)) {
       window.open(url, "_blank", "noopener,noreferrer");
+    } else if (url) {
+      toast.error("Unable to open share link");
     }
   }
 
@@ -151,10 +178,13 @@ export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBot
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
     >
       <div
         ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-sheet-title"
         className="w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
       >
         {/* Handle bar (mobile) */}
@@ -164,10 +194,10 @@ export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBot
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <h2 className="text-lg font-bold">Share</h2>
+          <h2 id="share-sheet-title" className="text-lg font-bold">Share</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-muted transition-colors"
+            className="p-1.5 rounded-full hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -180,7 +210,7 @@ export function ShareBottomSheet({ open, onClose, payload, isLoading }: ShareBot
             <p className="text-sm text-muted-foreground">Preparing share...</p>
           </div>
         ) : (
-          <div className="px-5 pb-6">
+          <div className="px-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+6rem))] sm:pb-6">
             {/* OG Image Hero */}
             <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted mb-4">
               {payload.og_image ? (

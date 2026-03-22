@@ -28,7 +28,7 @@ import { formatDuration, formatNumber, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
-import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
+import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
 import { DownloadGate } from "@/components/social/DownloadGate";
 import { SongPurchaseModal } from "@/components/music/SongPurchaseModal";
 import { TipModal } from "@/components/music/TipModal";
@@ -157,22 +157,6 @@ function toPlayerSong(detail: SongDetail): Song {
   } as Song;
 }
 
-interface SharePayload {
-  share_url: string;
-  og_title: string;
-  og_description: string | null;
-  og_image: string | null;
-  caption: string;
-  platform_links: {
-    copy: string;
-    whatsapp: string;
-    twitter: string;
-    facebook: string;
-    telegram: string;
-    instagram: null;
-  };
-}
-
 export default function SongDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [shareOpen, setShareOpen] = useState(false);
@@ -213,10 +197,53 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
     toast.success(`Added "${song.title}" to queue`);
   }
 
+  function buildSongSharePayload(source?: Partial<SharePayload>): SharePayload {
+    if (!song) {
+      return {
+        share_url: "",
+        og_title: "",
+        og_description: null,
+        og_image: null,
+        caption: "",
+        platform_links: {
+          copy: "",
+          whatsapp: "",
+          twitter: "",
+          facebook: "",
+          telegram: "",
+          instagram: null,
+        },
+      };
+    }
+
+    const fallbackShareUrl = `${window.location.origin}/songs/${song.slug || song.id}`;
+    const shareUrl = source?.share_url || fallbackShareUrl;
+    const shareTitle = source?.og_title || `${song.title} — ${song.artist.name}`;
+    const shareDescription = source?.og_description ?? `Listen to ${song.title} by ${song.artist.name} on TesoTunes`;
+    const caption = source?.caption || `${shareUrl}\n\n🎵 ${song.title} — ${song.artist.name}\nListen on TesoTunes`;
+
+    return {
+      share_url: shareUrl,
+      og_title: shareTitle,
+      og_description: shareDescription,
+      og_image: source?.og_image ?? song.artwork_url ?? null,
+      caption,
+      platform_links: {
+        copy: source?.platform_links?.copy || shareUrl,
+        whatsapp: source?.platform_links?.whatsapp || `https://wa.me/?text=${encodeURIComponent(`${shareUrl}\n\n${shareTitle}`)}`,
+        twitter: source?.platform_links?.twitter || `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}&hashtags=TesoTunes`,
+        facebook: source?.platform_links?.facebook || `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+        telegram: source?.platform_links?.telegram || `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+        instagram: source?.platform_links?.instagram ?? null,
+      },
+    };
+  }
+
   async function handleShare() {
     if (!song) return;
     setShareOpen(true);
     setShareLoading(true);
+    setSharePayload(buildSongSharePayload());
     try {
       const res = await apiPost<{
         success: boolean;
@@ -226,7 +253,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
         shareable_id: song.id,
         platform: "internal",
       });
-      setSharePayload(res.data.share_payload);
+      setSharePayload(buildSongSharePayload(res.data.share_payload));
       if (res.data.credits_earned && res.data.credits_earned > 0) {
         toast.success(`+${res.data.credits_earned} credits for sharing!`, {
           duration: 3000,
@@ -234,23 +261,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
         });
       }
     } catch {
-      // Fallback: build payload client-side
-      const url = `${window.location.origin}/songs/${song.slug}`;
-      setSharePayload({
-        share_url: url,
-        og_title: `${song.title} — ${song.artist.name}`,
-        og_description: `Listen to ${song.title} by ${song.artist.name} on TesoTunes`,
-        og_image: song.artwork_url,
-        caption: `🎵 ${song.title} — ${song.artist.name}\n\nListen on TesoTunes\n\n${url}`,
-        platform_links: {
-          copy: url,
-          whatsapp: `https://wa.me/?text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}%20${encodeURIComponent(url)}`,
-          twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}&url=${encodeURIComponent(url)}&hashtags=TesoTunes`,
-          facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-          telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`${song.title} — ${song.artist.name}`)}`,
-          instagram: null,
-        },
-      });
+      setSharePayload(buildSongSharePayload());
     } finally {
       setShareLoading(false);
     }

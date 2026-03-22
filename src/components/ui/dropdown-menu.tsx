@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
+const DropdownMenuContext = React.createContext<{ close: () => void } | null>(null);
+
 interface DropdownMenuProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
@@ -32,21 +34,23 @@ function DropdownMenu({ trigger, children, align = 'end', className }: DropdownM
   };
 
   return (
-    <div className="relative" ref={menuRef}>
-      <div onClick={() => setOpen(!open)}>{trigger}</div>
-      {open && (
-        <div
-          className={cn(
-            'absolute z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
-            'animate-in fade-in-0 zoom-in-95',
-            alignClasses[align],
-            className
-          )}
-        >
-          {children}
-        </div>
-      )}
-    </div>
+    <DropdownMenuContext.Provider value={{ close: () => setOpen(false) }}>
+      <div className="relative" ref={menuRef}>
+        <div onClick={() => setOpen(!open)}>{trigger}</div>
+        {open && (
+          <div
+            className={cn(
+              'absolute z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+              'animate-in fade-in-0 zoom-in-95',
+              alignClasses[align],
+              className
+            )}
+          >
+            {children}
+          </div>
+        )}
+      </div>
+    </DropdownMenuContext.Provider>
   );
 }
 
@@ -54,7 +58,9 @@ interface DropdownMenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   inset?: boolean;
 }
 
-function DropdownMenuItem({ className, inset, ...props }: DropdownMenuItemProps) {
+function DropdownMenuItem({ className, inset, onClick, ...props }: DropdownMenuItemProps) {
+  const context = React.useContext(DropdownMenuContext);
+
   return (
     <button
       className={cn(
@@ -62,6 +68,12 @@ function DropdownMenuItem({ className, inset, ...props }: DropdownMenuItemProps)
         inset && 'pl-8',
         className
       )}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) {
+          context?.close();
+        }
+      }}
       {...props}
     />
   );

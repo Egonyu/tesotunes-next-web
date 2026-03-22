@@ -1,15 +1,45 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Pause, Heart, MoreHorizontal, Music, Download, Headphones } from "lucide-react";
-import { apiGet } from "@/lib/api";
+import { Play, Pause, Heart, MoreHorizontal, Music, Download, Headphones, Share2 } from "lucide-react";
+import { apiGet, apiPost } from "@/lib/api";
 import { usePlayerStore } from "@/stores";
 import { formatNumber } from "@/lib/utils";
 import type { Song, PaginatedResponse } from "@/types";
 import { useToggleLike, useLikeStatus } from "@/hooks/useSocial";
 import { useSession } from "next-auth/react";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
+
+function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): SharePayload {
+  const fallbackShareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/songs/${song.slug || song.id}`
+    : `/songs/${song.slug || song.id}`;
+  const shareUrl = source?.share_url || fallbackShareUrl;
+  const artistName = song.artist?.name || "Unknown Artist";
+  const shareTitle = source?.og_title || `${song.title} — ${artistName}`;
+  const shareDescription = source?.og_description ?? `Listen to ${song.title} by ${artistName} on TesoTunes`;
+  const caption = source?.caption || `${shareUrl}\n\n🎵 ${song.title} — ${artistName}\nListen on TesoTunes`;
+
+  return {
+    share_url: shareUrl,
+    og_title: shareTitle,
+    og_description: shareDescription,
+    og_image: source?.og_image ?? song.artwork_url ?? null,
+    caption,
+    platform_links: {
+      copy: source?.platform_links?.copy || shareUrl,
+      whatsapp: source?.platform_links?.whatsapp || `https://wa.me/?text=${encodeURIComponent(`${shareUrl}\n\n${shareTitle}`)}`,
+      twitter: source?.platform_links?.twitter || `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}&hashtags=TesoTunes`,
+      facebook: source?.platform_links?.facebook || `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      telegram: source?.platform_links?.telegram || `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      instagram: source?.platform_links?.instagram ?? null,
+    },
+  };
+}
 
 interface SongGridProps {
   type: "trending" | "new" | "recent" | "top";
@@ -18,6 +48,10 @@ interface SongGridProps {
 
 export function SongGrid({ type, limit = 10 }: SongGridProps) {
   const { play, currentSong, isPlaying, pause, resume } = usePlayerStore();
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const latestShareRequest = useRef(0);
 
   const sortMap: Record<string, string> = {
     trending: "-play_count",
@@ -66,17 +100,49 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
     }
   };
 
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {songs.map((song) => {
-        const isCurrentSong = currentSong?.id === song.id;
-        const isCurrentlyPlaying = isCurrentSong && isPlaying;
+  const handleShare = async (song: Song) => {
+    const requestId = ++latestShareRequest.current;
+    const fallbackPayload = buildSongSharePayload(song);
+    setSharePayload(fallbackPayload);
+    setShareOpen(true);
+    setShareLoading(true);
 
-        return (
-          <div
-            key={song.id}
-            className="group relative rounded-lg bg-card/50 p-3 transition-colors hover:bg-card"
-          >
+    try {
+      const res = await apiPost<{
+        success: boolean;
+        data: { share_payload: SharePayload };
+      }>("/shares", {
+        shareable_type: "Song",
+        shareable_id: song.id,
+        platform: "internal",
+      });
+
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(buildSongSharePayload(song, res.data.share_payload));
+      }
+    } catch {
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(fallbackPayload);
+      }
+    } finally {
+      if (requestId === latestShareRequest.current) {
+        setShareLoading(false);
+      }
+    }
+  };
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {songs.map((song) => {
+          const isCurrentSong = currentSong?.id === song.id;
+          const isCurrentlyPlaying = isCurrentSong && isPlaying;
+
+          return (
+            <div
+              key={song.id}
+              className="group relative rounded-lg bg-card/50 p-3 transition-colors hover:bg-card"
+            >
             {/* Artwork - entire area is clickable to play */}
             <button
               onClick={() => handlePlay(song)}
@@ -149,16 +215,44 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                     </a>
                   )}
                   <SongLikeButton songId={song.id} />
-                  <button className="p-1 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  <DropdownMenu
+                    align="end"
+                    trigger={(
+                      <button
+                        type="button"
+                        className="p-1 hover:text-primary opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label={`More actions for ${song.title}`}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    )}
+                  >
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleShare(song);
+                      }}
+                      className="gap-2"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share
+                    </DropdownMenuItem>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <ShareBottomSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={sharePayload}
+        isLoading={shareLoading}
+      />
+    </>
   );
 }
 

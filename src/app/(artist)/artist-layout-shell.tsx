@@ -30,6 +30,7 @@ import { useArtistProfile } from '@/hooks/useArtist';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { pickMediaUrl } from '@/lib/media';
+import { usePlayerStore, useUIStore } from '@/stores';
 
 const navItems = [
   { href: '/artist', label: 'Dashboard', icon: LayoutDashboard },
@@ -64,10 +65,13 @@ export default function ArtistLayoutShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { data: profile } = useArtistProfile({ enabled: true });
+  const { currentSong } = usePlayerStore();
+  const { playerMinimized } = useUIStore();
 
   const artistName = profile?.stage_name || userName || 'Artist';
   const artistAvatar = pickMediaUrl(profile?.avatar, userImage);
   const isVerified = profile?.is_verified || false;
+  const hasActivePlayer = !!currentSong && !playerMinimized;
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,7 +126,14 @@ export default function ArtistLayoutShell({
           </div>
         </div>
 
-        <nav className="p-4 space-y-1">
+        <nav
+          className={cn(
+            'p-4 space-y-1 overflow-y-auto h-[calc(100vh-11rem)]',
+            hasActivePlayer
+              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
+              : 'pb-24'
+          )}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -146,7 +157,14 @@ export default function ArtistLayoutShell({
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-card">
+        <div
+          className={cn(
+            'absolute left-0 right-0 p-4 border-t bg-card transition-all',
+            hasActivePlayer
+              ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-[72px]'
+              : 'bottom-0'
+          )}
+        >
           <Link href="/" className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg">
             <Music className="h-4 w-4" />
             Back to TesoTunes
@@ -231,7 +249,14 @@ export default function ArtistLayoutShell({
           </div>
         </header>
 
-        <main className="p-4 lg:p-6 pb-28">
+        <main
+          className={cn(
+            'p-4 lg:p-6',
+            hasActivePlayer
+              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
+              : 'pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8'
+          )}
+        >
           {children}
         </main>
       </div>

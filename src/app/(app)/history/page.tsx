@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
   Play,
-  Pause,
   Heart,
   MoreHorizontal,
   Music,
   Trash2,
   Calendar,
-  Filter,
   Search,
 } from "lucide-react";
-import { apiGet, apiDelete } from "@/lib/api";
-import { formatDuration, formatDate } from "@/lib/utils";
+import { apiGet, apiDelete, apiPost } from "@/lib/api";
+import { formatDuration } from "@/lib/utils";
 import { toast } from "sonner";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
 
 interface HistoryEntry {
   id: number;
@@ -49,10 +49,40 @@ interface HistoryGroup {
   entries: HistoryEntry[];
 }
 
+function buildHistorySharePayload(entry: HistoryEntry, source?: Partial<SharePayload>): SharePayload {
+  const fallbackShareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/songs/${entry.song.slug || entry.song.id}`
+    : `/songs/${entry.song.slug || entry.song.id}`;
+  const shareUrl = source?.share_url || fallbackShareUrl;
+  const shareTitle = source?.og_title || `${entry.song.title} — ${entry.song.artist.name}`;
+  const shareDescription = source?.og_description ?? `Listen to ${entry.song.title} by ${entry.song.artist.name} on TesoTunes`;
+  const caption = source?.caption || `${shareUrl}\n\n🎵 ${entry.song.title} — ${entry.song.artist.name}\nListen on TesoTunes`;
+
+  return {
+    share_url: shareUrl,
+    og_title: shareTitle,
+    og_description: shareDescription,
+    og_image: source?.og_image ?? entry.song.cover_url ?? null,
+    caption,
+    platform_links: {
+      copy: source?.platform_links?.copy || shareUrl,
+      whatsapp: source?.platform_links?.whatsapp || `https://wa.me/?text=${encodeURIComponent(`${shareUrl}\n\n${shareTitle}`)}`,
+      twitter: source?.platform_links?.twitter || `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}&hashtags=TesoTunes`,
+      facebook: source?.platform_links?.facebook || `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      telegram: source?.platform_links?.telegram || `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      instagram: source?.platform_links?.instagram ?? null,
+    },
+  };
+}
+
 export default function HistoryPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "today" | "week" | "month">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const latestShareRequest = useRef(0);
 
   const { data: historyData, isLoading } = useQuery({
     queryKey: ["listening-history", filter],
@@ -75,6 +105,37 @@ export default function HistoryPage() {
       toast.success("Removed from history");
     },
   });
+
+  const handleShare = async (entry: HistoryEntry) => {
+    const requestId = ++latestShareRequest.current;
+    const fallbackPayload = buildHistorySharePayload(entry);
+    setSharePayload(fallbackPayload);
+    setShareOpen(true);
+    setShareLoading(true);
+
+    try {
+      const res = await apiPost<{
+        success: boolean;
+        data?: { share_payload?: SharePayload };
+      }>("/shares", {
+        shareable_type: "Song",
+        shareable_id: entry.song.id,
+        platform: "internal",
+      });
+
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(buildHistorySharePayload(entry, res?.data?.share_payload));
+      }
+    } catch {
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(fallbackPayload);
+      }
+    } finally {
+      if (requestId === latestShareRequest.current) {
+        setShareLoading(false);
+      }
+    }
+  };
 
   // Group history by date
   const groupedHistory = historyData?.reduce<HistoryGroup[]>((groups, entry) => {
@@ -285,9 +346,26 @@ export default function HistoryPage() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
-                      <button className="p-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted rounded">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <DropdownMenu
+                        align="end"
+                        trigger={(
+                          <button
+                            type="button"
+                            className="p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-muted rounded"
+                            aria-label={`More actions for ${entry.song.title}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        )}
+                      >
+                        <DropdownMenuItem
+                          onClick={() => {
+                            void handleShare(entry);
+                          }}
+                        >
+                          Share
+                        </DropdownMenuItem>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -320,6 +398,13 @@ export default function HistoryPage() {
           </div>
         </div>
       )}
+
+      <ShareBottomSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={sharePayload}
+        isLoading={shareLoading}
+      />
     </div>
   );
 }

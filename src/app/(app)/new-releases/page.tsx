@@ -1,24 +1,55 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import {
   Play,
-  Clock,
   MoreHorizontal,
   Loader2,
   Disc3,
-  Filter,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LikeButton } from '@/components/social/LikeButton';
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { ShareBottomSheet, type SharePayload } from '@/components/social/ShareBottomSheet';
 import type { Song, PaginatedResponse } from '@/types';
+
+function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): SharePayload {
+  const fallbackShareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/songs/${song.slug || song.id}`
+    : `/songs/${song.slug || song.id}`;
+  const shareUrl = source?.share_url || fallbackShareUrl;
+  const artistName = song.artist?.name || 'Unknown Artist';
+  const shareTitle = source?.og_title || `${song.title} — ${artistName}`;
+  const shareDescription = source?.og_description ?? `Listen to ${song.title} by ${artistName} on TesoTunes`;
+  const caption = source?.caption || `${shareUrl}\n\n🎵 ${song.title} — ${artistName}\nListen on TesoTunes`;
+
+  return {
+    share_url: shareUrl,
+    og_title: shareTitle,
+    og_description: shareDescription,
+    og_image: source?.og_image ?? song.artwork_url ?? null,
+    caption,
+    platform_links: {
+      copy: source?.platform_links?.copy || shareUrl,
+      whatsapp: source?.platform_links?.whatsapp || `https://wa.me/?text=${encodeURIComponent(`${shareUrl}\n\n${shareTitle}`)}`,
+      twitter: source?.platform_links?.twitter || `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}&hashtags=TesoTunes`,
+      facebook: source?.platform_links?.facebook || `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      telegram: source?.platform_links?.telegram || `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      instagram: source?.platform_links?.instagram ?? null,
+    },
+  };
+}
 
 export default function NewReleasesPage() {
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
+  const latestShareRequest = useRef(0);
 
   const { data, isLoading } = useQuery({
     queryKey: ['songs', 'new-releases', timeFilter],
@@ -31,6 +62,37 @@ export default function NewReleasesPage() {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleShare = async (song: Song) => {
+    const requestId = ++latestShareRequest.current;
+    const fallbackPayload = buildSongSharePayload(song);
+    setSharePayload(fallbackPayload);
+    setShareOpen(true);
+    setShareLoading(true);
+
+    try {
+      const res = await apiPost<{
+        success: boolean;
+        data: { share_payload: SharePayload };
+      }>('/shares', {
+        shareable_type: 'Song',
+        shareable_id: song.id,
+        platform: 'internal',
+      });
+
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(buildSongSharePayload(song, res.data.share_payload));
+      }
+    } catch {
+      if (requestId === latestShareRequest.current) {
+        setSharePayload(fallbackPayload);
+      }
+    } finally {
+      if (requestId === latestShareRequest.current) {
+        setShareLoading(false);
+      }
+    }
   };
 
   return (
@@ -124,9 +186,28 @@ export default function NewReleasesPage() {
                 <span className="text-sm text-muted-foreground w-12 text-right">
                   {formatDuration(song.duration_seconds || song.duration || 0)}
                 </span>
-                <button className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-accent transition-all">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
+                <DropdownMenu
+                  align="end"
+                  trigger={(
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-accent transition-all"
+                      aria-label={`More actions for ${song.title}`}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  )}
+                >
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void handleShare(song);
+                    }}
+                    className="gap-2"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                </DropdownMenu>
               </div>
             </div>
           ))}
@@ -138,6 +219,13 @@ export default function NewReleasesPage() {
           <p className="text-muted-foreground">Check back soon for fresh music!</p>
         </div>
       )}
+
+      <ShareBottomSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        payload={sharePayload}
+        isLoading={shareLoading}
+      />
     </div>
   );
 }

@@ -45,6 +45,7 @@ import { api } from '@/lib/api';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
+import { usePlayerStore, useUIStore } from '@/stores';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -96,6 +97,8 @@ export default function AdminLayoutShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [apiVersion, setApiVersion] = useState<string | null>(null);
   const { data: platformSettings } = usePlatformSettings();
+  const { currentSong } = usePlayerStore();
+  const { playerMinimized } = useUIStore();
 
   const appearance = platformSettings?.appearance;
   const adminPanelName = appearance?.admin_panel_name || 'Admin Panel';
@@ -104,6 +107,7 @@ export default function AdminLayoutShell({
   const adminLogoAlt = appearance?.logo_alt || adminPanelName;
   const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
   const visibleNavItems = ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports');
+  const hasActivePlayer = !!currentSong && !playerMinimized;
 
   useEffect(() => {
     api.get('/health', { timeout: 5000 }).then(res => {
@@ -165,7 +169,14 @@ export default function AdminLayoutShell({
           </button>
         </div>
 
-        <nav className="p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
+        <nav
+          className={cn(
+            'p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]',
+            hasActivePlayer
+              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
+              : 'pb-24'
+          )}
+        >
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href ||
@@ -192,7 +203,14 @@ export default function AdminLayoutShell({
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-2 border-t bg-background">
+        <div
+          className={cn(
+            'absolute left-0 right-0 p-2 border-t bg-background transition-all',
+            hasActivePlayer
+              ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-[72px]'
+              : 'bottom-0'
+          )}
+        >
           <Link
             href="/"
             className={cn(
@@ -239,7 +257,14 @@ export default function AdminLayoutShell({
           </div>
         </header>
 
-        <div className="p-6 pb-28">
+        <div
+          className={cn(
+            'p-6',
+            hasActivePlayer
+              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
+              : 'pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8'
+          )}
+        >
           {children}
         </div>
       </main>

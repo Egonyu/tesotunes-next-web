@@ -171,6 +171,16 @@ function formatDate(value: string | null) {
   });
 }
 
+function formatFlowMinutes(value: number | null): string | null {
+  if (value === null || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const normalized = Math.max(0, Math.round(value));
+
+  return `${normalized} min in flow`;
+}
+
 function StatCard({
   label,
   value,
@@ -402,13 +412,23 @@ export default function AdminPaymentsPage() {
                     <td className="py-4">
                       <div>{formatDate(payment.created_at)}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {payment.completed_at
-                          ? `Completed ${formatDate(payment.completed_at)}`
-                          : payment.failed_at
-                            ? `Failed ${formatDate(payment.failed_at)}`
-                            : payment.processing_age_minutes !== null
-                              ? `${payment.processing_age_minutes} min in flow`
-                              : 'Awaiting confirmation'}
+                        {(() => {
+                          const flowMinutes = formatFlowMinutes(payment.processing_age_minutes);
+
+                          if (payment.completed_at) {
+                            return `Completed ${formatDate(payment.completed_at)}`;
+                          }
+
+                          if (payment.failed_at) {
+                            return `Failed ${formatDate(payment.failed_at)}`;
+                          }
+
+                          if (flowMinutes) {
+                            return flowMinutes;
+                          }
+
+                          return 'Awaiting confirmation';
+                        })()}
                       </div>
                     </td>
                   </tr>

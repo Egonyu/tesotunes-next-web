@@ -73,22 +73,19 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const uploadTriggers = page.getByText('Upload', { exact: true });
-    await expect(uploadTriggers).toHaveCount(2);
+    const profileUpload = page.getByTestId('artist-profile-upload');
+    const coverUpload = page.getByTestId('artist-cover-upload');
 
-    const profileChooserPromise = page.waitForEvent('filechooser');
-    await uploadTriggers.nth(0).click();
-    const profileChooser = await profileChooserPromise;
-    await profileChooser.setFiles({
+    await expect(profileUpload).toBeVisible();
+    await expect(coverUpload).toBeVisible();
+
+    await profileUpload.locator('input[type="file"]').setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
 
-    const coverChooserPromise = page.waitForEvent('filechooser');
-    await uploadTriggers.nth(1).click();
-    const coverChooser = await coverChooserPromise;
-    await coverChooser.setFiles({
+    await coverUpload.locator('input[type="file"]').setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),

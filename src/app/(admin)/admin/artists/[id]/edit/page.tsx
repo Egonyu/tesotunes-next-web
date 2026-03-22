@@ -376,7 +376,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
           <div className="space-y-6">
             <FormSection title="Images" description="Upload profile and cover images">
               <div className="space-y-4">
-                <div>
+                <div data-testid="artist-profile-upload">
                   <label className="block text-sm font-medium mb-2">Profile Image</label>
                   <div className="relative h-36 rounded-lg border overflow-hidden bg-muted">
                     {profilePreview && (
@@ -398,7 +398,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
 
-                <div>
+                <div data-testid="artist-cover-upload">
                   <label className="block text-sm font-medium mb-2">Cover Image</label>
                   <div className="relative h-36 rounded-lg border overflow-hidden bg-muted">
                     {coverPreview && (

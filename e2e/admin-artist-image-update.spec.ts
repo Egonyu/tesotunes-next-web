@@ -73,25 +73,22 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    const fileInputs = page.locator('input[type="file"]');
+    const uploadTriggers = page.getByText('Upload', { exact: true });
+    await expect(uploadTriggers).toHaveCount(2);
 
-    await expect
-      .poll(async () => await fileInputs.count(), {
-        timeout: 15000,
-        message: 'Expected at least two file inputs on the admin artist edit page.',
-      })
-      .toBeGreaterThanOrEqual(2);
-
-    const profileInput = fileInputs.nth(0);
-    const coverInput = fileInputs.nth(1);
-
-    await profileInput.setInputFiles({
+    const profileChooserPromise = page.waitForEvent('filechooser');
+    await uploadTriggers.nth(0).click();
+    const profileChooser = await profileChooserPromise;
+    await profileChooser.setFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
 
-    await coverInput.setInputFiles({
+    const coverChooserPromise = page.waitForEvent('filechooser');
+    await uploadTriggers.nth(1).click();
+    const coverChooser = await coverChooserPromise;
+    await coverChooser.setFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),

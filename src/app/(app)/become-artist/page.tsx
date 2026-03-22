@@ -192,6 +192,21 @@ export default function BecomeArtistPage() {
     setIsSubmitting(true);
 
     try {
+      const payoutMethod = formData.payout_method ?? "zengapay";
+      const normalizedPhone = formData.phone ?? "";
+      const normalizedMobileMoneyNumber =
+        payoutMethod === "zengapay"
+          ? (formData.mobile_money_number || normalizedPhone)
+          : payoutMethod === "mtn_momo" || payoutMethod === "airtel_money"
+            ? formData.mobile_money_number
+            : undefined;
+      const normalizedMobileMoneyProvider =
+        payoutMethod === "mtn_momo"
+          ? "mtn"
+          : payoutMethod === "airtel_money"
+            ? "airtel"
+            : undefined;
+
       const submitData: ArtistApplicationData = {
         stage_name: formData.stage_name ?? "",
         bio: formData.bio ?? "",
@@ -204,16 +219,12 @@ export default function BecomeArtistPage() {
         social_links: formData.social_links,
         full_name: formData.full_name ?? "",
         nin_number: formData.nin_number,
-        phone: formData.phone ?? "",
-        payout_method: formData.payout_method ?? "zengapay",
-        mobile_money_number:
-          formData.mobile_money_number ||
-          (formData.payout_method === "zengapay" ? formData.phone : undefined),
-        mobile_money_provider:
-          formData.mobile_money_provider ||
-          (formData.payout_method === "zengapay" ? "zengapay" : undefined),
-        bank_name: formData.bank_name,
-        bank_account: formData.bank_account,
+        phone: normalizedPhone,
+        payout_method: payoutMethod,
+        mobile_money_number: normalizedMobileMoneyNumber,
+        mobile_money_provider: normalizedMobileMoneyProvider,
+        bank_name: payoutMethod === "bank" ? formData.bank_name : undefined,
+        bank_account: payoutMethod === "bank" ? formData.bank_account : undefined,
         // Only include files if they exist
         ...(avatarFile && { avatar: avatarFile }),
         ...(idFrontFile && { national_id_front: idFrontFile }),
@@ -798,14 +809,25 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
               key={method.id}
               type="button"
               onClick={() => {
+                const nextPayoutMethod = method.id as ArtistApplicationData["payout_method"];
+                const nextMobileMoneyNumber =
+                  nextPayoutMethod === "bank"
+                    ? undefined
+                    : nextPayoutMethod === "zengapay"
+                      ? (formData.phone ?? formData.mobile_money_number ?? "")
+                      : (formData.mobile_money_number ?? formData.phone ?? "");
+
                 updateForm({
-                  payout_method: method.id as ArtistApplicationData["payout_method"],
-                  mobile_money_number:
-                    method.id !== "bank"
-                      ? (formData.mobile_money_number ?? formData.phone ?? "")
-                      : formData.mobile_money_number,
+                  payout_method: nextPayoutMethod,
+                  mobile_money_number: nextMobileMoneyNumber,
                   mobile_money_provider:
-                    method.id === "mtn_momo" ? "mtn" : method.id === "airtel_money" ? "airtel" : undefined,
+                    nextPayoutMethod === "mtn_momo"
+                      ? "mtn"
+                      : nextPayoutMethod === "airtel_money"
+                        ? "airtel"
+                        : undefined,
+                  bank_name: nextPayoutMethod === "bank" ? formData.bank_name : undefined,
+                  bank_account: nextPayoutMethod === "bank" ? formData.bank_account : undefined,
                 });
               }}
               className={cn(

@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Loader2, ExternalLink } from 'lucide-react';
 import { apiGet, apiPostForm } from '@/lib/api';
@@ -380,7 +379,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   <label className="block text-sm font-medium mb-2">Profile Image</label>
                   <div className="relative h-36 rounded-lg border overflow-hidden bg-muted">
                     {profilePreview && (
-                      <Image src={profilePreview} alt="Profile preview" fill className="object-cover" />
+                      <img src={profilePreview} alt="Profile preview" className="h-full w-full object-cover" />
                     )}
                     <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
                       <input
@@ -402,7 +401,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                   <label className="block text-sm font-medium mb-2">Cover Image</label>
                   <div className="relative h-36 rounded-lg border overflow-hidden bg-muted">
                     {coverPreview && (
-                      <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
+                      <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
                     )}
                     <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
                       <input

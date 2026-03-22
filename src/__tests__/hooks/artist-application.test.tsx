@@ -233,5 +233,42 @@ describe('Artist Application Hooks', () => {
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('Application failed');
     });
+
+    it('normalizes zengapay submissions to use the phone number without a provider field', async () => {
+      mockApiPostForm.mockResolvedValueOnce({
+        success: true,
+        message: 'Application submitted successfully',
+        data: {
+          application_id: 2,
+          status: 'pending',
+        },
+      });
+
+      const { result } = renderHook(() => useSubmitArtistApplication(), {
+        wrapper: createWrapper(),
+      });
+
+      result.current.mutate({
+        stage_name: 'Zenga Artist',
+        bio: 'I make amazing music with a long enough bio to pass validation',
+        primary_genre: 'afrobeat',
+        full_name: 'Zenga Artist',
+        phone: '+256701234567',
+        payout_method: 'zengapay',
+        terms_accepted: true,
+        artist_agreement_accepted: true,
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      const callArgs = mockApiPostForm.mock.calls[0];
+      const formData = callArgs[1] as FormData;
+
+      expect(formData.get('payout_method')).toBe('zengapay');
+      expect(formData.get('payment_option')).toBe('zengapay');
+      expect(formData.get('phone')).toBe('+256701234567');
+      expect(formData.get('mobile_money_number')).toBe('+256701234567');
+      expect(formData.has('mobile_money_provider')).toBe(false);
+    });
   });
 });

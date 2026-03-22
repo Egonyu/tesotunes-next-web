@@ -1001,6 +1001,17 @@ export function useSubmitArtistApplication() {
   return useMutation({
     mutationFn: (data: ArtistApplicationData) => {
       const formData = new FormData();
+      const normalizedPayoutMethod = data.payout_method;
+      const normalizedMobileMoneyNumber =
+        normalizedPayoutMethod === "zengapay"
+          ? (data.mobile_money_number || data.phone)
+          : data.mobile_money_number;
+      const normalizedMobileMoneyProvider =
+        normalizedPayoutMethod === "mtn_momo"
+          ? (data.mobile_money_provider || "mtn")
+          : normalizedPayoutMethod === "airtel_money"
+            ? (data.mobile_money_provider || "airtel")
+            : undefined;
 
       // Add all text fields
       formData.append('stage_name', data.stage_name);
@@ -1008,8 +1019,8 @@ export function useSubmitArtistApplication() {
       formData.append('primary_genre', data.primary_genre);
       formData.append('full_name', data.full_name);
       formData.append('phone', data.phone);
-      formData.append('payout_method', data.payout_method);
-      formData.append('payment_option', data.payout_method);
+      formData.append('payout_method', normalizedPayoutMethod);
+      formData.append('payment_option', normalizedPayoutMethod);
       formData.append('terms_accepted', '1');
       formData.append('artist_agreement_accepted', '1');
 
@@ -1018,11 +1029,11 @@ export function useSubmitArtistApplication() {
       if (data.country) formData.append('country', data.country);
       if (data.city) formData.append('city', data.city);
       if (data.website_url) formData.append('website_url', data.website_url);
-      if (data.mobile_money_number) formData.append('mobile_money_number', data.mobile_money_number);
-      if (data.mobile_money_provider) {
-        formData.append('mobile_money_provider', data.mobile_money_provider);
-      } else if (data.payout_method === 'zengapay') {
-        formData.append('mobile_money_provider', 'zengapay');
+      if (normalizedMobileMoneyNumber) {
+        formData.append('mobile_money_number', normalizedMobileMoneyNumber);
+      }
+      if (normalizedMobileMoneyProvider) {
+        formData.append('mobile_money_provider', normalizedMobileMoneyProvider);
       }
       if (data.bank_name) formData.append('bank_name', data.bank_name);
       if (data.bank_account) formData.append('bank_account', data.bank_account);

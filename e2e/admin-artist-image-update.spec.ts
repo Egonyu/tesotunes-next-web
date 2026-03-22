@@ -47,6 +47,25 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
   return match[1];
 }
 
+async function uploadImageFromSection(
+  page: Parameters<typeof test>[0]['page'],
+  sectionTestId: string,
+  file: { name: string; mimeType: string; buffer: Buffer }
+): Promise<void> {
+  const uploadSection = page.getByTestId(sectionTestId);
+  await expect(uploadSection).toBeVisible();
+
+  const uploadTrigger = uploadSection.locator('label').last();
+  await expect(uploadTrigger).toBeVisible();
+
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    uploadTrigger.click(),
+  ]);
+
+  await chooser.setFiles(file);
+}
+
 test.describe('Admin artist image update', () => {
   test('updates profile and cover images and reflects new URLs', async ({ page }) => {
     test.setTimeout(90000);
@@ -73,13 +92,13 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    await page.locator('input[data-testid="artist-profile-image-input"]').setInputFiles({
+    await uploadImageFromSection(page, 'artist-profile-upload', {
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
 
-    await page.locator('input[data-testid="artist-cover-image-input"]').setInputFiles({
+    await uploadImageFromSection(page, 'artist-cover-upload', {
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),

@@ -74,6 +74,7 @@ const navItems = [
   { href: '/admin/polls', label: 'Polls', icon: BarChart3 },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/analytics', label: 'Analytics', icon: PieChart },
+  { href: '/admin/security', label: 'Security', icon: Shield },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
   { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag },
   { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield },

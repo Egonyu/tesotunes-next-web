@@ -77,16 +77,24 @@ test.describe('Admin artist image update', () => {
       /invalid credentials|invalid email or password|invalid login|authentication failed|unauthorized/i
     ).first();
 
-    await Promise.race([
-      expect(artistsNavLink).toBeVisible({ timeout: 20000 }),
-      expect(authError).toBeVisible({ timeout: 20000 }).then(() => {
-        throw new Error(
-          'Admin login failed: invalid credentials. Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to valid admin credentials.'
-        );
-      }),
-    ]);
+    const loginOutcome = await Promise.race([
+      artistsNavLink.waitFor({ state: 'visible', timeout: 20000 }).then(() => 'ok' as const),
+      authError.waitFor({ state: 'visible', timeout: 20000 }).then(() => 'auth_error' as const),
+    ]).catch(() => 'timeout' as const);
 
-    await expect(artistsNavLink).toBeVisible({ timeout: 10000 });
+    if (loginOutcome === 'auth_error') {
+      throw new Error(
+        'Admin login failed: invalid credentials. Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to valid admin credentials.'
+      );
+    }
+
+    if (loginOutcome === 'timeout') {
+      throw new Error(
+        `Admin login did not reach Artists navigation within 20s. Current URL: ${page.url()}`
+      );
+    }
+
+    await expect(artistsNavLink).toBeVisible({ timeout: 5000 });
 
     const artistId = await resolveArtistId(page);
 
@@ -102,24 +110,30 @@ test.describe('Admin artist image update', () => {
     const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
     const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
 
-    // Set profile image with explicit visibility check
-    await page.getByTestId('artist-profile-image-input').setInputFiles({
+    const profileImageInput = page.getByTestId('artist-profile-image-input');
+    const coverImageInput = page.getByTestId('artist-cover-image-input');
+
+    await expect(profileImageInput, `Missing profile image input on ${page.url()}`).toBeAttached({ timeout: 10000 });
+    await expect(coverImageInput, `Missing cover image input on ${page.url()}`).toBeAttached({ timeout: 10000 });
+
+    // Set profile image with explicit attachment check
+    await profileImageInput.setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
-    const profileFileCount = await page.getByTestId('artist-profile-image-input').evaluate((el) => {
+    const profileFileCount = await profileImageInput.evaluate((el) => {
       return (el as HTMLInputElement).files?.length ?? 0;
     });
     expect(profileFileCount).toBe(1);
 
-    // Set cover image with explicit visibility check
-    await page.getByTestId('artist-cover-image-input').setInputFiles({
+    // Set cover image with explicit attachment check
+    await coverImageInput.setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),
     });
-    const coverFileCount = await page.getByTestId('artist-cover-image-input').evaluate((el) => {
+    const coverFileCount = await coverImageInput.evaluate((el) => {
       return (el as HTMLInputElement).files?.length ?? 0;
     });
     expect(coverFileCount).toBe(1);

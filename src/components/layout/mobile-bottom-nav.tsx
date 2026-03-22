@@ -160,7 +160,7 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
         "flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-center transition-all duration-200 shadow-sm",
         isActive
           ? "border-primary/30 bg-linear-to-br from-primary/14 via-primary/10 to-orange-400/10 text-primary shadow-[0_12px_28px_rgba(220,38,90,0.14)] dark:border-primary/35 dark:from-[#2a1421] dark:via-[#241826] dark:to-[#1f1f2c]"
-          : "border-black/6 bg-white/88 text-foreground hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-[#11151d]/96 dark:hover:bg-[#171d29]"
+          : "border-border/70 bg-card/90 text-foreground hover:-translate-y-0.5 hover:bg-card dark:border-white/12 dark:bg-[#111826] dark:text-foreground/95 dark:hover:bg-[#182236]"
       )}
     >
       <div
@@ -168,10 +168,10 @@ function MenuItem({ href, label, icon: Icon, onClick }: MenuItemProps) {
           "flex h-10 w-10 items-center justify-center rounded-full border",
           isActive
             ? "border-primary/15 bg-primary/15 dark:border-primary/20 dark:bg-primary/18"
-            : "border-black/6 bg-white text-foreground/80 dark:border-white/10 dark:bg-[#181d28]"
+            : "border-border/70 bg-background text-foreground/85 dark:border-white/12 dark:bg-[#1a2436]"
         )}
       >
-        <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-foreground/70 dark:text-foreground/80")} />
+        <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-foreground/75 dark:text-foreground/90")} />
       </div>
       <span className="text-[11px] font-semibold leading-tight">{label}</span>
     </Link>
@@ -252,16 +252,16 @@ export function MobileBottomNav() {
       {/* Expanded Menu Overlay */}
       {menuOpen && (
         <div
-          className="fixed inset-0 bg-black/65 z-40 lg:hidden backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/72 z-40 lg:hidden backdrop-blur-sm animate-in fade-in duration-200"
           onClick={closeMenu}
         >
           {/* Menu Panel — slides up from bottom */}
           <div
-            className="absolute bottom-24 left-4 right-4 rounded-2xl border border-border/80 bg-background/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/10 dark:bg-[#0b0f16]/96 dark:shadow-[0_24px_56px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-24 left-4 right-4 rounded-2xl border border-black/10 bg-white/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/12 dark:bg-[#070d17]/98 dark:shadow-[0_24px_56px_rgba(0,0,0,0.65)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
           <div
-            className="absolute inset-0 rounded-2xl bg-linear-to-br from-white via-rose-50/90 to-orange-50/80 dark:from-[#0d121b] dark:via-[#101826] dark:to-[#131a2b]"
+            className="absolute inset-0 rounded-2xl bg-linear-to-br from-white via-rose-50/90 to-orange-50/80 dark:hidden"
             aria-hidden="true"
           />
             {/* Drag indicator */}
@@ -275,12 +275,12 @@ export function MobileBottomNav() {
                 <Compass className="h-5 w-5 text-primary" />
                 <div>
                   <h2 className="text-base font-bold text-foreground">Explore</h2>
-                  <p className="text-xs text-foreground/65 dark:text-foreground/70">Browse faster on mobile</p>
+                  <p className="text-xs text-foreground/70 dark:text-foreground/82">Browse faster on mobile</p>
                 </div>
               </div>
               <button
                 onClick={closeMenu}
-                className="rounded-full border border-black/5 bg-white/70 p-2 text-foreground/70 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-[#141b27] dark:text-foreground/80 dark:hover:bg-[#1b2433]"
+                className="rounded-full border border-border/70 bg-background/78 p-2 text-foreground/80 shadow-sm transition-colors hover:bg-background dark:border-white/12 dark:bg-[#17253a] dark:text-foreground/90 dark:hover:bg-[#22324b]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -291,7 +291,7 @@ export function MobileBottomNav() {
               {/* Artist Section */}
               {hasArtistAccess && (
                 <div>
-                  <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/55 dark:text-foreground/60">
+                  <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/68 dark:text-foreground/76">
                     Artist Studio
                   </h3>
                   <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
@@ -304,7 +304,7 @@ export function MobileBottomNav() {
 
               {/* Browse Section */}
               <div>
-                <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/55 dark:text-foreground/60">
+                <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/68 dark:text-foreground/76">
                   Browse
                 </h3>
                 <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
@@ -316,7 +316,7 @@ export function MobileBottomNav() {
 
               {/* Explore Section */}
               <div>
-                <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/55 dark:text-foreground/60">
+                <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/68 dark:text-foreground/76">
                   More
                 </h3>
                 <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
@@ -327,7 +327,7 @@ export function MobileBottomNav() {
               </div>
 
               {/* User Section */}
-              <div className="border-t border-black/6 pt-3 dark:border-white/8">
+              <div className="border-t border-border/70 pt-3 dark:border-white/12">
                 <div className="space-y-2">
                   {session ? (
                     <>
@@ -426,9 +426,9 @@ export function MobileBottomNav() {
       >
         <div className={cn(
           "flex items-center justify-around rounded-full px-1.5 py-1.5",
-          "bg-linear-to-r from-white/92 via-white/88 to-rose-50/82 dark:from-[#0b121d]/96 dark:via-[#0f1726]/94 dark:to-[#151427]/92",
+          "bg-linear-to-r from-white/92 via-white/88 to-rose-50/82 dark:bg-linear-to-r dark:from-[#070d17]/96 dark:via-[#070d17]/96 dark:to-[#070d17]/96",
           "backdrop-blur-2xl backdrop-saturate-150",
-          "shadow-[0_10px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_14px_36px_rgba(0,0,0,0.45)]",
+          "shadow-[0_10px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_14px_36px_rgba(0,0,0,0.55)]",
           "border border-black/[0.05] dark:border-white/[0.1]",
           "pb-[max(0.25rem,env(safe-area-inset-bottom))]"
         )}>

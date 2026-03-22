@@ -81,6 +81,15 @@ function toFieldErrors(error: unknown): { message: string; fields: Record<string
   };
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
@@ -207,7 +216,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     },
   });
 
-  const onProfileFileChange = (file?: File) => {
+  const onProfileFileChange = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       toast.error('Profile image must be an image file');
@@ -218,10 +227,14 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       return;
     }
     setProfileFile(file);
-    setProfilePreview(URL.createObjectURL(file));
+    try {
+      setProfilePreview(await readFileAsDataUrl(file));
+    } catch {
+      toast.error('Failed to preview profile image');
+    }
   };
 
-  const onCoverFileChange = (file?: File) => {
+  const onCoverFileChange = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       toast.error('Cover image must be an image file');
@@ -232,7 +245,11 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       return;
     }
     setCoverFile(file);
-    setCoverPreview(URL.createObjectURL(file));
+    try {
+      setCoverPreview(await readFileAsDataUrl(file));
+    } catch {
+      toast.error('Failed to preview cover image');
+    }
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -381,20 +398,22 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                     {profilePreview && (
                       <img src={profilePreview} alt="Profile preview" className="h-full w-full object-cover" />
                     )}
-                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
-                      <input
-                        data-testid="artist-profile-image-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => onProfileFileChange(e.target.files?.[0])}
-                      />
-                      <span className="inline-flex items-center gap-2 text-sm font-medium">
-                        <Upload className="h-4 w-4" />
-                        Upload
-                      </span>
-                    </label>
+                    {!profilePreview && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/80 text-muted-foreground">
+                        <Upload className="h-5 w-5" />
+                        <span className="text-sm font-medium">Upload profile image</span>
+                      </div>
+                    )}
                   </div>
+                  <input
+                    data-testid="artist-profile-image-input"
+                    aria-label="Profile image file"
+                    type="file"
+                    accept="image/*"
+                    className="mt-3 block w-full cursor-pointer rounded-lg border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-primary"
+                    onChange={(e) => void onProfileFileChange(e.target.files?.[0])}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, or WEBP up to 5MB.</p>
                 </div>
 
                 <div data-testid="artist-cover-upload">
@@ -403,20 +422,22 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                     {coverPreview && (
                       <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
                     )}
-                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white cursor-pointer">
-                      <input
-                        data-testid="artist-cover-image-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => onCoverFileChange(e.target.files?.[0])}
-                      />
-                      <span className="inline-flex items-center gap-2 text-sm font-medium">
-                        <Upload className="h-4 w-4" />
-                        Upload
-                      </span>
-                    </label>
+                    {!coverPreview && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/80 text-muted-foreground">
+                        <Upload className="h-5 w-5" />
+                        <span className="text-sm font-medium">Upload cover image</span>
+                      </div>
+                    )}
                   </div>
+                  <input
+                    data-testid="artist-cover-image-input"
+                    aria-label="Cover image file"
+                    type="file"
+                    accept="image/*"
+                    className="mt-3 block w-full cursor-pointer rounded-lg border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-primary"
+                    onChange={(e) => void onCoverFileChange(e.target.files?.[0])}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, or WEBP up to 10MB.</p>
                 </div>
               </div>
             </FormSection>

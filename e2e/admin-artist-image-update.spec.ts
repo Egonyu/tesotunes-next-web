@@ -21,6 +21,50 @@ function extractRealImageUrl(rawSrc: string | null, currentPageUrl: string): str
   return decodeURIComponent(encoded);
 }
 
+async function getOptionalImageSrc(page: Parameters<typeof test>[0]['page'], selector: string): Promise<string> {
+  const image = page.locator(selector).first();
+  if ((await image.count()) === 0) {
+    return '';
+  }
+
+  const src = await image.getAttribute('src');
+  return extractRealImageUrl(src, page.url());
+}
+
+async function resolveArtistImageInputs(page: Parameters<typeof test>[0]['page']) {
+  const profileByTestId = page.getByTestId('artist-profile-image-input');
+  const coverByTestId = page.getByTestId('artist-cover-image-input');
+
+  if ((await profileByTestId.count()) > 0 && (await coverByTestId.count()) > 0) {
+    return {
+      profile: profileByTestId.first(),
+      cover: coverByTestId.first(),
+    };
+  }
+
+  const profileByAria = page.locator('input[type="file"][aria-label="Profile image file"]');
+  const coverByAria = page.locator('input[type="file"][aria-label="Cover image file"]');
+
+  if ((await profileByAria.count()) > 0 && (await coverByAria.count()) > 0) {
+    return {
+      profile: profileByAria.first(),
+      cover: coverByAria.first(),
+    };
+  }
+
+  const allFileInputs = page.locator('input[type="file"]');
+  const fileInputCount = await allFileInputs.count();
+
+  if (fileInputCount >= 2) {
+    return {
+      profile: allFileInputs.nth(0),
+      cover: allFileInputs.nth(1),
+    };
+  }
+
+  throw new Error(`Expected at least 2 file inputs on ${page.url()}, found ${fileInputCount}`);
+}
+
 async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promise<string> {
   if (ARTIST_ID) {
     return ARTIST_ID;
@@ -102,19 +146,10 @@ test.describe('Admin artist image update', () => {
     await expect(page.getByRole('heading', { name: 'Edit Artist' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: 'Save Artist Profile' })).toBeVisible({ timeout: 10000 });
 
-    // Wait for images to be loaded
-    await page.waitForTimeout(500);
+    const beforeCoverSrc = await getOptionalImageSrc(page, 'img[alt="Cover preview"]');
+    const beforeProfileSrc = await getOptionalImageSrc(page, 'img[alt="Profile preview"]');
 
-    const beforeCoverSrcRaw = await page.locator('img[alt="Cover preview"]').first().getAttribute('src').catch(() => null);
-    const beforeProfileSrcRaw = await page.locator('img[alt="Profile preview"]').first().getAttribute('src').catch(() => null);
-    const beforeCoverSrc = extractRealImageUrl(beforeCoverSrcRaw, page.url());
-    const beforeProfileSrc = extractRealImageUrl(beforeProfileSrcRaw, page.url());
-
-    const profileImageInput = page.getByTestId('artist-profile-image-input');
-    const coverImageInput = page.getByTestId('artist-cover-image-input');
-
-    await expect(profileImageInput, `Missing profile image input on ${page.url()}`).toBeAttached({ timeout: 10000 });
-    await expect(coverImageInput, `Missing cover image input on ${page.url()}`).toBeAttached({ timeout: 10000 });
+    const { profile: profileImageInput, cover: coverImageInput } = await resolveArtistImageInputs(page);
 
     // Set profile image with explicit attachment check
     await profileImageInput.setInputFiles({

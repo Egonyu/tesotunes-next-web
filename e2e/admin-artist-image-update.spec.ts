@@ -178,11 +178,11 @@ test.describe('Admin artist image update', () => {
 
     const updateResponsePromise = page.waitForResponse((response) => {
       const req = response.request();
-      return (
-        req.method() === 'POST' &&
-        response.url().includes(`/api/admin/artists/${artistId}`) &&
-        response.status() === 200
-      );
+      const { pathname } = new URL(response.url());
+      const matchesLegacyEndpoint = pathname.endsWith(`/api/admin/artists/${artistId}`);
+      const matchesBackendEndpoint = pathname.endsWith(`/api/backend/admin/artists/${artistId}`);
+
+      return req.method() === 'POST' && (matchesLegacyEndpoint || matchesBackendEndpoint) && response.status() === 200;
     }, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'Save Artist Profile' }).click();

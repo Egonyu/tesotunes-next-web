@@ -527,6 +527,36 @@ export default function AdminSettingsPage() {
                     <input type="text" value={settings.payments.zengapay_api_key} onChange={(e) => updateField('payments', 'zengapay_api_key', e.target.value)} placeholder="API Key" className="w-full px-4 py-2 border rounded-lg bg-background" />
                   </div>
                 </div>
+
+                <div className="p-4 rounded-lg border">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-medium">Artist Earnings Share (%)</p>
+                      <p className="text-sm text-muted-foreground">Used for song purchase distribution (artist/platform split)</p>
+                    </div>
+                    <span className="text-sm font-semibold text-primary">
+                      {Number(settings.payments.artist_revenue_share || 0).toFixed(2)}%
+                    </span>
+                  </div>
+
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={settings.payments.artist_revenue_share}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const safe = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0;
+                      updateField('payments', 'artist_revenue_share', safe);
+                    }}
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Platform share is automatically computed as {100 - Number(settings.payments.artist_revenue_share || 0)}%.
+                  </p>
+                </div>
               </div>
             </div>
           )}

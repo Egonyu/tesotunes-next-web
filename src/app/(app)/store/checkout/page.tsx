@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { apiGet, apiPost, isApiError } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
-import { detectProvider, formatPhoneNumber } from "@/hooks/usePayments";
+import { formatPhoneNumber } from "@/hooks/usePayments";
 import { getStoreProductName, getStoreProductPrice } from "@/lib/store-product-utils";
 import { toast } from "sonner";
 
@@ -81,7 +81,7 @@ interface StorePaymentStatusResponse {
 }
 
 type CheckoutStep = "address" | "payment" | "confirm";
-type PaymentMethodId = "mtn_momo" | "airtel_money" | "credits";
+type PaymentMethodId = "mtn_momo" | "credits";
 type PaymentState = "idle" | "processing" | "success" | "failed";
 
 type ShippingAddress = {
@@ -107,17 +107,9 @@ const emptyAddress: ShippingAddress = {
 const PAYMENT_METHODS = [
   {
     id: "mtn_momo" as PaymentMethodId,
-    name: "MTN Mobile Money",
+    name: "ZengaPay Mobile Money",
     description: "Create the order and pay through the store payment flow.",
-    color: "bg-[#FFCC00]",
-    textColor: "text-black",
-    icon: Smartphone,
-  },
-  {
-    id: "airtel_money" as PaymentMethodId,
-    name: "Airtel Money",
-    description: "Create the order and pay through the store payment flow.",
-    color: "bg-[#E40000]",
+    color: "bg-green-600",
     textColor: "text-white",
     icon: Smartphone,
   },
@@ -204,12 +196,7 @@ export default function CheckoutPage() {
       const response = await apiPost<CreateOrderResponse>("/store/orders", {
         payment_method: paymentMethod === "credits" ? "credits" : "mobile_money",
         phone_number: paymentMethod === "credits" ? undefined : formattedPaymentPhone,
-        provider:
-          paymentMethod === "mtn_momo"
-            ? "mtn"
-            : paymentMethod === "airtel_money"
-              ? "airtel"
-              : undefined,
+        provider: undefined,
         shipping_address: {
           ...shippingAddress,
           address_line_2: shippingAddress.address_line_2 || undefined,
@@ -283,17 +270,6 @@ export default function CheckoutPage() {
 
     if (!formattedPaymentPhone || formattedPaymentPhone.length !== 12) {
       toast.error("Enter a valid Ugandan phone number for mobile money.");
-      return false;
-    }
-
-    const detected = detectProvider(formattedPaymentPhone);
-    if (paymentMethod === "mtn_momo" && detected === "airtel_money") {
-      toast.error("That number looks like Airtel. Switch the payment method or phone number.");
-      return false;
-    }
-
-    if (paymentMethod === "airtel_money" && detected === "mtn_momo") {
-      toast.error("That number looks like MTN. Switch the payment method or phone number.");
       return false;
     }
 

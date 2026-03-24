@@ -29,7 +29,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const paymentMethod = 'zengapay' as const;
 
   const { data: loan, isLoading, error } = useSaccoLoan(loanId);
   const paymentMutation = useMakeLoanPayment();
@@ -317,33 +317,11 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium mb-2">Payment Method</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('mtn_momo')}
-                    className={cn(
-                      'flex items-center gap-2 p-3 rounded-lg border transition-colors',
-                      paymentMethod === 'mtn_momo'
-                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10'
-                        : 'hover:border-foreground/30'
-                    )}
-                  >
-                    <Smartphone className="h-5 w-5 text-yellow-600" />
-                    <span className="text-sm font-medium">MTN MoMo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('airtel_money')}
-                    className={cn(
-                      'flex items-center gap-2 p-3 rounded-lg border transition-colors',
-                      paymentMethod === 'airtel_money'
-                        ? 'border-red-500 bg-red-50 dark:bg-red-900/10'
-                        : 'hover:border-foreground/30'
-                    )}
-                  >
-                    <Smartphone className="h-5 w-5 text-red-600" />
-                    <span className="text-sm font-medium">Airtel Money</span>
-                  </button>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20">
+                    <Smartphone className="h-5 w-5 text-emerald-600" />
+                    <span className="text-sm font-medium">ZengaPay Mobile Money</span>
+                  </div>
                 </div>
               </div>
 

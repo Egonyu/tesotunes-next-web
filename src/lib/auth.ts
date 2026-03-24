@@ -87,7 +87,7 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
  * Fetch fresh user data from the API to refresh role.
  * Returns null if the request fails (keeps existing role).
  */
-async function fetchFreshUserData(accessToken: string): Promise<{ role: string } | { expired: true } | null> {
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[] } | { expired: true } | null> {
   try {
     const baseUrls = buildAuthApiBaseUrls(API_URL);
     let response: Response | null = null;
@@ -126,9 +126,13 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string }
     // Support both { data: {...} } and direct {...} response shapes
     const user = (data.data as Record<string, unknown>) ?? data;
     const role = user.role as string;
+    const permissionsRaw = user.permissions;
+    const permissions = Array.isArray(permissionsRaw)
+      ? permissionsRaw.filter((p): p is string => typeof p === "string")
+      : [];
 
     if (role) {
-      return { role };
+      return { role, permissions };
     }
     return null;
   } catch (error) {
@@ -199,6 +203,9 @@ function extractAuthorizedUser(data: Record<string, unknown>) {
     email: user.email as string,
     name: user.name as string,
     role: (user.role as string) || "user",
+    permissions: Array.isArray(user.permissions)
+      ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
+      : [],
     accessToken: token,
   };
 }
@@ -317,6 +324,7 @@ export const authConfig: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
+        token.permissions = user.permissions;
         token.accessToken = user.accessToken;
         token.accessTokenRefreshedAt = Date.now();
         token.roleRefreshedAt = Date.now();
@@ -354,10 +362,12 @@ export const authConfig: NextAuthOptions = {
           }
         } else if (freshData && 'role' in freshData) {
           token.role = freshData.role;
+          token.permissions = freshData.permissions;
         }
 
         if (freshData && 'role' in freshData) {
           token.role = freshData.role;
+          token.permissions = freshData.permissions;
         }
 
         token.roleRefreshedAt = now;
@@ -369,6 +379,7 @@ export const authConfig: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.permissions = (token.permissions as string[] | undefined) ?? [];
         session.user.apiAuthorized = Boolean(token.accessToken);
         session.user.accessToken = token.accessToken as string | undefined;
       }

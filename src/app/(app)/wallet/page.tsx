@@ -333,7 +333,7 @@ export default function WalletPage() {
                   className="w-full px-4 py-3 rounded-lg border bg-background"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter your MTN or Airtel number. ZengaPay will process the withdrawal.
+                  Enter the phone number where ZengaPay should send the withdrawal prompt.
                 </p>
               </div>
             </div>

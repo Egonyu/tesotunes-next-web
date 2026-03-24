@@ -42,6 +42,7 @@ export interface PlatformSettings {
     zengapay_enabled: boolean;
     zengapay_merchant_id: string;
     zengapay_api_key: string;
+    artist_revenue_share: number;
   };
   email: {
     smtp_host: string;
@@ -121,6 +122,7 @@ export const defaultPlatformSettings: PlatformSettings = {
     zengapay_enabled: false,
     zengapay_merchant_id: "",
     zengapay_api_key: "",
+    artist_revenue_share: 70,
   },
   email: {
     smtp_host: "",

@@ -440,6 +440,53 @@ export interface PurchaseResponse {
     purchase_id: number;
     credits_deducted: number;
     credits_remaining: number;
+    payment?: {
+      id: number;
+      reference: string;
+      status: string;
+      amount: number;
+      currency: string;
+    };
+    distribution?: {
+      artist_name?: string;
+      artist_percentage: number;
+      platform_percentage: number;
+      artist_amount: number;
+      platform_amount: number;
+    };
+    benefits?: {
+      download_access: boolean;
+      loyalty_points_awarded?: number;
+      loyalty_points_balance?: number | null;
+    };
+    artist_wallet?: {
+      current_balance: number;
+    };
+    payment_status?: string;
+    payment_reference?: string;
+  };
+}
+
+export interface PurchaseSongPayload {
+  payment_method?: 'platform_credits' | 'zengapay';
+  phone_number?: string;
+}
+
+export interface SongPurchasePaymentStatusResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'refunded' | 'not_found';
+    reference: string;
+    amount?: number;
+    currency?: string;
+    purchased: boolean;
+    download_access: boolean;
+    song_id: number;
+    payment_id?: number;
+    completed_at?: string | null;
+    failed_at?: string | null;
+    message?: string;
   };
 }
 
@@ -447,7 +494,7 @@ export function useCheckPurchase(songId: number) {
   return useQuery({
     queryKey: ["song", "purchase", songId],
     queryFn: () =>
-      apiGet<{ data: { purchased: boolean } }>(`/songs/${songId}/purchase-status`).then(
+      apiGet<{ data: { purchased: boolean } }>(`/v1/songs/${songId}/purchase-status`).then(
         (res) => res.data.purchased
       ),
     enabled: songId > 0,
@@ -459,13 +506,24 @@ export function usePurchaseSong() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (songId: number) =>
-      apiPost<PurchaseResponse>(`/songs/${songId}/purchase`),
-    onSuccess: (_, songId) => {
-      queryClient.invalidateQueries({ queryKey: ["song", "purchase", songId] });
+    mutationFn: ({ songId, payload }: { songId: number; payload?: PurchaseSongPayload }) =>
+      apiPost<PurchaseResponse>(`/v1/songs/${songId}/purchase`, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["song", "purchase", variables.songId] });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
       queryClient.invalidateQueries({ queryKey: ["library"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
     },
+  });
+}
+
+export function useSongPurchasePaymentStatus(songId: number, reference: string | null, options?: { enabled?: boolean; refetchInterval?: number }) {
+  return useQuery({
+    queryKey: ['song', 'purchase', 'payment-status', songId, reference],
+    queryFn: () => apiGet<SongPurchasePaymentStatusResponse>(`/v1/songs/${songId}/purchase/payment-status/${reference}`),
+    enabled: songId > 0 && !!reference && (options?.enabled !== false),
+    refetchInterval: options?.refetchInterval ?? 3000,
+    refetchIntervalInBackground: false,
   });
 }
 

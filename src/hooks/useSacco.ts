@@ -217,7 +217,7 @@ export function useJoinSacco() {
       initial_deposit?: number;
       initial_shares?: number;
       phone_number: string;
-      payment_method?: "mtn_momo" | "airtel_money";
+      payment_method?: "zengapay";
     }) =>
       apiPost<{ message: string; data: SaccoMember }>("/sacco/join", data).then(
         (res) => res
@@ -299,7 +299,7 @@ export function useSaccoDeposit() {
     mutationFn: (data: {
       amount: number;
       phone_number: string;
-      payment_method: "mtn_momo" | "airtel_money";
+      payment_method: "zengapay";
     }) =>
       apiPost<{
         message: string;
@@ -318,7 +318,7 @@ export function useSaccoWithdraw() {
     mutationFn: (data: {
       amount: number;
       phone_number: string;
-      payment_method: "mtn_momo" | "airtel_money";
+      payment_method: "zengapay";
     }) =>
       apiPost<{
         message: string;
@@ -482,7 +482,7 @@ export function useApplyForLoan() {
       term_months: number;
       purpose: string;
       phone_number: string;
-      payment_method?: "mtn_momo" | "airtel_money";
+      payment_method?: "zengapay";
     }) =>
       apiPost<{
         message: string;
@@ -503,7 +503,7 @@ export function useMakeLoanPayment() {
       loan_id: number;
       amount: number;
       phone_number: string;
-      payment_method: "mtn_momo" | "airtel_money";
+      payment_method: "zengapay";
     }) =>
       apiPost<{
         message: string;
@@ -552,7 +552,7 @@ export function useBuyShares() {
     mutationFn: (data: {
       quantity: number;
       phone_number: string;
-      payment_method: "mtn_momo" | "airtel_money";
+      payment_method: "zengapay";
     }) =>
       apiPost<{
         message: string;

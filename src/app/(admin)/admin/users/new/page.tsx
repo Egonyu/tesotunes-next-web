@@ -12,8 +12,9 @@ import { PageHeader, FormField, FormSection, FormActions } from '@/components/ad
 interface Role {
   id: string;
   name: string;
-  description: string;
 }
+
+const ALLOWED_ADMIN_USER_ROLES = ['user', 'artist', 'moderator', 'admin'] as const;
 
 interface UserFormData {
   name: string;
@@ -66,6 +67,17 @@ export default function CreateUserPage() {
     queryFn: () => apiGet<{ data: { id: string; name: string }[] }>('/admin/artists?per_page=1000'),
     enabled: formData.is_artist,
   });
+
+  const roleOptions = (roles?.data ?? [])
+    .map((role) => role.name)
+    .filter((role, index, arr) => arr.indexOf(role) === index)
+    .filter((role): role is (typeof ALLOWED_ADMIN_USER_ROLES)[number] =>
+      (ALLOWED_ADMIN_USER_ROLES as readonly string[]).includes(role)
+    );
+
+  const resolvedRoleOptions = roleOptions.length > 0
+    ? roleOptions
+    : [...ALLOWED_ADMIN_USER_ROLES];
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -325,14 +337,9 @@ export default function CreateUserPage() {
                   onChange={(e) => updateField('role', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
                 >
-                  <option value="user">User</option>
-                  <option value="artist">Artist</option>
-                  <option value="moderator">Moderator</option>
-                  <option value="admin">Admin</option>
-                  <option value="super_admin">Super Admin</option>
-                  {roles?.data?.map(role => (
-                    <option key={role.id} value={role.name}>
-                      {role.name}
+                  {resolvedRoleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                     </option>
                   ))}
                 </select>

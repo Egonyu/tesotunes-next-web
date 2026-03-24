@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 type PaymentMethod = 'zengapay';
 
 const paymentMethods: { id: PaymentMethod; label: string; icon: React.ElementType; description: string }[] = [
-  { id: 'zengapay', label: 'ZengaPay Mobile Money', icon: Smartphone, description: 'Withdraw via MTN MoMo or Airtel Money through ZengaPay' },
+  { id: 'zengapay', label: 'ZengaPay Mobile Money', icon: Smartphone, description: 'Withdraw through the ZengaPay gateway' },
 ];
 
 export default function ArtistWalletPage() {
@@ -424,7 +424,7 @@ export default function ArtistWalletPage() {
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>• Minimum withdrawal: <span className="font-medium text-foreground">UGX 50,000</span></p>
               <p>• ZengaPay Mobile Money: <span className="font-medium text-foreground">Processed within 24 hours</span></p>
-              <p>• Supports both MTN MoMo and Airtel Money</p>
+              <p>• Single external payout rail via ZengaPay</p>
               <p>• No withdrawal fees via ZengaPay</p>
             </div>
           </div>
@@ -527,7 +527,7 @@ export default function ArtistWalletPage() {
                     className="w-full px-4 py-2.5 border rounded-lg bg-background"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Enter your MTN or Airtel number. ZengaPay will process it automatically.
+                    Enter the phone number where ZengaPay should send the withdrawal prompt.
                   </p>
                 </div>
               )}

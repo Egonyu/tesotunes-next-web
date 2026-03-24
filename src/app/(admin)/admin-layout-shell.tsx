@@ -40,6 +40,8 @@ import {
   BadgeCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { hasAnyPermission } from '@/lib/permissions';
+import { isAdminRole } from '@/lib/roles';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { api } from '@/lib/api';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
@@ -48,50 +50,52 @@ import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
 import { usePlayerStore, useUIStore } from '@/stores';
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/songs', label: 'Songs', icon: Music },
-  { href: '/admin/albums', label: 'Albums', icon: Disc3 },
-  { href: '/admin/artists', label: 'Artists', icon: Mic2 },
-  { href: '/admin/catalog', label: 'Catalog Intake', icon: FolderUp },
-  { href: '/admin/catalog/claims', label: 'Claim Review', icon: BadgeCheck },
-  { href: '/admin/genres', label: 'Genres', icon: Tags },
-  { href: '/admin/featured', label: 'Featured', icon: Star },
-  { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones },
-  { href: '/admin/store', label: 'Store', icon: ShoppingBag },
-  { href: '/admin/store/promotions', label: 'Promotions', icon: Percent },
-  { href: '/admin/events', label: 'Events', icon: Calendar },
-  { href: '/admin/awards', label: 'Awards', icon: Trophy },
-  { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone },
-  { href: '/admin/promotions', label: 'Promo Market', icon: Megaphone },
-  { href: '/admin/promotions/disputes', label: 'Disputes', icon: Megaphone },
-  { href: '/admin/promotions/analytics', label: 'Promo Analytics', icon: BarChart3 },
-  { href: '/admin/payments', label: 'Payments', icon: Wallet },
-  { href: '/admin/sacco', label: 'SACCO', icon: CreditCard },
-  { href: '/admin/sacco/board-meetings', label: 'Board Meetings', icon: Building2 },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: Crown },
-  { href: '/admin/forums', label: 'Forums', icon: MessageSquare },
-  { href: '/admin/polls', label: 'Polls', icon: BarChart3 },
-  { href: '/admin/reports', label: 'Reports', icon: FileText },
-  { href: '/admin/analytics', label: 'Analytics', icon: PieChart },
-  { href: '/admin/security', label: 'Security', icon: Shield },
-  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
-  { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag },
-  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield },
-  { href: '/admin/system', label: 'System Health', icon: Activity },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view'] },
+  { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/albums', label: 'Albums', icon: Disc3, requiredPermissions: ['admin.music', 'album.*'] },
+  { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/catalog', label: 'Catalog Intake', icon: FolderUp, requiredPermissions: ['catalog.view', 'catalog.upload'] },
+  { href: '/admin/catalog/claims', label: 'Claim Review', icon: BadgeCheck, requiredPermissions: ['catalog.claim.review'] },
+  { href: '/admin/genres', label: 'Genres', icon: Tags, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/featured', label: 'Featured', icon: Star, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/store', label: 'Store', icon: ShoppingBag, requiredPermissions: ['manage-store', 'admin.settings'] },
+  { href: '/admin/store/promotions', label: 'Promotions', icon: Percent, requiredPermissions: ['manage-store', 'admin.settings'] },
+  { href: '/admin/events', label: 'Events', icon: Calendar, requiredPermissions: ['admin.dashboard', 'admin.music'] },
+  { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
+  { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions', label: 'Promo Market', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/disputes', label: 'Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/analytics', label: 'Promo Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
+  { href: '/admin/sacco', label: 'SACCO', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
+  { href: '/admin/sacco/board-meetings', label: 'Board Meetings', icon: Building2, requiredPermissions: ['manage-sacco'] },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: Crown, requiredPermissions: ['admin.settings', 'admin.users'] },
+  { href: '/admin/forums', label: 'Forums', icon: MessageSquare, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/polls', label: 'Polls', icon: BarChart3, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports'] },
+  { href: '/admin/analytics', label: 'Analytics', icon: PieChart, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  { href: '/admin/security', label: 'Security', icon: Shield, requiredPermissions: ['admin.settings'] },
+  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, requiredPermissions: ['admin.settings'] },
+  { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag, requiredPermissions: ['admin.settings'] },
+  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield, requiredPermissions: ['manage-roles', 'admin.settings', 'admin.users'] },
+  { href: '/admin/system', label: 'System Health', icon: Activity, requiredPermissions: ['admin.settings'] },
+  { href: '/admin/settings', label: 'Settings', icon: Settings, requiredPermissions: ['admin.settings', 'manage-settings'] },
 ];
 
 type AdminLayoutShellProps = {
   children: React.ReactNode;
   userName: string;
   userRole: string;
+  userPermissions?: string[];
 };
 
 export default function AdminLayoutShell({
   children,
   userName,
   userRole,
+  userPermissions = [],
 }: AdminLayoutShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -107,7 +111,15 @@ export default function AdminLayoutShell({
   const adminLogo = appearance?.logo_light || appearance?.logo_dark || '';
   const adminLogoAlt = appearance?.logo_alt || adminPanelName;
   const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
-  const visibleNavItems = ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports');
+  const shouldFallbackToRoleVisibility = isAdminRole(userRole) && userPermissions.length === 0;
+
+  const visibleNavItems = (ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports'))
+    .filter((item) => {
+      if (shouldFallbackToRoleVisibility) return true;
+      const permissions = item.requiredPermissions as string[] | undefined;
+      if (!permissions || permissions.length === 0) return true;
+      return hasAnyPermission(userPermissions, permissions);
+    });
   const hasActivePlayer = !!currentSong && !playerMinimized;
 
   useEffect(() => {
@@ -276,4 +288,3 @@ export default function AdminLayoutShell({
     </div>
   );
 }
-

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -18,42 +19,67 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { hasAnyPermission } from '@/lib/permissions';
 
 // ── Types ────────────────────────────────────────────────────────────
 interface Permission {
-  id: string;
+  id: number;
   name: string;
   description: string;
-  group: string;
+  group?: string | null;
+  category?: string | null;
 }
 
 interface Role {
   id: number;
   name: string;
-  slug: string;
+  display_name?: string | null;
   description: string;
+  priority: number;
+  is_active: boolean;
   users_count: number;
   permissions: string[];
-  is_system: boolean;
+  is_system?: boolean;
   created_at: string;
 }
 
 interface RolesResponse {
+  success?: boolean;
   data: Role[];
 }
 
 interface PermissionsResponse {
-  data: Permission[];
+  success?: boolean;
+  data: Permission[] | Record<string, Permission[]>;
 }
+
+type RoleFormData = {
+  name: string;
+  display_name: string;
+  description: string;
+  priority: number;
+  is_active: boolean;
+  permissions: string[];
+};
+
+const SYSTEM_ROLE_NAMES = new Set(['user', 'artist', 'moderator', 'admin', 'super_admin']);
 
 // ── Component ────────────────────────────────────────────────────────
 export default function RolesPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', permissions: [] as string[] });
+  const [formData, setFormData] = useState<RoleFormData>({
+    name: '',
+    display_name: '',
+    description: '',
+    priority: 1,
+    is_active: true,
+    permissions: [],
+  });
 
   // ── Queries ──────────────────────────────────────────────────────
   const { data: rolesData, isLoading: loadingRoles } = useQuery({
@@ -68,7 +94,7 @@ export default function RolesPage() {
 
   // ── Mutations ────────────────────────────────────────────────────
   const createRole = useMutation({
-    mutationFn: (data: { name: string; description: string; permissions: string[] }) =>
+    mutationFn: (data: RoleFormData) =>
       apiPost('/admin/roles', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
@@ -80,7 +106,7 @@ export default function RolesPage() {
   });
 
   const updateRole = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; name: string; description: string; permissions: string[] }) =>
+    mutationFn: ({ id, ...data }: { id: number } & RoleFormData) =>
       apiPut(`/admin/roles/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
@@ -113,8 +139,13 @@ export default function RolesPage() {
 
   // ── Helpers ──────────────────────────────────────────────────────
   const roles = rolesData?.data ?? [];
-  const permissions = permissionsData?.data ?? [];
+
+  const permissions = Array.isArray(permissionsData?.data)
+    ? permissionsData?.data
+    : Object.values(permissionsData?.data ?? {}).flat();
+
   const currentRole = roles.find((r) => r.id === selectedRole);
+  const canManageRoles = hasAnyPermission(session?.user?.permissions, ['manage-roles', 'admin.settings', 'admin.users']);
 
   const filteredRoles = roles.filter(
     (r) =>
@@ -123,24 +154,43 @@ export default function RolesPage() {
   );
 
   const permissionGroups = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
-    const group = p.group || 'General';
+    const group = p.group || p.category || 'General';
     if (!acc[group]) acc[group] = [];
     acc[group].push(p);
     return acc;
   }, {});
 
   function resetForm() {
-    setFormData({ name: '', description: '', permissions: [] });
+    setFormData({
+      name: '',
+      display_name: '',
+      description: '',
+      priority: 1,
+      is_active: true,
+      permissions: [],
+    });
   }
 
   function openEditModal(role: Role) {
     setEditingRole(role);
-    setFormData({ name: role.name, description: role.description, permissions: [...role.permissions] });
+    setFormData({
+      name: role.name,
+      display_name: role.display_name || role.name,
+      description: role.description || '',
+      priority: role.priority ?? 1,
+      is_active: role.is_active ?? true,
+      permissions: [...role.permissions],
+    });
+  }
+
+  function isSystemRole(role: Role): boolean {
+    return Boolean(role.is_system) || SYSTEM_ROLE_NAMES.has(role.name);
   }
 
   function togglePermission(roleId: number, permId: string) {
+    if (!canManageRoles) return;
     const role = roles.find((r) => r.id === roleId);
-    if (!role || role.is_system) return;
+    if (!role || isSystemRole(role)) return;
     const perms = role.permissions.includes(permId)
       ? role.permissions.filter((p) => p !== permId)
       : [...role.permissions, permId];
@@ -148,6 +198,7 @@ export default function RolesPage() {
   }
 
   function handleSave() {
+    if (!canManageRoles) return;
     if (editingRole) {
       updateRole.mutate({ id: editingRole.id, ...formData });
     } else {
@@ -174,6 +225,7 @@ export default function RolesPage() {
         </div>
         <button
           onClick={() => { resetForm(); setShowCreateModal(true); }}
+          disabled={!canManageRoles}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
@@ -253,17 +305,19 @@ export default function RolesPage() {
                   <h2 className="text-lg font-semibold">{currentRole.name}</h2>
                   <p className="text-sm text-muted-foreground">{currentRole.description}</p>
                 </div>
-                {!currentRole.is_system && (
+                {!isSystemRole(currentRole) && (
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEditModal(currentRole)} className="p-2 hover:bg-muted rounded-lg">
+                    <button onClick={() => openEditModal(currentRole)} disabled={!canManageRoles} className="p-2 hover:bg-muted rounded-lg disabled:opacity-50">
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => {
+                        if (!canManageRoles) return;
                         if (confirm(`Delete role "${currentRole.name}"?`)) {
                           deleteRole.mutate(currentRole.id);
                         }
                       }}
+                      disabled={!canManageRoles}
                       className="p-2 hover:bg-muted rounded-lg text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -281,18 +335,18 @@ export default function RolesPage() {
                       <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">{group}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {groupPerms.map((perm) => {
-                          const hasPerm = currentRole.permissions.includes(perm.id);
+                          const hasPerm = currentRole.permissions.includes(perm.name);
                           return (
                             <button
                               key={perm.id}
-                              onClick={() => togglePermission(currentRole.id, perm.id)}
-                              disabled={currentRole.is_system || updateRolePermissions.isPending}
+                              onClick={() => togglePermission(currentRole.id, perm.name)}
+                              disabled={!canManageRoles || isSystemRole(currentRole) || updateRolePermissions.isPending}
                               className={cn(
                                 'flex items-center justify-between p-3 rounded-lg border text-left transition-colors',
                                 hasPerm
                                   ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                                   : 'bg-muted/50 hover:bg-muted',
-                                currentRole.is_system && 'cursor-not-allowed opacity-60'
+                                isSystemRole(currentRole) && 'cursor-not-allowed opacity-60'
                               )}
                             >
                               <div>
@@ -313,18 +367,18 @@ export default function RolesPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {permissions.map((perm) => {
-                      const hasPerm = currentRole.permissions.includes(perm.id);
+                      const hasPerm = currentRole.permissions.includes(perm.name);
                       return (
                         <button
                           key={perm.id}
-                          onClick={() => togglePermission(currentRole.id, perm.id)}
-                          disabled={currentRole.is_system || updateRolePermissions.isPending}
+                          onClick={() => togglePermission(currentRole.id, perm.name)}
+                          disabled={!canManageRoles || isSystemRole(currentRole) || updateRolePermissions.isPending}
                           className={cn(
                             'flex items-center justify-between p-3 rounded-lg border text-left transition-colors',
                             hasPerm
                               ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                               : 'bg-muted/50 hover:bg-muted',
-                            currentRole.is_system && 'cursor-not-allowed opacity-60'
+                            isSystemRole(currentRole) && 'cursor-not-allowed opacity-60'
                           )}
                         >
                           <div>
@@ -342,10 +396,17 @@ export default function RolesPage() {
                   </div>
                 )}
 
-                {currentRole.is_system && (
+                {isSystemRole(currentRole) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                    This is a system role and cannot be modified.
+                  </div>
+                )}
+
+                {!canManageRoles && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
-                    This is a system role and cannot be modified.
+                    Your account can view roles but cannot change role permissions.
                   </div>
                 )}
               </div>
@@ -374,7 +435,18 @@ export default function RolesPage() {
                 value={formData.name}
                 onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
                 className="w-full px-4 py-2 border rounded-lg bg-background"
-                placeholder="e.g. Content Moderator"
+                placeholder="e.g. content_manager"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Display Name</label>
+              <input
+                type="text"
+                value={formData.display_name}
+                onChange={(e) => setFormData((f) => ({ ...f, display_name: e.target.value }))}
+                className="w-full px-4 py-2 border rounded-lg bg-background"
+                placeholder="e.g. Content Manager"
               />
             </div>
 
@@ -389,6 +461,34 @@ export default function RolesPage() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Priority</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={formData.priority}
+                  onChange={(e) =>
+                    setFormData((f) => ({
+                      ...f,
+                      priority: Number.isNaN(Number(e.target.value)) ? 0 : Number(e.target.value),
+                    }))
+                  }
+                  className="w-full px-4 py-2 border rounded-lg bg-background"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium mt-7">
+                <input
+                  type="checkbox"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData((f) => ({ ...f, is_active: e.target.checked }))}
+                  className="rounded"
+                />
+                Active role
+              </label>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Permissions</label>
               <div className="max-h-64 overflow-y-auto space-y-1 border rounded-lg p-3">
@@ -396,13 +496,13 @@ export default function RolesPage() {
                   <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-muted rounded cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={formData.permissions.includes(perm.id)}
+                      checked={formData.permissions.includes(perm.name)}
                       onChange={() =>
                         setFormData((f) => ({
                           ...f,
-                          permissions: f.permissions.includes(perm.id)
-                            ? f.permissions.filter((p) => p !== perm.id)
-                            : [...f.permissions, perm.id],
+                          permissions: f.permissions.includes(perm.name)
+                            ? f.permissions.filter((p) => p !== perm.name)
+                            : [...f.permissions, perm.name],
                         }))
                       }
                       className="rounded"
@@ -422,7 +522,12 @@ export default function RolesPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!formData.name.trim() || createRole.isPending || updateRole.isPending}
+                disabled={
+                  !formData.name.trim() ||
+                  !formData.display_name.trim() ||
+                  createRole.isPending ||
+                  updateRole.isPending
+                }
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
               >
                 {(createRole.isPending || updateRole.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}

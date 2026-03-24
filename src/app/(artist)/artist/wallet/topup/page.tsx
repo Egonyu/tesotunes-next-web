@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  detectProvider,
   formatPhoneNumber,
   formatUGX,
   normalizePhoneNumber,
@@ -106,11 +105,6 @@ export default function ArtistTopUpPage() {
       return false;
     }
 
-    if (detectProvider(normalized) === 'unknown') {
-      toast.error('Use an MTN or Airtel number for ZengaPay mobile money.');
-      return false;
-    }
-
     return true;
   };
 
@@ -129,11 +123,9 @@ export default function ArtistTopUpPage() {
 
       try {
         const normalizedPhone = normalizePhoneNumber(phoneNumber);
-        const provider = detectProvider(normalizedPhone);
         const result = await depositMutation.mutateAsync({
           amount,
           phone: normalizedPhone,
-          provider: provider === 'unknown' ? undefined : provider,
         });
 
         const autoCompleted =
@@ -380,7 +372,7 @@ export default function ArtistTopUpPage() {
                   </div>
                   <div className="text-left flex-1">
                     <p className="font-medium">ZengaPay Mobile Money</p>
-                    <p className="text-sm text-muted-foreground">One gateway for MTN MoMo and Airtel Money</p>
+                    <p className="text-sm text-muted-foreground">Single gateway for artist wallet top-ups</p>
                   </div>
                   <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                     <Check className="h-4 w-4" />

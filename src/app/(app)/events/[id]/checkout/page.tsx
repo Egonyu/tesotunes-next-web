@@ -118,7 +118,9 @@ export default function CheckoutPage({
   useEffect(() => {
     if (isGuestCheckout && (paymentMethod === 'wallet' || paymentMethod === 'credits')) {
       setPaymentMethod('mtn_momo')
+      return
     }
+
   }, [isGuestCheckout, paymentMethod, setPaymentMethod])
 
   const updateAttendeeRow = (key: string, field: keyof AttendeeAssignmentRow, value: string | boolean) => {
@@ -238,7 +240,7 @@ export default function CheckoutPage({
       return
     }
 
-    const needsPhone = ['mtn_momo', 'airtel_money'].includes(paymentMethod)
+    const needsPhone = paymentMethod === 'mtn_momo'
     if (needsPhone && !phoneNumber) {
       toast.error('Please enter your phone number')
       return
@@ -251,7 +253,7 @@ export default function CheckoutPage({
       }
 
       if (paymentMethod === 'wallet' || paymentMethod === 'credits') {
-        toast.error('Guest checkout currently supports MTN or Airtel payments only')
+        toast.error('Guest checkout currently supports ZengaPay payments only')
         return
       }
     }
@@ -365,7 +367,7 @@ export default function CheckoutPage({
         <p className="text-muted-foreground text-sm">
           Please wait while we process your payment. Do not close this page.
         </p>
-        {paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money' ? (
+        {paymentMethod === 'mtn_momo' ? (
           <p className="text-sm text-primary mt-4">
             Check your phone for a payment prompt.
           </p>
@@ -559,7 +561,7 @@ export default function CheckoutPage({
 
               <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
                 Multi-tier orders, promo codes, and attendee assignment are already live here.
-                Guest checkout is MVP right now, so guest buyers use MTN or Airtel while Tesotunes wallet and credits stay signed-in only.
+                Guest checkout is MVP right now, so guest buyers use ZengaPay while Tesotunes wallet and credits stay signed-in only.
               </div>
 
               <div className="rounded-xl border bg-card p-4 text-sm">
@@ -681,8 +683,7 @@ export default function CheckoutPage({
               />
 
               {/* Phone Number for MoMo */}
-              {(paymentMethod === 'mtn_momo' ||
-                paymentMethod === 'airtel_money') && (
+              {paymentMethod === 'mtn_momo' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Phone Number</label>
                   <input

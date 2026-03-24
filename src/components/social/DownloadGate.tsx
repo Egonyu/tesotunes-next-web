@@ -71,6 +71,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
       const res = await apiPost<{
         success: boolean;
         download_url?: string;
+        expires_at?: string;
         message?: string;
       }>(`/v1/songs/${songId}/download`, { quality });
 

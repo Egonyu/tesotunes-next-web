@@ -28,7 +28,7 @@ import {
   usePurchaseTickets,
   PurchaseTicketRequest,
 } from '@/hooks/useEvents';
-import { formatPhoneNumber, useValidatePhone } from '@/hooks/usePayments';
+import { formatPhoneNumber, normalizePhoneNumber } from '@/hooks/usePayments';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
@@ -51,12 +51,11 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     preselectedTier ? parseInt(preselectedTier) : null
   );
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'airtel_money' | 'credits'>('mtn_momo');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mtn_momo' | 'credits'>('mtn_momo');
   const [phoneNumber, setPhoneNumber] = useState('');
 
   const { data: event, isLoading } = useEvent(eventId);
   const purchaseTickets = usePurchaseTickets();
-  const validatePhone = useValidatePhone();
 
   const selectedTicket = event?.ticket_tiers?.find(t => t.id === selectedTier);
   const isCreditsPayment = paymentMethod === 'credits';
@@ -72,7 +71,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     }
 
     // Validate phone for mobile money
-    const needsPhone = paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money';
+    const needsPhone = paymentMethod === 'mtn_momo';
     if (needsPhone && !phoneNumber) {
       toast.error('Please enter your phone number');
       return;
@@ -81,21 +80,12 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
     // Validate phone number format
     let validatedPhone: string | undefined;
     if (needsPhone) {
-      try {
-        const validation = await validatePhone.mutateAsync(phoneNumber);
-        if (!validation.valid) {
-          toast.error('Invalid phone number format');
-          return;
-        }
-        if (validation.provider !== paymentMethod) {
-          toast.error(`That number looks like ${validation.provider === 'mtn_momo' ? 'MTN' : 'Airtel'}. Switch the payment method or number.`);
-          return;
-        }
-        validatedPhone = validation.phone;
-      } catch (error) {
-        toast.error('Failed to validate phone number');
+      const normalized = normalizePhoneNumber(phoneNumber);
+      if (normalized.length !== 12) {
+        toast.error('Invalid phone number format');
         return;
       }
+      validatedPhone = normalized;
     }
 
     const purchaseData: PurchaseTicketRequest = {
@@ -284,7 +274,7 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                   </div>
                 </div>
 
-                {/* MTN MoMo */}
+                {/* ZengaPay Mobile Money */}
                 <div
                   onClick={() => setPaymentMethod('mtn_momo')}
                   className={cn(
@@ -293,31 +283,12 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-[#FFCC00] flex items-center justify-center">
-                      <Smartphone className="h-5 w-5 text-black" />
-                    </div>
-                    <div>
-                      <p className="font-medium">ZengaPay • MTN Mobile Money</p>
-                      <p className="text-sm text-muted-foreground">Collect through ZengaPay on your MTN MoMo account</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Airtel Money */}
-                <div
-                  onClick={() => setPaymentMethod('airtel_money')}
-                  className={cn(
-                    'p-4 rounded-lg border cursor-pointer transition-all',
-                    paymentMethod === 'airtel_money' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-[#E40000] flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-lg bg-green-600 flex items-center justify-center">
                       <Smartphone className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium">ZengaPay • Airtel Money</p>
-                      <p className="text-sm text-muted-foreground">Collect through ZengaPay on your Airtel Money account</p>
+                      <p className="font-medium">ZengaPay Mobile Money</p>
+                      <p className="text-sm text-muted-foreground">Collect through ZengaPay on your phone number</p>
                     </div>
                   </div>
                 </div>
@@ -345,16 +316,16 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
               </div>
 
               {/* Phone Number Input for Mobile Money */}
-              {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
+              {paymentMethod === 'mtn_momo' && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium mb-2">
-                    {paymentMethod === 'mtn_momo' ? 'MTN' : 'Airtel'} Phone Number
+                    Phone Number
                   </label>
                   <input
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder={paymentMethod === 'mtn_momo' ? '0770 000 000' : '0750 000 000'}
+                    placeholder="0770 000 000"
                     className="w-full px-4 py-3 rounded-lg border bg-background"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
@@ -395,10 +366,10 @@ function TicketPurchaseContent({ eventId }: { eventId: string }) {
 
                 <button
                   onClick={handlePurchase}
-                  disabled={purchaseTickets.isPending || ((paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && !phoneNumber)}
+                  disabled={purchaseTickets.isPending || (paymentMethod === 'mtn_momo' && !phoneNumber)}
                   className={cn(
                     'w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors',
-                    purchaseTickets.isPending || ((paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && !phoneNumber)
+                    purchaseTickets.isPending || (paymentMethod === 'mtn_momo' && !phoneNumber)
                       ? 'bg-muted text-muted-foreground cursor-not-allowed'
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   )}

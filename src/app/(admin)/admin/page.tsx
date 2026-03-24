@@ -60,6 +60,40 @@ interface DashboardStats {
     downloads_today: number;
     downloads_this_week: number;
   };
+  stream_financials?: {
+    total_streams: number;
+    stream_revenue_ugx: number;
+    download_revenue_ugx: number;
+    combined_artist_revenue_ugx: number;
+  };
+  sources?: {
+    revenue?: Array<{
+      source: string;
+      transactions: number;
+      total_ugx: number;
+    }>;
+    streaming?: Array<{
+      source: string;
+      entries: number;
+      total_ugx: number;
+    }>;
+  };
+  per_artist_song_totals?: Array<{
+    artist_id: number;
+    artist_name: string;
+    song_id: number | null;
+    song_title: string;
+    total_ugx: number;
+    stream_ugx: number;
+    download_ugx: number;
+    last_30_days_ugx: number;
+  }>;
+  timeseries_14d?: Array<{
+    date: string;
+    streams: number;
+    gross_revenue_ugx: number;
+    artist_revenue_ugx: number;
+  }>;
 }
 
 interface RecentActivity {
@@ -84,7 +118,7 @@ export default function AdminDashboardPage() {
     queryKey: ['admin', 'dashboard', 'stats'],
     queryFn: async () => {
       try {
-        const res = await apiGet<{ data: DashboardStats }>('/admin/dashboard/stats');
+        const res = await apiGet<{ data: DashboardStats }>('/admin/dashboard/stats?live=1');
         return res;
       } catch {
         // Fallback: build partial stats from available endpoints
@@ -103,13 +137,17 @@ export default function AdminDashboardPage() {
             songs: { total: total(songsRes), published: 0, pending_review: 0, draft: 0, total_plays: 0, plays_today: 0, change_percentage: 0 },
             albums: { total: total(albumsRes), released: 0, upcoming: 0 },
             artists: { total: artistStats?.total ?? total(artistsRes), verified: artistStats?.verified ?? 0, pending_verification: artistStats?.pending_verification ?? 0 },
-            revenue: { total: 0, this_month: 0, last_month: 0, change_percentage: 0, currency: 'UGX' },
-            activity: { total_plays: 0, plays_today: 0, plays_this_week: 0, total_downloads: 0, downloads_today: 0, downloads_this_week: 0 },
-          } as DashboardStats,
-        };
+             revenue: { total: 0, this_month: 0, last_month: 0, change_percentage: 0, currency: 'UGX' },
+             activity: { total_plays: 0, plays_today: 0, plays_this_week: 0, total_downloads: 0, downloads_today: 0, downloads_this_week: 0 },
+             stream_financials: { total_streams: 0, stream_revenue_ugx: 0, download_revenue_ugx: 0, combined_artist_revenue_ugx: 0 },
+             sources: { revenue: [], streaming: [] },
+             per_artist_song_totals: [],
+             timeseries_14d: [],
+           } as DashboardStats,
+         };
       }
     },
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 20 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -140,6 +178,9 @@ export default function AdminDashboardPage() {
 
   const stats = statsData?.data;
   const activity = activityData?.data;
+  const series14d = stats?.timeseries_14d ?? [];
+  const maxStreams = Math.max(1, ...series14d.map((p) => p.streams || 0));
+  const maxRevenue = Math.max(1, ...series14d.map((p) => p.gross_revenue_ugx || 0));
 
   const statCards = stats ? [
     {
@@ -417,6 +458,132 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium">Add Product</span>
             </Link>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-6 rounded-xl border bg-card lg:col-span-1">
+          <h2 className="font-semibold mb-4">Stream Revenue Snapshot</h2>
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Total Streams</p>
+              <p className="text-xl font-semibold">{formatNumber(stats?.stream_financials?.total_streams ?? stats?.activity?.total_plays ?? 0)}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Artist Stream Revenue</p>
+              <p className="text-xl font-semibold">{formatCurrency(stats?.stream_financials?.stream_revenue_ugx ?? 0)}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Artist Download Revenue</p>
+              <p className="text-xl font-semibold">{formatCurrency(stats?.stream_financials?.download_revenue_ugx ?? 0)}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Combined Artist Earnings</p>
+              <p className="text-xl font-semibold">{formatCurrency(stats?.stream_financials?.combined_artist_revenue_ugx ?? 0)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-xl border bg-card lg:col-span-2">
+          <h2 className="font-semibold mb-4">Top Revenue Sources</h2>
+          <div className="space-y-2">
+            {(stats?.sources?.revenue ?? []).slice(0, 6).map((source) => (
+              <div key={source.source} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium capitalize">{source.source.replace(/_/g, ' ')}</p>
+                  <p className="text-xs text-muted-foreground">{formatNumber(source.transactions)} transactions</p>
+                </div>
+                <p className="text-sm font-semibold">{formatCurrency(source.total_ugx)}</p>
+              </div>
+            ))}
+            {(stats?.sources?.revenue ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No revenue source data yet.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-6 rounded-xl border bg-card">
+          <h2 className="font-semibold mb-4">14-Day Streams Trend</h2>
+          <div className="h-52 flex items-end gap-1">
+            {series14d.map((point) => {
+              const height = Math.max(6, Math.round((point.streams / maxStreams) * 180));
+              return (
+                <div key={`streams-${point.date}`} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className="w-full rounded-t bg-blue-500/80"
+                    style={{ height }}
+                    title={`${point.date}: ${point.streams.toLocaleString()} streams`}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              );
+            })}
+            {series14d.length === 0 && <p className="text-sm text-muted-foreground">No stream trend data yet.</p>}
+          </div>
+        </div>
+
+        <div className="p-6 rounded-xl border bg-card">
+          <h2 className="font-semibold mb-4">14-Day Gross Revenue Trend</h2>
+          <div className="h-52 flex items-end gap-1">
+            {series14d.map((point) => {
+              const height = Math.max(6, Math.round((point.gross_revenue_ugx / maxRevenue) * 180));
+              return (
+                <div key={`revenue-${point.date}`} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className="w-full rounded-t bg-emerald-500/80"
+                    style={{ height }}
+                    title={`${point.date}: UGX ${Math.round(point.gross_revenue_ugx).toLocaleString()}`}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              );
+            })}
+            {series14d.length === 0 && <p className="text-sm text-muted-foreground">No revenue trend data yet.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 rounded-xl border bg-card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">Per-Artist Song Earnings (UGX)</h2>
+          <p className="text-xs text-muted-foreground">Auto-refresh every 20s</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2 pr-3 font-medium">Artist</th>
+                <th className="py-2 pr-3 font-medium">Song</th>
+                <th className="py-2 pr-3 font-medium">Stream UGX</th>
+                <th className="py-2 pr-3 font-medium">Download UGX</th>
+                <th className="py-2 pr-3 font-medium">Last 30 Days</th>
+                <th className="py-2 font-medium">Lifetime UGX</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats?.per_artist_song_totals ?? []).slice(0, 20).map((row) => (
+                <tr key={`${row.artist_id}-${row.song_id ?? 0}-${row.song_title}`} className="border-b last:border-0">
+                  <td className="py-2 pr-3">{row.artist_name}</td>
+                  <td className="py-2 pr-3">{row.song_title}</td>
+                  <td className="py-2 pr-3">{formatCurrency(row.stream_ugx)}</td>
+                  <td className="py-2 pr-3">{formatCurrency(row.download_ugx)}</td>
+                  <td className="py-2 pr-3">{formatCurrency(row.last_30_days_ugx)}</td>
+                  <td className="py-2 font-semibold">{formatCurrency(row.total_ugx)}</td>
+                </tr>
+              ))}
+              {(stats?.per_artist_song_totals ?? []).length === 0 && (
+                <tr>
+                  <td className="py-4 text-muted-foreground" colSpan={6}>No artist revenue data yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

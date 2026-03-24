@@ -27,7 +27,7 @@ const PLAN_ICONS: Record<string, typeof Crown> = {
 export default function SubscriptionPage() {
   const [activeTab, setActiveTab] = useState<'plan' | 'history'>('plan');
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const paymentMethod = 'zengapay' as const;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -69,7 +69,7 @@ export default function SubscriptionPage() {
         // Changing plan — use change-plan endpoint
         const result = await changePlan.mutateAsync({
           plan_id: planId,
-          payment_method: paymentMethod === 'mtn_momo' ? 'mobile_money' : 'mobile_money',
+          payment_method: 'mobile_money',
           phone_number: phoneNumber,
         });
         toast.success(result.message || 'Plan changed successfully!');
@@ -381,30 +381,12 @@ export default function SubscriptionPage() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Payment Method</label>
                   <div className="space-y-2">
-                    <button
-                      onClick={() => setPaymentMethod('mtn_momo')}
-                      className={cn(
-                        'w-full p-3 rounded-lg border text-left transition-colors',
-                        paymentMethod === 'mtn_momo' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                      )}
-                    >
+                    <div className="w-full p-3 rounded-lg border border-primary bg-primary/5 text-left">
                       <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded bg-[#FFCC00]" />
-                        <span>MTN Mobile Money</span>
+                        <div className="h-5 w-5 rounded bg-green-600" />
+                        <span>ZengaPay Mobile Money</span>
                       </div>
-                    </button>
-                    <button
-                      onClick={() => setPaymentMethod('airtel_money')}
-                      className={cn(
-                        'w-full p-3 rounded-lg border text-left transition-colors',
-                        paymentMethod === 'airtel_money' ? 'border-primary bg-primary/5' : 'hover:border-foreground'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded bg-[#E40000]" />
-                        <span>Airtel Money</span>
-                      </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
 
@@ -414,7 +396,7 @@ export default function SubscriptionPage() {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder={paymentMethod === 'mtn_momo' ? '0770 000 000' : '0750 000 000'}
+                    placeholder="0770 000 000"
                     className="w-full px-4 py-3 rounded-lg border bg-background"
                   />
                 </div>
@@ -738,4 +720,3 @@ function BillingHistoryTab({
     </div>
   );
 }
-

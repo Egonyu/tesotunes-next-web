@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  detectProvider,
   formatPhoneNumber,
   formatUGX,
   normalizePhoneNumber,
@@ -66,7 +65,7 @@ export default function TopUpPage() {
     if (topupMode === 'ugx') {
       return {
         title: 'ZengaPay wallet top-up',
-        description: 'Top up your wallet through ZengaPay using MTN Mobile Money or Airtel Money.',
+        description: 'Top up your wallet through ZengaPay with your preferred phone number.',
       };
     }
 
@@ -112,11 +111,6 @@ export default function TopUpPage() {
       return false;
     }
 
-    if (detectProvider(normalized) === 'unknown') {
-      toast.error('Use an MTN or Airtel number for ZengaPay mobile money.');
-      return false;
-    }
-
     return true;
   };
 
@@ -135,12 +129,10 @@ export default function TopUpPage() {
 
       try {
         const normalizedPhone = normalizePhoneNumber(phoneNumber);
-        const detectedProvider = detectProvider(normalizedPhone);
 
         const result = await depositMutation.mutateAsync({
           amount,
           phone: normalizedPhone,
-          provider: detectedProvider === 'unknown' ? undefined : detectedProvider,
         });
 
         const autoCompleted =
@@ -408,7 +400,7 @@ export default function TopUpPage() {
               </div>
               <div className="text-left flex-1">
                 <p className="font-medium">ZengaPay Mobile Money</p>
-                <p className="text-sm text-muted-foreground">Use MTN MoMo or Airtel Money through one ZengaPay gateway</p>
+                <p className="text-sm text-muted-foreground">Single payment gateway for wallet top-ups</p>
               </div>
               <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                 <Check className="h-4 w-4" />
@@ -426,7 +418,7 @@ export default function TopUpPage() {
               className="w-full px-4 py-3 rounded-lg border bg-background"
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Enter your MTN or Airtel number. ZengaPay will send the payment prompt there.
+              Enter the phone number where ZengaPay should send the payment prompt.
             </p>
             {phoneNumber ? (
               <p className="text-xs text-muted-foreground mt-2">

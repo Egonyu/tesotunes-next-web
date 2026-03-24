@@ -49,6 +49,7 @@ export default async function AdminLayout({
     <AdminLayoutShell
       userName={session.user.name ?? 'Admin User'}
       userRole={session.user.role ?? 'Admin'}
+      userPermissions={session.user.permissions ?? []}
     >
       {children}
     </AdminLayoutShell>

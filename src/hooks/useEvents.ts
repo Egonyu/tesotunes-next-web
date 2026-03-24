@@ -330,7 +330,7 @@ export interface PurchaseTicketRequest {
     ticket_tier_id: number;
     quantity: number;
   }>;
-  payment_method: 'wallet' | 'mtn_momo' | 'airtel_money' | 'card' | 'credits';
+  payment_method: 'wallet' | 'mtn_momo' | 'card' | 'credits';
   phone?: string;
   holder_name?: string;
   holder_email?: string;

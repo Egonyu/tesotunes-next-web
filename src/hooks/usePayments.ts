@@ -39,7 +39,7 @@ export interface InitiatePaymentRequest {
 export interface InitiatePaymentResponse {
   reference: string;
   status: 'pending' | 'processing' | 'completed';
-  provider: 'mtn_momo' | 'airtel_money';
+  provider: 'zengapay';
   phone: string;
   amount: number;
   message: string;
@@ -47,10 +47,11 @@ export interface InitiatePaymentResponse {
 
 export interface PaymentStatus {
   reference: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'expired';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'expired' | 'cancelled' | 'refunded' | 'not_found';
   amount?: number;
   provider?: string;
   completed_at?: string;
+  message?: string;
 }
 
 export interface WalletInfo {
@@ -273,12 +274,11 @@ export function useDeposit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { phone?: string; amount: number; provider?: string }) => {
+    mutationFn: async (data: { phone?: string; amount: number }) => {
       const response = await apiPost<{ data: InitiatePaymentResponse & { transaction_ref?: string } }>("/payments/mobile-money/initiate", {
         phone: normalizePhoneNumber(data.phone ?? ""),
         amount: data.amount,
         purpose: 'wallet_topup',
-        provider: data.provider,
       });
       return response.data;
     },

@@ -29,13 +29,20 @@ type UserFormData = {
   email: string;
   username: string;
   phone: string;
-  role: UserDetail['role'];
+  role: string;
   country: string;
   city: string;
   bio: string;
   is_active: boolean;
   password: string;
 };
+
+type RoleOption = {
+  id: number;
+  name: string;
+};
+
+const ALLOWED_ADMIN_USER_ROLES = ['user', 'artist', 'moderator', 'admin'] as const;
 
 type ApiError = {
   response?: {
@@ -86,7 +93,23 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     queryFn: () => apiGet<{ data: UserDetail }>(`/admin/users/${id}`),
   });
 
+  const { data: rolesRes } = useQuery({
+    queryKey: ['admin', 'roles', 'assignable'],
+    queryFn: () => apiGet<{ data: RoleOption[] }>('/admin/roles'),
+  });
+
   const user = userRes?.data;
+
+  const roleOptions = (rolesRes?.data ?? [])
+    .map((role) => role.name)
+    .filter((role, index, arr) => arr.indexOf(role) === index)
+    .filter((role): role is (typeof ALLOWED_ADMIN_USER_ROLES)[number] =>
+      (ALLOWED_ADMIN_USER_ROLES as readonly string[]).includes(role)
+    );
+
+  const resolvedRoleOptions = roleOptions.length > 0
+    ? roleOptions
+    : [...ALLOWED_ADMIN_USER_ROLES];
 
   useEffect(() => {
     if (!user) return;
@@ -259,17 +282,18 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         <FormSection title="Role & Access">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Role" error={errors.role}>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value as UserDetail['role'] }))}
-                className="w-full rounded-lg border px-4 py-2 bg-background"
-              >
-                <option value="user">User</option>
-                <option value="artist">Artist</option>
-                <option value="moderator">Moderator</option>
-                <option value="admin">Admin</option>
-              </select>
-            </FormField>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+                  className="w-full rounded-lg border px-4 py-2 bg-background"
+                >
+                  {resolvedRoleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
 
             <div className="flex items-center gap-2 pt-8">
               <input

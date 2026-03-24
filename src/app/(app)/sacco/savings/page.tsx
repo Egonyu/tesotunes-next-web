@@ -40,9 +40,9 @@ export default function SavingsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [depositMethod, setDepositMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const depositMethod = 'zengapay' as const;
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const withdrawMethod = 'zengapay' as const;
 
   // Use the new SACCO hooks
   const { data: savingsData, isLoading, error } = useSaccoSavings();
@@ -378,33 +378,11 @@ export default function SavingsPage() {
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium mb-2">Payment Method</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDepositMethod('mtn_momo')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      depositMethod === 'mtn_momo'
-                        ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-yellow-500" />
-                    <span className="text-xs">MTN MoMo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDepositMethod('airtel_money')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      depositMethod === 'airtel_money'
-                        ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-red-500" />
-                    <span className="text-xs">Airtel Money</span>
-                  </button>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="p-3 rounded-lg border border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 flex flex-col items-center gap-2">
+                    <Phone className="h-5 w-5 text-emerald-600" />
+                    <span className="text-xs">ZengaPay Mobile Money</span>
+                  </div>
                 </div>
               </div>
 
@@ -522,33 +500,11 @@ export default function SavingsPage() {
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium mb-2">Receive Via</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawMethod('mtn_momo')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      withdrawMethod === 'mtn_momo'
-                        ? 'bg-orange-50 border-orange-500 dark:bg-orange-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-yellow-500" />
-                    <span className="text-xs">MTN MoMo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawMethod('airtel_money')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      withdrawMethod === 'airtel_money'
-                        ? 'bg-orange-50 border-orange-500 dark:bg-orange-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-red-500" />
-                    <span className="text-xs">Airtel Money</span>
-                  </button>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="p-3 rounded-lg border border-orange-500 bg-orange-50 dark:bg-orange-900/20 flex flex-col items-center gap-2">
+                    <Phone className="h-5 w-5 text-orange-600" />
+                    <span className="text-xs">ZengaPay Mobile Money</span>
+                  </div>
                 </div>
               </div>
 

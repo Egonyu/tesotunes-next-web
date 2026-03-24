@@ -71,7 +71,7 @@ export default function LoanApplyPage() {
   const [term, setTerm] = useState<number>(12);
   const [purpose, setPurpose] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const paymentMethod = 'zengapay' as const;
 
   const userSavings = membership?.savings_balance ?? 0;
   const maxEligible = userSavings * 3;
@@ -261,31 +261,10 @@ export default function LoanApplyPage() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-1 block">Payment Method</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('mtn_momo')}
-                      className={cn(
-                        'py-2 rounded-lg border text-sm font-medium transition-colors',
-                        paymentMethod === 'mtn_momo'
-                          ? 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                          : 'hover:border-foreground'
-                      )}
-                    >
-                      MTN MoMo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('airtel_money')}
-                      className={cn(
-                        'py-2 rounded-lg border text-sm font-medium transition-colors',
-                        paymentMethod === 'airtel_money'
-                          ? 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                          : 'hover:border-foreground'
-                      )}
-                    >
-                      Airtel Money
-                    </button>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="py-2 rounded-lg border text-sm font-medium text-center bg-emerald-50 border-emerald-500 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">
+                      ZengaPay Mobile Money
+                    </div>
                   </div>
                 </div>
               </div>

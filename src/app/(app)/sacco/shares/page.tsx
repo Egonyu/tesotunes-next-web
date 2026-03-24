@@ -45,7 +45,7 @@ export default function SharesPage() {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [sharesToBuy, setSharesToBuy] = useState(1);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'mtn_momo' | 'airtel_money'>('mtn_momo');
+  const paymentMethod = 'zengapay' as const;
 
   const { data: sharesResponse, isLoading, error } = useSaccoShares();
   const { data: dividendsData } = useSaccoDividends();
@@ -385,33 +385,11 @@ export default function SharesPage() {
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium mb-2">Payment Method</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('mtn_momo')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      paymentMethod === 'mtn_momo'
-                        ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-yellow-500" />
-                    <span className="text-xs">MTN MoMo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('airtel_money')}
-                    className={cn(
-                      'p-3 rounded-lg border flex flex-col items-center gap-2',
-                      paymentMethod === 'airtel_money'
-                        ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
-                        : 'hover:border-foreground'
-                    )}
-                  >
-                    <Phone className="h-5 w-5 text-red-500" />
-                    <span className="text-xs">Airtel Money</span>
-                  </button>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="p-3 rounded-lg border border-blue-500 bg-blue-50 dark:bg-blue-900/20 flex flex-col items-center gap-2">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                    <span className="text-xs">ZengaPay Mobile Money</span>
+                  </div>
                 </div>
               </div>
 

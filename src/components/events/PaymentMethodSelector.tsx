@@ -34,17 +34,10 @@ const PAYMENT_METHODS: Array<{
   },
   {
     id: 'mtn_momo',
-    label: 'ZengaPay • MTN',
-    description: 'ZengaPay will collect from your MTN MoMo number',
+    label: 'ZengaPay Mobile Money',
+    description: 'ZengaPay will collect payment on your phone',
     icon: Phone,
-    color: 'text-yellow-500',
-  },
-  {
-    id: 'airtel_money',
-    label: 'ZengaPay • Airtel',
-    description: 'ZengaPay will collect from your Airtel Money number',
-    icon: Phone,
-    color: 'text-red-500',
+    color: 'text-green-600',
   },
   {
     id: 'credits',
@@ -124,7 +117,7 @@ export function PaymentMethodSelector({
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           ZengaPay is the only external payment rail here. Wallet and credits
-          stay inside Tesotunes, while MTN and Airtel run through ZengaPay.
+          stay inside Tesotunes, while mobile money runs through ZengaPay.
         </p>
       </div>
     </div>

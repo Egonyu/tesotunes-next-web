@@ -197,15 +197,8 @@ export default function BecomeArtistPage() {
       const normalizedMobileMoneyNumber =
         payoutMethod === "zengapay"
           ? (formData.mobile_money_number || normalizedPhone)
-          : payoutMethod === "mtn_momo" || payoutMethod === "airtel_money"
-            ? formData.mobile_money_number
-            : undefined;
-      const normalizedMobileMoneyProvider =
-        payoutMethod === "mtn_momo"
-          ? "mtn"
-          : payoutMethod === "airtel_money"
-            ? "airtel"
-            : undefined;
+          : undefined;
+      const normalizedMobileMoneyProvider = undefined;
 
       const submitData: ArtistApplicationData = {
         stage_name: formData.stage_name ?? "",
@@ -798,11 +791,9 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
         <label className="mb-3 block text-sm font-medium">
           Payout Method <span className="text-red-500">*</span>
         </label>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[
             { id: "zengapay", label: "ZengaPay", icon: "💳", desc: "Recommended one-tap payouts" },
-            { id: "mtn_momo", label: "MTN Mobile Money", icon: "📱", desc: "Instant payouts" },
-            { id: "airtel_money", label: "Airtel Money", icon: "📱", desc: "Instant payouts" },
             { id: "bank", label: "Bank Transfer", icon: "🏦", desc: "1-3 business days" },
           ].map((method) => (
             <button
@@ -820,12 +811,7 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
                 updateForm({
                   payout_method: nextPayoutMethod,
                   mobile_money_number: nextMobileMoneyNumber,
-                  mobile_money_provider:
-                    nextPayoutMethod === "mtn_momo"
-                      ? "mtn"
-                      : nextPayoutMethod === "airtel_money"
-                        ? "airtel"
-                        : undefined,
+                  mobile_money_provider: undefined,
                   bank_name: nextPayoutMethod === "bank" ? formData.bank_name : undefined,
                   bank_account: nextPayoutMethod === "bank" ? formData.bank_account : undefined,
                 });
@@ -853,25 +839,7 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
           <p className="text-sm font-medium text-primary">ZengaPay will use your phone number above.</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            No extra payout number needed. You can still switch to MTN/Airtel or bank if you prefer.
-          </p>
-        </div>
-      )}
-
-      {(formData.payout_method === "mtn_momo" || formData.payout_method === "airtel_money") && (
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Mobile Money Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            value={formData.mobile_money_number ?? ""}
-            onChange={(e) => updateForm({ mobile_money_number: e.target.value })}
-            placeholder="e.g. 0770 123 456"
-            className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-primary/20 focus:border-primary focus:ring-2 transition-all"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            The {formData.payout_method === "mtn_momo" ? "MTN" : "Airtel"} number where you&apos;ll receive earnings.
+            No extra payout number needed. You can still switch to bank transfer if you prefer.
           </p>
         </div>
       )}
@@ -1010,10 +978,6 @@ function StepReview({ formData, updateForm, avatarPreview, genres }: StepReviewP
             value={
               formData.payout_method === "zengapay"
                 ? "ZengaPay"
-                : formData.payout_method === "mtn_momo"
-                ? "MTN Mobile Money"
-                : formData.payout_method === "airtel_money"
-                ? "Airtel Money"
                 : "Bank Transfer"
             }
           />
@@ -1022,9 +986,7 @@ function StepReview({ formData, updateForm, avatarPreview, genres }: StepReviewP
             value={
               formData.payout_method === "bank"
                 ? formData.bank_account
-                : formData.payout_method === "zengapay"
-                ? formData.phone
-                : formData.mobile_money_number
+                : formData.phone
             }
           />
         </ReviewSection>

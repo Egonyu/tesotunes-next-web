@@ -23,7 +23,7 @@ interface JoinFormData {
   initial_shares: number;
   phone_number: string;
   accept_terms: boolean;
-  payment_method: 'mtn_momo' | 'airtel_money';
+  payment_method: 'zengapay';
 }
 
 export default function SaccoJoinPage() {
@@ -41,7 +41,7 @@ export default function SaccoJoinPage() {
     initial_shares: defaultJoinShares,
     phone_number: '',
     accept_terms: false,
-    payment_method: 'mtn_momo',
+    payment_method: 'zengapay',
   });
   const totalAmount = formData.initial_deposit + (formData.initial_shares * sharePrice);
 
@@ -251,39 +251,14 @@ export default function SaccoJoinPage() {
           {/* Payment Method */}
           <div className="p-6 rounded-xl border bg-card space-y-4">
             <h3 className="font-semibold">Payment Method</h3>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, payment_method: 'mtn_momo' })}
-                className={cn(
-                  'flex items-center gap-3 p-4 rounded-lg border text-left transition-all',
-                  formData.payment_method === 'mtn_momo'
-                    ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                    : 'hover:border-foreground'
-                )}
-              >
-                <Smartphone className="h-5 w-5 text-yellow-600" />
+            <div className="grid sm:grid-cols-1 gap-3">
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20">
+                <Smartphone className="h-5 w-5 text-emerald-600" />
                 <div>
-                  <p className="font-medium">MTN MoMo</p>
-                  <p className="text-sm text-muted-foreground">Pay via MTN Mobile Money</p>
+                  <p className="font-medium">ZengaPay Mobile Money</p>
+                  <p className="text-sm text-muted-foreground">Pay securely through ZengaPay</p>
                 </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, payment_method: 'airtel_money' })}
-                className={cn(
-                  'flex items-center gap-3 p-4 rounded-lg border text-left transition-all',
-                  formData.payment_method === 'airtel_money'
-                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                    : 'hover:border-foreground'
-                )}
-              >
-                <Smartphone className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="font-medium">Airtel Money</p>
-                  <p className="text-sm text-muted-foreground">Pay via Airtel Money</p>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
 

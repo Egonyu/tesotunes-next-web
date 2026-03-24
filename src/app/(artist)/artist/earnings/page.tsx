@@ -526,7 +526,7 @@ export default function ArtistEarningsPage() {
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
                 <div className="w-full px-4 py-2 border rounded-lg bg-background flex items-center gap-2">
                   <span className="font-medium">ZengaPay Mobile Money</span>
-                  <span className="text-xs text-muted-foreground ml-auto">MTN & Airtel</span>
+                  <span className="text-xs text-muted-foreground ml-auto">Primary rail</span>
                 </div>
               </div>
 
@@ -540,7 +540,7 @@ export default function ArtistEarningsPage() {
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter your MTN or Airtel number. ZengaPay will process it automatically.
+                  Enter the phone number where ZengaPay should send the withdrawal prompt.
                 </p>
               </div>
 

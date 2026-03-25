@@ -36,7 +36,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build app
-        run: npm run build
+        run: npm run build -- --webpack
 
       - name: Start app
         run: npm run start -- -p 3000 &

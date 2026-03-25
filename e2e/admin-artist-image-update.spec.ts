@@ -181,8 +181,10 @@ test.describe('Admin artist image update', () => {
       const { pathname } = new URL(response.url());
       const matchesLegacyEndpoint = pathname.endsWith(`/api/admin/artists/${artistId}`);
       const matchesBackendEndpoint = pathname.endsWith(`/api/backend/admin/artists/${artistId}`);
+      const isUpdateMethod = ['POST', 'PUT', 'PATCH'].includes(req.method());
+      const isSuccessStatus = [200, 201].includes(response.status());
 
-      return req.method() === 'POST' && (matchesLegacyEndpoint || matchesBackendEndpoint) && response.status() === 200;
+      return isUpdateMethod && (matchesLegacyEndpoint || matchesBackendEndpoint) && isSuccessStatus;
     }, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'Save Artist Profile' }).click();

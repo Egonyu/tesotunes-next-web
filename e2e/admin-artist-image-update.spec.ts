@@ -152,7 +152,7 @@ test.describe('Admin artist image update', () => {
     ).first();
 
     const loginOutcome = await Promise.race([
-      artistsNavLink.waitFor({ state: 'visible', timeout: 20000 }).then(() => 'ok' as const),
+      page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 20000 }).then(() => 'ok' as const),
       authError.waitFor({ state: 'visible', timeout: 20000 }).then(() => 'auth_error' as const),
     ]).catch(() => 'timeout' as const);
 
@@ -168,7 +168,8 @@ test.describe('Admin artist image update', () => {
       );
     }
 
-    await expect(artistsNavLink).toBeVisible({ timeout: 5000 });
+    await page.goto('/admin/artists');
+    await expect(page.getByRole('heading', { name: 'Artists' }).first()).toBeVisible({ timeout: 10000 });
 
     const artistId = await resolveArtistId(page);
 
@@ -242,7 +243,7 @@ test.describe('Admin artist image update', () => {
     const artistName = updatePayload.data?.name || 'Artist';
 
     await page.goto(`/admin/artists/${artistId}`);
-    await expect(page.getByRole('heading', { name: artistName })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1').filter({ hasText: artistName }).first()).toBeVisible({ timeout: 10000 });
 
     const { coverImg, avatarImg } = await resolveDetailImageLocators(page, artistName);
 

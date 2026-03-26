@@ -165,8 +165,26 @@ async function loginAsAdmin(page: Parameters<typeof test>[0]['page']) {
   throw new Error(`Admin login did not reach Artists navigation within 20s. Current URL: ${page.url()}`);
 }
 
+async function fetchArtistDetailPayload(
+  page: Parameters<typeof test>[0]['page'],
+  artistId: string
+): Promise<{ cover_url?: string | null; profile_url?: string | null }> {
+  return page.evaluate(async (resolvedArtistId) => {
+    const response = await fetch(`/api/backend/admin/artists/${resolvedArtistId}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      return {};
+    }
+
+    const payload = await response.json() as { data?: { cover_url?: string | null; profile_url?: string | null } };
+    return payload.data ?? {};
+  }, artistId);
+}
+
 test.describe('Admin artist image update', () => {
-  test('updates profile and cover images and reflects new URLs', async ({ page, request }) => {
+  test('updates profile and cover images and reflects new URLs', async ({ page }) => {
     test.setTimeout(120000); // Increase to 2 minutes
 
     if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
@@ -254,10 +272,9 @@ test.describe('Admin artist image update', () => {
     await expect
       .poll(
         async () => {
-          const response = await request.get(`/api/backend/admin/artists/${artistId}`);
-          const payload = await response.json() as { data?: { cover_url?: string | null } };
+          const payload = await fetchArtistDetailPayload(page, artistId);
 
-          return payload.data?.cover_url || '';
+          return payload.cover_url || '';
         },
         {
           timeout: 15000,
@@ -269,10 +286,9 @@ test.describe('Admin artist image update', () => {
     await expect
       .poll(
         async () => {
-          const response = await request.get(`/api/backend/admin/artists/${artistId}`);
-          const payload = await response.json() as { data?: { profile_url?: string | null } };
+          const payload = await fetchArtistDetailPayload(page, artistId);
 
-          return payload.data?.profile_url || '';
+          return payload.profile_url || '';
         },
         {
           timeout: 15000,

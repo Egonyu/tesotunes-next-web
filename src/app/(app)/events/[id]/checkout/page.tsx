@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -22,6 +22,7 @@ import {
   useSavedAttendeeProfiles,
   useInitiateCheckout,
   useCompleteCheckout,
+  useTrackEventFunnel,
   useValidateDiscountCode,
 } from '@/hooks/useEvents'
 import { useEventCartStore } from '@/stores/events'
@@ -76,7 +77,8 @@ export default function CheckoutPage({
   const initiateCheckout = useInitiateCheckout()
   const completeCheckout = useCompleteCheckout()
   const validateDiscountCode = useValidateDiscountCode()
-  const attribution = {
+  const trackEventFunnel = useTrackEventFunnel(id)
+  const attribution = useMemo(() => ({
     source: searchParams.get('source') || searchParams.get('utm_source') || searchParams.get('ref') || undefined,
     channel: searchParams.get('channel') || searchParams.get('utm_medium') || undefined,
     campaign_code: searchParams.get('campaign_code') || searchParams.get('campaign') || searchParams.get('promo') || undefined,
@@ -88,7 +90,33 @@ export default function CheckoutPage({
     utm_term: searchParams.get('utm_term') || undefined,
     utm_content: searchParams.get('utm_content') || undefined,
     landing_page: `/events/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
-  }
+  }), [id, searchParams])
+
+  useEffect(() => {
+    if (!event || items.length === 0) {
+      return
+    }
+
+    const storageKey = 'tesotunes-event-funnel-session'
+    const checkoutKey = `tesotunes-event-checkout:${event.id}:${attribution.campaign_code || attribution.source || 'direct'}`
+    let sessionKey = window.localStorage.getItem(storageKey)
+
+    if (!sessionKey) {
+      sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      window.localStorage.setItem(storageKey, sessionKey)
+    }
+
+    if (window.sessionStorage.getItem(checkoutKey)) {
+      return
+    }
+
+    window.sessionStorage.setItem(checkoutKey, '1')
+    trackEventFunnel.mutate({
+      stage: 'checkout_start',
+      session_key: sessionKey,
+      ...attribution,
+    })
+  }, [attribution, event, items.length, trackEventFunnel])
 
   useEffect(() => {
     setAttendeeRows((current) => {

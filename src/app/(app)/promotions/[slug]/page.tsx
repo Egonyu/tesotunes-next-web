@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Star,
@@ -21,28 +22,62 @@ import {
 import { cn } from "@/lib/utils";
 import { formatNumber, formatCurrency, formatDate } from "@/lib/utils";
 import { usePromotion, usePromotionReviews, usePurchasePromotion } from "@/hooks/usePromotions";
+import { apiPost } from "@/lib/api";
 import {
   PROMOTION_TYPE_LABELS,
   PROMOTION_PLATFORM_LABELS,
 } from "@/types/promotions";
 import type { PaymentMethod } from "@/types/promotions";
+import { toast } from "sonner";
 
 type Tab = "overview" | "requirements" | "deliverables" | "reviews";
 
 export default function PromotionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
 
   const { data: promotion, isLoading, isError } = usePromotion(slug);
   const { data: reviewsData } = usePromotionReviews(slug);
   const purchase = usePurchasePromotion(slug);
+  const submitEventPromotionRequest = useMutation({
+    mutationFn: (payload: {
+      promotion_slug?: string;
+      promotion_title: string;
+      promotion_type?: string;
+      promotion_platform?: string;
+      price_credits?: number;
+      price_ugx?: number;
+      request_notes?: string;
+      featured_image_url?: string | null;
+      payload?: Record<string, unknown>;
+    }) => apiPost<{ success: boolean; message: string }>(`/artist/events/${selectedEvent?.id}/promotion-requests`, payload),
+  });
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credits");
   const [songId, setSongId] = useState("");
   const [notes, setNotes] = useState("");
+
+  const selectedEvent =
+    searchParams.get("target_type") === "event" &&
+    searchParams.get("event_id") &&
+    searchParams.get("event_name")
+      ? {
+          id: Number(searchParams.get("event_id")),
+          title: searchParams.get("event_name") as string,
+          slug: searchParams.get("event_slug"),
+          startsAt: searchParams.get("event_starts_at"),
+          venue: searchParams.get("event_venue"),
+          city: searchParams.get("event_city"),
+        }
+      : null;
+
+  const backToMarketplaceHref = selectedEvent
+    ? `/promotions?target_type=event&event_id=${selectedEvent.id}&event_name=${encodeURIComponent(selectedEvent.title)}${selectedEvent.slug ? `&event_slug=${encodeURIComponent(selectedEvent.slug)}` : ""}${selectedEvent.startsAt ? `&event_starts_at=${encodeURIComponent(selectedEvent.startsAt)}` : ""}${selectedEvent.venue ? `&event_venue=${encodeURIComponent(selectedEvent.venue)}` : ""}${selectedEvent.city ? `&event_city=${encodeURIComponent(selectedEvent.city)}` : ""}`
+    : "/promotions";
 
   if (isLoading) {
     return (
@@ -80,6 +115,37 @@ export default function PromotionDetailPage() {
       : 0;
 
   const handlePurchase = () => {
+    if (selectedEvent) {
+      submitEventPromotionRequest.mutate(
+        {
+          promotion_slug: promotion.slug,
+          promotion_title: promotion.title,
+          promotion_type: promotion.type,
+          promotion_platform: promotion.platform,
+          price_credits: promotion.price_credits,
+          price_ugx: promotion.price_ugx,
+          request_notes: notes || undefined,
+          featured_image_url: promotion.featured_image_url,
+          payload: {
+            target_type: "event",
+            event_id: selectedEvent.id,
+            payment_method: paymentMethod,
+            song_id: songId ? Number(songId) : undefined,
+          },
+        },
+        {
+          onSuccess: (response) => {
+            toast.success(response.message || "Promotion request submitted");
+            router.push(`/artist/events/${selectedEvent.id}`);
+          },
+          onError: (error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Failed to submit promotion request");
+          },
+        }
+      );
+      return;
+    }
+
     purchase.mutate(
       {
         payment_method: paymentMethod,
@@ -107,11 +173,11 @@ export default function PromotionDetailPage() {
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
       {/* Back */}
       <Link
-        href="/promotions"
+        href={backToMarketplaceHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Promotions
+        {selectedEvent ? "Back to Event Promotions" : "Back to Promotions"}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -140,6 +206,30 @@ export default function PromotionDetailPage() {
             <span>·</span>
             <span>{PROMOTION_PLATFORM_LABELS[promotion.platform]}</span>
           </div>
+
+          {selectedEvent && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                    Promoted Event
+                  </p>
+                  <h2 className="font-semibold">{selectedEvent.title}</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedEvent.venue || "Venue pending"}
+                    {selectedEvent.city ? ` · ${selectedEvent.city}` : ""}
+                    {selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}
+                  </p>
+                </div>
+                <Link
+                  href={`/events/${selectedEvent.id}`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  View event
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Title */}
           <h1 className="text-2xl font-bold">{promotion.title}</h1>
@@ -406,73 +496,88 @@ export default function PromotionDetailPage() {
                   onClick={() => setShowCheckout(true)}
                   className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >
-                  Purchase Promotion
+                  {selectedEvent ? "Request Event Promotion Review" : "Purchase Promotion"}
                 </button>
               ) : (
                 <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-medium text-sm">Complete Purchase</h4>
+                  <h4 className="font-medium text-sm">
+                    {selectedEvent ? "Submit Promotion Request" : "Complete Purchase"}
+                  </h4>
 
-                  {/* Payment method */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Payment Method
-                    </label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {promotion.accepts_credits && (
-                        <button
-                          onClick={() => setPaymentMethod("credits")}
-                          className={cn(
-                            "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                            paymentMethod === "credits"
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-muted-foreground/30"
-                          )}
-                        >
-                          <Coins className="h-4 w-4 text-primary" />
-                          Credits Only
-                        </button>
-                      )}
-                      {promotion.accepts_ugx && (
-                        <button
-                          onClick={() => setPaymentMethod("ugx")}
-                          className={cn(
-                            "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                            paymentMethod === "ugx"
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-muted-foreground/30"
-                          )}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          UGX (Mobile Money)
-                        </button>
-                      )}
-                      {promotion.accepts_hybrid && (
-                        <button
-                          onClick={() => setPaymentMethod("hybrid")}
-                          className={cn(
-                            "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                            paymentMethod === "hybrid"
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-muted-foreground/30"
-                          )}
-                        >
-                          <Coins className="h-4 w-4 text-primary" />
-                          Hybrid (Credits + UGX)
-                        </button>
-                      )}
+                  {selectedEvent && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                      Tesotunes will review this promotion package for the selected event before it is activated.
                     </div>
-                  </div>
+                  )}
+
+                  {!selectedEvent && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Payment Method
+                      </label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {promotion.accepts_credits && (
+                          <button
+                            onClick={() => setPaymentMethod("credits")}
+                            className={cn(
+                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
+                              paymentMethod === "credits"
+                                ? "border-primary bg-primary/5"
+                                : "hover:border-muted-foreground/30"
+                            )}
+                          >
+                            <Coins className="h-4 w-4 text-primary" />
+                            Credits Only
+                          </button>
+                        )}
+                        {promotion.accepts_ugx && (
+                          <button
+                            onClick={() => setPaymentMethod("ugx")}
+                            className={cn(
+                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
+                              paymentMethod === "ugx"
+                                ? "border-primary bg-primary/5"
+                                : "hover:border-muted-foreground/30"
+                            )}
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            UGX (Mobile Money)
+                          </button>
+                        )}
+                        {promotion.accepts_hybrid && (
+                          <button
+                            onClick={() => setPaymentMethod("hybrid")}
+                            className={cn(
+                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
+                              paymentMethod === "hybrid"
+                                ? "border-primary bg-primary/5"
+                                : "hover:border-muted-foreground/30"
+                            )}
+                          >
+                            <Coins className="h-4 w-4 text-primary" />
+                            Hybrid (Credits + UGX)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Song ID */}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">
-                      Song ID (optional)
+                      {selectedEvent
+                        ? "Song ID (optional support track)"
+                        : "Song ID (optional)"}
                     </label>
                     <input
                       type="text"
                       value={songId}
                       onChange={(e) => setSongId(e.target.value)}
-                      placeholder="Enter your song ID"
+                      placeholder={
+                        selectedEvent
+                          ? "Add a supporting song if this promotion also needs one"
+                          : "Enter your song ID"
+                      }
                       className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
@@ -485,7 +590,11 @@ export default function PromotionDetailPage() {
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Any special instructions..."
+                      placeholder={
+                        selectedEvent
+                          ? "Add event promo notes, audience goals, or special instructions..."
+                          : "Any special instructions..."
+                      }
                       rows={3}
                       className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                     />
@@ -494,13 +603,13 @@ export default function PromotionDetailPage() {
                   {/* Confirm */}
                   <button
                     onClick={handlePurchase}
-                    disabled={purchase.isPending}
+                    disabled={purchase.isPending || submitEventPromotionRequest.isPending}
                     className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    {purchase.isPending && (
+                    {(purchase.isPending || submitEventPromotionRequest.isPending) && (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     )}
-                    Confirm Purchase
+                    {selectedEvent ? "Submit For Review" : "Confirm Purchase"}
                   </button>
 
                   <button

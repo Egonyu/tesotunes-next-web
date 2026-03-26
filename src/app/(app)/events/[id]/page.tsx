@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -29,6 +29,7 @@ import {
   getEventVenueLabel,
   useEvent,
   useJoinEventWaitlist,
+  useTrackEventFunnel,
   type EventTicketTier,
 } from '@/hooks/useEvents'
 import { toast } from 'sonner'
@@ -77,10 +78,23 @@ export default function EventDetailPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: event, isLoading, error } = useEvent(id)
+  const trackEventFunnel = useTrackEventFunnel(id)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [waitlistEmail, setWaitlistEmail] = useState('')
   const [waitlistPhone, setWaitlistPhone] = useState('')
   const joinWaitlist = useJoinEventWaitlist()
+
+  const attribution = useMemo(() => ({
+    source: searchParams.get('source') || searchParams.get('utm_source') || searchParams.get('ref') || undefined,
+    channel: searchParams.get('channel') || searchParams.get('utm_medium') || undefined,
+    campaign_code: searchParams.get('campaign_code') || searchParams.get('campaign') || searchParams.get('promo') || undefined,
+    referral_code: searchParams.get('referral_code') || searchParams.get('ref') || undefined,
+    promoter_code: searchParams.get('promoter_code') || searchParams.get('promoter') || undefined,
+    utm_source: searchParams.get('utm_source') || undefined,
+    utm_medium: searchParams.get('utm_medium') || undefined,
+    utm_campaign: searchParams.get('utm_campaign') || undefined,
+    landing_page: `/events/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+  }), [id, searchParams])
 
   if (isLoading) {
     return (
@@ -112,18 +126,52 @@ export default function EventDetailPage({
   const endsAt = getEventEndDate(event)
   const isPastEvent = startsAt ? new Date(startsAt) < new Date() : false
   const isExternalOnly = event.ticketing_mode === 'external_only'
+  const isHybrid = event.ticketing_mode === 'hybrid'
+  const ticketingSummary = event.ticketing_summary
 
   const totalSold =
     event.ticket_tiers?.reduce(
       (sum: number, t: EventTicketTier) => sum + (t.quantity_sold || 0),
       0,
     ) || 0
+  const tesotunesAvailable =
+    event.ticket_tiers?.reduce(
+      (sum: number, t: EventTicketTier) => sum + (typeof t.available === 'number' ? t.available : 0),
+      0,
+    ) ?? 0
   const totalCapacity =
     event.ticket_tiers?.reduce(
       (sum: number, t: EventTicketTier) => sum + (t.quantity || 0),
       0,
     ) || getEventCapacity(event) || 0
-  const isSoldOut = totalCapacity > 0 && totalSold >= totalCapacity
+  const hasTicketTiers = (event.ticket_tiers?.length || 0) > 0
+  const isSoldOut = hasTicketTiers ? tesotunesAvailable <= 0 : totalCapacity > 0 && totalSold >= totalCapacity
+
+  useEffect(() => {
+    if (!event) {
+      return
+    }
+
+    const storageKey = 'tesotunes-event-funnel-session'
+    const eventVisitKey = `tesotunes-event-visit:${event.id}:${attribution.campaign_code || attribution.source || 'direct'}`
+    let sessionKey = window.localStorage.getItem(storageKey)
+
+    if (!sessionKey) {
+      sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      window.localStorage.setItem(storageKey, sessionKey)
+    }
+
+    if (window.sessionStorage.getItem(eventVisitKey)) {
+      return
+    }
+
+    window.sessionStorage.setItem(eventVisitKey, '1')
+    trackEventFunnel.mutate({
+      stage: 'visit',
+      session_key: sessionKey,
+      ...attribution,
+    })
+  }, [attribution, event, trackEventFunnel])
 
   function handleBookmark() {
     setIsBookmarked(!isBookmarked)
@@ -207,6 +255,11 @@ export default function EventDetailPage({
                   Sold Out
                 </span>
               )}
+              {isHybrid && (
+                <span className="px-3 py-1 bg-sky-500/90 text-white text-sm rounded-full">
+                  Hybrid Ticketing
+                </span>
+              )}
             </div>
 
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
@@ -288,6 +341,42 @@ export default function EventDetailPage({
                 <p className="whitespace-pre-line">{event.description}</p>
               </div>
             </section>
+
+            {isHybrid && ticketingSummary && (
+              <section>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900/50 dark:bg-sky-950/30">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-sky-500/10 p-2 text-sky-700 dark:text-sky-300">
+                      <Globe className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <h2 className="text-base font-semibold">Tesotunes tickets are live for this hybrid event</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          You can still buy through Tesotunes here, while the organizer may also reserve inventory for outlets, printed booklets, or other partner channels.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-lg border bg-background/80 p-3">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Tesotunes available</p>
+                          <p className="mt-1 text-lg font-semibold">
+                            {ticketingSummary.tesotunes_available == null ? 'Open' : ticketingSummary.tesotunes_available.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border bg-background/80 p-3">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">External reserved</p>
+                          <p className="mt-1 text-lg font-semibold">{ticketingSummary.external_allocated.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-lg border bg-background/80 p-3">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Online sell-through</p>
+                          <p className="mt-1 text-lg font-semibold">{ticketingSummary.online_sell_through_percent.toFixed(0)}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Artist */}
             {event.artist && (
@@ -434,17 +523,33 @@ export default function EventDetailPage({
                   </p>
                 </div>
               ) : event.ticket_tiers && event.ticket_tiers.length > 0 ? (
-                <TicketSelector
-                  tiers={event.ticket_tiers}
-                  eventId={event.id}
-                  isPastEvent={isPastEvent}
-                  isCancelled={event.status === 'cancelled'}
-                  waitlistCount={event.waitlist_count || 0}
-                  waitlistJoined={event.waitlist_joined || false}
-                  isJoiningWaitlist={joinWaitlist.isPending}
-                  onJoinWaitlist={isSoldOut ? handleJoinWaitlist : undefined}
-                  onProceedToCheckout={handleProceedToCheckout}
-                />
+                <div className="space-y-4">
+                  {isHybrid && ticketingSummary && (
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm dark:border-sky-900/50 dark:bg-sky-950/30">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-sky-900 dark:text-sky-100">Buy on Tesotunes or catch limited partner inventory elsewhere</p>
+                          <p className="mt-1 text-sky-900/80 dark:text-sky-100/80">
+                            Tesotunes checkout is active. {ticketingSummary.external_allocated > 0
+                              ? ` ${ticketingSummary.external_allocated.toLocaleString()} tickets are currently reserved for outside channels.`
+                              : ' The organizer can still reconcile outside ticket sales without affecting your Tesotunes purchase here.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <TicketSelector
+                    tiers={event.ticket_tiers}
+                    eventId={event.id}
+                    isPastEvent={isPastEvent}
+                    isCancelled={event.status === 'cancelled'}
+                    waitlistCount={event.waitlist_count || 0}
+                    waitlistJoined={event.waitlist_joined || false}
+                    isJoiningWaitlist={joinWaitlist.isPending}
+                    onJoinWaitlist={isSoldOut ? handleJoinWaitlist : undefined}
+                    onProceedToCheckout={handleProceedToCheckout}
+                  />
+                </div>
               ) : (
                 <div className="p-6 rounded-xl border bg-card">
                   <h2 className="text-lg font-semibold mb-4">Tickets</h2>

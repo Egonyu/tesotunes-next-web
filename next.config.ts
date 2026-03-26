@@ -13,6 +13,26 @@ const nextConfig: NextConfig = {
     unoptimized: process.env.NODE_ENV === "development",
     remotePatterns: [
       {
+        protocol: "https",
+        hostname: "api.tesotunes.com",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.tesotunes.com",
+        pathname: "/store-media/**",
+      },
+      {
+        protocol: "https",
+        hostname: "beta.tesotunes.com",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "beta.tesotunes.com",
+        pathname: "/store-media/**",
+      },
+      {
         protocol: "http",
         hostname: "tesotunes-api.test",
         pathname: "/storage/**",
@@ -44,12 +64,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.tesotunes.com",
+        hostname: "**.tesotunes.com",
         pathname: "/storage/**",
       },
       {
         protocol: "https",
-        hostname: "*.tesotunes.com",
+        hostname: "**.tesotunes.com",
         pathname: "/store-media/**",
       },
       {
@@ -59,12 +79,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.digitaloceanspaces.com",
+        hostname: "**.digitaloceanspaces.com",
         pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "*.cloudinary.com",
+        hostname: "**.cloudinary.com",
       },
       {
         protocol: "https",

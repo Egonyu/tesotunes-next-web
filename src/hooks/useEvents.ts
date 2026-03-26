@@ -55,6 +55,7 @@ export interface EventTicketTier {
   quantity: number | null;
   quantity_total?: number | null;
   quantity_sold?: number;
+  quantity_external_allocated?: number;
   available: number;
   max_per_order: number;
   sales_start_date?: string | null;
@@ -94,6 +95,136 @@ export interface EventStaffMember {
     username?: string;
     avatar?: string;
   } | null;
+}
+
+export interface TicketSupportCase {
+  id: number;
+  case_type: 'refund_request' | 'payment_dispute';
+  dispute_category?: string | null;
+  status: 'open' | 'approved' | 'rejected' | 'resolved';
+  escalation_status?: 'none' | 'review' | 'resolved';
+  reason: string;
+  gateway_reference?: string | null;
+  evidence_url?: string | null;
+  evidence_notes?: string | null;
+  resolution_notes?: string | null;
+  requested_refund_amount?: number | null;
+  approved_refund_amount?: number | null;
+  created_at?: string;
+  resolved_at?: string | null;
+  attendee?: {
+    id: number;
+    ticket_number: string;
+    status: string;
+    holder_name: string;
+    holder_email?: string | null;
+    holder_phone?: string | null;
+    price_paid?: number;
+    ticket_tier?: {
+      id: number;
+      name: string;
+    } | null;
+  } | null;
+  requested_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+  resolved_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+}
+
+export interface OfflineSaleOrder {
+  order_id: string;
+  status: 'active' | 'voided';
+  sale_source?: 'printed_ticket' | 'door_sale' | 'phone_booking' | 'complimentary' | string | null;
+  notes?: string | null;
+  validation_notes?: string | null;
+  printed_ticket_import?: boolean;
+  last_synced_at?: string | null;
+  holder_name?: string | null;
+  holder_email?: string | null;
+  holder_phone?: string | null;
+  logged_at?: string | null;
+  quantity: number;
+  checked_in_count: number;
+  voided_count: number;
+  unit_price_ugx: number;
+  total_amount: number;
+  ticket_tier?: {
+    id: number;
+    name: string;
+  } | null;
+  ticket_numbers: string[];
+}
+
+export interface ExternalAllocation {
+  id: number;
+  channel: string;
+  channel_label: string;
+  quantity: number;
+  notes?: string | null;
+  status: "active" | "released";
+  created_at?: string | null;
+  released_at?: string | null;
+  release_reason?: string | null;
+  ticket_tier?: {
+    id: number;
+    name: string;
+    available?: number;
+  } | null;
+  logged_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+  released_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+}
+
+export interface EventPromotionRequest {
+  id: number;
+  uuid?: string;
+  promotion_slug?: string | null;
+  promotion_title: string;
+  promotion_type?: string | null;
+  promotion_platform?: string | null;
+  price_credits: number;
+  price_ugx: number;
+  status: "pending" | "active" | "rejected";
+  request_notes?: string | null;
+  moderation_notes?: string | null;
+  featured_image_url?: string | null;
+  requested_at?: string | null;
+  moderated_at?: string | null;
+  requested_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+  moderated_by?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+}
+
+export interface EventTicketingSummary {
+  mode_label: string;
+  tesotunes_checkout_enabled: boolean;
+  manual_reconciliation_enabled: boolean;
+  has_external_allocations: boolean;
+  total_capacity?: number | null;
+  tesotunes_sold: number;
+  tesotunes_available?: number | null;
+  external_allocated: number;
+  online_sell_through_percent: number;
 }
 
 /**
@@ -201,7 +332,18 @@ export interface Event {
       notes?: string | null;
       currency?: string;
     }>;
+    campaign_presets?: Array<{
+      key?: string;
+      name: string;
+      source: string;
+      medium: string;
+      channel?: string;
+      campaign_code: string;
+      notes?: string | null;
+    }>;
   };
+  promotion_requests?: EventPromotionRequest[];
+  ticketing_summary?: EventTicketingSummary;
   operations?: {
     registration_deadline?: string;
     refund_policy?: string;
@@ -277,6 +419,14 @@ export interface Ticket {
     order_id?: string;
     attribution?: Record<string, unknown> | null;
     fee_breakdown?: TicketQuote | null;
+    support_cases?: Array<{
+      case_id: number;
+      case_type: 'refund_request' | 'payment_dispute';
+      decision: string;
+      resolved_at: string;
+      approved_refund_amount?: number | null;
+      resolution_notes?: string | null;
+    }>;
     wallet_actions?: {
       resend_count?: number;
       last_resent_at?: string;
@@ -357,6 +507,20 @@ export interface PurchaseTicketRequest {
     utm_content?: string;
     landing_page?: string;
   };
+}
+
+export interface TrackEventFunnelRequest {
+  stage: "visit" | "checkout_start";
+  session_key: string;
+  source?: string;
+  channel?: string;
+  campaign_code?: string;
+  referral_code?: string;
+  promoter_code?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  landing_page?: string;
 }
 
 /**
@@ -475,6 +639,16 @@ export interface CheckInResponse {
   };
 }
 
+export interface CreateTicketSupportCaseRequest {
+  case_type: 'refund_request' | 'payment_dispute';
+  dispute_category?: string;
+  reason: string;
+  gateway_reference?: string;
+  evidence_url?: string;
+  evidence_notes?: string;
+  requested_refund_amount?: number;
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -509,6 +683,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
   const rawOperations = (raw.operations && typeof raw.operations === 'object' ? raw.operations : undefined) as Event['operations'];
   const rawSocialLinks = (raw.social_links && typeof raw.social_links === 'object' ? raw.social_links : undefined) as Record<string, string> | undefined;
   const rawMarketingSettings = (raw.marketing_settings && typeof raw.marketing_settings === 'object' ? raw.marketing_settings : undefined) as Event['marketing_settings'];
+  const rawTicketingSummary = (raw.ticketing_summary && typeof raw.ticketing_summary === 'object' ? raw.ticketing_summary : undefined) as Event['ticketing_summary'];
   const rawPayoutCenter = (raw.payout_center && typeof raw.payout_center === 'object' ? raw.payout_center : undefined) as Event['payout_center'];
 
   return {
@@ -591,6 +766,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
     website: raw.website as string | undefined,
     social_links: rawSocialLinks,
     marketing_settings: rawMarketingSettings,
+    ticketing_summary: rawTicketingSummary,
     operations: rawOperations,
     payout_center: rawPayoutCenter,
     published_at: raw.published_at as string | undefined,
@@ -865,6 +1041,28 @@ export function useTransferTicket(ticketId: number | string) {
   });
 }
 
+export function useTicketCases(ticketId: number | string) {
+  return useQuery({
+    queryKey: ["ticket", ticketId, "cases"],
+    queryFn: () => apiGet<{ data: TicketSupportCase[] }>(`/tickets/${ticketId}/cases`).then((res) => res.data || []),
+    enabled: !!ticketId,
+  });
+}
+
+export function useRequestTicketCase(ticketId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateTicketSupportCaseRequest) =>
+      apiPost<{ message: string; data: TicketSupportCase }>(`/tickets/${ticketId}/cases`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId, "cases"] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
 export function useSavedAttendeeProfiles(limit = 10, enabled = true) {
   return useQuery({
     queryKey: ["tickets", "attendee-profiles", limit],
@@ -1015,6 +1213,27 @@ export function useUpdateEvent() {
   });
 }
 
+export function useStoreEventPromotionRequest(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      promotion_slug?: string;
+      promotion_title: string;
+      promotion_type?: string;
+      promotion_platform?: string;
+      price_credits?: number;
+      price_ugx?: number;
+      request_notes?: string;
+      featured_image_url?: string | null;
+      payload?: Record<string, unknown>;
+    }) => apiPost<{ success: boolean; data: EventPromotionRequest; message: string }>(`/artist/events/${eventId}/promotion-requests`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", String(eventId)] });
+    },
+  });
+}
+
 export function useDeleteEvent() {
   const queryClient = useQueryClient();
 
@@ -1082,6 +1301,27 @@ export function useEventAnalytics(eventId: number | string) {
             customer_paid_total: number;
             estimated_organizer_payout: number;
             tesotunes_fee_revenue: number;
+          }>;
+        };
+        funnel: {
+          totals: {
+            visits: number;
+            checkout_starts: number;
+            paid_orders: number;
+            tickets_sold: number;
+          };
+          by_source: Array<{
+            label: string;
+            channel?: string | null;
+            campaign_code?: string | null;
+            referral_code?: string | null;
+            visits: number;
+            checkout_starts: number;
+            paid_orders: number;
+            tickets_sold: number;
+            visit_to_checkout_rate: number;
+            checkout_to_order_rate: number;
+            visit_to_order_rate: number;
           }>;
         };
         sales_channels: {
@@ -1158,6 +1398,17 @@ export function useEventAnalytics(eventId: number | string) {
             dominant_status: string;
           }>;
         };
+        support_cases: {
+          open: number;
+          approved: number;
+          rejected: number;
+          refund_requests: number;
+          payment_disputes: number;
+          open_payment_disputes: number;
+          chargeback_review_cases: number;
+          chargeback_exposure_amount: number;
+          approved_refund_amount: number;
+        };
         check_ins: number;
         interested_count: number;
         total_attendees: number;
@@ -1184,6 +1435,184 @@ export function useEventAnalytics(eventId: number | string) {
       };
     }>(`/artist/events/${eventId}/analytics`),
     enabled: !!eventId,
+  });
+}
+
+export function useEventTicketCases(eventId: number | string) {
+  return useQuery({
+    queryKey: ["artist", "events", eventId, "ticket-cases"],
+    queryFn: () => apiGet<{ data: TicketSupportCase[] }>(`/artist/events/${eventId}/ticket-cases`).then((res) => res.data || []),
+    enabled: !!eventId,
+  });
+}
+
+export function useResolveEventTicketCase(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      caseId,
+      decision,
+      resolution_notes,
+      approved_refund_amount,
+    }: {
+      caseId: number;
+      decision: 'approve' | 'reject';
+      resolution_notes?: string;
+      approved_refund_amount?: number;
+    }) => apiPost<{ message: string; data: TicketSupportCase }>(`/artist/events/${eventId}/ticket-cases/${caseId}/resolve`, {
+      decision,
+      resolution_notes,
+      approved_refund_amount,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "ticket-cases"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useEventOfflineSales(eventId: number | string) {
+  return useQuery({
+    queryKey: ["artist", "events", eventId, "offline-sales"],
+    queryFn: () => apiGet<{ data: OfflineSaleOrder[] }>(`/artist/events/${eventId}/offline-sales`).then((res) => res.data || []),
+    enabled: !!eventId,
+  });
+}
+
+export function useStoreOfflineSale(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      ticket_tier_id: number;
+      quantity: number;
+      holder_name?: string;
+      holder_email?: string;
+      holder_phone?: string;
+      unit_price_ugx?: number;
+      sale_source?: 'printed_ticket' | 'door_sale' | 'phone_booking' | 'complimentary';
+      notes?: string;
+    }) => apiPost<{ message: string; data: OfflineSaleOrder }>(`/artist/events/${eventId}/offline-sales`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "offline-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useStorePrintedTicketImport(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      ticket_tier_id: number;
+      codes: string | string[];
+      holder_name?: string;
+      holder_email?: string;
+      holder_phone?: string;
+      unit_price_ugx?: number;
+      notes?: string;
+      validation_notes?: string;
+    }) => apiPost<{ message: string; data: OfflineSaleOrder }>(`/artist/events/${eventId}/printed-ticket-imports`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "offline-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useSyncPrintedTicketImport(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      order_id: string;
+      holder_name?: string;
+      holder_email?: string;
+      holder_phone?: string;
+      notes?: string;
+      validation_notes?: string;
+    }) => apiPost<{ message: string; data: OfflineSaleOrder }>(`/artist/events/${eventId}/printed-ticket-imports/${data.order_id}/sync`, {
+      holder_name: data.holder_name,
+      holder_email: data.holder_email,
+      holder_phone: data.holder_phone,
+      notes: data.notes,
+      validation_notes: data.validation_notes,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "offline-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useVoidOfflineSale(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) =>
+      apiPost<{ message: string }>(`/artist/events/${eventId}/offline-sales/${orderId}/void`, {
+        reason,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "offline-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useEventExternalAllocations(eventId: number | string) {
+  return useQuery({
+    queryKey: ["artist", "events", eventId, "external-allocations"],
+    queryFn: () => apiGet<{ data: ExternalAllocation[] }>(`/artist/events/${eventId}/external-allocations`).then((res) => res.data || []),
+    enabled: !!eventId,
+  });
+}
+
+export function useStoreExternalAllocation(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      ticket_tier_id: number;
+      quantity: number;
+      channel_label: string;
+      notes?: string;
+    }) => apiPost<{ message: string; data: ExternalAllocation }>(`/artist/events/${eventId}/external-allocations`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "external-allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useReleaseExternalAllocation(eventId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ allocationId, reason }: { allocationId: number; reason?: string }) =>
+      apiPost<{ message: string; data: ExternalAllocation }>(`/artist/events/${eventId}/external-allocations/${allocationId}/release`, {
+        reason,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "external-allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId, "analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["artist", "events", eventId] });
+    },
+  });
+}
+
+export function useTrackEventFunnel(eventId: number | string) {
+  return useMutation({
+    mutationFn: (payload: TrackEventFunnelRequest) =>
+      apiPost(`/events/${eventId}/funnel-touch`, payload),
   });
 }
 

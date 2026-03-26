@@ -30,6 +30,16 @@ const rawCandidates = [
   process.env.API_URL,
 ].filter((value): value is string => Boolean(value && value.trim()));
 
+function dedupeAdjacentHostnameLabels(hostname: string): string {
+  const labels = hostname.split(".").filter(Boolean);
+  if (labels.length <= 1) {
+    return hostname;
+  }
+
+  const deduped = labels.filter((label, index) => index === 0 || label !== labels[index - 1]);
+  return deduped.join(".");
+}
+
 function normalizeApiUrl(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed.startsWith("/")) {
@@ -47,7 +57,13 @@ function normalizeApiUrl(value: string): string | null {
     return null;
   }
 
-  const base = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
+  const normalizedHostname = dedupeAdjacentHostnameLabels(parsed.hostname);
+  const normalizedOrigin = `${parsed.protocol}//${normalizedHostname}${parsed.port ? `:${parsed.port}` : ""}`;
+  const normalizedPathname = parsed.pathname
+    .replace(/\/+$/, "")
+    .replace(/(?:\/api)+$/i, "/api");
+  const base = `${normalizedOrigin}${normalizedPathname}`.replace(/\/+$/, "");
+
   return base.endsWith("/api") ? base : `${base}/api`;
 }
 

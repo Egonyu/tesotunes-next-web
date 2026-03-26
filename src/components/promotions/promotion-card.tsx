@@ -21,9 +21,14 @@ import {
 interface PromotionCardProps {
   promotion: PromotionListItem;
   className?: string;
+  href?: string;
 }
 
-export function PromotionCard({ promotion, className }: PromotionCardProps) {
+export function PromotionCard({
+  promotion,
+  className,
+  href,
+}: PromotionCardProps) {
   const deliveryText =
     promotion.delivery_days_min === promotion.delivery_days_max
       ? `${promotion.delivery_days_min} day${promotion.delivery_days_min !== 1 ? "s" : ""}`
@@ -31,7 +36,7 @@ export function PromotionCard({ promotion, className }: PromotionCardProps) {
 
   return (
     <Link
-      href={`/promotions/${promotion.slug}`}
+      href={href || `/promotions/${promotion.slug}`}
       className={cn(
         "group block bg-card rounded-xl border hover:border-primary/50 transition-all hover:shadow-lg overflow-hidden",
         className

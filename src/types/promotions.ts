@@ -240,6 +240,7 @@ export interface PurchasePromotionRequest {
   credits_amount?: number;
   ugx_amount?: number;
   song_id?: number;
+  event_id?: number;
   notes?: string;
   preferred_delivery_date?: string;
 }

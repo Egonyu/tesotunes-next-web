@@ -90,6 +90,27 @@ interface AnalyticsResponse {
         tesotunes_fee_revenue: number
       }>
     }
+    funnel: {
+      totals: {
+        visits: number
+        checkout_starts: number
+        paid_orders: number
+        tickets_sold: number
+      }
+      by_source: Array<{
+        label: string
+        channel?: string | null
+        campaign_code?: string | null
+        referral_code?: string | null
+        visits: number
+        checkout_starts: number
+        paid_orders: number
+        tickets_sold: number
+        visit_to_checkout_rate: number
+        checkout_to_order_rate: number
+        visit_to_order_rate: number
+      }>
+    }
     sales_channels: {
       channels: Array<{
         key: 'tesotunes_native' | 'tracked_promo' | 'manual_offline' | 'external'
@@ -395,6 +416,58 @@ export default function AdminEventAnalyticsPage({
                 <span className="font-medium">{analytics.payouts.entry_count.toLocaleString()}</span>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5">
+            <h2 className="font-semibold">Promotion Funnel</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Visits</span>
+                <span className="font-medium">{analytics.funnel.totals.visits.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Checkout starts</span>
+                <span className="font-medium">{analytics.funnel.totals.checkout_starts.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Paid orders</span>
+                <span className="font-medium">{analytics.funnel.totals.paid_orders.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tickets sold</span>
+                <span className="font-medium">{analytics.funnel.totals.tickets_sold.toLocaleString()}</span>
+              </div>
+            </div>
+            {analytics.funnel.by_source.length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {analytics.funnel.by_source.slice(0, 5).map((row) => (
+                  <div key={row.label} className="rounded-xl bg-muted/40 p-3 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium">{row.label}</p>
+                        <p className="text-muted-foreground">
+                          {row.visits} visits • {row.checkout_starts} checkouts • {row.paid_orders} orders
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {[row.channel, row.campaign_code].filter(Boolean).join(' • ') || 'Tracked source'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{row.visit_to_checkout_rate.toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground">visit → checkout</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.checkout_to_order_rate.toFixed(1)}% checkout → order
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Funnel rows will appear once visitors land on this event and start checkout.
+              </p>
+            )}
           </div>
 
           <div className="rounded-2xl border bg-card p-5">

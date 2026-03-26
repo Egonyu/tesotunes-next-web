@@ -31,7 +31,17 @@ import {
   getEventTimeLabel,
   getEventVenueLabel,
   useEventAnalytics,
+  useEventExternalAllocations,
+  useEventOfflineSales,
+  useStoreOfflineSale,
+  useStorePrintedTicketImport,
+  useSyncPrintedTicketImport,
+  useStoreExternalAllocation,
+  useEventTicketCases,
+  useReleaseExternalAllocation,
+  useResolveEventTicketCase,
   useUpdateEvent,
+  useVoidOfflineSale,
 } from '@/hooks/useEvents';
 import { toast } from 'sonner';
 
@@ -39,6 +49,15 @@ interface CampaignSpendRow {
   key: string;
   label: string;
   amount: string;
+  notes: string;
+}
+
+interface CampaignPresetRow {
+  key: string;
+  name: string;
+  source: string;
+  medium: string;
+  campaign_code: string;
   notes: string;
 }
 
@@ -58,13 +77,38 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
   const [campaignName, setCampaignName] = useState('tesotunes-promote');
   const [campaignSource, setCampaignSource] = useState('tesotunes_promote');
   const [campaignMedium, setCampaignMedium] = useState('featured_banner');
+  const [campaignNotes, setCampaignNotes] = useState('');
   const [staffEmail, setStaffEmail] = useState('');
   const [staffRole, setStaffRole] = useState<'finance' | 'check_in_staff' | 'promoter' | 'analyst'>('finance');
   const [staffNotes, setStaffNotes] = useState('');
   const [checkInQuery, setCheckInQuery] = useState('');
   const [checkInNote, setCheckInNote] = useState('');
   const [selectedTicketNumber, setSelectedTicketNumber] = useState<string | null>(null);
+  const [supportResolutionNote, setSupportResolutionNote] = useState('');
+  const [offlineHolderName, setOfflineHolderName] = useState('');
+  const [offlineHolderEmail, setOfflineHolderEmail] = useState('');
+  const [offlineHolderPhone, setOfflineHolderPhone] = useState('');
+  const [offlineQuantity, setOfflineQuantity] = useState('1');
+  const [offlineUnitPrice, setOfflineUnitPrice] = useState('');
+  const [offlineSource, setOfflineSource] = useState<'printed_ticket' | 'door_sale' | 'phone_booking' | 'complimentary'>('printed_ticket');
+  const [offlineNotes, setOfflineNotes] = useState('');
+  const [offlineTierId, setOfflineTierId] = useState<number | null>(null);
+  const [offlineVoidReason, setOfflineVoidReason] = useState('');
+  const [printedCodes, setPrintedCodes] = useState('');
+  const [printedValidationNotes, setPrintedValidationNotes] = useState('');
+  const [selectedPrintedOrderId, setSelectedPrintedOrderId] = useState<string | null>(null);
+  const [syncPrintedHolderName, setSyncPrintedHolderName] = useState('');
+  const [syncPrintedHolderEmail, setSyncPrintedHolderEmail] = useState('');
+  const [syncPrintedHolderPhone, setSyncPrintedHolderPhone] = useState('');
+  const [syncPrintedNotes, setSyncPrintedNotes] = useState('');
+  const [syncPrintedValidationNotes, setSyncPrintedValidationNotes] = useState('');
+  const [externalTierId, setExternalTierId] = useState<number | null>(null);
+  const [externalQuantity, setExternalQuantity] = useState('1');
+  const [externalChannelLabel, setExternalChannelLabel] = useState('External outlet');
+  const [externalNotes, setExternalNotes] = useState('');
+  const [externalReleaseReason, setExternalReleaseReason] = useState('');
   const [campaignSpendRows, setCampaignSpendRows] = useState<CampaignSpendRow[]>([]);
+  const [campaignPresetRows, setCampaignPresetRows] = useState<CampaignPresetRow[]>([]);
   const [discountDraft, setDiscountDraft] = useState<DiscountCodeDraft>({
     name: '',
     code: '',
@@ -84,6 +128,16 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
     enabled: !!id,
   });
   const { data: analyticsResponse } = useEventAnalytics(id);
+  const { data: offlineSales = [] } = useEventOfflineSales(id);
+  const { data: externalAllocations = [] } = useEventExternalAllocations(id);
+  const storeOfflineSale = useStoreOfflineSale(id);
+  const storePrintedTicketImport = useStorePrintedTicketImport(id);
+  const syncPrintedTicketImport = useSyncPrintedTicketImport(id);
+  const storeExternalAllocation = useStoreExternalAllocation(id);
+  const { data: ticketCases = [] } = useEventTicketCases(id);
+  const resolveTicketCase = useResolveEventTicketCase(id);
+  const voidOfflineSale = useVoidOfflineSale(id);
+  const releaseExternalAllocation = useReleaseExternalAllocation(id);
   const refreshEvent = () => {
     queryClient.invalidateQueries({ queryKey: ['artist', 'events', id] });
   };
@@ -222,6 +276,9 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
   const eventDate = getEventStartDate(event);
   const eventTime = getEventTimeLabel(event);
   const analytics = analyticsResponse?.data;
+  const isHybrid = event.ticketing_mode === 'hybrid';
+  const isExternalOnly = event.ticketing_mode === 'external_only';
+  const ticketingSummary = event.ticketing_summary;
   useEffect(() => {
     const nextRows = new Map<string, CampaignSpendRow>();
 
@@ -251,17 +308,77 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
     ]);
   }, [analytics?.roi.by_source, event?.marketing_settings?.campaign_spend]);
 
-  const campaignLink = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set('source', campaignSource || 'tesotunes_promote');
-    params.set('channel', campaignMedium || 'featured_banner');
-    params.set('campaign_code', campaignName || `${event.slug}-promote`);
-    params.set('utm_source', campaignSource || 'tesotunes_promote');
-    params.set('utm_medium', campaignMedium || 'featured_banner');
-    params.set('utm_campaign', campaignName || `${event.slug}-promote`);
+  useEffect(() => {
+    const presets = event?.marketing_settings?.campaign_presets || [];
 
-    return `${window.location.origin}/events/${event.id}?${params.toString()}`;
-  }, [campaignMedium, campaignName, campaignSource, event.id, event.slug]);
+    if (presets.length === 0) {
+      setCampaignPresetRows([
+        {
+          key: 'tesotunes-boost',
+          name: 'Tesotunes Boost',
+          source: 'tesotunes_promote',
+          medium: 'featured_banner',
+          campaign_code: event?.slug ? `${event.slug}-featured-banner` : 'tesotunes-promote',
+          notes: '',
+        },
+      ]);
+      return;
+    }
+
+    setCampaignPresetRows(presets.map((preset, index) => ({
+      key: preset.key || `campaign-preset-${index + 1}`,
+      name: preset.name,
+      source: preset.source,
+      medium: preset.medium,
+      campaign_code: preset.campaign_code,
+      notes: preset.notes || '',
+    })));
+  }, [event?.marketing_settings?.campaign_presets, event?.slug]);
+
+  useEffect(() => {
+    if (!offlineTierId && event?.ticket_tiers?.length) {
+      setOfflineTierId(event.ticket_tiers[0].id);
+      const firstPrice = event.ticket_tiers[0].price_ugx || event.ticket_tiers[0].price || 0;
+      setOfflineUnitPrice(firstPrice > 0 ? String(firstPrice) : '');
+    }
+  }, [event?.ticket_tiers, offlineTierId]);
+
+  useEffect(() => {
+    if (!externalTierId && event?.ticket_tiers?.length) {
+      setExternalTierId(event.ticket_tiers[0].id);
+    }
+  }, [event?.ticket_tiers, externalTierId]);
+
+  const campaignLink = useMemo(
+    () => buildCampaignLink(),
+    [campaignMedium, campaignName, campaignSource, event]
+  );
+
+  const promotionMarketplaceLink = useMemo(() => {
+    if (!event) {
+      return "/promotions";
+    }
+
+    const params = new URLSearchParams();
+    params.set("target_type", "event");
+    params.set("event_id", String(event.id));
+    params.set("event_name", event.title);
+    params.set("event_slug", event.slug);
+
+    if (event.starts_at) {
+      params.set("event_starts_at", event.starts_at);
+    }
+
+    if (event.venue_name) {
+      params.set("event_venue", event.venue_name);
+    }
+
+    if (event.city) {
+      params.set("event_city", event.city);
+    }
+
+    return `/promotions?${params.toString()}`;
+  }, [event]);
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${id}`;
@@ -279,6 +396,30 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
     await navigator.clipboard.writeText(campaignLink);
     toast.success('Tracked campaign link copied');
   };
+
+  function buildCampaignLink(options?: {
+    source?: string;
+    medium?: string;
+    campaignCode?: string;
+  }) {
+    if (!event) {
+      return '';
+    }
+
+    const params = new URLSearchParams();
+    const source = options?.source || campaignSource || 'tesotunes_promote';
+    const medium = options?.medium || campaignMedium || 'featured_banner';
+    const campaignCode = options?.campaignCode || campaignName || `${event.slug}-promote`;
+
+    params.set('source', source);
+    params.set('channel', medium);
+    params.set('campaign_code', campaignCode);
+    params.set('utm_source', source);
+    params.set('utm_medium', medium);
+    params.set('utm_campaign', campaignCode);
+
+    return `${window.location.origin}/events/${event.id}?${params.toString()}`;
+  }
 
   const quickCampaigns = [
     { label: 'Tesotunes Boost', source: 'tesotunes_promote', medium: 'featured_banner' },
@@ -320,6 +461,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         id: Number(id),
         marketing_settings: {
           campaign_spend: payload,
+          campaign_presets: event?.marketing_settings?.campaign_presets || [],
         },
       });
 
@@ -329,6 +471,104 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Failed to save campaign spend');
     }
+  };
+
+  const updateCampaignPresetRow = (index: number, field: keyof CampaignPresetRow, value: string) => {
+    setCampaignPresetRows((current) => current.map((row, rowIndex) => (
+      rowIndex === index ? { ...row, [field]: value } : row
+    )));
+  };
+
+  const addCampaignPresetRow = () => {
+    setCampaignPresetRows((current) => [
+      ...current,
+      {
+        key: `campaign-preset-${current.length + 1}`,
+        name: '',
+        source: 'tesotunes_promote',
+        medium: 'featured_banner',
+        campaign_code: event ? `${event.slug}-campaign-${current.length + 1}` : `campaign-${current.length + 1}`,
+        notes: '',
+      },
+    ]);
+  };
+
+  const removeCampaignPresetRow = (index: number) => {
+    setCampaignPresetRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  const applyCampaignPreset = (preset: CampaignPresetRow) => {
+    setCampaignName(preset.campaign_code);
+    setCampaignSource(preset.source);
+    setCampaignMedium(preset.medium);
+    setCampaignNotes(preset.notes);
+    toast.success(`Loaded ${preset.name}`);
+  };
+
+  const saveCampaignPresets = async () => {
+    if (!event) {
+      return;
+    }
+
+    const payload = campaignPresetRows
+      .map((row, index) => ({
+        key: row.key || `campaign-preset-${index + 1}`,
+        name: row.name.trim(),
+        source: row.source.trim(),
+        medium: row.medium.trim(),
+        channel: row.medium.trim(),
+        campaign_code: row.campaign_code.trim(),
+        notes: row.notes.trim() || null,
+      }))
+      .filter((row) => row.name || row.source || row.medium || row.campaign_code);
+
+    if (payload.length === 0) {
+      toast.error('Add at least one preset before saving');
+      return;
+    }
+
+    try {
+      await updateEvent.mutateAsync({
+        id: event.id,
+        marketing_settings: {
+          campaign_spend: event.marketing_settings?.campaign_spend || [],
+          campaign_presets: payload,
+        },
+      });
+      toast.success('Campaign presets saved');
+      refreshEvent();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save campaign presets');
+    }
+  };
+
+  const copyPresetLink = async (preset: CampaignPresetRow) => {
+    await navigator.clipboard.writeText(buildCampaignLink({
+      source: preset.source,
+      medium: preset.medium,
+      campaignCode: preset.campaign_code,
+    }));
+    toast.success(`${preset.name} link copied`);
+  };
+
+  const copyPresetTrackerRow = async (preset: CampaignPresetRow) => {
+    const link = buildCampaignLink({
+      source: preset.source,
+      medium: preset.medium,
+      campaignCode: preset.campaign_code,
+    });
+    await navigator.clipboard.writeText(`${preset.name},${preset.source},${preset.medium},${preset.campaign_code},${link}`);
+    toast.success(`${preset.name} tracker row copied`);
+  };
+
+  const loadPrintedBatchForSync = (sale: typeof offlineSales[number]) => {
+    setSelectedPrintedOrderId(sale.order_id);
+    setSyncPrintedHolderName(sale.holder_name || '');
+    setSyncPrintedHolderEmail(sale.holder_email || '');
+    setSyncPrintedHolderPhone(sale.holder_phone || '');
+    setSyncPrintedNotes(sale.notes || '');
+    setSyncPrintedValidationNotes(sale.validation_notes || '');
+    toast.success('Printed batch loaded for sync');
   };
 
   return (
@@ -403,6 +643,39 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {(isHybrid || isExternalOnly) && ticketingSummary && (
+        <div className={`rounded-xl border p-6 ${isHybrid ? 'border-sky-200 bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/20' : 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20'}`}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold">
+                {ticketingSummary.mode_label}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isHybrid
+                  ? 'Tesotunes checkout is active while the same event can also reconcile external and manual inventory. Use the ops panels below to keep online, outlet, and printed ticket counts aligned.'
+                  : 'Tesotunes is promoting this event while organizer-managed or partner channels handle ticketing. Use the ops panels below to keep external and manual movement visible in one place.'}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Tesotunes available</p>
+                <p className="mt-1 font-semibold">
+                  {ticketingSummary.tesotunes_available == null ? 'Open' : ticketingSummary.tesotunes_available.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">External reserved</p>
+                <p className="mt-1 font-semibold">{ticketingSummary.external_allocated.toLocaleString()}</p>
+              </div>
+              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Tesotunes sold</p>
+                <p className="mt-1 font-semibold">{ticketingSummary.tesotunes_sold.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -476,6 +749,546 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">Offline Sales Reconciliation</h2>
+            <p className="text-sm text-muted-foreground">
+              Log printed, door, and phone-booked tickets as real attendees so remaining capacity, sell-through, and check-in stay accurate for non-smartphone buyers too.
+            </p>
+          </div>
+          <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+            {isHybrid ? 'Hybrid ops' : `${offlineSales.length} logged batch${offlineSales.length === 1 ? '' : 'es'}`}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <select
+            value={offlineTierId ?? ''}
+            onChange={(e) => {
+              const nextTierId = Number(e.target.value);
+              setOfflineTierId(nextTierId);
+              const selectedTier = event.ticket_tiers?.find((tier) => tier.id === nextTierId);
+              if (selectedTier) {
+                const price = selectedTier.price_ugx || selectedTier.price || 0;
+                setOfflineUnitPrice(price > 0 ? String(price) : '');
+              }
+            }}
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          >
+            <option value="" disabled>Select ticket tier</option>
+            {(event.ticket_tiers || []).map((tier) => (
+              <option key={tier.id} value={tier.id}>
+                {tier.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={offlineQuantity}
+            onChange={(e) => setOfflineQuantity(e.target.value)}
+            placeholder="Quantity"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={offlineUnitPrice}
+            onChange={(e) => setOfflineUnitPrice(e.target.value)}
+            placeholder="Unit price UGX"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <select
+            value={offlineSource}
+            onChange={(e) => setOfflineSource(e.target.value as 'printed_ticket' | 'door_sale' | 'phone_booking' | 'complimentary')}
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          >
+            <option value="printed_ticket">Printed ticket</option>
+            <option value="door_sale">Door sale</option>
+            <option value="phone_booking">Phone booking</option>
+            <option value="complimentary">Complimentary</option>
+          </select>
+          <input
+            type="text"
+            value={offlineHolderName}
+            onChange={(e) => setOfflineHolderName(e.target.value)}
+            placeholder="Buyer or batch holder name"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="email"
+            value={offlineHolderEmail}
+            onChange={(e) => setOfflineHolderEmail(e.target.value)}
+            placeholder="Buyer email"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="tel"
+            value={offlineHolderPhone}
+            onChange={(e) => setOfflineHolderPhone(e.target.value)}
+            placeholder="Buyer phone"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={offlineNotes}
+            onChange={(e) => setOfflineNotes(e.target.value)}
+            placeholder="Notes"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Logged offline tickets are counted as confirmed attendees and can be found later in door lookup by ticket code or holder name.
+          </p>
+          <button
+            onClick={async () => {
+              if (!offlineTierId) {
+                toast.error('Choose a ticket tier first');
+                return;
+              }
+
+              try {
+                const result = await storeOfflineSale.mutateAsync({
+                  ticket_tier_id: offlineTierId,
+                  quantity: Number(offlineQuantity || 1),
+                  holder_name: offlineHolderName || undefined,
+                  holder_email: offlineHolderEmail || undefined,
+                  holder_phone: offlineHolderPhone || undefined,
+                  unit_price_ugx: offlineUnitPrice ? Number(offlineUnitPrice) : undefined,
+                  sale_source: offlineSource,
+                  notes: offlineNotes || undefined,
+                });
+                toast.success(result.message || 'Offline sale logged');
+                setOfflineHolderName('');
+                setOfflineHolderEmail('');
+                setOfflineHolderPhone('');
+                setOfflineQuantity('1');
+                setOfflineNotes('');
+                setOfflineVoidReason('');
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to log offline sale');
+              }
+            }}
+            disabled={storeOfflineSale.isPending}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {storeOfflineSale.isPending ? 'Logging...' : 'Log Offline Sale'}
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <input
+            type="text"
+            value={offlineVoidReason}
+            onChange={(e) => setOfflineVoidReason(e.target.value)}
+            placeholder="Optional void reason for duplicate or cancelled booklet entries"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 rounded-xl border p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-medium">Printed Ticket Import</h3>
+              <p className="text-sm text-muted-foreground">
+                Paste pre-printed physical ticket codes from a booklet or outlet run so they validate and check in as real Tesotunes event attendees.
+              </p>
+            </div>
+            <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+              Booklet sync
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <textarea
+              value={printedCodes}
+              onChange={(e) => setPrintedCodes(e.target.value)}
+              placeholder={"BOOK-001\nBOOK-002\nBOOK-003"}
+              rows={5}
+              className="w-full rounded-lg border bg-background px-4 py-3 text-sm"
+            />
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={printedValidationNotes}
+                onChange={(e) => setPrintedValidationNotes(e.target.value)}
+                placeholder="Validation notes, for example Orange wristband booklet"
+                className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Imported printed codes use the same ticket tier, buyer details, and pricing you set above, but they keep their physical booklet codes instead of random offline codes.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!offlineTierId) {
+                    toast.error('Choose a ticket tier first');
+                    return;
+                  }
+
+                  if (!printedCodes.trim()) {
+                    toast.error('Paste at least one printed ticket code');
+                    return;
+                  }
+
+                  try {
+                    const result = await storePrintedTicketImport.mutateAsync({
+                      ticket_tier_id: offlineTierId,
+                      codes: printedCodes,
+                      holder_name: offlineHolderName || undefined,
+                      holder_email: offlineHolderEmail || undefined,
+                      holder_phone: offlineHolderPhone || undefined,
+                      unit_price_ugx: offlineUnitPrice ? Number(offlineUnitPrice) : undefined,
+                      notes: offlineNotes || undefined,
+                      validation_notes: printedValidationNotes || undefined,
+                    });
+                    toast.success(result.message || 'Printed ticket import completed');
+                    setPrintedCodes('');
+                    setPrintedValidationNotes('');
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Failed to import printed ticket codes');
+                  }
+                }}
+                disabled={storePrintedTicketImport.isPending}
+                className="rounded-lg border px-4 py-2 text-sm hover:bg-muted disabled:opacity-60"
+              >
+                {storePrintedTicketImport.isPending ? 'Importing...' : 'Import Printed Codes'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-medium">Printed Batch Sync</h3>
+              <p className="text-sm text-muted-foreground">
+                Load an imported printed batch below to correct holder details or update booklet validation instructions without re-importing the ticket codes.
+              </p>
+            </div>
+            <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+              {selectedPrintedOrderId ? 'Batch selected' : 'Pick a batch'}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <input
+              type="text"
+              value={syncPrintedHolderName}
+              onChange={(e) => setSyncPrintedHolderName(e.target.value)}
+              placeholder="Batch holder name"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+            <input
+              type="email"
+              value={syncPrintedHolderEmail}
+              onChange={(e) => setSyncPrintedHolderEmail(e.target.value)}
+              placeholder="Batch holder email"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+            <input
+              type="tel"
+              value={syncPrintedHolderPhone}
+              onChange={(e) => setSyncPrintedHolderPhone(e.target.value)}
+              placeholder="Batch holder phone"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+            <input
+              type="text"
+              value={syncPrintedValidationNotes}
+              onChange={(e) => setSyncPrintedValidationNotes(e.target.value)}
+              placeholder="Validation notes"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+            <input
+              type="text"
+              value={syncPrintedNotes}
+              onChange={(e) => setSyncPrintedNotes(e.target.value)}
+              placeholder="Batch notes"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              This sync keeps the original printed ticket codes intact. It only updates the booklet batch details Tesotunes shows during door lookup and validation.
+            </p>
+            <button
+              onClick={async () => {
+                if (!selectedPrintedOrderId) {
+                  toast.error('Load a printed batch first');
+                  return;
+                }
+
+                try {
+                  const result = await syncPrintedTicketImport.mutateAsync({
+                    order_id: selectedPrintedOrderId,
+                    holder_name: syncPrintedHolderName || undefined,
+                    holder_email: syncPrintedHolderEmail || undefined,
+                    holder_phone: syncPrintedHolderPhone || undefined,
+                    notes: syncPrintedNotes || undefined,
+                    validation_notes: syncPrintedValidationNotes || undefined,
+                  });
+                  toast.success(result.message || 'Printed batch synced');
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Failed to sync printed batch');
+                }
+              }}
+              disabled={!selectedPrintedOrderId || syncPrintedTicketImport.isPending}
+              className="rounded-lg border px-4 py-2 text-sm hover:bg-muted disabled:opacity-60"
+            >
+              {syncPrintedTicketImport.isPending ? 'Syncing...' : 'Sync Printed Batch'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {offlineSales.length > 0 ? offlineSales.map((sale) => (
+            <div key={sale.order_id} className="rounded-xl border p-4 text-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{sale.ticket_tier?.name || 'Offline sale batch'}</p>
+                    <span className="rounded-full border px-2 py-0.5 text-xs capitalize">{sale.status}</span>
+                    {sale.sale_source && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">
+                        {sale.sale_source.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    {[sale.holder_name, sale.holder_phone, sale.order_id].filter(Boolean).join(' • ')}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {sale.quantity} tickets • UGX {sale.total_amount.toLocaleString()} total
+                    {sale.logged_at ? ` • Logged ${new Date(sale.logged_at).toLocaleString()}` : ''}
+                  </p>
+                  {sale.ticket_numbers.length > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Codes: {sale.ticket_numbers.join(', ')}
+                      {sale.quantity > sale.ticket_numbers.length ? ' ...' : ''}
+                    </p>
+                  )}
+                  {sale.validation_notes && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Validation notes: {sale.validation_notes}
+                    </p>
+                  )}
+                  {sale.last_synced_at && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Last synced {new Date(sale.last_synced_at).toLocaleString()}
+                    </p>
+                  )}
+                  {sale.notes && (
+                    <p className="mt-2 text-xs text-muted-foreground">{sale.notes}</p>
+                  )}
+                </div>
+                {sale.status === 'active' ? (
+                  <div className="flex flex-col gap-2">
+                    {sale.printed_ticket_import && (
+                      <button
+                        onClick={() => loadPrintedBatchForSync(sale)}
+                        className="rounded-lg border px-3 py-2 text-xs hover:bg-muted"
+                      >
+                        Load for Sync
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await voidOfflineSale.mutateAsync({
+                            orderId: sale.order_id,
+                            reason: offlineVoidReason || undefined,
+                          });
+                          toast.success(result.message || 'Offline sale voided');
+                        } catch (error) {
+                          toast.error(error instanceof Error ? error.message : 'Failed to void offline sale');
+                        }
+                      }}
+                      disabled={voidOfflineSale.isPending}
+                      className="rounded-lg border px-3 py-2 text-xs hover:bg-muted disabled:opacity-60"
+                    >
+                      Void Batch
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Voided {sale.voided_count}/{sale.quantity}
+                  </div>
+                )}
+              </div>
+            </div>
+          )) : (
+            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+              No offline ticket batches logged yet. Use this for physical tickets, door sales, and manual phone bookings.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">External Capacity Allocation</h2>
+            <p className="text-sm text-muted-foreground">
+              Reserve ticket capacity for outside channels without marking those tickets as sold on Tesotunes. This keeps hybrid inventory honest before partner outlets reconcile back.
+            </p>
+          </div>
+          <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+            {isHybrid ? 'Hybrid capacity' : `${externalAllocations.filter((item) => item.status === 'active').length} active reservation${externalAllocations.filter((item) => item.status === 'active').length === 1 ? '' : 's'}`}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <select
+            value={externalTierId ?? ''}
+            onChange={(e) => setExternalTierId(Number(e.target.value))}
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          >
+            <option value="" disabled>Select ticket tier</option>
+            {(event.ticket_tiers || []).map((tier) => (
+              <option key={tier.id} value={tier.id}>
+                {tier.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min="1"
+            max="100000"
+            value={externalQuantity}
+            onChange={(e) => setExternalQuantity(e.target.value)}
+            placeholder="Quantity"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={externalChannelLabel}
+            onChange={(e) => setExternalChannelLabel(e.target.value)}
+            placeholder="Outlet / partner label"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={externalNotes}
+            onChange={(e) => setExternalNotes(e.target.value)}
+            placeholder="Notes"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Use this when a partner box office, physical outlet, or third-party channel needs reserved capacity before final reconciliation.
+          </p>
+          <button
+            onClick={async () => {
+              if (!externalTierId) {
+                toast.error('Choose a ticket tier first');
+                return;
+              }
+
+              try {
+                const result = await storeExternalAllocation.mutateAsync({
+                  ticket_tier_id: externalTierId,
+                  quantity: Number(externalQuantity || 1),
+                  channel_label: externalChannelLabel || 'External outlet',
+                  notes: externalNotes || undefined,
+                });
+                toast.success(result.message || 'External allocation saved');
+                setExternalQuantity('1');
+                setExternalChannelLabel('External outlet');
+                setExternalNotes('');
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Failed to save external allocation');
+              }
+            }}
+            disabled={storeExternalAllocation.isPending}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {storeExternalAllocation.isPending ? 'Saving...' : 'Reserve External Capacity'}
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <input
+            type="text"
+            value={externalReleaseReason}
+            onChange={(e) => setExternalReleaseReason(e.target.value)}
+            placeholder="Optional release reason when external partner returns inventory"
+            className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {externalAllocations.length > 0 ? externalAllocations.map((allocation) => (
+            <div key={allocation.id} className="rounded-xl border p-4 text-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{allocation.channel_label}</p>
+                    <span className="rounded-full border px-2 py-0.5 text-xs capitalize">{allocation.status}</span>
+                    {allocation.ticket_tier?.name && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{allocation.ticket_tier.name}</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    {allocation.quantity} reserved
+                    {allocation.logged_by?.name ? ` • Logged by ${allocation.logged_by.name}` : ''}
+                    {allocation.created_at ? ` • ${new Date(allocation.created_at).toLocaleString()}` : ''}
+                  </p>
+                  {allocation.ticket_tier?.available !== undefined && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Remaining Tesotunes capacity after this reservation: {allocation.ticket_tier.available}
+                    </p>
+                  )}
+                  {allocation.notes && (
+                    <p className="mt-2 text-xs text-muted-foreground">{allocation.notes}</p>
+                  )}
+                  {allocation.released_at && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Released {new Date(allocation.released_at).toLocaleString()}
+                      {allocation.release_reason ? ` • ${allocation.release_reason}` : ''}
+                    </p>
+                  )}
+                </div>
+                {allocation.status === 'active' ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const result = await releaseExternalAllocation.mutateAsync({
+                          allocationId: allocation.id,
+                          reason: externalReleaseReason || undefined,
+                        });
+                        toast.success(result.message || 'External allocation released');
+                      } catch (error) {
+                        toast.error(error instanceof Error ? error.message : 'Failed to release external allocation');
+                      }
+                    }}
+                    disabled={releaseExternalAllocation.isPending}
+                    className="rounded-lg border px-3 py-2 text-xs hover:bg-muted disabled:opacity-60"
+                  >
+                    Release Reservation
+                  </button>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Released
+                  </div>
+                )}
+              </div>
+            </div>
+          )) : (
+            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+              No external capacity reserved yet. Add reservations here when hybrid events need inventory held back for partner outlets or other non-Tesotunes channels.
+            </div>
+          )}
         </div>
       </div>
 
@@ -584,6 +1397,163 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      <div className="rounded-xl border p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">Ticket Support Queue</h2>
+            <p className="text-sm text-muted-foreground">
+              Review refund requests and payment issues before they turn into manual support noise. Approvals cancel the ticket and post an adjustment into event payout reporting.
+            </p>
+          </div>
+          <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+            {ticketCases.filter((item) => item.status === 'open').length} open
+          </div>
+        </div>
+
+          {analytics?.support_cases && (
+            <div className="mt-4 grid gap-4 md:grid-cols-4">
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Open cases</p>
+                <p className="mt-1 font-semibold">{analytics.support_cases.open}</p>
+            </div>
+            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <p className="text-muted-foreground">Approved</p>
+              <p className="mt-1 font-semibold">{analytics.support_cases.approved}</p>
+            </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Refund requests</p>
+                <p className="mt-1 font-semibold">{analytics.support_cases.refund_requests}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Chargeback review</p>
+                <p className="mt-1 font-semibold">{analytics.support_cases.chargeback_review_cases}</p>
+              </div>
+            </div>
+          )}
+
+          {analytics?.support_cases && (
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Chargeback exposure</p>
+                <p className="mt-1 font-semibold">UGX {analytics.support_cases.chargeback_exposure_amount.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Approved refund amount</p>
+                <p className="mt-1 font-semibold">UGX {analytics.support_cases.approved_refund_amount.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+        <div className="mt-4">
+          <textarea
+            value={supportResolutionNote}
+            onChange={(e) => setSupportResolutionNote(e.target.value)}
+            placeholder="Optional organizer note for case decisions"
+            rows={3}
+            className="w-full rounded-lg border bg-background px-4 py-3 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {ticketCases.length > 0 ? ticketCases.map((item) => (
+            <div key={item.id} className="rounded-xl border p-4 text-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">
+                        {item.case_type === 'refund_request' ? 'Refund review' : 'Payment issue'}
+                      </p>
+                      <span className="rounded-full border px-2 py-0.5 text-xs capitalize">{item.status}</span>
+                      {item.case_type === 'payment_dispute' && item.escalation_status === 'review' && (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-300">
+                          Chargeback review
+                        </span>
+                      )}
+                      {item.attendee?.ticket_tier?.name && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{item.attendee.ticket_tier.name}</span>
+                    )}
+                  </div>
+                    <p className="mt-1 text-muted-foreground">
+                      {[item.attendee?.holder_name, item.attendee?.holder_email, item.attendee?.ticket_number].filter(Boolean).join(' • ')}
+                    </p>
+                    {item.case_type === 'payment_dispute' && (
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {item.dispute_category && <p>Category: {item.dispute_category.replaceAll('_', ' ')}</p>}
+                        {item.gateway_reference && <p>Reference: {item.gateway_reference}</p>}
+                        {item.evidence_url && <p>Evidence: {item.evidence_url}</p>}
+                        {item.evidence_notes && <p>Evidence notes: {item.evidence_notes}</p>}
+                      </div>
+                    )}
+                    <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{item.reason}</p>
+                  {item.requested_refund_amount !== null && item.requested_refund_amount !== undefined && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Requested refund: UGX {item.requested_refund_amount.toLocaleString()}
+                    </p>
+                  )}
+                  {item.resolution_notes && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Resolution: {item.resolution_notes}
+                    </p>
+                  )}
+                </div>
+
+                {item.status === 'open' ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await resolveTicketCase.mutateAsync({
+                            caseId: item.id,
+                            decision: 'approve',
+                            resolution_notes: supportResolutionNote || undefined,
+                            approved_refund_amount: item.requested_refund_amount ?? item.attendee?.price_paid,
+                          });
+                          toast.success(result.message || 'Support case approved');
+                          setSupportResolutionNote('');
+                        } catch (error) {
+                          toast.error(error instanceof Error ? error.message : 'Failed to approve support case');
+                        }
+                      }}
+                      disabled={resolveTicketCase.isPending}
+                      className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await resolveTicketCase.mutateAsync({
+                            caseId: item.id,
+                            decision: 'reject',
+                            resolution_notes: supportResolutionNote || undefined,
+                          });
+                          toast.success(result.message || 'Support case rejected');
+                          setSupportResolutionNote('');
+                        } catch (error) {
+                          toast.error(error instanceof Error ? error.message : 'Failed to reject support case');
+                        }
+                      }}
+                      disabled={resolveTicketCase.isPending}
+                      className="rounded-lg border px-3 py-2 text-xs hover:bg-muted disabled:opacity-60"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    {item.resolved_at ? `Resolved ${new Date(item.resolved_at).toLocaleString()}` : 'Resolved'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )) : (
+            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+              No ticket support cases yet. Refund reviews and payment disputes will appear here when buyers raise them.
+            </div>
+          )}
+        </div>
+      </div>
+
       {analytics && (
         <div className="rounded-xl border p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
@@ -658,6 +1628,82 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               <p className="text-muted-foreground">Failed payout value</p>
               <p className="mt-1 font-semibold">UGX {analytics.payouts.failed_balance.toLocaleString()}</p>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border bg-card p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-medium">Promotion Funnel</h3>
+                <p className="text-sm text-muted-foreground">
+                  Track visits, checkout starts, and paid orders in one funnel view.
+                </p>
+              </div>
+              <div className="text-right text-sm">
+                <p className="font-semibold">{analytics.funnel.totals.visits} visits</p>
+                <p className="text-muted-foreground">{analytics.funnel.totals.checkout_starts} checkout starts</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Visits</p>
+                <p className="mt-1 font-semibold">{analytics.funnel.totals.visits.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Checkout starts</p>
+                <p className="mt-1 font-semibold">{analytics.funnel.totals.checkout_starts.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Paid orders</p>
+                <p className="mt-1 font-semibold">{analytics.funnel.totals.paid_orders.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Tickets sold</p>
+                <p className="mt-1 font-semibold">{analytics.funnel.totals.tickets_sold.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {analytics.funnel.by_source.length > 0 ? (
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="pb-3 pr-4 font-medium">Source</th>
+                      <th className="pb-3 pr-4 font-medium">Visits</th>
+                      <th className="pb-3 pr-4 font-medium">Checkouts</th>
+                      <th className="pb-3 pr-4 font-medium">Orders</th>
+                      <th className="pb-3 pr-4 font-medium">Tickets</th>
+                      <th className="pb-3 pr-4 font-medium">Visit → Checkout</th>
+                      <th className="pb-3 font-medium">Checkout → Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.funnel.by_source.map((row) => (
+                      <tr key={`funnel-${row.label}`} className="border-t">
+                        <td className="py-3 pr-4">
+                          <div>
+                            <p className="font-medium">{row.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[row.channel, row.campaign_code].filter(Boolean).join(' • ') || 'Tracked source'}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">{row.visits.toLocaleString()}</td>
+                        <td className="py-3 pr-4">{row.checkout_starts.toLocaleString()}</td>
+                        <td className="py-3 pr-4">{row.paid_orders.toLocaleString()}</td>
+                        <td className="py-3 pr-4">{row.tickets_sold.toLocaleString()}</td>
+                        <td className="py-3 pr-4">{row.visit_to_checkout_rate.toFixed(1)}%</td>
+                        <td className="py-3">{row.checkout_to_order_rate.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Funnel data will appear here as visitors land on the event page and start checkout.
+              </p>
+            )}
           </div>
 
           <div className="mt-4 rounded-xl border bg-card p-4">
@@ -792,6 +1838,64 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               )) : (
                 <p className="text-sm text-muted-foreground">
                   No tracked campaign conversions yet. Save spend below now, and ROI will start filling in as tracked sales arrive.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-xl border p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-medium">Campaign Comparison</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Compare named sources side by side across orders, payout, fees, and return.
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {analytics.roi.by_source.length} tracked campaign{analytics.roi.by_source.length === 1 ? '' : 's'}
+                </div>
+              </div>
+
+              {analytics.roi.by_source.length > 0 ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="pb-3 pr-4 font-medium">Campaign</th>
+                        <th className="pb-3 pr-4 font-medium">Orders</th>
+                        <th className="pb-3 pr-4 font-medium">Revenue</th>
+                        <th className="pb-3 pr-4 font-medium">Payout</th>
+                        <th className="pb-3 pr-4 font-medium">Tesotunes Fees</th>
+                        <th className="pb-3 pr-4 font-medium">Spend</th>
+                        <th className="pb-3 pr-4 font-medium">Net</th>
+                        <th className="pb-3 font-medium">ROAS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.roi.by_source.map((source) => (
+                        <tr key={`comparison-${source.key}`} className="border-t">
+                          <td className="py-3 pr-4">
+                            <div>
+                              <p className="font-medium">{source.label}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {[source.channel, source.campaign_code].filter(Boolean).join(' • ') || 'Tracked link'}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="py-3 pr-4">{source.orders}</td>
+                          <td className="py-3 pr-4">UGX {source.gross_revenue.toLocaleString()}</td>
+                          <td className="py-3 pr-4">UGX {source.estimated_organizer_payout.toLocaleString()}</td>
+                          <td className="py-3 pr-4">UGX {source.tesotunes_fee_revenue.toLocaleString()}</td>
+                          <td className="py-3 pr-4">UGX {source.spend.toLocaleString()}</td>
+                          <td className="py-3 pr-4">UGX {source.net_profit.toLocaleString()}</td>
+                          <td className="py-3">{source.roas !== null ? `${source.roas.toFixed(2)}x` : 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Campaign comparison will appear here once at least one tracked source has spend or conversion data.
                 </p>
               )}
             </div>
@@ -1196,23 +2300,84 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               Build tracked links for homepage boosts, partner drops, and creator referrals so conversions show up in your event revenue view.
             </p>
           </div>
-          <Link
-            href={`/events/${event.id}`}
-            target="_blank"
-            className="text-sm text-primary hover:underline"
-          >
-            Open public page
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={promotionMarketplaceLink}
+              className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+            >
+              Buy marketplace promotion
+            </Link>
+            <Link
+              href={`/events/${event.id}`}
+              target="_blank"
+              className="text-sm text-primary hover:underline"
+            >
+              Open public page
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {quickCampaigns.map((preset) => (
-            <button
-              key={preset.label}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {event.promotion_requests && event.promotion_requests.length > 0 && (
+              <div className="w-full rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-medium">Marketplace Promotion Requests</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Review Tesotunes approval status for event-linked marketplace packages.
+                    </p>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {event.promotion_requests.length} request{event.promotion_requests.length === 1 ? '' : 's'}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {event.promotion_requests.map((request) => (
+                    <div key={request.id} className="rounded-xl bg-background/80 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{request.promotion_title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[request.promotion_platform, request.promotion_type].filter(Boolean).join(' • ') || 'Promotion package'}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          request.status === 'active'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            : request.status === 'rejected'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                        }`}>
+                          {request.status === 'active' ? 'Approved' : request.status === 'rejected' ? 'Rejected' : 'Pending'}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        <p>UGX {request.price_ugx.toLocaleString()} · {request.price_credits.toLocaleString()} credits</p>
+                        {request.request_notes && (
+                          <p className="mt-2">{request.request_notes}</p>
+                        )}
+                        {request.moderation_notes && (
+                          <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+                            Tesotunes note: {request.moderation_notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {quickCampaigns.map((preset) => (
+              <button
+                key={preset.label}
               onClick={() => {
                 setCampaignSource(preset.source);
                 setCampaignMedium(preset.medium);
                 setCampaignName(`${event.slug}-${preset.medium}`);
+                setCampaignNotes('');
               }}
               className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
             >
@@ -1221,7 +2386,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           ))}
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Campaign Code</label>
             <input
@@ -1249,6 +2414,16 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
             />
           </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Preset Notes</label>
+            <input
+              type="text"
+              value={campaignNotes}
+              onChange={(e) => setCampaignNotes(e.target.value)}
+              placeholder="Optional reminder"
+              className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+            />
+          </div>
         </div>
 
         <div className="mt-4 rounded-xl bg-muted/40 p-4">
@@ -1270,6 +2445,131 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               className="rounded-lg border px-4 py-2 text-sm hover:bg-muted"
             >
               Copy Tracker Row
+            </button>
+            <button
+              onClick={async () => {
+                const nextKey = `campaign-preset-${campaignPresetRows.length + 1}`;
+                const nextPreset: CampaignPresetRow = {
+                  key: nextKey,
+                  name: campaignName || `${event.slug}-campaign`,
+                  source: campaignSource || 'tesotunes_promote',
+                  medium: campaignMedium || 'featured_banner',
+                  campaign_code: campaignName || `${event.slug}-campaign`,
+                  notes: campaignNotes,
+                };
+
+                setCampaignPresetRows((current) => [...current, nextPreset]);
+                await navigator.clipboard.writeText(campaignLink);
+                toast.success('Preset added locally and link copied');
+              }}
+              className="rounded-lg border px-4 py-2 text-sm hover:bg-muted"
+            >
+              Save As Preset
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="font-medium">Saved Campaign Presets</h3>
+              <p className="text-sm text-muted-foreground">
+                Reuse named tracked links for recurring promo channels and copy them in one click.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addCampaignPresetRow}
+              className="rounded-lg border px-3 py-2 text-xs hover:bg-muted"
+            >
+              Add Preset
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {campaignPresetRows.map((preset, index) => (
+              <div key={`${preset.key}-${index}`} className="rounded-xl bg-muted/40 p-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                  <input
+                    type="text"
+                    value={preset.name}
+                    onChange={(e) => updateCampaignPresetRow(index, 'name', e.target.value)}
+                    placeholder="Preset name"
+                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={preset.source}
+                    onChange={(e) => updateCampaignPresetRow(index, 'source', e.target.value)}
+                    placeholder="Source"
+                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={preset.medium}
+                    onChange={(e) => updateCampaignPresetRow(index, 'medium', e.target.value)}
+                    placeholder="Channel"
+                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={preset.campaign_code}
+                    onChange={(e) => updateCampaignPresetRow(index, 'campaign_code', e.target.value)}
+                    placeholder="Campaign code"
+                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCampaignPresetRow(index)}
+                    disabled={campaignPresetRows.length === 1}
+                    className="rounded-lg border px-3 py-2 text-xs hover:bg-muted disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-[1.5fr_auto_auto_auto]">
+                  <input
+                    type="text"
+                    value={preset.notes}
+                    onChange={(e) => updateCampaignPresetRow(index, 'notes', e.target.value)}
+                    placeholder="Notes"
+                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => applyCampaignPreset(preset)}
+                    className="rounded-lg border px-3 py-2 text-xs hover:bg-muted"
+                  >
+                    Load
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyPresetLink(preset)}
+                    className="rounded-lg border px-3 py-2 text-xs hover:bg-muted"
+                  >
+                    Copy Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyPresetTrackerRow(preset)}
+                    className="rounded-lg border px-3 py-2 text-xs hover:bg-muted"
+                  >
+                    Copy Row
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={saveCampaignPresets}
+              disabled={updateEvent.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            >
+              Save Presets
             </button>
           </div>
         </div>
@@ -1336,6 +2636,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             {event.ticket_tiers.map((tier) => {
               const tierTotal = tier.quantity_total || tier.quantity || 0;
               const tierSold = tier.quantity_sold || 0;
+              const tierExternalAllocated = tier.quantity_external_allocated || 0;
               const tierAvailable = tier.available ?? (tierTotal - tierSold);
               const tierProgress = tierTotal > 0 ? (tierSold / tierTotal) * 100 : 0;
 
@@ -1371,6 +2672,11 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {tierSold}/{tierTotal} sold
                     </span>
+                    {tierExternalAllocated > 0 && (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {tierExternalAllocated} external
+                      </span>
+                    )}
                     {tierAvailable <= 0 && (
                       <span className="text-xs text-red-500 font-medium">Sold out</span>
                     )}

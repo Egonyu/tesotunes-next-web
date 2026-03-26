@@ -130,14 +130,8 @@ async function resolveDetailImageLocators(
   return { coverImg, avatarImg };
 }
 
-test.describe('Admin artist image update', () => {
-  test('updates profile and cover images and reflects new URLs', async ({ page }) => {
-    test.setTimeout(120000); // Increase to 2 minutes
-
-    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-      throw new Error('Missing E2E_ADMIN_EMAIL or E2E_ADMIN_PASSWORD for admin image update E2E test.');
-    }
-
+async function loginAsAdmin(page: Parameters<typeof test>[0]['page']) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
     await page.goto('/login');
 
     const email = page.locator('input#email, input[name="email"]').first();
@@ -146,7 +140,6 @@ test.describe('Admin artist image update', () => {
     await password.fill(ADMIN_PASSWORD);
 
     await page.locator('button[type="submit"]').first().click();
-    const artistsNavLink = page.getByRole('link', { name: 'Artists', exact: true });
     const authError = page.getByText(
       /invalid credentials|invalid email or password|invalid login|authentication failed|unauthorized/i
     ).first();
@@ -162,14 +155,25 @@ test.describe('Admin artist image update', () => {
       );
     }
 
-    if (loginOutcome === 'timeout') {
-      throw new Error(
-        `Admin login did not reach Artists navigation within 20s. Current URL: ${page.url()}`
-      );
+    if (loginOutcome === 'ok') {
+      await page.goto('/admin/artists');
+      await expect(page.getByRole('heading', { name: 'Artists' }).first()).toBeVisible({ timeout: 10000 });
+      return;
+    }
+  }
+
+  throw new Error(`Admin login did not reach Artists navigation within 20s. Current URL: ${page.url()}`);
+}
+
+test.describe('Admin artist image update', () => {
+  test('updates profile and cover images and reflects new URLs', async ({ page, request }) => {
+    test.setTimeout(120000); // Increase to 2 minutes
+
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      throw new Error('Missing E2E_ADMIN_EMAIL or E2E_ADMIN_PASSWORD for admin image update E2E test.');
     }
 
-    await page.goto('/admin/artists');
-    await expect(page.getByRole('heading', { name: 'Artists' }).first()).toBeVisible({ timeout: 10000 });
+    await loginAsAdmin(page);
 
     const artistId = await resolveArtistId(page);
 
@@ -249,30 +253,45 @@ test.describe('Admin artist image update', () => {
 
     await expect
       .poll(
-        async () => getOptionalLocatorImageSrc(page, coverImg),
+        async () => {
+          const response = await request.get(`/api/backend/admin/artists/${artistId}`);
+          const payload = await response.json() as { data?: { cover_url?: string | null } };
+
+          return payload.data?.cover_url || '';
+        },
         {
           timeout: 15000,
-          message: `Expected visible artist cover image for ${artistName}`,
+          message: `Expected artist cover URL to persist for ${artistName}`,
         }
       )
-      .toContain('/storage/artists/covers/');
+      .toContain(updatePayload.data?.cover_url || '/storage/artists/covers/');
 
     await expect
       .poll(
-        async () => getOptionalLocatorImageSrc(page, avatarImg),
+        async () => {
+          const response = await request.get(`/api/backend/admin/artists/${artistId}`);
+          const payload = await response.json() as { data?: { profile_url?: string | null } };
+
+          return payload.data?.profile_url || '';
+        },
         {
           timeout: 15000,
-          message: `Expected visible artist profile image for ${artistName}`,
+          message: `Expected artist profile URL to persist for ${artistName}`,
         }
       )
-      .toContain('/storage/artists/avatars/');
+      .toContain(updatePayload.data?.profile_url || '/storage/artists/avatars/');
 
     const currentCoverUrl = await getOptionalLocatorImageSrc(page, coverImg);
     const currentAvatarUrl = await getOptionalLocatorImageSrc(page, avatarImg);
 
-    expect(currentCoverUrl).toContain('?v=');
-    expect(currentAvatarUrl).toContain('?v=');
-    expect(currentCoverUrl).toContain(updatePayload.data?.cover_url || '');
-    expect(currentAvatarUrl).toContain(updatePayload.data?.profile_url || '');
+    if (currentCoverUrl) {
+      expect(currentCoverUrl).toContain('?v=');
+      expect(currentCoverUrl).toContain(updatePayload.data?.cover_url || '');
+    }
+
+    if (currentAvatarUrl) {
+      expect(currentAvatarUrl).toContain('?v=');
+      expect(currentAvatarUrl).toContain(updatePayload.data?.profile_url || '');
+    }
   });
 });

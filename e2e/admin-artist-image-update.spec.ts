@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 
 const ARTIST_ID = process.env.E2E_ARTIST_ID;
 const ADMIN_EMAIL = (process.env.E2E_ADMIN_EMAIL || '').trim();
@@ -28,6 +28,18 @@ async function getOptionalImageSrc(page: Parameters<typeof test>[0]['page'], sel
   }
 
   const src = await image.getAttribute('src');
+  return extractRealImageUrl(src, page.url());
+}
+
+async function getOptionalLocatorImageSrc(
+  page: Parameters<typeof test>[0]['page'],
+  locator: Locator
+): Promise<string> {
+  if ((await locator.count()) === 0) {
+    return '';
+  }
+
+  const src = await locator.first().getAttribute('src');
   return extractRealImageUrl(src, page.url());
 }
 
@@ -98,6 +110,24 @@ async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promis
   }
 
   return match[1];
+}
+
+async function resolveDetailImageLocators(
+  page: Parameters<typeof test>[0]['page'],
+  artistName: string
+) {
+  const coverByTestId = page.getByTestId('artist-cover-image').first();
+  const avatarByTestId = page.getByTestId('artist-profile-image').first();
+
+  const coverImg = (await coverByTestId.count()) > 0
+    ? coverByTestId
+    : page.locator(`img[alt="${artistName} cover"]`).first();
+
+  const avatarImg = (await avatarByTestId.count()) > 0
+    ? avatarByTestId
+    : page.locator(`img[alt="${artistName}"]`).first();
+
+  return { coverImg, avatarImg };
 }
 
 test.describe('Admin artist image update', () => {
@@ -212,25 +242,36 @@ test.describe('Admin artist image update', () => {
     const artistName = updatePayload.data?.name || 'Artist';
 
     await page.goto(`/admin/artists/${artistId}`);
+    await expect(page.getByRole('heading', { name: artistName })).toBeVisible({ timeout: 10000 });
 
-    const coverImg = page.locator(`img[alt="${artistName} cover"]`).first();
-    const avatarImg = page.locator(`img[alt="${artistName}"]`).first();
+    const { coverImg, avatarImg } = await resolveDetailImageLocators(page, artistName);
 
-    await expect(coverImg).toBeVisible();
-    await expect(avatarImg).toBeVisible();
+    await expect
+      .poll(
+        async () => getOptionalLocatorImageSrc(page, coverImg),
+        {
+          timeout: 15000,
+          message: `Expected visible artist cover image for ${artistName}`,
+        }
+      )
+      .toContain('/storage/artists/covers/');
 
-    const coverSrc = await coverImg.getAttribute('src');
-    const avatarSrc = await avatarImg.getAttribute('src');
+    await expect
+      .poll(
+        async () => getOptionalLocatorImageSrc(page, avatarImg),
+        {
+          timeout: 15000,
+          message: `Expected visible artist profile image for ${artistName}`,
+        }
+      )
+      .toContain('/storage/artists/avatars/');
 
-    const realCoverUrl = extractRealImageUrl(coverSrc, page.url());
-    const realAvatarUrl = extractRealImageUrl(avatarSrc, page.url());
+    const currentCoverUrl = await getOptionalLocatorImageSrc(page, coverImg);
+    const currentAvatarUrl = await getOptionalLocatorImageSrc(page, avatarImg);
 
-    expect(realCoverUrl).toContain('/storage/artists/covers/');
-    expect(realAvatarUrl).toContain('/storage/artists/avatars/');
-    expect(realCoverUrl).toContain('?v=');
-    expect(realAvatarUrl).toContain('?v=');
-
-    expect(realCoverUrl).toContain(updatePayload.data?.cover_url || '');
-    expect(realAvatarUrl).toContain(updatePayload.data?.profile_url || '');
+    expect(currentCoverUrl).toContain('?v=');
+    expect(currentAvatarUrl).toContain('?v=');
+    expect(currentCoverUrl).toContain(updatePayload.data?.cover_url || '');
+    expect(currentAvatarUrl).toContain(updatePayload.data?.profile_url || '');
   });
 });

@@ -340,6 +340,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
             <SafeImage
               src={pickMediaUrl(artist.cover_url)}
               alt={`${artist.name} cover`}
+              data-testid="artist-cover-image"
               fill
               className="object-cover"
             />
@@ -351,6 +352,7 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                 <SafeImage
                   src={pickMediaUrl(artist.profile_url)}
                   alt={artist.name}
+                  data-testid="artist-profile-image"
                   fill
                   className="object-cover"
                   fallback={<InitialsAvatar name={artist.name} className="bg-white/90 text-slate-700" textClassName="text-3xl" />}

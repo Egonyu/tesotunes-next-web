@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api';
 import { normalizeCountryCode } from '@/lib/country';
@@ -29,13 +29,23 @@ interface UserFormData {
   role: string;
   status: string;
   email_verified: boolean;
-  is_artist: boolean;
-  artist_id: string;
+  is_event_organizer: boolean;
+  organizer_business_name: string;
+  organizer_support_email: string;
+  organizer_support_phone: string;
+  organizer_notes: string;
+  organizer_payout_method: string;
+  organizer_mobile_money_provider: string;
+  organizer_mobile_money_number: string;
+  organizer_bank_name: string;
+  organizer_bank_account: string;
   avatar: File | null;
 }
 
 export default function CreateUserPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const organizerMode = searchParams.get('mode') === 'organizer';
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
     email: '',
@@ -49,8 +59,16 @@ export default function CreateUserPage() {
     role: 'user',
     status: 'active',
     email_verified: false,
-    is_artist: false,
-    artist_id: '',
+    is_event_organizer: organizerMode,
+    organizer_business_name: '',
+    organizer_support_email: '',
+    organizer_support_phone: '',
+    organizer_notes: '',
+    organizer_payout_method: 'mobile_money',
+    organizer_mobile_money_provider: 'mtn',
+    organizer_mobile_money_number: '',
+    organizer_bank_name: '',
+    organizer_bank_account: '',
     avatar: null,
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -60,12 +78,6 @@ export default function CreateUserPage() {
   const { data: roles } = useQuery({
     queryKey: ['admin', 'roles'],
     queryFn: () => apiGet<{ data: Role[] }>('/admin/roles'),
-  });
-
-  const { data: artists } = useQuery({
-    queryKey: ['admin', 'artists', 'list'],
-    queryFn: () => apiGet<{ data: { id: string; name: string }[] }>('/admin/artists?per_page=1000'),
-    enabled: formData.is_artist,
   });
 
   const roleOptions = (roles?.data ?? [])
@@ -136,9 +148,17 @@ export default function CreateUserPage() {
     data.append('role', formData.role);
     data.append('status', formData.status);
     data.append('email_verified', formData.email_verified ? '1' : '0');
-    data.append('is_artist', formData.is_artist ? '1' : '0');
-    if (formData.is_artist && formData.artist_id) {
-      data.append('artist_id', formData.artist_id);
+    data.append('is_event_organizer', formData.is_event_organizer ? '1' : '0');
+    if (formData.is_event_organizer) {
+      data.append('organizer_business_name', formData.organizer_business_name);
+      data.append('organizer_support_email', formData.organizer_support_email);
+      data.append('organizer_support_phone', formData.organizer_support_phone);
+      data.append('organizer_notes', formData.organizer_notes);
+      data.append('organizer_payout_method', formData.organizer_payout_method);
+      data.append('organizer_mobile_money_provider', formData.organizer_mobile_money_provider);
+      data.append('organizer_mobile_money_number', formData.organizer_mobile_money_number);
+      data.append('organizer_bank_name', formData.organizer_bank_name);
+      data.append('organizer_bank_account', formData.organizer_bank_account);
     }
 
     if (formData.avatar) data.append('avatar', formData.avatar);
@@ -149,12 +169,12 @@ export default function CreateUserPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Add New User"
-        description="Create a new user account"
+        title={organizerMode ? 'Add Organizer' : 'Add New User'}
+        description={organizerMode ? 'Create an event organizer-ready account' : 'Create a new user account'}
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Users', href: '/admin/users' },
-          { label: 'New User' },
+          { label: organizerMode ? 'New Organizer' : 'New User' },
         ]}
         backHref="/admin/users"
       />
@@ -272,6 +292,124 @@ export default function CreateUserPage() {
               </div>
             </FormSection>
 
+            <FormSection title="Event Organizer Setup" description="Prepare this account for event ownership, payouts, and organizer support flows">
+              <div className="flex items-center gap-2">
+                <input
+                  id="is_event_organizer"
+                  type="checkbox"
+                  checked={formData.is_event_organizer}
+                  onChange={(e) => updateField('is_event_organizer', e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="is_event_organizer" className="text-sm font-medium">
+                  This user will manage events as an organizer
+                </label>
+              </div>
+
+              {formData.is_event_organizer && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Business / Organizer Name" error={errors.organizer_business_name}>
+                      <input
+                        type="text"
+                        value={formData.organizer_business_name}
+                        onChange={(e) => updateField('organizer_business_name', e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        placeholder="Tesotunes Live UG"
+                      />
+                    </FormField>
+
+                    <FormField label="Support Email" error={errors.organizer_support_email}>
+                      <input
+                        type="email"
+                        value={formData.organizer_support_email}
+                        onChange={(e) => updateField('organizer_support_email', e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        placeholder="events@example.com"
+                      />
+                    </FormField>
+
+                    <FormField label="Support Phone" error={errors.organizer_support_phone}>
+                      <input
+                        type="tel"
+                        value={formData.organizer_support_phone}
+                        onChange={(e) => updateField('organizer_support_phone', e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        placeholder="+256 700 000 000"
+                      />
+                    </FormField>
+
+                    <FormField label="Payout Method" error={errors.organizer_payout_method}>
+                      <select
+                        value={formData.organizer_payout_method}
+                        onChange={(e) => updateField('organizer_payout_method', e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="mobile_money">Mobile Money</option>
+                        <option value="zengapay">ZengaPay</option>
+                        <option value="bank">Bank Transfer</option>
+                      </select>
+                    </FormField>
+                  </div>
+
+                  {formData.organizer_payout_method === 'bank' ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField label="Bank Name" error={errors.organizer_bank_name}>
+                        <input
+                          type="text"
+                          value={formData.organizer_bank_name}
+                          onChange={(e) => updateField('organizer_bank_name', e.target.value)}
+                          className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        />
+                      </FormField>
+                      <FormField label="Bank Account" error={errors.organizer_bank_account}>
+                        <input
+                          type="text"
+                          value={formData.organizer_bank_account}
+                          onChange={(e) => updateField('organizer_bank_account', e.target.value)}
+                          className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                        />
+                      </FormField>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField label="Mobile Money Provider" error={errors.organizer_mobile_money_provider}>
+                        <select
+                          value={formData.organizer_mobile_money_provider}
+                          onChange={(e) => updateField('organizer_mobile_money_provider', e.target.value)}
+                          disabled={formData.organizer_payout_method === 'zengapay'}
+                          className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary disabled:opacity-60"
+                        >
+                          <option value="mtn">MTN</option>
+                          <option value="airtel">Airtel</option>
+                          <option value="zengapay">ZengaPay</option>
+                        </select>
+                      </FormField>
+                      <FormField label="Mobile Money Number" error={errors.organizer_mobile_money_number}>
+                        <input
+                          type="tel"
+                          value={formData.organizer_mobile_money_number}
+                          onChange={(e) => updateField('organizer_mobile_money_number', e.target.value)}
+                          className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                          placeholder="+256 700 000 000"
+                        />
+                      </FormField>
+                    </div>
+                  )}
+
+                  <FormField label="Organizer Notes" error={errors.organizer_notes}>
+                    <textarea
+                      rows={3}
+                      value={formData.organizer_notes}
+                      onChange={(e) => updateField('organizer_notes', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                      placeholder="Optional internal notes about this organizer account"
+                    />
+                  </FormField>
+                </>
+              )}
+            </FormSection>
+
             <FormSection title="Bio">
               <FormField label="About" error={errors.bio}>
                 <textarea
@@ -344,35 +482,9 @@ export default function CreateUserPage() {
                   ))}
                 </select>
               </FormField>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_artist}
-                    onChange={(e) => updateField('is_artist', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm">Link to Artist Profile</span>
-                </label>
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                Selecting the `artist` role already creates the linked artist account automatically. Manual `artist_id` linking has been removed from this admin user flow.
               </div>
-
-              {formData.is_artist && (
-                <FormField label="Artist Profile" error={errors.artist_id}>
-                  <select
-                    value={formData.artist_id}
-                    onChange={(e) => updateField('artist_id', e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select artist or create new</option>
-                    {artists?.data?.map(artist => (
-                      <option key={artist.id} value={artist.id}>
-                        {artist.name}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-              )}
             </FormSection>
 
             <FormSection title="Status">

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Minus, Image as ImageIcon, Calendar, MapPin, DollarSign, Ticket } from 'lucide-react';
 import { useCreateEvent, CreateEventRequest } from '@/hooks/useEvents';
+import EventCommissionEstimator from '@/components/events/EventCommissionEstimator';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
@@ -63,6 +64,11 @@ export default function CreateEventPage() {
   const [cancellationPolicy, setCancellationPolicy] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportPhone, setSupportPhone] = useState('');
+  const [invoiceIssuerName, setInvoiceIssuerName] = useState('');
+  const [invoiceSupportEmail, setInvoiceSupportEmail] = useState('');
+  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState('');
+  const [taxRatePercent, setTaxRatePercent] = useState('');
+  const [taxIsInclusive, setTaxIsInclusive] = useState(true);
   const [ageRestriction, setAgeRestriction] = useState('');
   const [doorNotes, setDoorNotes] = useState('');
   const [taxVatNotes, setTaxVatNotes] = useState('');
@@ -152,6 +158,11 @@ export default function CreateEventPage() {
       contact_info: {
         support_email: supportEmail || undefined,
         support_phone: supportPhone || undefined,
+        invoice_issuer_name: invoiceIssuerName || undefined,
+        invoice_support_email: invoiceSupportEmail || undefined,
+        tax_registration_number: taxRegistrationNumber || undefined,
+        tax_rate_percent: taxRatePercent ? Number(taxRatePercent) : undefined,
+        tax_is_inclusive: taxRatePercent ? taxIsInclusive : undefined,
         age_restriction: ageRestriction || undefined,
         door_notes: doorNotes || undefined,
         tax_vat_notes: taxVatNotes || undefined,
@@ -330,6 +341,75 @@ export default function CreateEventPage() {
                 placeholder="+256..."
                 className="w-full px-4 py-3 rounded-lg border bg-background"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Invoice Issuer Name
+              </label>
+              <input
+                type="text"
+                value={invoiceIssuerName}
+                onChange={(e) => setInvoiceIssuerName(e.target.value)}
+                placeholder="Tesotunes Events Limited"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Invoice Support Email
+              </label>
+              <input
+                type="email"
+                value={invoiceSupportEmail}
+                onChange={(e) => setInvoiceSupportEmail(e.target.value)}
+                placeholder="billing@yourevent.com"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Tax Registration Number
+              </label>
+              <input
+                type="text"
+                value={taxRegistrationNumber}
+                onChange={(e) => setTaxRegistrationNumber(e.target.value)}
+                placeholder="TIN / VAT Number"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Tax Rate Percent
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={taxRatePercent}
+                onChange={(e) => setTaxRatePercent(e.target.value)}
+                placeholder="18"
+                className="w-full px-4 py-3 rounded-lg border bg-background"
+              />
+            </div>
+
+            <div className="md:col-span-2 rounded-lg border bg-muted/20 px-4 py-3">
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={taxIsInclusive}
+                  onChange={(e) => setTaxIsInclusive(e.target.checked)}
+                  className="h-4 w-4 rounded border"
+                />
+                Ticket price already includes tax
+              </label>
+              <p className="mt-2 text-xs text-muted-foreground">
+                This affects invoice presentation only. Tesotunes will not add extra tax at checkout unless a charging contract is introduced later.
+              </p>
             </div>
 
             <div>
@@ -681,6 +761,17 @@ export default function CreateEventPage() {
             ))}
           </div>
         </section>
+
+        <EventCommissionEstimator
+          endpoint="/artist/events/commission-simulation"
+          ticketingMode={ticketingMode}
+          currency="UGX"
+          ticketTiers={ticketTiers.map((tier) => ({
+            name: tier.name,
+            price: isFreeRsvp ? 0 : tier.price,
+            quantity: tier.quantity,
+          }))}
+        />
 
         {/* Submit */}
         <div className="flex gap-4">

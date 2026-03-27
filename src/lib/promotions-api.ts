@@ -9,6 +9,7 @@ import type {
   PromotionListItem,
   PromotionOrder,
   PromotionReview,
+  PromoterProfile,
   BrowsePromotionsParams,
   PurchasePromotionRequest,
   SubmitVerificationRequest,
@@ -75,20 +76,7 @@ export function fetchPlatforms() {
 
 /** Get promoter public profile */
 export function fetchPromoterProfile(username: string) {
-  return apiGet<{
-    data: {
-      id: number;
-      name: string;
-      username: string;
-      avatar_url: string | null;
-      is_verified: boolean;
-      follower_count: number;
-      total_promotions: number;
-      average_rating: number;
-      completed_orders: number;
-      promotions: PromotionListItem[];
-    };
-  }>(`/promoters/${username}`);
+  return apiGet<{ data: PromoterProfile }>(`/promoters/${username}`);
 }
 
 // ---------------------------------------------------------------------------

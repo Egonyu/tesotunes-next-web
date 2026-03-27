@@ -318,6 +318,11 @@ export interface Event {
   contact_info?: {
     support_email?: string;
     support_phone?: string;
+    invoice_issuer_name?: string;
+    invoice_support_email?: string;
+    tax_registration_number?: string;
+    tax_rate_percent?: number;
+    tax_is_inclusive?: boolean;
     age_restriction?: string;
     door_notes?: string;
     tax_vat_notes?: string;
@@ -350,6 +355,11 @@ export interface Event {
     cancellation_policy?: string;
     support_email?: string;
     support_phone?: string;
+    invoice_issuer_name?: string;
+    invoice_support_email?: string;
+    tax_registration_number?: string;
+    tax_rate_percent?: number;
+    tax_is_inclusive?: boolean;
     age_restriction?: string;
     door_notes?: string;
     tax_vat_notes?: string;
@@ -449,6 +459,63 @@ export interface Ticket {
     };
   } | null;
   created_at: string;
+}
+
+export interface TicketInvoice {
+  invoice_number: string;
+  issued_at?: string | null;
+  currency: string;
+  status: string;
+  event?: {
+    id?: number | null;
+    title?: string | null;
+    starts_at?: string | null;
+    venue_name?: string | null;
+    city?: string | null;
+    country?: string | null;
+  } | null;
+  ticket?: {
+    id: number;
+    ticket_number: string;
+    tier_name?: string | null;
+    holder_name?: string | null;
+    holder_email?: string | null;
+    holder_phone?: string | null;
+    payment_method?: string | null;
+    payment_reference?: string | null;
+    order_id?: string | null;
+  } | null;
+  issuer?: {
+    name?: string | null;
+    support_email?: string | null;
+    support_phone?: string | null;
+    tax_registration_number?: string | null;
+  } | null;
+  buyer?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  line_items: Array<{
+    label: string;
+    quantity: number;
+    unit_price: number;
+    base_amount: number;
+    service_fee: number;
+    total_amount: number;
+  }>;
+  tax: {
+    rate_percent: number;
+    inclusive: boolean;
+    amount: number;
+    notes?: string | null;
+  };
+  totals: {
+    subtotal: number;
+    service_fee: number;
+    tax_amount: number;
+    total_paid: number;
+  };
 }
 
 export interface SavedAttendeeProfile {
@@ -863,6 +930,11 @@ export interface CreateEventRequest {
   contact_info?: {
     support_email?: string;
     support_phone?: string;
+    invoice_issuer_name?: string;
+    invoice_support_email?: string;
+    tax_registration_number?: string;
+    tax_rate_percent?: number;
+    tax_is_inclusive?: boolean;
     age_restriction?: string;
     door_notes?: string;
     tax_vat_notes?: string;
@@ -1009,6 +1081,14 @@ export function useTicket(ticketId: number | string) {
     queryKey: ["ticket", ticketId],
     queryFn: () => apiGet<{ data: Ticket }>(`/tickets/${ticketId}`).then(res => res.data),
     enabled: !!ticketId,
+  });
+}
+
+export function useTicketInvoice(ticketId: number | string, enabled = false) {
+  return useQuery({
+    queryKey: ["ticket", ticketId, "invoice"],
+    queryFn: () => apiGet<{ data: TicketInvoice }>(`/tickets/${ticketId}/invoice`).then((res) => res.data),
+    enabled: enabled && !!ticketId,
   });
 }
 
@@ -1272,6 +1352,7 @@ export function useEventAnalytics(eventId: number | string) {
           legacy_orders_without_fee_breakdown: number;
         };
         payouts: {
+          held_balance: number;
           pending_balance: number;
           ready_balance: number;
           settled_balance: number;
@@ -1282,9 +1363,11 @@ export function useEventAnalytics(eventId: number | string) {
             ready: number;
             paid: number;
             failed: number;
+            held: number;
           };
           latest_ready_at?: string | null;
           latest_paid_out_at?: string | null;
+          latest_held_at?: string | null;
         };
         marketing: {
           attributed_orders: number;
@@ -1408,6 +1491,33 @@ export function useEventAnalytics(eventId: number | string) {
           chargeback_review_cases: number;
           chargeback_exposure_amount: number;
           approved_refund_amount: number;
+        };
+        audit_log: {
+          total_entries: number;
+          recent_entries: Array<{
+            id: number;
+            action: string;
+            actor?: string | null;
+            created_at?: string | null;
+            old_values?: Record<string, unknown>;
+            new_values?: Record<string, unknown>;
+          }>;
+        };
+        health: {
+          score: number;
+          grade: 'strong' | 'watch' | 'at_risk';
+          issues: Array<{
+            key: string;
+            severity: 'low' | 'medium' | 'high';
+            label: string;
+            detail: string;
+          }>;
+          summary: {
+            conversion_rate: number;
+            sell_through_rate: number;
+            held_balance: number;
+            legacy_orders_without_fee_breakdown: number;
+          };
         };
         check_ins: number;
         interested_count: number;

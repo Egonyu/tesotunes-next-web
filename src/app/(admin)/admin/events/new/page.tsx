@@ -7,6 +7,7 @@ import { apiGet, apiPostForm } from '@/lib/api';
 import { toast } from 'sonner';
 import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 import { PageHeader, FormField, FormSection, FormActions } from '@/components/admin';
+import EventCommissionEstimator from '@/components/events/EventCommissionEstimator';
 import { Upload, X, Calendar, Plus, Trash2, Search, Loader2, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
@@ -43,6 +44,7 @@ interface EventFormData {
   max_capacity: string;
   is_featured: boolean;
   status: string;
+  organizer_user_id: string;
   artist_ids: string[];
   cover_image: File | null;
   ticket_tiers: TicketTier[];
@@ -73,6 +75,7 @@ const initialFormData: EventFormData = {
   max_capacity: '',
   is_featured: false,
   status: 'draft',
+  organizer_user_id: '',
   artist_ids: [],
   cover_image: null,
   ticket_tiers: [],
@@ -84,6 +87,13 @@ interface Artist {
   avatar_url?: string;
 }
 
+interface OrganizerOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function CreateEventPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -91,6 +101,7 @@ export default function CreateEventPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [artistSearch, setArtistSearch] = useState('');
+  const [organizerSearch, setOrganizerSearch] = useState('');
 
   const { data: artistsData, isLoading: artistsLoading } = useQuery({
     queryKey: ['admin', 'artists-select', artistSearch],
@@ -101,6 +112,18 @@ export default function CreateEventPage() {
       const res = await apiGet<{ data: Artist[] } | Artist[]>(`/admin/artists?${params.toString()}`);
       // Handle both { data: [...] } and direct array responses
       return Array.isArray(res) ? res : (res.data || []);
+    },
+  });
+
+  const { data: organizersData, isLoading: organizersLoading } = useQuery({
+    queryKey: ['admin', 'event-organizers', organizerSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('per_page', '50');
+      params.set('is_active', '1');
+      if (organizerSearch) params.set('search', organizerSearch);
+      const res = await apiGet<{ data: OrganizerOption[] }>(`/admin/users?${params.toString()}`);
+      return res.data || [];
     },
   });
 
@@ -279,6 +302,44 @@ export default function CreateEventPage() {
               required
               placeholder="summer-music-festival-2024"
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Organizer Account</label>
+              <input
+                type="text"
+                value={organizerSearch}
+                onChange={(e) => setOrganizerSearch(e.target.value)}
+                placeholder="Search users by name, email, username..."
+                className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <select
+                name="organizer_user_id"
+                value={formData.organizer_user_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Use current admin account</option>
+                {(organizersData || []).map((organizer) => (
+                  <option key={organizer.id} value={organizer.id}>
+                    {organizer.name} ({organizer.role}) - {organizer.email}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                This controls who owns the event for payouts, analytics, staff, and organizer workflows.
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">Organizer ownership matters</p>
+              <p>
+                Choose the real organizer account here instead of leaving the event attached to the logged-in admin.
+              </p>
+              {organizersLoading && (
+                <p className="mt-2">Loading organizer accounts...</p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -715,6 +776,18 @@ export default function CreateEventPage() {
             </>
           )}
         </FormSection>
+
+        <EventCommissionEstimator
+          endpoint="/admin/events/commission-simulation"
+          organizerUserId={formData.organizer_user_id || null}
+          ticketingMode={formData.is_free ? 'free_rsvp' : 'tesotunes_managed'}
+          currency={formData.currency}
+          ticketTiers={formData.is_free ? [{
+            name: 'Free RSVP',
+            price: 0,
+            quantity: Number(formData.max_capacity || 0) || 1,
+          }] : formData.ticket_tiers}
+        />
 
         <FormSection title="Settings" description="Event visibility options">
           <label className="flex items-center gap-2 cursor-pointer">

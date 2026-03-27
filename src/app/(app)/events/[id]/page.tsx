@@ -96,6 +96,32 @@ export default function EventDetailPage({
     landing_page: `/events/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
   }), [id, searchParams])
 
+  useEffect(() => {
+    if (!event) {
+      return
+    }
+
+    const storageKey = 'tesotunes-event-funnel-session'
+    const eventVisitKey = `tesotunes-event-visit:${event.id}:${attribution.campaign_code || attribution.source || 'direct'}`
+    let sessionKey = window.localStorage.getItem(storageKey)
+
+    if (!sessionKey) {
+      sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      window.localStorage.setItem(storageKey, sessionKey)
+    }
+
+    if (window.sessionStorage.getItem(eventVisitKey)) {
+      return
+    }
+
+    window.sessionStorage.setItem(eventVisitKey, '1')
+    trackEventFunnel.mutate({
+      stage: 'visit',
+      session_key: sessionKey,
+      ...attribution,
+    })
+  }, [attribution, event, trackEventFunnel])
+
   if (isLoading) {
     return (
       <div className="container py-8 flex items-center justify-center min-h-[60vh]">
@@ -146,32 +172,6 @@ export default function EventDetailPage({
     ) || getEventCapacity(event) || 0
   const hasTicketTiers = (event.ticket_tiers?.length || 0) > 0
   const isSoldOut = hasTicketTiers ? tesotunesAvailable <= 0 : totalCapacity > 0 && totalSold >= totalCapacity
-
-  useEffect(() => {
-    if (!event) {
-      return
-    }
-
-    const storageKey = 'tesotunes-event-funnel-session'
-    const eventVisitKey = `tesotunes-event-visit:${event.id}:${attribution.campaign_code || attribution.source || 'direct'}`
-    let sessionKey = window.localStorage.getItem(storageKey)
-
-    if (!sessionKey) {
-      sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-      window.localStorage.setItem(storageKey, sessionKey)
-    }
-
-    if (window.sessionStorage.getItem(eventVisitKey)) {
-      return
-    }
-
-    window.sessionStorage.setItem(eventVisitKey, '1')
-    trackEventFunnel.mutate({
-      stage: 'visit',
-      session_key: sessionKey,
-      ...attribution,
-    })
-  }, [attribution, event, trackEventFunnel])
 
   function handleBookmark() {
     setIsBookmarked(!isBookmarked)

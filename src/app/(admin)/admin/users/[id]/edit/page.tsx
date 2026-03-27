@@ -22,6 +22,19 @@ type UserDetail = {
   role: 'user' | 'artist' | 'moderator' | 'admin';
   is_active: boolean;
   avatar_url?: string | null;
+  event_organizer?: {
+    enabled: boolean;
+    business_name?: string | null;
+    support_email?: string | null;
+    support_phone?: string | null;
+    notes?: string | null;
+    ready_for_events?: boolean;
+    payout_method?: string | null;
+    mobile_money_provider?: string | null;
+    mobile_money_number?: string | null;
+    bank_name?: string | null;
+    bank_account?: string | null;
+  } | null;
 };
 
 type UserFormData = {
@@ -35,6 +48,16 @@ type UserFormData = {
   bio: string;
   is_active: boolean;
   password: string;
+  is_event_organizer: boolean;
+  organizer_business_name: string;
+  organizer_support_email: string;
+  organizer_support_phone: string;
+  organizer_notes: string;
+  organizer_payout_method: string;
+  organizer_mobile_money_provider: string;
+  organizer_mobile_money_number: string;
+  organizer_bank_name: string;
+  organizer_bank_account: string;
 };
 
 type RoleOption = {
@@ -86,6 +109,16 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
     bio: '',
     is_active: true,
     password: '',
+    is_event_organizer: false,
+    organizer_business_name: '',
+    organizer_support_email: '',
+    organizer_support_phone: '',
+    organizer_notes: '',
+    organizer_payout_method: 'mobile_money',
+    organizer_mobile_money_provider: 'mtn',
+    organizer_mobile_money_number: '',
+    organizer_bank_name: '',
+    organizer_bank_account: '',
   });
 
   const { data: userRes, isLoading } = useQuery({
@@ -124,6 +157,16 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       bio: user.bio || '',
       is_active: user.is_active ?? true,
       password: '',
+      is_event_organizer: Boolean(user.event_organizer?.enabled),
+      organizer_business_name: user.event_organizer?.business_name || '',
+      organizer_support_email: user.event_organizer?.support_email || '',
+      organizer_support_phone: user.event_organizer?.support_phone || '',
+      organizer_notes: user.event_organizer?.notes || '',
+      organizer_payout_method: user.event_organizer?.payout_method || 'mobile_money',
+      organizer_mobile_money_provider: user.event_organizer?.mobile_money_provider || 'mtn',
+      organizer_mobile_money_number: user.event_organizer?.mobile_money_number || '',
+      organizer_bank_name: user.event_organizer?.bank_name || '',
+      organizer_bank_account: user.event_organizer?.bank_account || '',
     });
     setErrors({});
   }, [user]);
@@ -140,7 +183,20 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         city: payload.city.trim() || null,
         bio: payload.bio.trim() || null,
         is_active: payload.is_active,
+        is_event_organizer: payload.is_event_organizer,
       };
+
+      if (payload.is_event_organizer) {
+        body.organizer_business_name = payload.organizer_business_name.trim() || null;
+        body.organizer_support_email = payload.organizer_support_email.trim() || null;
+        body.organizer_support_phone = payload.organizer_support_phone.trim() || null;
+        body.organizer_notes = payload.organizer_notes.trim() || null;
+        body.organizer_payout_method = payload.organizer_payout_method;
+        body.organizer_mobile_money_provider = payload.organizer_mobile_money_provider || null;
+        body.organizer_mobile_money_number = payload.organizer_mobile_money_number.trim() || null;
+        body.organizer_bank_name = payload.organizer_bank_name.trim() || null;
+        body.organizer_bank_account = payload.organizer_bank_account.trim() || null;
+      }
 
       if (payload.password.trim()) {
         body.password = payload.password.trim();
@@ -305,6 +361,108 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               <label htmlFor="is_active" className="text-sm font-medium">Active account</label>
             </div>
           </div>
+        </FormSection>
+
+        <FormSection title="Event Organizer Setup" description="Manage event ownership readiness, support contacts, and payout details">
+          <div className="flex items-center gap-2">
+            <input
+              id="is_event_organizer"
+              type="checkbox"
+              checked={formData.is_event_organizer}
+              onChange={(e) => setFormData((prev) => ({ ...prev, is_event_organizer: e.target.checked }))}
+            />
+            <label htmlFor="is_event_organizer" className="text-sm font-medium">Organizer-ready account</label>
+          </div>
+
+          {formData.is_event_organizer && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Business / Organizer Name" error={errors.organizer_business_name}>
+                  <input
+                    value={formData.organizer_business_name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, organizer_business_name: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+                <FormField label="Support Email" error={errors.organizer_support_email}>
+                  <input
+                    type="email"
+                    value={formData.organizer_support_email}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, organizer_support_email: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+                <FormField label="Support Phone" error={errors.organizer_support_phone}>
+                  <input
+                    value={formData.organizer_support_phone}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, organizer_support_phone: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  />
+                </FormField>
+                <FormField label="Payout Method" error={errors.organizer_payout_method}>
+                  <select
+                    value={formData.organizer_payout_method}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, organizer_payout_method: e.target.value }))}
+                    className="w-full rounded-lg border px-4 py-2 bg-background"
+                  >
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="zengapay">ZengaPay</option>
+                    <option value="bank">Bank Transfer</option>
+                  </select>
+                </FormField>
+              </div>
+
+              {formData.organizer_payout_method === 'bank' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Bank Name" error={errors.organizer_bank_name}>
+                    <input
+                      value={formData.organizer_bank_name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, organizer_bank_name: e.target.value }))}
+                      className="w-full rounded-lg border px-4 py-2 bg-background"
+                    />
+                  </FormField>
+                  <FormField label="Bank Account" error={errors.organizer_bank_account}>
+                    <input
+                      value={formData.organizer_bank_account}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, organizer_bank_account: e.target.value }))}
+                      className="w-full rounded-lg border px-4 py-2 bg-background"
+                    />
+                  </FormField>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Mobile Money Provider" error={errors.organizer_mobile_money_provider}>
+                    <select
+                      value={formData.organizer_mobile_money_provider}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, organizer_mobile_money_provider: e.target.value }))}
+                      disabled={formData.organizer_payout_method === 'zengapay'}
+                      className="w-full rounded-lg border px-4 py-2 bg-background disabled:opacity-60"
+                    >
+                      <option value="mtn">MTN</option>
+                      <option value="airtel">Airtel</option>
+                      <option value="zengapay">ZengaPay</option>
+                    </select>
+                  </FormField>
+                  <FormField label="Mobile Money Number" error={errors.organizer_mobile_money_number}>
+                    <input
+                      value={formData.organizer_mobile_money_number}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, organizer_mobile_money_number: e.target.value }))}
+                      className="w-full rounded-lg border px-4 py-2 bg-background"
+                    />
+                  </FormField>
+                </div>
+              )}
+
+              <FormField label="Organizer Notes" error={errors.organizer_notes}>
+                <textarea
+                  rows={3}
+                  value={formData.organizer_notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, organizer_notes: e.target.value }))}
+                  className="w-full rounded-lg border px-4 py-2 bg-background"
+                />
+              </FormField>
+            </>
+          )}
         </FormSection>
 
         <FormSection title="Reset Password" description="Optional. Leave blank to keep existing password.">

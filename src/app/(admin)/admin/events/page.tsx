@@ -52,6 +52,16 @@ interface Event {
     name: string;
     avatar: string;
   };
+  risk?: {
+    score: number;
+    level: 'low' | 'watch' | 'high';
+    duplicate_check_in_overrides: number;
+    manual_offline_ticket_count: number;
+    printed_ticket_count: number;
+    chargeback_review_cases: number;
+    failed_payout_balance: number;
+    held_payout_balance: number;
+  } | null;
 }
 
 interface EventStats {
@@ -119,6 +129,12 @@ export default function EventsPage() {
     if (val >= 1000000000) return `UGX ${(val / 1000000000).toFixed(1)}B`;
     if (val >= 1000000) return `UGX ${(val / 1000000).toFixed(0)}M`;
     return `UGX ${val.toLocaleString()}`;
+  };
+
+  const riskStyles: Record<string, string> = {
+    low: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    watch: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    high: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   };
 
   return (
@@ -234,12 +250,22 @@ export default function EventsPage() {
                 <div className="flex-1 p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold">{event.title}</h3>
-                    <span className={cn(
-                      'px-2 py-1 rounded-full text-xs font-medium capitalize shrink-0',
-                      statusStyles[event.status] || statusStyles.draft
-                    )}>
-                      {event.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {event.risk && (
+                        <span className={cn(
+                          'px-2 py-1 rounded-full text-xs font-medium uppercase shrink-0',
+                          riskStyles[event.risk.level] || riskStyles.low
+                        )}>
+                          {event.risk.level} risk
+                        </span>
+                      )}
+                      <span className={cn(
+                        'px-2 py-1 rounded-full text-xs font-medium capitalize shrink-0',
+                        statusStyles[event.status] || statusStyles.draft
+                      )}>
+                        {event.status}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-2 mb-4 text-sm text-muted-foreground">
@@ -269,6 +295,27 @@ export default function EventsPage() {
                       <p className="text-xs text-muted-foreground">Filled</p>
                     </div>
                   </div>
+
+                  {event.risk && (
+                    <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border bg-background/60 p-3 text-xs">
+                      <div>
+                        <p className="text-muted-foreground">Risk score</p>
+                        <p className="font-semibold">{event.risk.score}/100</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Manual / offline</p>
+                        <p className="font-semibold">{event.risk.manual_offline_ticket_count.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Duplicate overrides</p>
+                        <p className="font-semibold">{event.risk.duplicate_check_in_overrides.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Chargeback review</p>
+                        <p className="font-semibold">{event.risk.chargeback_review_cases.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">

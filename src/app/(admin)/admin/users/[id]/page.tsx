@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPost } from '@/lib/api';
 import { PageHeader, ConfirmDialog } from '@/components/admin';
-import { Ban, CheckCircle, Edit, Mail, MapPin, Phone, Trash2, User } from 'lucide-react';
+import { Ban, Building2, CheckCircle, Edit, Mail, MapPin, Phone, Trash2, User, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 type UserDetail = {
@@ -27,6 +27,19 @@ type UserDetail = {
   avatar_url?: string | null;
   created_at: string;
   updated_at: string;
+  event_organizer?: {
+    enabled: boolean;
+    business_name?: string | null;
+    support_email?: string | null;
+    support_phone?: string | null;
+    notes?: string | null;
+    ready_for_events?: boolean;
+    payout_method?: string | null;
+    mobile_money_provider?: string | null;
+    mobile_money_number?: string | null;
+    bank_name?: string | null;
+    bank_account?: string | null;
+  } | null;
 };
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -174,6 +187,40 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               <p className="mt-1 text-sm">{user.bio || 'No bio provided.'}</p>
             </div>
           </div>
+
+          {user.event_organizer?.enabled && (
+            <div className="rounded-xl border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Organizer Setup</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Business:</span> {user.event_organizer.business_name || 'Not set'}</div>
+                <div><span className="text-muted-foreground">Support Email:</span> {user.event_organizer.support_email || 'Not set'}</div>
+                <div><span className="text-muted-foreground">Support Phone:</span> {user.event_organizer.support_phone || 'Not set'}</div>
+                <div><span className="text-muted-foreground">Ready:</span> {user.event_organizer.ready_for_events ? 'Yes' : 'Needs setup'}</div>
+              </div>
+              <div className="mt-4 rounded-lg border bg-muted/30 p-4 text-sm">
+                <div className="inline-flex items-center gap-2 font-medium">
+                  <Wallet className="h-4 w-4" />
+                  Payout
+                </div>
+                <p className="mt-2 text-muted-foreground">Method: {user.event_organizer.payout_method || 'Not set'}</p>
+                {user.event_organizer.payout_method === 'bank' ? (
+                  <p className="text-muted-foreground">
+                    {user.event_organizer.bank_name || 'Bank not set'} / {user.event_organizer.bank_account || 'Account not set'}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    {user.event_organizer.mobile_money_provider || 'Provider not set'} / {user.event_organizer.mobile_money_number || 'Number not set'}
+                  </p>
+                )}
+                {user.event_organizer.notes && (
+                  <p className="mt-2 text-muted-foreground">{user.event_organizer.notes}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

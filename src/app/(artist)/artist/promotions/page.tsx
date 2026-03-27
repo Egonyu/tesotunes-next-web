@@ -80,7 +80,7 @@ export default function ArtistPromotionsPage() {
 
       {/* Analytics cards */}
       {analytics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           <div className="bg-card border rounded-lg p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Megaphone className="h-3.5 w-3.5" />
@@ -105,6 +105,44 @@ export default function ArtistPromotionsPage() {
             <p className="text-2xl font-bold">
               {formatNumber(analytics.total_revenue_credits)}
               <span className="text-xs text-muted-foreground ml-1">cr</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(analytics.total_revenue_ugx)}
+            </p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Net Revenue
+            </div>
+            <p className="text-2xl font-bold">
+              {formatNumber(analytics.net_revenue_credits)}
+              <span className="text-xs text-muted-foreground ml-1">cr</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(analytics.net_revenue_ugx)}
+            </p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <CreditCard className="h-3.5 w-3.5" />
+              Platform Fees
+            </div>
+            <p className="text-2xl font-bold">
+              {formatNumber(analytics.total_platform_fees_credits)}
+              <span className="text-xs text-muted-foreground ml-1">cr</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(analytics.total_platform_fees_ugx)}
+            </p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Settled
+            </div>
+            <p className="text-2xl font-bold">
+              {formatNumber(analytics.settled_orders)}
             </p>
           </div>
           <div className="bg-card border rounded-lg p-4">

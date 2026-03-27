@@ -18,6 +18,8 @@ import type {
   VerifyOrderRequest,
   RejectOrderRequest,
   ResolveDisputeRequest,
+  PromoterProfile,
+  SellerAnalytics,
 } from "@/types/promotions";
 import * as api from "@/lib/promotions-api";
 
@@ -104,7 +106,7 @@ export function usePlatforms() {
 
 /** Promoter profile */
 export function usePromoterProfile(username: string) {
-  return useQuery({
+  return useQuery<PromoterProfile>({
     queryKey: promotionKeys.promoter(username),
     queryFn: () => api.fetchPromoterProfile(username).then((r) => r.data),
     enabled: !!username,
@@ -336,7 +338,7 @@ export function useRejectOrder(orderId: number) {
 
 /** Seller analytics */
 export function useSellerAnalytics() {
-  return useQuery({
+  return useQuery<SellerAnalytics>({
     queryKey: promotionKeys.sellerAnalytics(),
     queryFn: () => api.fetchSellerAnalytics().then((r) => r.data),
   });

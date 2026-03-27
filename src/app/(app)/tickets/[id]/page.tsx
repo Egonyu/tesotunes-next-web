@@ -4,7 +4,7 @@ import { use, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, MapPin, Download, Share2, ChevronLeft, Mail, Send, Gift, Smartphone, ShieldAlert, BadgeDollarSign } from 'lucide-react';
-import { useRequestTicketCase, useResendTicket, useTicket, useTicketCases, useTransferTicket } from '@/hooks/useEvents';
+import { useRequestTicketCase, useResendTicket, useTicket, useTicketCases, useTicketInvoice, useTransferTicket } from '@/hooks/useEvents';
 import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
@@ -32,6 +32,7 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
   const [requestedRefundAmount, setRequestedRefundAmount] = useState('');
   const { data: ticket, isLoading } = useTicket(ticketId);
   const { data: ticketCases = [] } = useTicketCases(ticketId);
+  const ticketInvoice = useTicketInvoice(ticketId);
   const resendTicket = useResendTicket(ticketId);
   const transferTicket = useTransferTicket(ticketId);
   const requestTicketCase = useRequestTicketCase(ticketId);
@@ -255,6 +256,103 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
     link.click();
     URL.revokeObjectURL(url);
     toast.success('Calendar file downloaded');
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      const result = await ticketInvoice.refetch();
+      const invoice = result.data;
+      if (!invoice) {
+        throw new Error('Invoice data is not available for this ticket yet');
+      }
+
+      const safe = (value?: string | null) => value ?? '';
+      const formatMoney = (value: number) =>
+        new Intl.NumberFormat('en-UG', {
+          style: 'currency',
+          currency: invoice.currency || 'UGX',
+          maximumFractionDigits: 2,
+        }).format(value || 0);
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${safe(invoice.invoice_number)} - Tesotunes Invoice</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+    h1, h2, h3, p { margin: 0; }
+    .row { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; flex: 1; }
+    .muted { color: #6b7280; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e5e7eb; }
+    .totals { margin-top: 20px; width: 320px; margin-left: auto; }
+    .totals div { display: flex; justify-content: space-between; padding: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>Tesotunes Ticket Invoice</h1>
+  <p class="muted">${safe(invoice.invoice_number)}${invoice.issued_at ? ` • Issued ${new Date(invoice.issued_at).toLocaleString('en')}` : ''}</p>
+  <div class="row" style="margin-top:24px;">
+    <div class="card">
+      <h3>Issuer</h3>
+      <p>${safe(invoice.issuer?.name)}</p>
+      <p>${safe(invoice.issuer?.support_email)}</p>
+      <p>${safe(invoice.issuer?.support_phone)}</p>
+      <p class="muted">${invoice.issuer?.tax_registration_number ? `Tax No: ${invoice.issuer.tax_registration_number}` : ''}</p>
+    </div>
+    <div class="card">
+      <h3>Buyer</h3>
+      <p>${safe(invoice.buyer?.name)}</p>
+      <p>${safe(invoice.buyer?.email)}</p>
+      <p>${safe(invoice.buyer?.phone)}</p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h3>Event</h3>
+      <p>${safe(invoice.event?.title)}</p>
+      <p>${safe(invoice.event?.venue_name)}${invoice.event?.city ? `, ${invoice.event.city}` : ''}</p>
+      <p class="muted">${invoice.event?.starts_at ? new Date(invoice.event.starts_at).toLocaleString('en') : ''}</p>
+    </div>
+    <div class="card">
+      <h3>Ticket</h3>
+      <p>${safe(invoice.ticket?.tier_name)}</p>
+      <p>${safe(invoice.ticket?.ticket_number)}</p>
+      <p class="muted">${safe(invoice.ticket?.payment_method)} ${invoice.ticket?.payment_reference ? `• ${invoice.ticket.payment_reference}` : ''}</p>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Qty</th><th>Ticket</th><th>Fee</th><th>Total</th></tr>
+    </thead>
+    <tbody>
+      ${invoice.line_items.map((item) => `<tr><td>${safe(item.label)}</td><td>${item.quantity}</td><td>${formatMoney(item.base_amount)}</td><td>${formatMoney(item.service_fee)}</td><td>${formatMoney(item.total_amount)}</td></tr>`).join('')}
+    </tbody>
+  </table>
+  <div class="totals">
+    <div><span>Subtotal</span><strong>${formatMoney(invoice.totals.subtotal)}</strong></div>
+    <div><span>Service fee</span><strong>${formatMoney(invoice.totals.service_fee)}</strong></div>
+    <div><span>${invoice.tax.inclusive ? 'Included tax' : 'Tax'}</span><strong>${formatMoney(invoice.totals.tax_amount)}</strong></div>
+    <div><span>Total paid</span><strong>${formatMoney(invoice.totals.total_paid)}</strong></div>
+  </div>
+  ${invoice.tax.notes ? `<p class="muted" style="margin-top:24px;">${safe(invoice.tax.notes)}</p>` : ''}
+</body>
+</html>`;
+
+      const win = window.open('', '_blank', 'noopener,noreferrer,width=960,height=720');
+      if (!win) {
+        throw new Error('Please allow pop-ups to open the invoice');
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.print();
+      toast.success('Invoice opened in a printable window');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load invoice');
+    }
   };
 
   const handleResend = async () => {
@@ -507,6 +605,14 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={handleDownloadInvoice}
+                disabled={ticketInvoice.isFetching}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border bg-background hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                <BadgeDollarSign className="h-5 w-5" />
+                {ticketInvoice.isFetching ? 'Loading Invoice...' : 'Download Invoice'}
+              </button>
               <button
                 onClick={handleWhatsAppShare}
                 className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border bg-background hover:bg-muted transition-colors"

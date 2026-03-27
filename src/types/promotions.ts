@@ -68,6 +68,34 @@ export interface PromoterSummary {
   follower_count: number;
 }
 
+export interface PromoterProfile {
+  id: number;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  banner_url: string | null;
+  bio: string | null;
+  location: string | null;
+  is_verified: boolean;
+  follower_count: number;
+  total_promotions: number;
+  active_promotions: number;
+  featured_promotions: number;
+  average_rating: number;
+  completed_orders: number;
+  platforms: PromotionPlatform[];
+  service_types: PromotionType[];
+  social_links: {
+    instagram_url?: string | null;
+    twitter_url?: string | null;
+    facebook_url?: string | null;
+    youtube_url?: string | null;
+    tiktok_url?: string | null;
+    website_url?: string | null;
+  };
+  promotions: PromotionListItem[];
+}
+
 export interface PromotionRequirements {
   action: string;
   duration_hours?: number;
@@ -196,6 +224,11 @@ export interface SellerAnalytics {
   pending_verifications: number;
   total_revenue_credits: number;
   total_revenue_ugx: number;
+  total_platform_fees_credits: number;
+  total_platform_fees_ugx: number;
+  net_revenue_credits: number;
+  net_revenue_ugx: number;
+  settled_orders: number;
   average_rating: number;
   conversion_rate: number;
   top_performing_promotion: PromotionListItem | null;
@@ -228,6 +261,8 @@ export interface BrowsePromotionsParams {
   min_price_ugx?: number;
   max_price_ugx?: number;
   rating_min?: number;
+  delivery_days_max?: number;
+  verified?: boolean;
   sort?: "price_asc" | "price_desc" | "rating" | "popularity" | "newest";
   featured?: boolean;
   search?: string;

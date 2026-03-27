@@ -178,6 +178,13 @@ export default function UsersPage() {
           <Plus className="h-4 w-4" />
           Add User
         </Link>
+        <Link
+          href="/admin/users/new?mode=organizer"
+          className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
+        >
+          <Shield className="h-4 w-4" />
+          Add Organizer
+        </Link>
       </div>
 
       {/* Filters */}

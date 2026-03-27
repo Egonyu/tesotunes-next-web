@@ -26,8 +26,14 @@ export function PromotionFilters() {
     filters.platform ||
     filters.min_price_credits ||
     filters.max_price_credits ||
+    filters.min_price_ugx ||
+    filters.max_price_ugx ||
+    filters.min_reach ||
+    filters.max_reach ||
+    filters.delivery_days_max ||
     filters.rating_min ||
     filters.featured ||
+    filters.verified ||
     filters.search;
 
   return (
@@ -45,7 +51,7 @@ export function PromotionFilters() {
       </div>
 
       {/* Filter row */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {/* Type */}
         <select
           value={filters.type || ""}
@@ -86,15 +92,9 @@ export function PromotionFilters() {
           )}
         </select>
 
-        {/* Sort */}
         <select
           value={filters.sort || "popularity"}
-          onChange={(e) =>
-            setFilter(
-              "sort",
-              e.target.value as typeof filters.sort
-            )
-          }
+          onChange={(e) => setFilter("sort", e.target.value as typeof filters.sort)}
           className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           {SORT_OPTIONS.map((opt) => (
@@ -104,7 +104,6 @@ export function PromotionFilters() {
           ))}
         </select>
 
-        {/* Min rating */}
         <select
           value={filters.rating_min || ""}
           onChange={(e) =>
@@ -114,15 +113,33 @@ export function PromotionFilters() {
             )
           }
           className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
+          >
           <option value="">Any Rating</option>
           <option value="4">4+ Stars</option>
           <option value="4.5">4.5+ Stars</option>
           <option value="3">3+ Stars</option>
         </select>
 
+        <select
+          value={filters.delivery_days_max || ""}
+          onChange={(e) =>
+            setFilter(
+              "delivery_days_max",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Any Delivery Speed</option>
+          <option value="2">2 days or less</option>
+          <option value="3">3 days or less</option>
+          <option value="5">5 days or less</option>
+          <option value="7">7 days or less</option>
+          <option value="14">14 days or less</option>
+        </select>
+
         {/* Featured only */}
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none rounded-lg border px-3 py-2 bg-muted/30">
           <input
             type="checkbox"
             checked={!!filters.featured}
@@ -134,11 +151,113 @@ export function PromotionFilters() {
           Featured Only
         </label>
 
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none rounded-lg border px-3 py-2 bg-muted/30">
+          <input
+            type="checkbox"
+            checked={!!filters.verified}
+            onChange={(e) =>
+              setFilter("verified", e.target.checked || undefined)
+            }
+            className="rounded border-muted-foreground/30 text-primary focus:ring-primary/20"
+          />
+          Verified Promoters
+        </label>
+
+        <input
+          type="number"
+          min={0}
+          step={1000}
+          placeholder="Min UGX"
+          value={filters.min_price_ugx ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "min_price_ugx",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="number"
+          min={0}
+          step={1000}
+          placeholder="Max UGX"
+          value={filters.max_price_ugx ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "max_price_ugx",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="number"
+          min={0}
+          step={1}
+          placeholder="Min reach"
+          value={filters.min_reach ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "min_reach",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="number"
+          min={0}
+          step={1}
+          placeholder="Max reach"
+          value={filters.max_reach ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "max_reach",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="number"
+          min={0}
+          step={1}
+          placeholder="Min credits"
+          value={filters.min_price_credits ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "min_price_credits",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="number"
+          min={0}
+          step={1}
+          placeholder="Max credits"
+          value={filters.max_price_credits ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "max_price_credits",
+              e.target.value ? Number(e.target.value) : undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
         {/* Reset */}
         {hasActiveFilters && (
           <button
             onClick={resetFilters}
-            className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 ml-auto"
+            className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 md:col-span-2 xl:col-span-4 justify-start"
           >
             <X className="h-3 w-3" />
             Clear Filters

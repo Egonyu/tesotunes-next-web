@@ -2,7 +2,7 @@
 
 import { use } from 'react'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   BarChart3,
@@ -13,7 +13,8 @@ import {
   Ticket,
   Users,
 } from 'lucide-react'
-import { apiGet } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface TierBreakdown {
   id: number
@@ -59,6 +60,7 @@ interface AnalyticsResponse {
       legacy_orders_without_fee_breakdown: number
     }
     payouts: {
+      held_balance: number
       pending_balance: number
       ready_balance: number
       settled_balance: number
@@ -69,9 +71,11 @@ interface AnalyticsResponse {
         ready: number
         paid: number
         failed: number
+        held: number
       }
       latest_ready_at?: string | null
       latest_paid_out_at?: string | null
+      latest_held_at?: string | null
     }
     marketing: {
       attributed_orders: number
@@ -185,6 +189,47 @@ interface AnalyticsResponse {
         dominant_status: string
       }>
     }
+    audit_log: {
+      total_entries: number
+      recent_entries: Array<{
+        id: number
+        action: string
+        actor?: string | null
+        created_at?: string | null
+        old_values?: Record<string, unknown>
+        new_values?: Record<string, unknown>
+      }>
+    }
+    risk: {
+      score: number
+      level: 'low' | 'watch' | 'high'
+      duplicate_check_in_overrides: number
+      manual_offline_ticket_count: number
+      printed_ticket_count: number
+      chargeback_review_cases: number
+      chargeback_exposure_amount: number
+      failed_payout_balance: number
+      held_payout_balance: number
+      legacy_orders_without_fee_breakdown: number
+      signals: Array<{
+        key: string
+        severity: 'low' | 'medium' | 'high'
+        label: string
+        detail: string
+        count?: number
+        amount?: number
+      }>
+    }
+    health: {
+      score: number
+      grade: 'strong' | 'watch' | 'at_risk'
+      issues: Array<{
+        key: string
+        severity: 'low' | 'medium' | 'high'
+        label: string
+        detail: string
+      }>
+    }
     conversion_rate: number
     sell_through_rate: number
     by_tier: TierBreakdown[]
@@ -202,10 +247,33 @@ export default function AdminEventAnalyticsPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'events', id, 'analytics'],
     queryFn: () => apiGet<AnalyticsResponse>(`/admin/events/${id}/analytics`),
+  })
+
+  const holdPayouts = useMutation({
+    mutationFn: () => apiPost<{ success: boolean; message: string }>(`/admin/events/${id}/payouts/hold`, {
+      reason: 'Manual admin review',
+    }),
+    onSuccess: (result) => {
+      toast.success(result.message || 'Ready payouts placed on hold')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events', id, 'analytics'] })
+    },
+    onError: () => toast.error('Failed to hold payouts'),
+  })
+
+  const releasePayouts = useMutation({
+    mutationFn: () => apiPost<{ success: boolean; message: string }>(`/admin/events/${id}/payouts/release`, {
+      note: 'Released by admin',
+    }),
+    onSuccess: (result) => {
+      toast.success(result.message || 'Held payouts released')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events', id, 'analytics'] })
+    },
+    onError: () => toast.error('Failed to release payouts'),
   })
 
   if (isLoading) {
@@ -371,6 +439,126 @@ export default function AdminEventAnalyticsPage({
           </div>
 
           <div className="rounded-2xl border bg-card p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="font-semibold">Risk View</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Suspicious ticketing and payout signals that deserve admin review.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold">{analytics.risk.score}/100</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {analytics.risk.level}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Duplicate overrides</p>
+                <p className="mt-1 font-semibold">{analytics.risk.duplicate_check_in_overrides.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Manual / offline tickets</p>
+                <p className="mt-1 font-semibold">{analytics.risk.manual_offline_ticket_count.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Printed tickets</p>
+                <p className="mt-1 font-semibold">{analytics.risk.printed_ticket_count.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+                <p className="text-muted-foreground">Chargeback review</p>
+                <p className="mt-1 font-semibold">{analytics.risk.chargeback_review_cases.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              {analytics.risk.signals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No suspicious ticketing signals detected right now.</p>
+              ) : (
+                analytics.risk.signals.map((signal) => (
+                  <div key={signal.key} className="rounded-xl bg-muted/40 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium">{signal.label}</p>
+                      <span className="text-xs uppercase text-muted-foreground">{signal.severity}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{signal.detail}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {signal.count !== undefined ? `Count: ${signal.count}` : ''}
+                      {signal.count !== undefined && signal.amount !== undefined ? ' • ' : ''}
+                      {signal.amount !== undefined ? `Amount: ${formatCurrency(signal.amount)}` : ''}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="font-semibold">Event Health</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Quick risk view across payout setup, contract coverage, and conversion.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold">{analytics.health.score}/100</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {analytics.health.grade.replace('_', ' ')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              {analytics.health.issues.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No major operational risks detected right now.</p>
+              ) : (
+                analytics.health.issues.map((issue) => (
+                  <div key={issue.key} className="rounded-xl bg-muted/40 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium">{issue.label}</p>
+                      <span className="text-xs uppercase text-muted-foreground">{issue.severity}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{issue.detail}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-semibold">Audit Trail</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Recent fee, campaign, and payout-control changes on this event.
+                </p>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {analytics.audit_log.total_entries.toLocaleString()} recent entries
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {analytics.audit_log.recent_entries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No recent audit entries for this event yet.</p>
+              ) : (
+                analytics.audit_log.recent_entries.map((entry) => (
+                  <div key={entry.id} className="rounded-xl bg-muted/40 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium">{entry.action.replaceAll('_', ' ')}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {entry.created_at ? new Date(entry.created_at).toLocaleString() : 'Just now'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">
+                      {entry.actor || 'System'}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold">Revenue Split</h2>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between">
@@ -393,6 +581,47 @@ export default function AdminEventAnalyticsPage({
           </div>
 
           <div className="rounded-2xl border bg-card p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-semibold">Payout Controls</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Hold ready payouts during compliance review, then release them back into the payout queue when cleared.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => holdPayouts.mutate()}
+                  disabled={holdPayouts.isPending || analytics.payouts.ready_balance <= 0}
+                  className="rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-60"
+                >
+                  Hold Ready
+                </button>
+                <button
+                  onClick={() => releasePayouts.mutate()}
+                  disabled={releasePayouts.isPending || analytics.payouts.held_balance <= 0}
+                  className="rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-60"
+                >
+                  Release Held
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Ready for Payout</p>
+                <p className="mt-2 text-2xl font-bold">{formatCurrency(analytics.payouts.ready_balance)}</p>
+              </div>
+              <div className="rounded-xl border bg-amber-500/5 p-4">
+                <p className="text-sm text-muted-foreground">Held Balance</p>
+                <p className="mt-2 text-2xl font-bold">{formatCurrency(analytics.payouts.held_balance)}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Held Entries</p>
+                <p className="mt-2 text-2xl font-bold">{analytics.payouts.status_breakdown.held.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold">Payout Ledger</h2>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between">
@@ -402,6 +631,10 @@ export default function AdminEventAnalyticsPage({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ready balance</span>
                 <span className="font-medium">{formatCurrency(analytics.payouts.ready_balance)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Held balance</span>
+                <span className="font-medium">{formatCurrency(analytics.payouts.held_balance)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Paid out</span>

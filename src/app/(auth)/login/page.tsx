@@ -55,6 +55,8 @@ export default function LoginPage() {
         const message =
           result.error === "CredentialsSignin"
             ? "Invalid email or password"
+            : result.error.includes("Too many attempts")
+              ? "Too many login attempts from this local session. Please wait a minute and try again."
             : result.error;
         setError(message);
         return;

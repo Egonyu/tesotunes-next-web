@@ -115,6 +115,15 @@ export async function apiPut<T, D = unknown>(
   return response.data;
 }
 
+export async function apiPatch<T, D = unknown>(
+  url: string,
+  data?: D,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await api.patch<T>(normalizeApiPath(url), data, config);
+  return response.data;
+}
+
 export async function apiPostForm<T>(
   url: string,
   formData: FormData,

@@ -256,7 +256,7 @@ export default function ObservabilityPage() {
 
   const changesQuery = useQuery({
     queryKey: ['admin', 'observability', 'changes', baseParams],
-    queryFn: () => apiGet<{ data: { recent: ObservabilityEvent[] } }>('/admin/observability/changes', { params: baseParams }),
+    queryFn: () => apiGet<{ data: { recent: ObservabilityEvent[]; integrity_snapshots: Array<Record<string, unknown>> } }>('/admin/observability/changes', { params: baseParams }),
     enabled: activeTab === 'changes',
   });
 

@@ -61,13 +61,12 @@ const navItems = [
   { href: '/admin/featured', label: 'Featured', icon: Star, requiredPermissions: ['admin.music', 'music.*'] },
   { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones, requiredPermissions: ['admin.music', 'music.*'] },
   { href: '/admin/store', label: 'Store', icon: ShoppingBag, requiredPermissions: ['manage-store', 'admin.settings'] },
-  { href: '/admin/store/promotions', label: 'Promotions', icon: Percent, requiredPermissions: ['manage-store', 'admin.settings'] },
   { href: '/admin/events', label: 'Events', icon: Calendar, requiredPermissions: ['admin.dashboard', 'admin.music'] },
   { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions', label: 'Promo Market', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/disputes', label: 'Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/analytics', label: 'Promo Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  { href: '/admin/promotions', label: 'Promotions', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/disputes', label: 'Promotion Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/analytics', label: 'Promotion Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
   { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
   { href: '/admin/sacco', label: 'SACCO', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
   { href: '/admin/sacco/board-meetings', label: 'Board Meetings', icon: Building2, requiredPermissions: ['manage-sacco'] },
@@ -76,13 +75,18 @@ const navItems = [
   { href: '/admin/polls', label: 'Polls', icon: BarChart3, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports'] },
   { href: '/admin/analytics', label: 'Analytics', icon: PieChart, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  { href: '/admin/observability', label: 'Observability', icon: Activity, requiredPermissions: ['admin.settings', 'admin.reports'] },
   { href: '/admin/security', label: 'Security', icon: Shield, requiredPermissions: ['admin.settings'] },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, requiredPermissions: ['admin.settings'] },
   { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag, requiredPermissions: ['admin.settings'] },
-  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield, requiredPermissions: ['manage-roles', 'admin.settings', 'admin.users'] },
+  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield, requiredPermissions: ['manage-roles', 'manage-settings', 'manage-users', 'admin.settings', 'admin.users'] },
   { href: '/admin/system', label: 'System Health', icon: Activity, requiredPermissions: ['admin.settings'] },
   { href: '/admin/settings', label: 'Settings', icon: Settings, requiredPermissions: ['admin.settings', 'manage-settings'] },
 ];
+
+function normalizeRole(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? '';
+}
 
 type AdminLayoutShellProps = {
   children: React.ReactNode;
@@ -112,9 +116,11 @@ export default function AdminLayoutShell({
   const adminLogoAlt = appearance?.logo_alt || adminPanelName;
   const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
   const shouldFallbackToRoleVisibility = isAdminRole(userRole) && userPermissions.length === 0;
+  const isSuperAdmin = ['super admin', 'super_admin'].includes(normalizeRole(userRole));
 
   const visibleNavItems = (ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports'))
     .filter((item) => {
+      if (isSuperAdmin) return true;
       if (shouldFallbackToRoleVisibility) return true;
       const permissions = item.requiredPermissions as string[] | undefined;
       if (!permissions || permissions.length === 0) return true;

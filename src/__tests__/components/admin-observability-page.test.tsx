@@ -8,11 +8,12 @@ jest.mock('@/lib/api', () => ({
 }));
 
 const replaceMock = jest.fn();
+let currentSearchParams = 'tab=overview';
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock }),
   usePathname: () => '/admin/observability',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(currentSearchParams),
 }));
 
 import ObservabilityPage from '@/app/(admin)/admin/observability/page';
@@ -27,6 +28,11 @@ describe('Admin ObservabilityPage', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     replaceMock.mockReset();
+    currentSearchParams = 'tab=overview';
+    replaceMock.mockImplementation((url: string) => {
+      const queryIndex = url.indexOf('?');
+      currentSearchParams = queryIndex >= 0 ? url.slice(queryIndex + 1) : '';
+    });
     useObservabilityStore.setState({
       activeTab: 'overview',
       filters: {
@@ -927,6 +933,21 @@ describe('Admin ObservabilityPage', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Login Failed/i).length).toBeGreaterThan(0);
     });
+  });
+
+  it('keeps the newly selected tab active while syncing the deep link', async () => {
+    const user = userEvent.setup();
+
+    render(<ObservabilityPage />);
+
+    await screen.findByText(/Observability/i);
+    await user.click(screen.getByRole('button', { name: 'Threats' }));
+
+    await waitFor(() => {
+      expect(useObservabilityStore.getState().activeTab).toBe('threats');
+    });
+
+    expect(replaceMock).toHaveBeenLastCalledWith('/admin/observability?tab=threats', { scroll: false });
   });
 
   it('creates an incident from the selected event', async () => {

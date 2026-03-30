@@ -54,6 +54,7 @@ export default function BecomeArtistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
+  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
 
   // Check application status
   const { data: appStatus, isLoading: statusLoading } = useArtistApplicationStatus();
@@ -103,7 +104,10 @@ export default function BecomeArtistPage() {
   const genres = genresData?.data ?? [];
 
   // Auth guard - redirect via useEffect to avoid hooks reconciliation error
-  const shouldRedirectToLogin = status !== "loading" && !statusLoading && !session?.user;
+  const shouldRedirectToLogin =
+    status !== "loading" &&
+    !statusLoading &&
+    (!session?.user || !hasApiAccess);
   const shouldRedirectToStatus = appStatus?.data?.status === "pending";
   const shouldRedirectToArtist = appStatus?.data?.status === "approved" || appStatus?.data?.is_artist;
 

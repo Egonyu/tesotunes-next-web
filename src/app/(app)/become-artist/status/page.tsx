@@ -81,6 +81,7 @@ function getTimelineSteps(appStatus: string): TimelineStep[] {
 export default function ApplicationStatusPage() {
   const { data: session, status: authStatus } = useSession();
   const { data: appData, isLoading, refetch, isRefetching } = useArtistApplicationStatus();
+  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
 
   if (authStatus === "loading" || isLoading) {
     return (
@@ -93,7 +94,7 @@ export default function ApplicationStatusPage() {
     );
   }
 
-  if (!session?.user) {
+  if (!session?.user || !hasApiAccess) {
     redirect("/login?callbackUrl=/become-artist/status");
   }
 

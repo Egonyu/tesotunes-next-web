@@ -105,7 +105,7 @@ export function GlobalFilterBar({ filters, onApply, onReset }: GlobalFilterBarPr
   };
 
   return (
-    <div className="sticky top-16 z-20 rounded-2xl border bg-background/95 p-4 shadow-sm backdrop-blur lg:top-[4.5rem]">
+    <div className="rounded-2xl border bg-background/95 p-4 shadow-sm backdrop-blur">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>

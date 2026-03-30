@@ -1058,10 +1058,14 @@ export function useSubmitArtistApplication() {
  * Check current artist application status
  */
 export function useArtistApplicationStatus() {
+  const { data: session, status } = useSession();
+  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
+
   return useQuery({
     queryKey: ["artist", "application-status"],
     queryFn: () => apiGet<ApplicationStatusResponse>("/artist/application-status"),
     staleTime: 30 * 1000, // 30 seconds
+    enabled: status === "authenticated" && hasApiAccess,
   });
 }
 

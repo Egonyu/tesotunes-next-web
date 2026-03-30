@@ -32,6 +32,37 @@ function normalizeApiPath(url: string): string {
   return url.startsWith("/") ? url : `/${url}`;
 }
 
+function buildDirectApiUrl(url: string): string {
+  const normalizedBaseUrl = API_URL.replace(/\/+$/, "");
+  const normalizedPath = normalizeApiPath(url);
+
+  return `${normalizedBaseUrl}${normalizedPath}`;
+}
+
+async function getBrowserUploadAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const response = await fetch("/api/auth/upload-token", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = await response.json() as { accessToken?: string };
+  return typeof data.accessToken === "string" && data.accessToken.length > 0
+    ? data.accessToken
+    : null;
+}
+
 api.interceptors.request.use(
   (config) => {
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
@@ -129,6 +160,25 @@ export async function apiPostForm<T>(
   formData: FormData,
   config?: AxiosRequestConfig
 ): Promise<T> {
+  if (typeof window !== "undefined") {
+    const accessToken = await getBrowserUploadAccessToken();
+
+    if (accessToken) {
+      const response = await axios.post<T>(buildDirectApiUrl(url), formData, {
+        ...config,
+        timeout: 300000,
+        withCredentials: false,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          ...(config?.headers ?? {}),
+        },
+      });
+
+      return response.data;
+    }
+  }
+
   const response = await api.post<T>(normalizeApiPath(url), formData, {
     ...config,
     timeout: 0,

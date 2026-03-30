@@ -174,6 +174,10 @@ export default function UploadPage() {
           const axiosError = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> }; status?: number } };
           if (axiosError.response?.status === 401) {
             errorMessage = 'Your session has expired. Please log in again to upload.';
+          } else if (axiosError.response?.status === 413) {
+            errorMessage = 'This upload is larger than the server currently accepts. Please choose a smaller file or contact support.';
+          } else if (axiosError.response?.status === 502) {
+            errorMessage = 'The upload gateway could not reach the music API. Please try again in a moment.';
           } else if (axiosError.response?.data?.message) {
             errorMessage = axiosError.response.data.message;
           } else if (axiosError.response?.data?.errors) {

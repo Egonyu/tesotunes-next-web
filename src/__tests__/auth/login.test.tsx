@@ -27,6 +27,17 @@ jest.mock("lucide-react", () => ({
   Loader2: () => <span data-testid="icon-loader">Loading</span>,
 }));
 
+jest.mock("@/hooks/usePublicPlatformSettings", () => ({
+  usePublicPlatformSettings: () => ({
+    data: {
+      appearance: {
+        auth_form_title: "Welcome back",
+        auth_form_subtitle: "Sign in to continue listening to your favorite music",
+      },
+    },
+  }),
+}));
+
 import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -107,6 +118,30 @@ describe("LoginPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/account is suspended/i)).toBeInTheDocument();
+    });
+  });
+
+  it("starts a cooldown when the backend returns a login retry window", async () => {
+    mockSignIn.mockResolvedValue({
+      ok: false,
+      error: "Too many login attempts. Try again in 19 seconds.",
+      status: 429,
+      url: null,
+    });
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "artist@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /try again in 19s/i })).toBeDisabled();
+      expect(screen.getByText(/too many login attempts\. try again in 19 seconds\./i)).toBeInTheDocument();
     });
   });
 

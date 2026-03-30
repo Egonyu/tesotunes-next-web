@@ -8,7 +8,6 @@ import type {
   Promotion,
   PromotionListItem,
   PromotionOrder,
-  PromotionReview,
   PromoterProfile,
   BrowsePromotionsParams,
   PurchasePromotionRequest,
@@ -20,6 +19,7 @@ import type {
   VerifyOrderRequest,
   RejectOrderRequest,
   ResolveDisputeRequest,
+  UpdatePromoterProfileRequest,
   PaginatedPromotions,
   PaginatedOrders,
   PaginatedReviews,
@@ -58,13 +58,6 @@ export function fetchPromotions(params: BrowsePromotionsParams = {}) {
 /** Get single promotion detail by slug */
 export function fetchPromotion(slug: string) {
   return apiGet<{ data: Promotion }>(`/promotions/${slug}`);
-}
-
-/** Get reviews for a promotion */
-export function fetchPromotionReviews(slug: string, page = 1) {
-  return apiGet<PaginatedReviews>(
-    `/promotions/${slug}/reviews?page=${page}`
-  );
 }
 
 /** Get available platforms list */
@@ -158,6 +151,21 @@ export function fetchMyPromotions(params: { status?: string; page?: number } = {
   return apiGet<PaginatedPromotions>(
     `/my/promotions${toQueryString(params as Record<string, unknown>)}`
   );
+}
+
+/** Get single promotion detail for the current seller */
+export function fetchMyPromotion(id: number) {
+  return apiGet<{ data: Promotion }>(`/my/promotions/${id}`);
+}
+
+/** Get the current seller's promoter profile */
+export function fetchMyPromoterProfile() {
+  return apiGet<{ data: PromoterProfile }>("/my/promoter-profile");
+}
+
+/** Update the current seller's promoter profile */
+export function updateMyPromoterProfile(data: UpdatePromoterProfileRequest) {
+  return apiPut<{ data: PromoterProfile }>("/my/promoter-profile", data);
 }
 
 /** List orders for my promotions (seller verification queue) */

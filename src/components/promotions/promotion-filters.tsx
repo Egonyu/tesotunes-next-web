@@ -3,13 +3,21 @@
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePromotionsStore } from "@/stores/promotions";
-import type { PromotionType, PromotionPlatform } from "@/types/promotions";
+import type {
+  PromotionType,
+  PromotionPlatform,
+  PromotionAudienceNiche,
+  PromotionContentFormat,
+} from "@/types/promotions";
 import {
+  PROMOTION_AUDIENCE_NICHE_LABELS,
+  PROMOTION_CONTENT_FORMAT_LABELS,
   PROMOTION_TYPE_LABELS,
   PROMOTION_PLATFORM_LABELS,
 } from "@/types/promotions";
 
 const SORT_OPTIONS = [
+  { value: "best_match", label: "Best Match" },
   { value: "popularity", label: "Most Popular" },
   { value: "newest", label: "Newest" },
   { value: "rating", label: "Highest Rated" },
@@ -24,6 +32,13 @@ export function PromotionFilters() {
   const hasActiveFilters =
     filters.type ||
     filters.platform ||
+    filters.audience_niche ||
+    filters.audience_region ||
+    filters.content_format ||
+    filters.channel ||
+    filters.placement ||
+    filters.proof_type ||
+    filters.timing ||
     filters.min_price_credits ||
     filters.max_price_credits ||
     filters.min_price_ugx ||
@@ -90,6 +105,42 @@ export function PromotionFilters() {
               </option>
             )
           )}
+        </select>
+
+        <select
+          value={filters.audience_niche || ""}
+          onChange={(e) =>
+            setFilter(
+              "audience_niche",
+              (e.target.value as PromotionAudienceNiche) || undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Any Audience</option>
+          {Object.entries(PROMOTION_AUDIENCE_NICHE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filters.content_format || ""}
+          onChange={(e) =>
+            setFilter(
+              "content_format",
+              (e.target.value as PromotionContentFormat) || undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Any Format</option>
+          {Object.entries(PROMOTION_CONTENT_FORMAT_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
 
         <select
@@ -175,6 +226,51 @@ export function PromotionFilters() {
               e.target.value ? Number(e.target.value) : undefined
             )
           }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="text"
+          placeholder="Audience region"
+          value={filters.audience_region ?? ""}
+          onChange={(e) =>
+            setFilter(
+              "audience_region",
+              e.target.value || undefined
+            )
+          }
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="text"
+          placeholder="Channel or account"
+          value={filters.channel ?? ""}
+          onChange={(e) => setFilter("channel", e.target.value || undefined)}
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="text"
+          placeholder="Placement style"
+          value={filters.placement ?? ""}
+          onChange={(e) => setFilter("placement", e.target.value || undefined)}
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="text"
+          placeholder="Proof type"
+          value={filters.proof_type ?? ""}
+          onChange={(e) => setFilter("proof_type", e.target.value || undefined)}
+          className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+
+        <input
+          type="text"
+          placeholder="Timing window"
+          value={filters.timing ?? ""}
+          onChange={(e) => setFilter("timing", e.target.value || undefined)}
           className="bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
 

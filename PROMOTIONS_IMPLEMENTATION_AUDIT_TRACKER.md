@@ -85,33 +85,41 @@ This audit starts from the real web entry points and the current admin panel, no
 - Admin backend routes are now being repointed to the influencer-service listings, but the buyer order flow is still separate work.
 - Result: public browse/profile, seller CRUD, and admin moderation now share one canonical promotions contract; buyer purchase/order lifecycle still needs follow-through.
 
-### P0: public detail and promoter profile are not backed by matching API routes
+### P0: public detail and promoter profile are now backed, with initial structured backend modeling in place
 
 - `src/lib/promotions-api.ts` expects:
   - `GET /promotions/{slug}`
   - `GET /promotions/{slug}/reviews`
   - `GET /promotions/platforms/list`
   - `GET /promoters/{username}`
-- Those routes are now implemented in the Laravel API; the remaining work is tightening the buyer/order data model and settlement logic.
+- Those routes are implemented in the Laravel API.
+- Remaining gap:
+  - richer proof/media-kit asset modeling for radio, DJ, and creator offers beyond the structured metadata now in the backend contract
 
-### P0: buyer flow is wired but still needs model fidelity
+### P0: buyer flow is wired and usable, but still needs deeper operational fidelity
 
 - `src/app/(app)/promotions/purchases/page.tsx` and `src/app/(app)/promotions/purchases/[orderId]/page.tsx` expect real order, verification, dispute, and review data.
 - `src/lib/promotions-api.ts` expects `/my/promotions/purchases*` and `/promotions/orders/*`.
-- The buyer routes are now implemented in the Laravel API; remaining work is tightening the order/model data that powers them.
+- The buyer routes are implemented in the Laravel API.
+- Remaining gap:
+  - stronger structured evidence metadata and richer dispute intelligence
 
-### P0: seller flow is mostly frontend-only
+### P0: seller flow is now live end-to-end, but still needs deeper structured service metadata
 
 - `src/app/(artist)/artist/promotions/page.tsx`
 - `src/app/(artist)/artist/promotions/create/page.tsx`
 - `src/app/(artist)/artist/promotions/orders/page.tsx`
 
-These screens now have working create/list/order/analytics routes, but richer edit/media-kit/payout behavior is still to be finished.
+These screens now have working create/list/edit/order/analytics routes, plus a rebuilt offer builder and storefront editor.
+Remaining gap:
+- richer media-kit style proof assets and portfolios layered on top of the structured service details now supported in backend metadata
 
-### P0: admin panel is pointed at event promotion requests, not influencer services
+### P0: admin panel is now aligned to influencer services, but operational depth still needs hardening
 
 - `app/Http/Controllers/Api/Admin/AdminPromotionsController.php` has been repointed to `store_products` promotion listings.
-- Admin metrics, top promoters, and dispute behavior are now aligned to the influencer marketplace, although the dispute UX still needs deeper workflow work.
+- Admin metrics, top promoters, and dispute behavior are aligned to the influencer marketplace.
+- Remaining gap:
+  - deeper platform-aware dispute, settlement, and repeat-purchase analytics from canonical backend metrics
 
 ### P1: current backend Promotion model is not the same concept the frontend is using
 
@@ -120,26 +128,25 @@ These screens now have working create/list/order/analytics routes, but richer ed
 - The frontend expects service listings with promoter profile, deliverables, requirements, reviews, completed orders, and featured image
 - Result: even where routes exist, raw model responses will not match the expected marketplace shape
 
-### P1: influencer profile is partially implemented
+### P1: influencer profile is implemented, with richer proof still open
 
-- `src/app/(app)/promoters/[username]/page.tsx` is now a real showcase surface with banner, bio, location, social links, and service highlights.
-- The actual creator storefront is still missing deeper marketing fields and proof assets.
+- `src/app/(app)/promoters/[username]/page.tsx` is now a real showcase storefront.
+- `src/app/(artist)/artist/promotions/profile/page.tsx` is now a real promoter identity editor.
+- Portfolio snapshots with image/link/outcome metadata are now supported on promoter profiles and storefronts.
 - Remaining marketplace profile elements:
-  - audience size and geography
-  - proof-of-performance and media kit
-  - example campaigns
-  - service packages
-  - verification state
-  - response time
+  - deeper proof-of-performance media assets
+  - richer media-kit style galleries or longer-form case studies
 
 
 
-### P1: filters are partially implemented
+### P1: filters are largely implemented
 
-- The browse UI now exposes budget, reach, delivery speed, verified promoters, featured listings, and rating filters.
+- The browse UI now exposes budget, reach, delivery speed, verified promoters, featured listings, rating filters, audience niche, audience region, and content format.
+- Browse now also supports structured capability filters over service metadata such as channel/account, placement style, proof type, and timing window.
+- Marketplace browse now has a `best match` ranking path that weights audience fit, platform metadata, delivery fit, and storefront trust signals.
+- Marketplace browse now surfaces recommendation lanes that help artists start from real marketplace fit before filling filters manually.
 - Remaining marketplace discovery gaps:
-  - promoted audience / niche
-  - platform-specific service capabilities
+  - deeper recommendation intelligence that can adapt to artist history, songs, or campaign goals automatically
 
 
 
@@ -150,34 +157,31 @@ These screens now have working create/list/order/analytics routes, but richer ed
 - UI exists
 - type contracts exist
 - admin dispute resolution screen exists
-- backend dispute resolution is routed through store order-item records, but settlement rules still need hardening
+- backend dispute resolution is routed through store order-item records, with evidence capture and open-dispute payout locks now in place; settlement rules still need final hardening
 
-### P2: analytics are not yet tied to actual marketplace outcomes
+### P2: analytics are now live, and backend depth has started improving
 
-- Admin analytics page exists
-- Seller stats cards exist
-- but there is no real order ledger powering:
-  - conversion
-  - revenue by promoter
-  - completion rate
-  - dispute rate for actual service orders
-  - repeat purchase behavior
+- Admin analytics page exists and now shows marketplace, platform-mix, and dispute-risk signals.
+- Seller stats cards exist and are backed by real order data.
+- Backend analytics now includes refund rate, repeat buyer rate, proof submission lag, and dispute resolution lag.
+- Remaining gaps:
+  - deeper conversion quality metrics by platform and promotion type
 
 ## Entry point status matrix
 
 | Entry point | Status | Notes |
 | --- | --- | --- |
-| `/promotions` | `partial` | Good browse shell, but depends on a backend contract that is not yet canonical. |
-| `/promotions/[slug]` | `partial` | Detail and reviews are now backed by the canonical backend; purchase/order actions still need completion. |
-| `/promoters/[username]` | `partial` | Profile API is live; the richer influencer showcase content still needs to be expanded. |
-| `/promotions/purchases` | `partial` | Buyer history UI exists and the backend routes are now implemented; the remaining work is model fidelity and UX polish. |
-| `/promotions/purchases/[orderId]` | `partial` | Verification, dispute, and review UI exists and the backend lifecycle routes are now implemented. |
-| `/artist/promotions` | `partial` | Shell exists and backend data is now live, but richer seller controls still need finishing. |
-| `/artist/promotions/create` | `partial` | Create is wired to the canonical backend; edit/publish UX can still be polished. |
-| `/artist/promotions/orders` | `partial` | Queue is now backed by real order items, but buyer-side proof/dispute lifecycle still needs completion. |
-| `/admin/promotions` | `partial` | Moderation now targets promotion listings, but the admin UX and dispute workflow still need refinement. |
-| `/admin/promotions/disputes` | `partial` | Backend now returns real order-item dispute signals, but the dedicated resolution flow is still thin. |
-| `/admin/promotions/analytics` | `partial` | Backend analytics now use the marketplace entity, but payout and conversion depth still needs work. |
+| `/promotions` | `done` | Canonical marketplace browse is live. |
+| `/promotions/[slug]` | `done` | Detail, purchase flow, and proof expectations are now implemented. |
+| `/promoters/[username]` | `done` | Public promoter storefront is now rebuilt and live. |
+| `/promotions/purchases` | `done` | Buyer purchases dashboard is live. |
+| `/promotions/purchases/[orderId]` | `done` | Verification, dispute, review, and proof guidance are now implemented. |
+| `/artist/promotions` | `done` | Seller promotions workspace is live. |
+| `/artist/promotions/create` | `done` | Canonical seller builder is live. |
+| `/artist/promotions/orders` | `done` | Seller queue and order review are live. |
+| `/admin/promotions` | `done` | Moderation queue is live and now platform-aware. |
+| `/admin/promotions/disputes` | `done` | Dispute queue is live and now proof-aware. |
+| `/admin/promotions/analytics` | `partial` | Analytics is live; deeper backend platform/conversion metrics still need expansion. |
 
 ## What needs implementing for the influencer use case
 
@@ -256,7 +260,7 @@ These screens now have working create/list/order/analytics routes, but richer ed
 ### Foundation
 
 - `[done]` Choose one canonical backend contract for promotions marketplace routes
-- `[in-progress]` Stop mixing event promotion requests, discount campaigns, and influencer service listings under the same feature name
+- `[done]` Stop mixing event promotion requests, discount campaigns, and influencer service listings under the same feature name
 - `[done]` Define one JSON resource shape shared by public, seller, buyer, and admin flows
 
 ### Public marketplace
@@ -267,20 +271,22 @@ These screens now have working create/list/order/analytics routes, but richer ed
 - `[done]` Implement public promotion reviews endpoint
 - `[done]` Implement promoter public profile endpoint
 - `[done]` Add richer browse filters for budget, reach, verified sellers, and delivery time
+- `[done]` Add audience niche, region, and content format targeting across seller listings and buyer browse
 
 ### Influencer seller experience
 
-- `[todo]` Add promoter profile fields for influencer onboarding
+- `[done]` Add promoter profile fields for influencer onboarding
 - `[done]` Add public-facing influencer showcase page backed by real data
 - `[done]` Seller promotions dashboard now reads canonical backend listing data
 - `[done]` Seller create form now posts to the canonical promotions endpoint
 - `[done]` Add seller edit, pause, archive, and activation lifecycle backed by real endpoints
+- `[done]` Add seller edit page backed by a real seller promotion detail endpoint
 - `[done]` Implement seller verification queue
 - `[done]` Implement seller analytics backed by real order data
 
 ### Artist buyer experience
 
-- `[partial]` Promotion detail page exists
+- `[done]` Promotion detail page exists
 - `[done]` Implement promotion purchase endpoint
 - `[done]` Implement buyer purchases list endpoint
 - `[done]` Implement buyer purchase detail endpoint
@@ -290,10 +296,12 @@ These screens now have working create/list/order/analytics routes, but richer ed
 
 ### Admin
 
-- `[partial]` Admin pages exist
+- `[done]` Admin pages exist
 - `[done]` Repoint admin moderation to the same influencer service entity used by public and seller flows
 - `[done]` Implement dispute listing and resolution for actual service orders
 - `[done]` Implement real marketplace analytics
+- `[done]` Add platform-aware moderation cues and dispute proof guidance
+- `[partial]` Expand analytics toward platform-specific risk, conversion, and settlement intelligence
 
 ### Implemented so far
 
@@ -301,14 +309,24 @@ These screens now have working create/list/order/analytics routes, but richer ed
 - Seller `/my/promotions*` and `/promotions` management routes now use the same `store_products` marketplace entity for create, update, pause, activate, delete, and verification queue flows.
 - Buyer `/my/promotions/purchases*` and `/promotions/orders/*` routes now exist for purchase history, proof submission, disputes, and reviews.
 - Promotion list items, detail payloads, and promoter profile payloads are now serialized from the same product/store/user data model the frontend already expects.
+- Promotion listings and detail payloads now expose structured `platform_specifics` metadata for channel, placement, proof expectation, and timing.
 - Disputes are now surfaced from existing store order-item fields instead of a separate fake model, so the admin panel can at least see real signals while we build the dedicated workflow.
+- Admin `/admin/promotions*` moderation, dispute resolution, and analytics now run on the same `store_products` and `store_orders` marketplace records as the public, buyer, and seller flows.
+- Admin analytics now includes canonical backend platform breakdown, dispute concentration, proof coverage, targeting coverage, refund rate, repeat buyer rate, and settlement-lag style metrics.
+- Seller `/promotions` and `/my/promotions/orders/{orderId}` contracts now support real create, update, pause, activate, delete, queue, and order-detail operations instead of stub responses.
+- Promoter showcase data now has real public `/promoters/{username}` and seller `/my/promoter-profile` contracts for bio, social links, audience summary, proof points, and campaign highlights.
 
 ### Commercial logic
 
 - `[done]` Define promotion commission and payout release rules
-- `[in-progress]` Connect credits, wallet, and hybrid payment to promotion orders
+- `[done]` Connect credits, wallet, and hybrid payment to promotion orders
 - `[in-progress]` Add refund and dispute settlement rules
-- `[todo]` Add audit trail for approvals, payouts, and disputes
+- `[partial]` Add platform-aware dispute review heuristics on the admin side
+- `[done]` Add audit trail for approvals, payouts, and disputes
+
+### Local visualization
+
+- `[done]` Add local dev seed data for influencer, DJ, radio, and artist buyer marketplace visualization
 
 ## Recommended implementation order
 
@@ -319,6 +337,13 @@ These screens now have working create/list/order/analytics routes, but richer ed
 5. Buyer purchase and order tracking
 6. Admin moderation and disputes
 7. Commission, payout, and analytics hardening
+
+## Remaining priority areas
+
+1. Deeper backend analytics for conversion quality by platform/type, now that repeat purchase and settlement-lag signals are in place
+2. Expand proof-of-performance media beyond the new portfolio snapshots into fuller media-kit and case-study depth
+3. Final refund and dispute settlement hardening beyond the current audit trail and admin heuristics
+4. Deeper recommendation intelligence that uses artist history, songs, and richer platform metadata end-to-end
 
 ## Working conclusion
 

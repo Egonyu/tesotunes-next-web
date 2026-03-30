@@ -7,6 +7,9 @@ import ArtistLayoutShell from './artist-layout-shell';
 export default async function ArtistLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authConfig);
   const userRole = session?.user?.role ?? null;
+  const isArtist = Boolean(session?.user?.isArtist);
+  const hasApiAccess = session?.user?.apiAuthorized ?? false;
+  const hasArtistAccess = hasApiAccess && canAccessArtistStudio(userRole, isArtist);
 
   if (!session?.user) {
     return (
@@ -18,7 +21,17 @@ export default async function ArtistLayout({ children }: { children: React.React
     );
   }
 
-  if (!canAccessArtistStudio(userRole)) {
+  if (!hasApiAccess) {
+    return (
+      <AccessNotice
+        title="Session Expired"
+        description="Your sign-in session no longer has API access. Please sign in again to continue using Artist Studio."
+        callbackUrl="/artist"
+      />
+    );
+  }
+
+  if (!hasArtistAccess) {
     return (
       <AccessNotice
         title="Artist Access Required"

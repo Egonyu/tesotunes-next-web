@@ -32,6 +32,28 @@ export type PromotionPlatform =
   | "podcast"
   | "other";
 
+export type PromotionAudienceNiche =
+  | "afrobeats"
+  | "gospel"
+  | "hip_hop"
+  | "amapiano"
+  | "dancehall"
+  | "gen_z"
+  | "campus"
+  | "nightlife"
+  | "mainstream"
+  | "diaspora";
+
+export type PromotionContentFormat =
+  | "short_video"
+  | "live_stream"
+  | "story_post"
+  | "feed_post"
+  | "radio_spin"
+  | "dj_drop"
+  | "playlist_push"
+  | "interview_feature";
+
 export type PromotionStatus =
   | "draft"
   | "pending"
@@ -54,6 +76,15 @@ export type PaymentMethod = "credits" | "ugx" | "hybrid";
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
 
 export type DisputeResolution = "refund_buyer" | "release_to_seller";
+
+export type DisputeReasonCode =
+  | "missing_delivery"
+  | "wrong_platform"
+  | "poor_quality_proof"
+  | "late_delivery"
+  | "scope_mismatch"
+  | "fraud_or_spam"
+  | "other";
 
 // ---------------------------------------------------------------------------
 // Core Models
@@ -85,6 +116,11 @@ export interface PromoterProfile {
   completed_orders: number;
   platforms: PromotionPlatform[];
   service_types: PromotionType[];
+  audience_summary?: string | null;
+  response_time_hours?: number | null;
+  proof_points?: string[];
+  campaign_highlights?: string[];
+  portfolio_items?: PromoterPortfolioItem[];
   social_links: {
     instagram_url?: string | null;
     twitter_url?: string | null;
@@ -96,10 +132,45 @@ export interface PromoterProfile {
   promotions: PromotionListItem[];
 }
 
+export interface PromoterPortfolioItem {
+  title: string;
+  summary?: string | null;
+  outcome?: string | null;
+  platform?: PromotionPlatform | null;
+  asset_url?: string | null;
+  external_url?: string | null;
+}
+
+export interface UpdatePromoterProfileRequest {
+  banner_url?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  audience_summary?: string | null;
+  response_time_hours?: number | null;
+  proof_points?: string[];
+  campaign_highlights?: string[];
+  portfolio_items?: PromoterPortfolioItem[];
+  social_links?: {
+    instagram_url?: string | null;
+    twitter_url?: string | null;
+    facebook_url?: string | null;
+    youtube_url?: string | null;
+    tiktok_url?: string | null;
+    website_url?: string | null;
+  };
+}
+
 export interface PromotionRequirements {
   action: string;
   duration_hours?: number;
   hashtags?: string[];
+}
+
+export interface PromotionPlatformSpecifics {
+  channel?: string;
+  placement?: string;
+  proof?: string;
+  timing?: string;
 }
 
 /** Lightweight promotion card used in list / browse views */
@@ -116,8 +187,12 @@ export interface PromotionListItem {
   accepts_ugx: boolean;
   accepts_hybrid: boolean;
   estimated_reach: number;
+  audience_niches?: PromotionAudienceNiche[];
+  audience_regions?: string[];
+  content_formats?: PromotionContentFormat[];
   delivery_days_min: number;
   delivery_days_max: number;
+  platform_specifics?: PromotionPlatformSpecifics;
   rating_average: number;
   rating_count: number;
   total_orders: number;
@@ -134,8 +209,10 @@ export interface PromotionListItem {
 export interface Promotion extends PromotionListItem {
   description: string;
   requirements: PromotionRequirements | null;
+  platform_specifics?: PromotionPlatformSpecifics;
   deliverables: string[];
   terms: string | null;
+  featured_image?: string | null;
   reviews?: PromotionReview[];
 }
 
@@ -155,6 +232,8 @@ export interface OrderVerification {
 
 export interface OrderDispute {
   is_disputed: boolean;
+  state?: "open" | "resolved";
+  reason_code?: DisputeReasonCode | null;
   dispute_reason: string | null;
   reason?: string | null;
   disputed_at: string | null;
@@ -164,6 +243,9 @@ export interface OrderDispute {
   resolution_notes: string | null;
   admin_notes?: string | null;
   evidence_url?: string | null;
+  evidence_files?: string[];
+  settlement_status?: string | null;
+  refund_reason?: string | null;
 }
 
 export interface PromotionOrder {
@@ -237,12 +319,29 @@ export interface SellerAnalytics {
 export interface AdminAnalytics {
   total_promotions: number;
   active_promotions: number;
+  pending_promotions?: number;
   total_orders: number;
   total_gmv_credits: number;
   total_gmv_ugx: number;
   platform_revenue_ugx: number;
   top_promoters: PromoterSummary[];
   top_promotion_types: { type: PromotionType; count: number; revenue: number }[];
+  platform_breakdown?: {
+    platform: PromotionPlatform;
+    count: number;
+    orders: number;
+    completed_orders: number;
+  }[];
+  dispute_platform_breakdown?: {
+    platform: PromotionPlatform;
+    count: number;
+  }[];
+  proof_coverage_pct?: number;
+  targeting_coverage_pct?: number;
+  refund_rate?: number;
+  repeat_buyer_rate?: number;
+  avg_proof_submission_hours?: number | null;
+  avg_dispute_resolution_hours?: number | null;
   average_order_value: number;
   dispute_rate: number;
 }
@@ -254,6 +353,13 @@ export interface AdminAnalytics {
 export interface BrowsePromotionsParams {
   type?: PromotionType;
   platform?: PromotionPlatform;
+  audience_niche?: PromotionAudienceNiche;
+  audience_region?: string;
+  content_format?: PromotionContentFormat;
+  channel?: string;
+  placement?: string;
+  proof_type?: string;
+  timing?: string;
   min_reach?: number;
   max_reach?: number;
   min_price_credits?: number;
@@ -263,7 +369,13 @@ export interface BrowsePromotionsParams {
   rating_min?: number;
   delivery_days_max?: number;
   verified?: boolean;
-  sort?: "price_asc" | "price_desc" | "rating" | "popularity" | "newest";
+  sort?:
+    | "best_match"
+    | "price_asc"
+    | "price_desc"
+    | "rating"
+    | "popularity"
+    | "newest";
   featured?: boolean;
   search?: string;
   page?: number;
@@ -298,9 +410,13 @@ export interface CreatePromotionRequest {
   accepts_ugx: boolean;
   accepts_hybrid: boolean;
   estimated_reach: number;
+  audience_niches?: PromotionAudienceNiche[];
+  audience_regions?: string[];
+  content_formats?: PromotionContentFormat[];
   delivery_days_min: number;
   delivery_days_max: number;
   requirements?: PromotionRequirements;
+  platform_specifics?: PromotionPlatformSpecifics;
   deliverables?: string[];
   terms?: string;
   featured_image?: string;
@@ -310,6 +426,9 @@ export type UpdatePromotionRequest = Partial<CreatePromotionRequest>;
 
 export interface DisputeOrderRequest {
   reason: string;
+  reason_code?: DisputeReasonCode;
+  evidence_url?: string;
+  evidence_files?: string[];
 }
 
 export interface ReviewPromotionRequest {
@@ -411,6 +530,30 @@ export const PROMOTION_PLATFORM_LABELS: Record<PromotionPlatform, string> = {
   other: "Other",
 };
 
+export const PROMOTION_AUDIENCE_NICHE_LABELS: Record<PromotionAudienceNiche, string> = {
+  afrobeats: "Afrobeats",
+  gospel: "Gospel",
+  hip_hop: "Hip Hop",
+  amapiano: "Amapiano",
+  dancehall: "Dancehall",
+  gen_z: "Gen Z",
+  campus: "Campus",
+  nightlife: "Nightlife",
+  mainstream: "Mainstream",
+  diaspora: "Diaspora",
+};
+
+export const PROMOTION_CONTENT_FORMAT_LABELS: Record<PromotionContentFormat, string> = {
+  short_video: "Short Video",
+  live_stream: "Live Stream",
+  story_post: "Story Post",
+  feed_post: "Feed Post",
+  radio_spin: "Radio Spin",
+  dj_drop: "DJ Drop",
+  playlist_push: "Playlist Push",
+  interview_feature: "Interview Feature",
+};
+
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending_verification: "Pending Verification",
   verification_submitted: "Verification Submitted",
@@ -428,4 +571,14 @@ export const PROMOTION_STATUS_LABELS: Record<PromotionStatus, string> = {
   rejected: "Rejected",
   archived: "Archived",
   expired: "Expired",
+};
+
+export const DISPUTE_REASON_LABELS: Record<DisputeReasonCode, string> = {
+  missing_delivery: "Delivery Missing",
+  wrong_platform: "Wrong Platform or Channel",
+  poor_quality_proof: "Weak or Invalid Proof",
+  late_delivery: "Delivery Was Late",
+  scope_mismatch: "Service Scope Was Not Met",
+  fraud_or_spam: "Fraud or Spam Concern",
+  other: "Other",
 };

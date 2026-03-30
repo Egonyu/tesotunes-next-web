@@ -79,9 +79,12 @@
 - Multiple payment methods supported
 
 ### Reviews
-- `POST /api/v1/store/products/{id}/reviews` - Add review
-- `GET /api/v1/store/products/{id}/reviews` - View reviews
-- `POST /api/v1/store/reviews/{id}/respond` - Seller response
+- `POST /api/reviews` - Add a shared review for a reviewable entity
+- `GET /api/reviews/{reviewableType}/{reviewableId}` - View shared reviews
+- `GET /api/reviews/{reviewableType}/{reviewableId}/eligibility` - Check whether the current user can review
+- `PUT /api/reviews/{review}` - Update my review
+- `DELETE /api/reviews/{review}` - Delete my review
+- `POST /api/reviews/{review}/helpful` - Mark review helpful
 
 ### Analytics
 - `GET /api/v1/store/seller/analytics/{store}/dashboard` - Dashboard
@@ -139,7 +142,7 @@ POST /api/v1/store/seller/stores/{store_id}/activate
 - ✅ `store_categories` - Product categories
 - ✅ `orders` - Customer orders
 - ✅ `order_items` - Order line items
-- ✅ `store_reviews` - Product reviews
+- ✅ `reviews` - Shared polymorphic reviews for products, stores, and promotions
 - ✅ `store_subscriptions` - Store subscription tiers
 - ✅ `store_statistics` - Analytics data
 
@@ -185,11 +188,11 @@ Located in `app/Modules/Store/Http/Controllers/Api/`:
 - ✅ OrderController
 - ✅ PaymentController
 - ✅ NotificationController
-- ✅ ReviewController
 - ✅ AnalyticsController
 - ✅ ReportController
 - ✅ PromotionController
 - ✅ SellerPromotionController
+- ✅ Api\Social\ReviewController
 
 ---
 
@@ -213,7 +216,7 @@ Located in `app/Modules/Store/Http/Controllers/Api/`:
 - ✅ ProductService - Product management
 - ✅ CartService - Shopping cart logic
 - ✅ OrderService - Order processing
-- ✅ ReviewService - Review management
+- ✅ Shared reviews handled by the generic social review controller and `App\Models\Review`
 
 ---
 

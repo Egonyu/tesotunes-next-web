@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { use } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,11 +18,22 @@ import {
   Plus,
   Check,
   Images,
+  Loader2,
 } from "lucide-react";
 import { apiGet, apiPost, isApiError } from "@/lib/api";
+import { mapGenericReviewToFeedItem } from "@/lib/review-feed";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
+import { ReviewFeed } from "@/components/reviews/review-feed";
+import { ReviewComposer } from "@/components/reviews/review-composer";
+import {
+  useCreateReview,
+  useDeleteReview,
+  useMarkReviewHelpful,
+  useReviews,
+  useUpdateReview,
+} from "@/hooks/useReviews";
 import { toast } from "sonner";
 
 interface ProductRecord {
@@ -43,6 +54,7 @@ interface ProductRecord {
   review_count?: number | null;
   metadata?: Record<string, string> | null;
   allow_hybrid_payment?: boolean;
+  product_type?: string | null;
 }
 
 interface Product {
@@ -61,6 +73,7 @@ interface Product {
   rating: number;
   review_count: number;
   specifications?: Record<string, string>;
+  productType?: string | null;
 }
 
 function normalizeProduct(product: ProductRecord): Product {
@@ -91,6 +104,7 @@ function normalizeProduct(product: ProductRecord): Product {
     rating: Number(product.average_rating ?? 0),
     review_count: Number(product.review_count ?? 0),
     specifications: product.metadata ?? undefined,
+    productType: product.product_type ?? null,
   };
 }
 
@@ -103,6 +117,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showReviewComposer, setShowReviewComposer] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
@@ -139,6 +155,30 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     mutationFn: () => apiPost("/store/wishlist", { product_id: product?.id }),
   });
 
+  const { data: reviewsResponse, isLoading: isReviewsLoading } = useReviews(
+    "product",
+    product?.id ?? 0
+  );
+  const createReview = useCreateReview();
+  const markReviewHelpful = useMarkReviewHelpful("product", product?.id ?? 0);
+  const updateReview = useUpdateReview("product", product?.id ?? 0);
+  const deleteReview = useDeleteReview("product", product?.id ?? 0);
+
+  const { data: canReviewResponse } = useQuery({
+    queryKey: ["store-product-can-review", product?.id],
+    queryFn: () =>
+      apiGet<{ data: { can_review: boolean; reason?: string; is_verified?: boolean } }>(
+        `/reviews/product/${product?.id}/eligibility`
+      ),
+    enabled: status === "authenticated" && Boolean(product?.id),
+  });
+
+  useEffect(() => {
+    if (product?.productType === "promotion") {
+      router.replace(`/promotions/${product.slug}`);
+    }
+  }, [product, router]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -165,6 +205,113 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       </div>
     );
   }
+
+  if (product.productType === "promotion") {
+    return (
+      <div className="container mx-auto py-16 px-4 text-center">
+        <Package className="mx-auto mb-4 h-14 w-14 text-primary" />
+        <h1 className="text-2xl font-bold">Opening promotion listing</h1>
+        <p className="mt-2 text-muted-foreground">
+          This service belongs in the promotions marketplace, so we&apos;re taking you there.
+        </p>
+      </div>
+    );
+  }
+
+  const reviews = reviewsResponse?.data.data ?? [];
+  const reviewFeedItems = useMemo(
+    () => reviews.map((review) => mapGenericReviewToFeedItem(review)),
+    [reviews]
+  );
+  const editingReview = useMemo(
+    () => reviews.find((review) => review.id === editingReviewId) ?? null,
+    [editingReviewId, reviews]
+  );
+
+  const canReview = canReviewResponse?.data.can_review ?? false;
+  const reviewBlockNote =
+    status !== "authenticated"
+      ? "Sign in after purchasing to leave a review."
+      : canReviewResponse?.data.reason ?? "Share your experience with this product.";
+
+  const handleCreateReview = ({
+    rating,
+    comment,
+    wouldRecommend,
+  }: {
+    rating: number;
+    comment: string;
+    wouldRecommend: boolean;
+  }) => {
+    if (!product) return;
+
+    createReview.mutate(
+      {
+        reviewable_type: "product",
+        reviewable_id: product.id,
+        rating,
+        content: comment,
+        is_verified_purchase: Boolean(canReviewResponse?.data.is_verified),
+        metadata: { would_recommend: wouldRecommend, source: "store_product_page" },
+      },
+      {
+        onSuccess: () => {
+          setShowReviewComposer(false);
+          setEditingReviewId(null);
+          queryClient.invalidateQueries({ queryKey: ["product", slug] });
+        },
+      }
+    );
+  };
+
+  const handleUpdateReview = ({
+    rating,
+    comment,
+    wouldRecommend,
+  }: {
+    rating: number;
+    comment: string;
+    wouldRecommend: boolean;
+  }) => {
+    if (!editingReviewId) return;
+
+    updateReview.mutate(
+      {
+        id: editingReviewId,
+        data: {
+          rating,
+          content: comment,
+          metadata: {
+            ...(editingReview?.metadata ?? {}),
+            would_recommend: wouldRecommend,
+          },
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditingReviewId(null);
+          queryClient.invalidateQueries({ queryKey: ["product", slug] });
+        },
+      }
+    );
+  };
+
+  const handleMarkHelpful = (reviewId: number | string, helpful: boolean) => {
+    if (typeof reviewId !== "number") return;
+    markReviewHelpful.mutate({ id: reviewId, helpful });
+  };
+
+  const handleDeleteReview = (reviewId: number | string) => {
+    if (typeof reviewId !== "number") return;
+    deleteReview.mutate(reviewId, {
+      onSuccess: () => {
+        if (editingReviewId === reviewId) {
+          setEditingReviewId(null);
+        }
+        queryClient.invalidateQueries({ queryKey: ["product", slug] });
+      },
+    });
+  };
 
   const handleAddToCart = () => {
     if (addedToCart) {
@@ -416,13 +563,100 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         </div>
       </div>
 
-      {/* Reviews / Comments Section */}
-      <div className="mt-12">
-        <CommentSection
-          commentableType="product"
-          commentableId={product.id}
-          title={`Reviews & Comments`}
-        />
+      <div className="mt-12 grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <section className="space-y-5 rounded-[28px] border bg-card p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Product Reviews
+              </p>
+              <h2 className="mt-2 text-2xl font-bold">
+                Buyer feedback for {product.name}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">{reviewBlockNote}</p>
+            </div>
+            <div className="rounded-2xl border bg-background/70 px-4 py-3 text-right">
+              <p className="text-2xl font-bold">{product.rating.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatNumber(product.review_count)} review{product.review_count !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
+          {status === "authenticated" && canReview && !showReviewComposer && !editingReview ? (
+            <button
+              onClick={() => setShowReviewComposer(true)}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Leave a review
+            </button>
+          ) : null}
+
+          {showReviewComposer ? (
+            <ReviewComposer
+              title="Leave a product review"
+              description="Tell future buyers what stood out about this item."
+              submitLabel={createReview.isPending ? "Submitting..." : "Submit review"}
+              disabled={createReview.isPending}
+              onSubmit={handleCreateReview}
+              onCancel={() => setShowReviewComposer(false)}
+            />
+          ) : null}
+
+          {editingReview ? (
+            <ReviewComposer
+              key={`edit-${editingReview.id}`}
+              title="Edit your review"
+              description="Update your rating or review text."
+              submitLabel={updateReview.isPending ? "Saving..." : "Save changes"}
+              initialRating={editingReview.rating}
+              initialComment={editingReview.content}
+              initialWouldRecommend={Boolean(editingReview.metadata?.would_recommend)}
+              disabled={updateReview.isPending}
+              onSubmit={handleUpdateReview}
+              onCancel={() => setEditingReviewId(null)}
+            />
+          ) : null}
+
+          {isReviewsLoading ? (
+            <div className="flex items-center gap-2 rounded-2xl border bg-background/70 p-4 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading reviews...
+            </div>
+          ) : (
+            <ReviewFeed
+              reviews={reviewFeedItems}
+              emptyMessage="No reviews yet. The first verified buyer review will appear here."
+              onMarkHelpful={handleMarkHelpful}
+              markingHelpfulId={markReviewHelpful.variables?.id ?? null}
+              onEdit={(reviewId) => {
+                if (typeof reviewId !== "number") return;
+                setShowReviewComposer(false);
+                setEditingReviewId(reviewId);
+              }}
+              onDelete={handleDeleteReview}
+              deletingReviewId={deleteReview.variables ?? null}
+            />
+          )}
+        </section>
+
+        <section className="space-y-5 rounded-[28px] border bg-card p-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Discussion
+            </p>
+            <h2 className="mt-2 text-2xl font-bold">Questions and comments</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use comments for general discussion. Reviews are for purchase-backed feedback.
+            </p>
+          </div>
+
+          <CommentSection
+            commentableType="product"
+            commentableId={product.id}
+            title="Comments"
+          />
+        </section>
       </div>
     </div>
   );

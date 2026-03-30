@@ -12,6 +12,10 @@ import {
   CreditCard,
   Star,
   TrendingUp,
+  ArrowRight,
+  PauseCircle,
+  Eye,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNumber, formatCurrency } from "@/lib/utils";
@@ -27,8 +31,7 @@ import {
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
-import type { PromotionStatus } from "@/types/promotions";
-import { PROMOTION_TYPE_LABELS } from "@/types/promotions";
+import { PROMOTION_PLATFORM_LABELS, PROMOTION_TYPE_LABELS } from "@/types/promotions";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: "", label: "All" },
@@ -54,41 +57,62 @@ export default function ArtistPromotionsPage() {
   const activate = useActivatePromotion();
   const remove = useDeletePromotion();
 
+  const getTypeLabel = (value: string) =>
+    PROMOTION_TYPE_LABELS[value as keyof typeof PROMOTION_TYPE_LABELS] ??
+    value.replace(/_/g, " ");
+
+  const getPlatformLabel = (value: string) =>
+    PROMOTION_PLATFORM_LABELS[value as keyof typeof PROMOTION_PLATFORM_LABELS] ??
+    value.replace(/_/g, " ");
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Megaphone className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">My Promotions</h1>
-            <p className="text-sm text-muted-foreground">
-              Create and manage your promotional services
+      <section className="relative overflow-hidden rounded-[28px] border border-border/60 bg-card/90 p-6 shadow-xl shadow-black/5">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-amber-400/10" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <Megaphone className="h-3.5 w-3.5" />
+              Seller Promotions Studio
+            </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">Turn your audience into a service storefront</h1>
+            <p className="mt-3 text-sm text-muted-foreground lg:text-base">
+              Package your TikTok reach, DJ co-sign, radio slot, or creator influence into offers that artists can discover, book, and track on Tesotunes.
             </p>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/artist/promotions/profile"
+              className="rounded-2xl border border-border/60 bg-background/80 px-4 py-4 transition hover:border-primary/40 hover:bg-background"
+            >
+              <Eye className="h-5 w-5 text-primary" />
+              <p className="mt-3 font-semibold">Promoter profile</p>
+              <p className="mt-1 text-xs text-muted-foreground">Edit your public showcase and proof points</p>
+            </Link>
+            <Link
+              href="/artist/promotions/create"
+              className="rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90"
+            >
+              <Plus className="h-5 w-5" />
+              <p className="mt-3 font-semibold">Create service</p>
+              <p className="mt-1 text-xs text-primary-foreground/80">Publish a new promotion listing</p>
+            </Link>
+          </div>
         </div>
-        <Link
-          href="/artist/promotions/create"
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Create Promotion
-        </Link>
-      </div>
+      </section>
 
       {/* Analytics cards */}
       {analytics && (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Megaphone className="h-3.5 w-3.5" />
               Active
             </div>
             <p className="text-2xl font-bold">{analytics.active_promotions}</p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Users className="h-3.5 w-3.5" />
               Total Orders
@@ -97,7 +121,7 @@ export default function ArtistPromotionsPage() {
               {formatNumber(analytics.total_orders)}
             </p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <CreditCard className="h-3.5 w-3.5" />
               Revenue
@@ -110,7 +134,7 @@ export default function ArtistPromotionsPage() {
               {formatCurrency(analytics.total_revenue_ugx)}
             </p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <TrendingUp className="h-3.5 w-3.5" />
               Net Revenue
@@ -123,7 +147,7 @@ export default function ArtistPromotionsPage() {
               {formatCurrency(analytics.net_revenue_ugx)}
             </p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <CreditCard className="h-3.5 w-3.5" />
               Platform Fees
@@ -136,7 +160,7 @@ export default function ArtistPromotionsPage() {
               {formatCurrency(analytics.total_platform_fees_ugx)}
             </p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <BarChart3 className="h-3.5 w-3.5" />
               Settled
@@ -145,7 +169,7 @@ export default function ArtistPromotionsPage() {
               {formatNumber(analytics.settled_orders)}
             </p>
           </div>
-          <div className="bg-card border rounded-lg p-4">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Star className="h-3.5 w-3.5" />
               Rating
@@ -157,140 +181,193 @@ export default function ArtistPromotionsPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => {
-              setStatus(tab.value);
-              setPage(1);
-            }}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
-              status === tab.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/50 hover:bg-muted text-muted-foreground"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.95fr)]">
+        <section className="rounded-[28px] border border-border/60 bg-card/90 p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Your live services</h2>
+              <p className="text-sm text-muted-foreground">
+                Filter listings by status and manage what artists can currently book.
+              </p>
+            </div>
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => {
+                    setStatus(tab.value);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                    status === tab.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Promotions table */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      ) : !data?.data?.length ? (
-        <PromotionsEmptyState
-          title="No promotions yet"
-          description="Create your first promotion to start earning from your influence."
-        />
-      ) : (
-        <>
-          <div className="bg-card border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/30">
-                  <th className="text-left p-3 font-medium text-muted-foreground">
-                    Promotion
-                  </th>
-                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">
-                    Type
-                  </th>
-                  <th className="text-left p-3 font-medium text-muted-foreground hidden sm:table-cell">
-                    Price
-                  </th>
-                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">
-                    Orders
-                  </th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-right p-3 font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : !data?.data?.length ? (
+            <PromotionsEmptyState
+              title="No promotions yet"
+              description="Create your first promotion to start earning from your influence."
+            />
+          ) : (
+            <>
+              <div className="mt-6 grid gap-4">
                 {data.data.map((promo) => (
-                  <tr key={promo.id} className="border-b last:border-0">
-                    <td className="p-3">
-                      <p className="font-medium truncate max-w-[200px]">
-                        {promo.title}
-                      </p>
-                    </td>
-                    <td className="p-3 hidden md:table-cell text-muted-foreground">
-                      {PROMOTION_TYPE_LABELS[promo.type]}
-                    </td>
-                    <td className="p-3 hidden sm:table-cell">
-                      {promo.price_credits} cr
-                    </td>
-                    <td className="p-3 hidden lg:table-cell">
-                      {promo.completed_orders}/{promo.total_orders}
-                    </td>
-                    <td className="p-3">
-                      <PromotionStatusBadge status={promo.status} />
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                  <article
+                    key={promo.id}
+                    className="rounded-[24px] border border-border/60 bg-background/70 p-5"
+                  >
+                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <PromotionStatusBadge status={promo.status} />
+                          <span className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
+                            {getTypeLabel(promo.type)}
+                          </span>
+                          <span className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
+                            {getPlatformLabel(promo.platform)}
+                          </span>
+                        </div>
+
+                        <div className="mt-4">
+                          <h3 className="text-xl font-semibold">{promo.title}</h3>
+                          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                            {promo.short_description}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Pricing</p>
+                            <p className="mt-2 font-semibold">{promo.price_credits} cr</p>
+                            <p className="text-xs text-muted-foreground">{formatCurrency(promo.price_ugx)}</p>
+                          </div>
+                          <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Orders</p>
+                            <p className="mt-2 font-semibold">{promo.completed_orders}/{promo.total_orders}</p>
+                            <p className="text-xs text-muted-foreground">Completed vs total</p>
+                          </div>
+                          <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Reach</p>
+                            <p className="mt-2 font-semibold">{formatNumber(promo.estimated_reach)}</p>
+                            <p className="text-xs text-muted-foreground">Estimated audience</p>
+                          </div>
+                          <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Rating</p>
+                            <p className="mt-2 font-semibold">{promo.rating_average.toFixed(1)}</p>
+                            <p className="text-xs text-muted-foreground">{promo.rating_count} reviews</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex w-full flex-col gap-2 xl:w-52">
                         <button
-                          onClick={() =>
-                            router.push(
-                              `/artist/promotions/${promo.id}/edit`
-                            )
-                          }
-                          className="px-2 py-1 text-xs rounded hover:bg-muted transition-colors"
+                          onClick={() => router.push(`/artist/promotions/${promo.id}/edit`)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90"
                         >
-                          Edit
+                          Edit service
+                          <ArrowRight className="h-4 w-4" />
                         </button>
                         {promo.status === "active" && (
                           <button
                             onClick={() => pause.mutate(promo.id)}
-                            className="px-2 py-1 text-xs rounded hover:bg-amber-50 text-amber-600 transition-colors"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300"
                           >
-                            Pause
+                            <PauseCircle className="h-4 w-4" />
+                            Pause listing
                           </button>
                         )}
                         {promo.status === "paused" && (
                           <button
                             onClick={() => activate.mutate(promo.id)}
-                            className="px-2 py-1 text-xs rounded hover:bg-emerald-50 text-emerald-600 transition-colors"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300"
                           >
-                            Activate
+                            <ArrowRight className="h-4 w-4" />
+                            Reactivate
                           </button>
                         )}
                         <button
                           onClick={() => {
                             if (
-                              confirm(
-                                "Are you sure you want to delete this promotion?"
-                              )
+                              confirm("Are you sure you want to delete this promotion?")
                             ) {
                               remove.mutate(promo.id);
                             }
                           }}
-                          className="px-2 py-1 text-xs rounded hover:bg-red-50 text-destructive transition-colors"
+                          className="rounded-xl border border-destructive/20 px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/10"
                         >
-                          Delete
+                          Delete listing
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </article>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
 
-          <PromotionsPagination
-            currentPage={data.meta.current_page}
-            lastPage={data.meta.last_page}
-            onPageChange={setPage}
-          />
-        </>
-      )}
+              <PromotionsPagination
+                currentPage={data.meta.current_page}
+                lastPage={data.meta.last_page}
+                onPageChange={setPage}
+              />
+            </>
+          )}
+        </section>
+
+        <aside className="rounded-[28px] border border-border/60 bg-card/90 p-6">
+          <h2 className="text-lg font-semibold">What sells best here</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Artists respond best to clear scope, proof of reach, and platform-specific outcomes.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Short-form creators</p>
+                <Megaphone className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Lead with follower quality, niche fit, and exactly what the artist receives.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Radio and DJ offers</p>
+                <Radio className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Make slots, number of spins, and proof submission terms very explicit.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Profile quality</p>
+                <Star className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Add highlights, social links, and performance proof on your promoter profile to increase conversion.
+              </p>
+              <Link
+                href="/artist/promotions/profile"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary"
+              >
+                Improve profile
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

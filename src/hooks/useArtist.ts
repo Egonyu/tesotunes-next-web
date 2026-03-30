@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
+import { api, apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import { slugify } from "@/lib/utils";
 import {
@@ -547,35 +547,14 @@ function buildRetrySongSlug(title: string) {
 
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
 
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
-      // Get the Laravel API URL from env
-      const laravelApiUrl = process.env.NEXT_PUBLIC_API_URL
-        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')
-        : 'https://api.tesotunes.com/api';
-
-      // Call Laravel API directly, bypassing Next.js payload limit
-      const instance = axios.create({
-        baseURL: laravelApiUrl,
-        timeout: 300000, // 5 minute timeout for large uploads
-        withCredentials: true,
-      });
-
-      // Add auth token from session if available.
-      const accessToken = (session as { user?: { accessToken?: string } } | null)?.user?.accessToken;
-      if (accessToken) {
-        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      }
-
       const submitUpload = (payload: UploadSongData) => {
         const uploadFormData = buildArtistSongUploadFormData(payload);
 
-        return instance.post<UploadSongResponse>('/artist/songs', uploadFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        return api.post<UploadSongResponse>('/artist/songs', uploadFormData, {
+          timeout: 300000,
           onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
             if (onProgress && progressEvent.total) {
               onProgress({
@@ -585,7 +564,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
               });
             }
           },
-        }).then(res => res.data);
+        }).then((res) => res.data);
       };
 
       try {
@@ -1079,10 +1058,14 @@ export function useSubmitArtistApplication() {
  * Check current artist application status
  */
 export function useArtistApplicationStatus() {
+  const { data: session, status } = useSession();
+  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
+
   return useQuery({
     queryKey: ["artist", "application-status"],
     queryFn: () => apiGet<ApplicationStatusResponse>("/artist/application-status"),
     staleTime: 30 * 1000, // 30 seconds
+    enabled: status === "authenticated" && hasApiAccess,
   });
 }
 

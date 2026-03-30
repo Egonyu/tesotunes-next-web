@@ -1,11 +1,35 @@
+import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'super admin', 'super_admin']);
+const UNRESTRICTED_ADMIN_ROLE_NAMES = new Set(['super admin', 'super_admin']);
+const ARTIST_ROLE_NAMES = new Set(['artist']);
+const NEXTAUTH_SESSION_COOKIE_CANDIDATES = [
+  '__Secure-next-auth.session-token',
+  'next-auth.session-token',
+];
+
+const AUTH_REQUIRED_ROUTE_PREFIXES = [
+  '/admin',
+  '/artist',
+  '/artist-dashboard',
+  '/credits',
+  '/history',
+  '/library',
+  '/messages',
+  '/notifications',
+  '/profile',
+  '/referrals',
+  '/sacco',
+  '/settings',
+  '/tickets',
+  '/transactions',
+  '/wallet',
+];
 
 const ADMIN_PERMISSION_RULES: Array<{ prefix: string; permissions: string[] }> = [
-  { prefix: '/admin/roles', permissions: ['manage-roles', 'admin.settings', 'admin.users'] },
+  { prefix: '/admin/roles', permissions: ['manage-roles', 'manage-settings', 'manage-users', 'admin.settings', 'admin.users'] },
   { prefix: '/admin/settings', permissions: ['manage-settings', 'admin.settings'] },
   { prefix: '/admin/feature-flags', permissions: ['admin.settings'] },
   { prefix: '/admin/audit-logs', permissions: ['admin.settings'] },
@@ -27,6 +51,48 @@ function normalize(value: string | null | undefined): string {
 function wildcardToRegex(pattern: string): RegExp {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
   return new RegExp(`^${escaped}$`, 'i');
+}
+
+function matchesRoutePrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isAuthProtectedPath(pathname: string): boolean {
+  return AUTH_REQUIRED_ROUTE_PREFIXES.some((prefix) => matchesRoutePrefix(pathname, prefix));
+}
+
+function hasApiAccess(token: Record<string, unknown> | null): boolean {
+  return Boolean(token?.accessToken);
+}
+
+async function resolveAuthToken(request: NextRequest) {
+  const baseOptions = {
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  };
+
+  const directToken = await getToken(baseOptions);
+  if (directToken) {
+    return directToken;
+  }
+
+  for (const cookieName of NEXTAUTH_SESSION_COOKIE_CANDIDATES) {
+    if (!request.cookies.has(cookieName)) {
+      continue;
+    }
+
+    const token = await getToken({
+      ...baseOptions,
+      cookieName,
+      secureCookie: cookieName.startsWith('__Secure-'),
+    });
+
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
 }
 
 function hasPermission(grantedPermissions: string[], requiredPermission: string): boolean {
@@ -67,37 +133,74 @@ function redirectToAccessRequired(request: NextRequest, reason: 'auth' | 'forbid
 }
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const pathname = request.nextUrl.pathname;
 
-  if (!token) {
+  if (!isAuthProtectedPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  const token = await resolveAuthToken(request);
+
+  if (!token || !hasApiAccess(token)) {
     return redirectToAccessRequired(request, 'auth');
   }
 
-  const role = normalize((token.role as string | undefined) ?? '');
-  if (!ADMIN_ROLE_NAMES.has(role)) {
-    return redirectToAccessRequired(request, 'forbidden');
+  if (matchesRoutePrefix(pathname, '/artist') || matchesRoutePrefix(pathname, '/artist-dashboard')) {
+    const role = normalize((token.role as string | undefined) ?? '');
+    const isArtist = Boolean(token.isArtist);
+
+    if (!ADMIN_ROLE_NAMES.has(role) && !ARTIST_ROLE_NAMES.has(role) && !isArtist) {
+      return redirectToAccessRequired(request, 'forbidden');
+    }
   }
 
-  const requiredPermissions = getRequiredPermissions(request.nextUrl.pathname);
-  if (requiredPermissions.length === 0) {
-    return NextResponse.next();
-  }
+  if (matchesRoutePrefix(pathname, '/admin')) {
+    const role = normalize((token.role as string | undefined) ?? '');
+    if (!ADMIN_ROLE_NAMES.has(role)) {
+      return redirectToAccessRequired(request, 'forbidden');
+    }
 
-  const grantedPermissions = Array.isArray(token.permissions)
-    ? token.permissions.filter((permission): permission is string => typeof permission === 'string')
-    : [];
+    if (UNRESTRICTED_ADMIN_ROLE_NAMES.has(role)) {
+      return NextResponse.next();
+    }
 
-  if (grantedPermissions.length === 0) {
-    return NextResponse.next();
-  }
+    const requiredPermissions = getRequiredPermissions(pathname);
+    if (requiredPermissions.length === 0) {
+      return NextResponse.next();
+    }
 
-  if (!hasAnyPermission(grantedPermissions, requiredPermissions)) {
-    return redirectToAccessRequired(request, 'forbidden');
+    const grantedPermissions = Array.isArray(token.permissions)
+      ? token.permissions.filter((permission): permission is string => typeof permission === 'string')
+      : [];
+
+    if (grantedPermissions.length === 0) {
+      return redirectToAccessRequired(request, 'forbidden');
+    }
+
+    if (!hasAnyPermission(grantedPermissions, requiredPermissions)) {
+      return redirectToAccessRequired(request, 'forbidden');
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/artist/:path*',
+    '/artist-dashboard/:path*',
+    '/credits/:path*',
+    '/history/:path*',
+    '/library/:path*',
+    '/messages/:path*',
+    '/notifications/:path*',
+    '/profile/:path*',
+    '/referrals/:path*',
+    '/sacco/:path*',
+    '/settings/:path*',
+    '/tickets/:path*',
+    '/transactions/:path*',
+    '/wallet/:path*',
+  ],
 };

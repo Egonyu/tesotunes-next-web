@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { formatNumber, formatCurrency } from "@/lib/utils";
 import type { PromotionListItem } from "@/types/promotions";
 import {
+  PROMOTION_AUDIENCE_NICHE_LABELS,
+  PROMOTION_CONTENT_FORMAT_LABELS,
   PROMOTION_TYPE_LABELS,
   PROMOTION_PLATFORM_LABELS,
 } from "@/types/promotions";
@@ -22,6 +24,14 @@ interface PromotionCardProps {
   promotion: PromotionListItem;
   className?: string;
   href?: string;
+}
+
+function labelFromSlug(value: string | null | undefined) {
+  if (!value) return "Other";
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export function PromotionCard({
@@ -74,7 +84,8 @@ export function PromotionCard({
         {/* Platform badge */}
         <div className="absolute top-2 right-2">
           <span className="bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-sm">
-            {PROMOTION_PLATFORM_LABELS[promotion.platform]}
+            {PROMOTION_PLATFORM_LABELS[promotion.platform] ??
+              labelFromSlug(promotion.platform)}
           </span>
         </div>
       </div>
@@ -83,7 +94,8 @@ export function PromotionCard({
       <div className="p-4 space-y-3">
         {/* Type label */}
         <span className="text-[11px] font-medium text-primary uppercase tracking-wider">
-          {PROMOTION_TYPE_LABELS[promotion.type]}
+          {PROMOTION_TYPE_LABELS[promotion.type] ??
+            labelFromSlug(promotion.type)}
         </span>
 
         {/* Title */}
@@ -95,6 +107,29 @@ export function PromotionCard({
         <p className="text-xs text-muted-foreground line-clamp-2">
           {promotion.short_description}
         </p>
+
+        {(promotion.audience_niches?.length || promotion.content_formats?.length) && (
+          <div className="flex flex-wrap gap-1.5">
+            {(promotion.audience_niches ?? []).slice(0, 2).map((niche) => (
+              <span
+                key={niche}
+                className="rounded-full bg-primary/5 px-2 py-0.5 text-[10px] font-medium text-primary"
+              >
+                {PROMOTION_AUDIENCE_NICHE_LABELS[niche] ??
+                  labelFromSlug(niche)}
+              </span>
+            ))}
+            {(promotion.content_formats ?? []).slice(0, 1).map((format) => (
+              <span
+                key={format}
+                className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+              >
+                {PROMOTION_CONTENT_FORMAT_LABELS[format] ??
+                  labelFromSlug(format)}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Promoter */}
         <div className="flex items-center gap-2">

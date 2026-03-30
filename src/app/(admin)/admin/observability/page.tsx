@@ -134,40 +134,50 @@ export default function ObservabilityPage() {
   const [selectedPaymentReference, setSelectedPaymentReference] = useState<string | null>(null);
   const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderRiskRow | null>(null);
   const hydratedRef = useRef(false);
+  const activeTabRef = useRef(activeTab);
+  const filtersRef = useRef(filters);
+  const searchParamsString = searchParams.toString();
   const serializedStoreState = useMemo(() => serializeState(activeTab, filters), [activeTab, filters]);
 
   useEffect(() => {
-    const tab = searchParams.get('tab') as ObservabilityTab | null;
-    if (tab && tab !== activeTab && tabs.some((item) => item.key === tab)) {
+    activeTabRef.current = activeTab;
+    filtersRef.current = filters;
+  }, [activeTab, filters]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParamsString);
+    const tab = params.get('tab') as ObservabilityTab | null;
+    if (tab && tab !== activeTabRef.current && tabs.some((item) => item.key === tab)) {
       setActiveTab(tab);
     }
 
-    const nextFilters = readFilters(new URLSearchParams(searchParams.toString()));
+    const currentFilters = filtersRef.current;
+    const nextFilters = readFilters(params);
     if (JSON.stringify(nextFilters) !== JSON.stringify({
-      from: filters.from,
-      to: filters.to,
-      search: filters.search,
-      user_id: filters.user_id,
-      admin_id: filters.admin_id,
-      ip: filters.ip,
-      asn: filters.asn,
-      country: filters.country,
-      route: filters.route,
-      payment_reference: filters.payment_reference,
-      host: filters.host,
-      container: filters.container,
-      incident_id: filters.incident_id,
-      severity: filters.severity,
-      domain: filters.domain,
-      category: filters.category,
-      outcome: filters.outcome,
-      actor_type: filters.actor_type,
+      from: currentFilters.from,
+      to: currentFilters.to,
+      search: currentFilters.search,
+      user_id: currentFilters.user_id,
+      admin_id: currentFilters.admin_id,
+      ip: currentFilters.ip,
+      asn: currentFilters.asn,
+      country: currentFilters.country,
+      route: currentFilters.route,
+      payment_reference: currentFilters.payment_reference,
+      host: currentFilters.host,
+      container: currentFilters.container,
+      incident_id: currentFilters.incident_id,
+      severity: currentFilters.severity,
+      domain: currentFilters.domain,
+      category: currentFilters.category,
+      outcome: currentFilters.outcome,
+      actor_type: currentFilters.actor_type,
     })) {
       setFilters(nextFilters);
     }
 
     hydratedRef.current = true;
-  }, [activeTab, filters, searchParams, setActiveTab, setFilters]);
+  }, [searchParamsString, setActiveTab, setFilters]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -175,10 +185,10 @@ export default function ObservabilityPage() {
     }
 
     const nextQuery = serializedStoreState;
-    if (nextQuery !== searchParams.toString()) {
+    if (nextQuery !== searchParamsString) {
       router.replace(`${pathname}?${nextQuery}`, { scroll: false });
     }
-  }, [pathname, router, searchParams, serializedStoreState]);
+  }, [pathname, router, searchParamsString, serializedStoreState]);
 
   const baseParams = useMemo(() => paramsFromFilters(filters), [filters]);
 

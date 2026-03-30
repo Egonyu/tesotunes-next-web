@@ -6,14 +6,15 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      isArtist?: boolean;
       permissions?: string[];
       apiAuthorized?: boolean;
-      accessToken?: string;
     } & DefaultSession["user"];
   }
 
   interface User extends DefaultUser {
     role: string;
+    isArtist?: boolean;
     permissions?: string[];
     accessToken: string;
   }
@@ -23,6 +24,7 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
     role?: string;
+    isArtist?: boolean;
     permissions?: string[];
     accessToken?: string;
     accessTokenRefreshedAt?: number;

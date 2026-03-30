@@ -17,9 +17,8 @@ jest.mock('@/lib/api', () => ({
 jest.mock('next-auth/react', () => ({
   useSession: () => ({
     data: {
-      user: { id: '1', name: 'Test', email: 'test@test.com', accessToken: 'token' },
+      user: { id: '1', name: 'Test', email: 'test@test.com', apiAuthorized: true },
       expires: new Date(Date.now() + 86400000).toISOString(),
-      accessToken: 'token',
     },
     status: 'authenticated',
   }),

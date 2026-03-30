@@ -81,7 +81,7 @@ function getTimelineSteps(appStatus: string): TimelineStep[] {
 export default function ApplicationStatusPage() {
   const { data: session, status: authStatus } = useSession();
   const { data: appData, isLoading, refetch, isRefetching } = useArtistApplicationStatus();
-  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
+  const hasApiAccess = session?.user?.apiAuthorized ?? false;
 
   if (authStatus === "loading" || isLoading) {
     return (

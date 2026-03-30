@@ -1059,7 +1059,7 @@ export function useSubmitArtistApplication() {
  */
 export function useArtistApplicationStatus() {
   const { data: session, status } = useSession();
-  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
+  const hasApiAccess = session?.user?.apiAuthorized ?? false;
 
   return useQuery({
     queryKey: ["artist", "application-status"],

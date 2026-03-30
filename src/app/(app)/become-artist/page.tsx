@@ -54,7 +54,7 @@ export default function BecomeArtistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
-  const hasApiAccess = session?.user?.apiAuthorized ?? Boolean(session?.user?.accessToken);
+  const hasApiAccess = session?.user?.apiAuthorized ?? false;
 
   // Check application status
   const { data: appStatus, isLoading: statusLoading } = useArtistApplicationStatus();

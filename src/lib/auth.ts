@@ -7,8 +7,9 @@ import {
   fetchAuthApi,
 } from "./auth-api";
 
-// Refresh user role every 30 minutes (in milliseconds) - increased to avoid rate limits
-const ROLE_REFRESH_INTERVAL = 30 * 60 * 1000;
+// Refresh role and access posture every 5 minutes so artist/admin changes
+// propagate quickly without requiring a fresh sign-in.
+const ROLE_REFRESH_INTERVAL = 5 * 60 * 1000;
 const ACCESS_TOKEN_REFRESH_INTERVAL = 12 * 60 * 60 * 1000;
 
 // Detect production/HTTPS environment
@@ -87,7 +88,7 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
  * Fetch fresh user data from the API to refresh role.
  * Returns null if the request fails (keeps existing role).
  */
-async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[] } | { expired: true } | null> {
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[]; isArtist: boolean } | { expired: true } | null> {
   try {
     const baseUrls = buildAuthApiBaseUrls(API_URL);
     let response: Response | null = null;
@@ -126,13 +127,14 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string; 
     // Support both { data: {...} } and direct {...} response shapes
     const user = (data.data as Record<string, unknown>) ?? data;
     const role = user.role as string;
+    const isArtist = Boolean(user.is_artist) || Boolean(user.artist);
     const permissionsRaw = user.permissions;
     const permissions = Array.isArray(permissionsRaw)
       ? permissionsRaw.filter((p): p is string => typeof p === "string")
       : [];
 
     if (role) {
-      return { role, permissions };
+      return { role, permissions, isArtist };
     }
     return null;
   } catch (error) {
@@ -185,6 +187,20 @@ async function refreshApiAccessToken(
   }
 }
 
+async function revokeApiAccessToken(accessToken: string): Promise<void> {
+  try {
+    await fetchAuthApi("/auth/logout", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+  } catch (error) {
+    console.warn("[Auth] Error revoking API token during sign-out:", error);
+  }
+}
+
 function extractAuthorizedUser(data: Record<string, unknown>) {
   const dataObj = data.data as Record<string, unknown> | undefined;
   const user = (data.user as Record<string, unknown>) ??
@@ -203,6 +219,7 @@ function extractAuthorizedUser(data: Record<string, unknown>) {
     email: user.email as string,
     name: user.name as string,
     role: (user.role as string) || "user",
+    isArtist: Boolean(user.is_artist) || Boolean(user.artist),
     permissions: Array.isArray(user.permissions)
       ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
       : [],
@@ -219,22 +236,27 @@ export async function authorizeCredentials(
 
   const rememberMe =
     credentials.remember_me === true || credentials.remember_me === "true";
+  const isLocalDevelopment = process.env.NODE_ENV !== "production";
+  const shouldTryLocalAdminFallback = (message: string) =>
+    isLocalDevelopment && /verify your email/i.test(message);
 
   try {
-    const response = await fetchAuthApi("/auth/login", {
+    const requestBody = {
+      email: credentials.email,
+      password: credentials.password,
+      remember_me: rememberMe,
+    };
+
+    let response = await fetchAuthApi("/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        email: credentials.email,
-        password: credentials.password,
-        remember_me: rememberMe,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
-    const data = await safeJsonParse(response);
+    let data = await safeJsonParse(response);
 
     if (!data) {
       console.error("[Auth] Empty or non-JSON response from API");
@@ -243,8 +265,39 @@ export async function authorizeCredentials(
 
     if (!response.ok) {
       const message = (data.message as string) || "Unknown error";
-      console.error("[Auth] Login failed:", message);
-      throw new Error(message);
+      const retryAfter = typeof data.retry_after === "number"
+        ? data.retry_after
+        : typeof data.retry_after === "string"
+          ? Number(data.retry_after)
+          : null;
+      const enrichedMessage =
+        response.status === 429 && retryAfter && retryAfter > 0
+          ? `Too many login attempts. Try again in ${retryAfter} seconds.`
+          : message;
+
+      if (shouldTryLocalAdminFallback(enrichedMessage)) {
+        const fallbackResponse = await fetchAuthApi("/auth/local-admin-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const fallbackData = await safeJsonParse(fallbackResponse);
+
+        if (fallbackResponse.ok && fallbackData) {
+          const authorizedFallbackUser = extractAuthorizedUser(fallbackData);
+
+          if (authorizedFallbackUser) {
+            return authorizedFallbackUser;
+          }
+        }
+      }
+
+      console.error("[Auth] Login failed:", enrichedMessage);
+      throw new Error(enrichedMessage);
     }
 
     const authorizedUser = extractAuthorizedUser(data);
@@ -324,6 +377,7 @@ export const authConfig: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
+        token.isArtist = user.isArtist;
         token.permissions = user.permissions;
         token.accessToken = user.accessToken;
         token.accessTokenRefreshedAt = Date.now();
@@ -362,11 +416,13 @@ export const authConfig: NextAuthOptions = {
           }
         } else if (freshData && 'role' in freshData) {
           token.role = freshData.role;
+          token.isArtist = freshData.isArtist;
           token.permissions = freshData.permissions;
         }
 
         if (freshData && 'role' in freshData) {
           token.role = freshData.role;
+          token.isArtist = freshData.isArtist;
           token.permissions = freshData.permissions;
         }
 
@@ -379,11 +435,20 @@ export const authConfig: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.isArtist = Boolean(token.isArtist);
         session.user.permissions = (token.permissions as string[] | undefined) ?? [];
         session.user.apiAuthorized = Boolean(token.accessToken);
-        session.user.accessToken = token.accessToken as string | undefined;
       }
       return session;
+    },
+  },
+  events: {
+    async signOut({ token }) {
+      const accessToken = token?.accessToken;
+
+      if (typeof accessToken === "string" && accessToken.length > 0) {
+        await revokeApiAccessToken(accessToken);
+      }
     },
   },
   providers: [

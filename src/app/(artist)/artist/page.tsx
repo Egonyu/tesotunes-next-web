@@ -20,6 +20,9 @@ import {
   Disc3,
   Megaphone,
   ArrowRight,
+  Sparkles,
+  Radio,
+  Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistDashboard } from '@/hooks/useArtist';
@@ -78,22 +81,94 @@ export default function ArtistDashboardPage() {
   const pendingActions = dashboard?.pending_actions || [];
   const chartData = dashboard?.chart_data || [];
   const artistName = dashboard?.artist?.name || 'Artist';
+  const statsTotal = stats.length;
   
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome back, {artistName}!</h1>
-          <p className="text-muted-foreground">Here&apos;s what&apos;s happening with your music</p>
-        </div>
-        <Link
-          href="/artist/upload"
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-        >
-          <Upload className="h-4 w-4" />
-          Upload New Song
-        </Link>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.95fr)]">
+        <section className="relative overflow-hidden rounded-[28px] border border-border/60 bg-card/90 p-6 shadow-xl shadow-black/5">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-rose-500/10" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Artist Command Center
+              </div>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
+                Welcome back, {artistName}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm text-muted-foreground lg:text-base">
+                Keep your catalog moving, monitor performance, and grow into promotions, events, and store revenue from one studio.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Link
+                href="/artist/upload"
+                className="rounded-2xl border border-border/60 bg-background/80 px-4 py-4 transition hover:border-primary/40 hover:bg-background"
+              >
+                <Upload className="h-5 w-5 text-primary" />
+                <p className="mt-3 font-semibold">Upload music</p>
+                <p className="mt-1 text-xs text-muted-foreground">Publish a new release</p>
+              </Link>
+              <Link
+                href="/artist/promotions"
+                className="rounded-2xl border border-border/60 bg-background/80 px-4 py-4 transition hover:border-primary/40 hover:bg-background"
+              >
+                <Megaphone className="h-5 w-5 text-primary" />
+                <p className="mt-3 font-semibold">Sell promotion</p>
+                <p className="mt-1 text-xs text-muted-foreground">Offer influence services</p>
+              </Link>
+              <Link
+                href="/artist/analytics"
+                className="rounded-2xl border border-border/60 bg-background/80 px-4 py-4 transition hover:border-primary/40 hover:bg-background"
+              >
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <p className="mt-3 font-semibold">Open analytics</p>
+                <p className="mt-1 text-xs text-muted-foreground">Check momentum and reach</p>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-border/60 bg-card/90 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Growth Focus</p>
+              <p className="text-xs text-muted-foreground">High-impact areas to keep moving</p>
+            </div>
+            <Target className="h-5 w-5 text-primary" />
+          </div>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Catalog health</p>
+                <Music className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {statsTotal > 0 ? `${statsTotal} core performance metrics are live on your dashboard.` : 'Add your first release to activate catalog insights.'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Promotion studio</p>
+                <Megaphone className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Build storefront-ready promo offers for TikTok, radio, DJ, and artist collaborations.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Event + media reach</p>
+                <Radio className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Connect releases to events, fan club, and store campaigns so each drop gets a longer tail.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
       
       {/* Stats */}
@@ -103,9 +178,9 @@ export default function ArtistDashboardPage() {
           const isPositive = stat.change >= 0;
           
           return (
-            <div key={stat.label} className="p-4 rounded-xl border bg-card">
+            <div key={stat.label} className="rounded-2xl border border-border/60 bg-card/90 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <div className="rounded-xl bg-primary/10 p-2 text-primary">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className={cn(
@@ -117,7 +192,8 @@ export default function ArtistDashboardPage() {
                 </div>
               </div>
               <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.period}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stat.period}</p>
             </div>
           );
         })}
@@ -133,7 +209,7 @@ export default function ArtistDashboardPage() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group relative p-4 rounded-xl border bg-card hover:shadow-md transition-all overflow-hidden"
+                className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className={cn(
                   'absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-gradient-to-br',
@@ -157,7 +233,7 @@ export default function ArtistDashboardPage() {
       {/* Charts & Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Plays Chart */}
-        <div className="lg:col-span-2 p-6 rounded-xl border bg-card">
+        <div className="lg:col-span-2 rounded-[28px] border border-border/60 bg-card/90 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">Plays Over Time</h2>
             <select className="text-sm px-3 py-1 border rounded-lg bg-background">
@@ -200,11 +276,11 @@ export default function ArtistDashboardPage() {
         </div>
         
         {/* Pending Actions */}
-        <div className="p-6 rounded-xl border bg-card">
+        <div className="rounded-[28px] border border-border/60 bg-card/90 p-6">
           <h2 className="font-semibold mb-4">Pending Actions</h2>
           <div className="space-y-4">
             {pendingActions.map((action) => (
-              <div key={action.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+              <div key={action.id} className="flex gap-3 rounded-2xl border border-border/60 bg-background/70 p-3">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary h-fit">
                   <Clock className="h-4 w-4" />
                 </div>
@@ -220,7 +296,7 @@ export default function ArtistDashboardPage() {
       </div>
       
       {/* Top Songs */}
-      <div className="p-6 rounded-xl border bg-card">
+      <div className="rounded-[28px] border border-border/60 bg-card/90 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Top Performing Songs</h2>
           <Link href="/artist/songs" className="text-sm text-primary hover:underline">

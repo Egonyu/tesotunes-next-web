@@ -20,6 +20,7 @@ import type {
   ResolveDisputeRequest,
   PromoterProfile,
   SellerAnalytics,
+  UpdatePromoterProfileRequest,
 } from "@/types/promotions";
 import * as api from "@/lib/promotions-api";
 
@@ -38,6 +39,8 @@ export const promotionKeys = {
   platforms: () => [...promotionKeys.all, "platforms"] as const,
   promoter: (username: string) =>
     [...promotionKeys.all, "promoter", username] as const,
+  myPromoterProfile: () =>
+    [...promotionKeys.all, "my-promoter-profile"] as const,
 
   // Buyer
   myPurchases: (params?: Record<string, unknown>) =>
@@ -48,6 +51,8 @@ export const promotionKeys = {
   // Seller
   myPromotions: (params?: Record<string, unknown>) =>
     [...promotionKeys.all, "my-promotions", params] as const,
+  myPromotion: (id: number) =>
+    [...promotionKeys.all, "my-promotion", id] as const,
   myOrders: (params?: Record<string, unknown>) =>
     [...promotionKeys.all, "my-orders", params] as const,
   myOrder: (id: number) =>
@@ -63,6 +68,10 @@ export const promotionKeys = {
   adminAnalytics: () =>
     [...promotionKeys.all, "admin-analytics"] as const,
 };
+
+const adminListPrefix = [...promotionKeys.all, "admin-list"] as const;
+const adminDisputesPrefix = [...promotionKeys.all, "admin-disputes"] as const;
+const sellerOrdersPrefix = [...promotionKeys.all, "my-orders"] as const;
 
 // ---------------------------------------------------------------------------
 // PUBLIC HOOKS
@@ -86,15 +95,6 @@ export function usePromotion(slug: string) {
   });
 }
 
-/** Promotion reviews (paginated) */
-export function usePromotionReviews(slug: string, page = 1) {
-  return useQuery({
-    queryKey: promotionKeys.reviews(slug, page),
-    queryFn: () => api.fetchPromotionReviews(slug, page),
-    enabled: !!slug,
-  });
-}
-
 /** Available platforms */
 export function usePlatforms() {
   return useQuery({
@@ -110,6 +110,29 @@ export function usePromoterProfile(username: string) {
     queryKey: promotionKeys.promoter(username),
     queryFn: () => api.fetchPromoterProfile(username).then((r) => r.data),
     enabled: !!username,
+  });
+}
+
+export function useMyPromoterProfile() {
+  return useQuery<PromoterProfile>({
+    queryKey: promotionKeys.myPromoterProfile(),
+    queryFn: () => api.fetchMyPromoterProfile().then((r) => r.data),
+  });
+}
+
+export function useUpdateMyPromoterProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdatePromoterProfileRequest) =>
+      api.updateMyPromoterProfile(data),
+    onSuccess: () => {
+      toast.success("Promoter profile updated!");
+      qc.invalidateQueries({ queryKey: promotionKeys.myPromoterProfile() });
+      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+    },
+    onError: () => {
+      toast.error("Failed to update promoter profile.");
+    },
   });
 }
 
@@ -230,6 +253,7 @@ export function useUpdatePromotion(id: number) {
     onSuccess: () => {
       toast.success("Promotion updated!");
       qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.myPromotion(id) });
     },
     onError: () => {
       toast.error("Failed to update promotion.");
@@ -284,6 +308,15 @@ export function useMyPromotions(params: { status?: string; page?: number } = {})
   });
 }
 
+/** Single seller promotion detail */
+export function useMyPromotion(id: number) {
+  return useQuery({
+    queryKey: promotionKeys.myPromotion(id),
+    queryFn: () => api.fetchMyPromotion(id).then((r) => r.data),
+    enabled: id > 0,
+  });
+}
+
 /** Orders for my promotions */
 export function useMyPromotionOrders(params: { status?: string; page?: number } = {}) {
   return useQuery({
@@ -309,7 +342,7 @@ export function useVerifyOrder(orderId: number) {
       api.verifyOrder(orderId, data),
     onSuccess: () => {
       toast.success("Order verified! Payment released.");
-      qc.invalidateQueries({ queryKey: promotionKeys.myOrders() });
+      qc.invalidateQueries({ queryKey: sellerOrdersPrefix });
       qc.invalidateQueries({ queryKey: promotionKeys.myOrder(orderId) });
       qc.invalidateQueries({ queryKey: promotionKeys.sellerAnalytics() });
     },
@@ -327,8 +360,9 @@ export function useRejectOrder(orderId: number) {
       api.rejectOrder(orderId, data),
     onSuccess: () => {
       toast.success("Order rejected. Refund issued to buyer.");
-      qc.invalidateQueries({ queryKey: promotionKeys.myOrders() });
+      qc.invalidateQueries({ queryKey: sellerOrdersPrefix });
       qc.invalidateQueries({ queryKey: promotionKeys.myOrder(orderId) });
+      qc.invalidateQueries({ queryKey: promotionKeys.sellerAnalytics() });
     },
     onError: () => {
       toast.error("Failed to reject order.");
@@ -363,7 +397,8 @@ export function useAdminApprovePromotion() {
     mutationFn: (id: number) => api.adminApprovePromotion(id),
     onSuccess: () => {
       toast.success("Promotion approved!");
-      qc.invalidateQueries({ queryKey: promotionKeys.adminList() });
+      qc.invalidateQueries({ queryKey: adminListPrefix });
+      qc.invalidateQueries({ queryKey: promotionKeys.adminAnalytics() });
     },
     onError: () => {
       toast.error("Failed to approve promotion.");
@@ -379,7 +414,8 @@ export function useAdminRejectPromotion() {
       api.adminRejectPromotion(id, { reason }),
     onSuccess: () => {
       toast.success("Promotion rejected.");
-      qc.invalidateQueries({ queryKey: promotionKeys.adminList() });
+      qc.invalidateQueries({ queryKey: adminListPrefix });
+      qc.invalidateQueries({ queryKey: promotionKeys.adminAnalytics() });
     },
     onError: () => {
       toast.error("Failed to reject promotion.");
@@ -408,7 +444,9 @@ export function useAdminResolveDispute() {
     }) => api.adminResolveDispute(disputeId, data),
     onSuccess: () => {
       toast.success("Dispute resolved.");
-      qc.invalidateQueries({ queryKey: promotionKeys.adminDisputes() });
+      qc.invalidateQueries({ queryKey: adminDisputesPrefix });
+      qc.invalidateQueries({ queryKey: promotionKeys.adminAnalytics() });
+      qc.invalidateQueries({ queryKey: adminListPrefix });
     },
     onError: () => {
       toast.error("Failed to resolve dispute.");

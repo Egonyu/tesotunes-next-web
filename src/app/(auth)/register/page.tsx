@@ -48,8 +48,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success - redirect to login
-      router.push("/login?registered=true");
+      // Success - redirect to email verification guidance
+      router.push(`/verify-email?registered=true&email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       console.error("[Register] Error:", error);
 

@@ -21,6 +21,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SafeImage, InitialsAvatar } from '@/components/ui/safe-image';
 
 interface SettingsResponse {
   data: Partial<PlatformSettings>;
@@ -306,6 +307,81 @@ export default function AdminSettingsPage() {
                 <div><label className="block text-sm font-medium mb-2">Compact Logo Label</label><input type="text" value={settings.appearance.logo_compact_label} onChange={(e) => updateField('appearance', 'logo_compact_label', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
                 <div><label className="block text-sm font-medium mb-2">SACCO Header Name</label><input type="text" value={settings.appearance.sacco_name} onChange={(e) => updateField('appearance', 'sacco_name', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
                 <div><label className="block text-sm font-medium mb-2">SACCO Header Tagline</label><input type="text" value={settings.appearance.sacco_tagline} onChange={(e) => updateField('appearance', 'sacco_tagline', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+              </div>
+
+              <div className="rounded-2xl border bg-card p-5">
+                <div className="mb-4">
+                  <h3 className="text-base font-semibold">Login Experience</h3>
+                  <p className="text-sm text-muted-foreground">Control the public sign-in screen text, hero image, and summary stats.</p>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-4">
+                    <div><label className="block text-sm font-medium mb-2">Login Form Title</label><input type="text" value={settings.appearance.auth_form_title} onChange={(e) => updateField('appearance', 'auth_form_title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                    <div><label className="block text-sm font-medium mb-2">Login Form Subtitle</label><textarea value={settings.appearance.auth_form_subtitle} onChange={(e) => updateField('appearance', 'auth_form_subtitle', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background min-h-24" /></div>
+                    <div><label className="block text-sm font-medium mb-2">Hero Title</label><input type="text" value={settings.appearance.auth_hero_title} onChange={(e) => updateField('appearance', 'auth_hero_title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                    <div><label className="block text-sm font-medium mb-2">Hero Description</label><textarea value={settings.appearance.auth_hero_description} onChange={(e) => updateField('appearance', 'auth_hero_description', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background min-h-28" /></div>
+                    <div><label className="block text-sm font-medium mb-2">Hero Image URL</label><input type="text" value={settings.appearance.auth_hero_image} onChange={(e) => updateField('appearance', 'auth_hero_image', e.target.value)} placeholder="https://..." className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border overflow-hidden bg-[#16090d] text-white">
+                      <div className="relative min-h-[320px] p-6">
+                        {settings.appearance.auth_hero_image ? (
+                          <SafeImage
+                            src={settings.appearance.auth_hero_image}
+                            alt={settings.appearance.auth_hero_title}
+                            fill
+                            className="object-cover opacity-25"
+                            fallback={null}
+                            sizes="(min-width: 1024px) 25vw, 100vw"
+                          />
+                        ) : null}
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(225,29,72,0.35),transparent_42%),linear-gradient(135deg,rgba(36,8,18,0.98),rgba(10,10,10,0.9))]" />
+                        <div className="relative z-10 space-y-5">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-12 w-12 overflow-hidden rounded-full bg-primary text-primary-foreground">
+                              <SafeImage
+                                src={settings.appearance.logo_light || settings.appearance.logo_dark}
+                                alt={settings.appearance.logo_alt || settings.appearance.app_name}
+                                fill
+                                className="object-cover"
+                                fallback={<InitialsAvatar name={settings.appearance.logo_compact_label || settings.appearance.app_name} className="bg-primary text-primary-foreground" textClassName="text-lg" />}
+                                sizes="48px"
+                              />
+                            </div>
+                            <div className="text-xl font-semibold">{settings.appearance.app_name}</div>
+                          </div>
+                          <div>
+                            <div className="text-3xl font-semibold leading-tight">{settings.appearance.auth_hero_title}</div>
+                            <p className="mt-3 text-sm leading-6 text-white/70">{settings.appearance.auth_hero_description}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            {[
+                              [settings.appearance.auth_stat_1_value, settings.appearance.auth_stat_1_label],
+                              [settings.appearance.auth_stat_2_value, settings.appearance.auth_stat_2_label],
+                              [settings.appearance.auth_stat_3_value, settings.appearance.auth_stat_3_label],
+                            ].map(([value, label], index) => (
+                              <div key={`${label}-${index}`} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-center">
+                                <div className="text-xl font-bold">{value}</div>
+                                <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/55">{label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div><label className="block text-sm font-medium mb-2">Stat 1 Value</label><input type="text" value={settings.appearance.auth_stat_1_value} onChange={(e) => updateField('appearance', 'auth_stat_1_value', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                      <div><label className="block text-sm font-medium mb-2">Stat 1 Label</label><input type="text" value={settings.appearance.auth_stat_1_label} onChange={(e) => updateField('appearance', 'auth_stat_1_label', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                      <div><label className="block text-sm font-medium mb-2">Stat 2 Value</label><input type="text" value={settings.appearance.auth_stat_2_value} onChange={(e) => updateField('appearance', 'auth_stat_2_value', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                      <div><label className="block text-sm font-medium mb-2">Stat 2 Label</label><input type="text" value={settings.appearance.auth_stat_2_label} onChange={(e) => updateField('appearance', 'auth_stat_2_label', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                      <div><label className="block text-sm font-medium mb-2">Stat 3 Value</label><input type="text" value={settings.appearance.auth_stat_3_value} onChange={(e) => updateField('appearance', 'auth_stat_3_value', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                      <div><label className="block text-sm font-medium mb-2">Stat 3 Label</label><input type="text" value={settings.appearance.auth_stat_3_label} onChange={(e) => updateField('appearance', 'auth_stat_3_label', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-background" /></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

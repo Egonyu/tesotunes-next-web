@@ -13,6 +13,6 @@ export function isArtistRole(role: string | null | undefined): boolean {
   return ARTIST_ROLE_NAMES.includes(normalizeRole(role));
 }
 
-export function canAccessArtistStudio(role: string | null | undefined): boolean {
-  return isArtistRole(role) || isAdminRole(role);
+export function canAccessArtistStudio(role: string | null | undefined, isArtist = false): boolean {
+  return isArtist || isArtistRole(role) || isAdminRole(role);
 }

@@ -95,7 +95,7 @@ describe('RegisterPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/login?registered=true');
+      expect(mockPush).toHaveBeenCalledWith('/verify-email?registered=true&email=test%40test.com');
     });
   });
 

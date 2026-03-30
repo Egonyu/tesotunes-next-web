@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPatch, apiPost } from '@/lib/api';
@@ -75,6 +75,21 @@ function paramsFromFilters(filters: ObservabilityFilters) {
   }, {});
 }
 
+function serializeState(activeTab: ObservabilityTab, filters: ObservabilityFilters) {
+  const params = new URLSearchParams();
+  params.set('tab', activeTab);
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      [...value].sort().forEach((item) => params.append(key, item));
+    } else if (value) {
+      params.set(key, value);
+    }
+  });
+
+  return params.toString();
+}
+
 function readFilters(searchParams: URLSearchParams): Partial<ObservabilityFilters> {
   const getMany = (key: string) => searchParams.getAll(key).filter(Boolean);
 
@@ -118,6 +133,8 @@ export default function ObservabilityPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedPaymentReference, setSelectedPaymentReference] = useState<string | null>(null);
   const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderRiskRow | null>(null);
+  const hydratedRef = useRef(false);
+  const serializedStoreState = useMemo(() => serializeState(activeTab, filters), [activeTab, filters]);
 
   useEffect(() => {
     const tab = searchParams.get('tab') as ObservabilityTab | null;
@@ -148,50 +165,56 @@ export default function ObservabilityPage() {
     })) {
       setFilters(nextFilters);
     }
+
+    hydratedRef.current = true;
   }, [activeTab, filters, searchParams, setActiveTab, setFilters]);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('tab', activeTab);
+    if (!hydratedRef.current) {
+      return;
+    }
 
-    Object.entries(filters).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((item) => params.append(key, item));
-      } else if (value) {
-        params.set(key, value);
-      }
-    });
-
-    const nextQuery = params.toString();
+    const nextQuery = serializedStoreState;
     if (nextQuery !== searchParams.toString()) {
       router.replace(`${pathname}?${nextQuery}`, { scroll: false });
     }
-  }, [activeTab, filters, pathname, router, searchParams]);
+  }, [pathname, router, searchParams, serializedStoreState]);
 
   const baseParams = useMemo(() => paramsFromFilters(filters), [filters]);
 
   const overviewQuery = useQuery({
     queryKey: ['admin', 'observability', 'overview', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; top_attacked_endpoints: Array<{ route: string; total: number }>; recent_events: ObservabilityEvent[] } }>('/admin/observability/overview', { params: baseParams }),
+    placeholderData: (previous) => previous,
     refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const threatsQuery = useQuery({
     queryKey: ['admin', 'observability', 'events', baseParams],
     queryFn: () => apiGet<{ data: ObservabilityEvent[]; meta: { total: number } }>('/admin/observability/events', { params: { ...baseParams, per_page: 25 } }),
+    placeholderData: (previous) => previous,
     refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const entryPointsQuery = useQuery({
-    queryKey: ['admin', 'observability', 'entry-points'],
+    queryKey: ['admin', 'observability', 'entry-points', baseParams],
     queryFn: () => apiGet<{ data: EntryPointRow[] }>('/admin/observability/entry-points', { params: baseParams }),
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
     staleTime: 30000,
   });
 
   const attackersQuery = useQuery({
     queryKey: ['admin', 'observability', 'attackers', baseParams],
     queryFn: () => apiGet<{ data: AttackerRow[] }>('/admin/observability/attackers', { params: baseParams }),
+    placeholderData: (previous) => previous,
     refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const attackerDetailQuery = useQuery({
@@ -204,12 +227,18 @@ export default function ObservabilityPage() {
     queryKey: ['admin', 'observability', 'bots', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; top_bots: Array<{ ip: string; events: number; risk_score: number }> } }>('/admin/observability/bots', { params: baseParams }),
     enabled: activeTab === 'bots' || activeTab === 'overview',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const authQuery = useQuery({
     queryKey: ['admin', 'observability', 'auth-sessions', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; recent: ObservabilityEvent[] } }>('/admin/observability/auth-sessions', { params: baseParams }),
     enabled: activeTab === 'auth-sessions' || activeTab === 'overview',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const sessionDetailQuery = useQuery({
@@ -222,6 +251,9 @@ export default function ObservabilityPage() {
     queryKey: ['admin', 'observability', 'payments-risk', baseParams],
     queryFn: () => apiGet<{ data: { dashboard: { summary: Record<string, number> }; high_risk_events: ObservabilityEvent[] } }>('/admin/observability/payments-risk', { params: baseParams }),
     enabled: activeTab === 'payments-risk' || activeTab === 'overview',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const paymentDetailQuery = useQuery({
@@ -234,12 +266,18 @@ export default function ObservabilityPage() {
     queryKey: ['admin', 'observability', 'system-host', baseParams],
     queryFn: () => apiGet<{ data: SystemHostDetail }>('/admin/observability/system-host', { params: baseParams }),
     enabled: activeTab === 'system-host',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const databaseQuery = useQuery({
     queryKey: ['admin', 'observability', 'database', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; stats: Record<string, unknown>; slow_queries: Array<Record<string, unknown>>; collector_breakdown: DatabaseCollectorBreakdownRow[]; priority_alerts: ObservabilityEvent[]; collector_recent: ObservabilityEvent[]; recent: ObservabilityEvent[] } }>('/admin/observability/database', { params: baseParams }),
     enabled: activeTab === 'database',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const databaseEventDetailQuery = useQuery({
@@ -252,24 +290,36 @@ export default function ObservabilityPage() {
     queryKey: ['admin', 'observability', 'audit-trail', baseParams],
     queryFn: () => apiGet<{ data: { recent: ObservabilityEvent[] } }>('/admin/observability/audit-trail', { params: baseParams }),
     enabled: activeTab === 'audit-trail',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const changesQuery = useQuery({
     queryKey: ['admin', 'observability', 'changes', baseParams],
-    queryFn: () => apiGet<{ data: { recent: ObservabilityEvent[] } }>('/admin/observability/changes', { params: baseParams }),
+    queryFn: () => apiGet<{ data: { recent: ObservabilityEvent[]; integrity_snapshots: Array<Record<string, unknown>> } }>('/admin/observability/changes', { params: baseParams }),
     enabled: activeTab === 'changes',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const incidentsQuery = useQuery({
-    queryKey: ['admin', 'observability', 'incidents'],
-    queryFn: () => apiGet<{ data: IncidentRow[] }>('/admin/observability/incidents'),
+    queryKey: ['admin', 'observability', 'incidents', baseParams],
+    queryFn: () => apiGet<{ data: IncidentRow[] }>('/admin/observability/incidents', { params: baseParams }),
     enabled: activeTab === 'incidents' || activeTab === 'overview',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const stakeholderRiskQuery = useQuery({
     queryKey: ['admin', 'observability', 'stakeholder-risk', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; actors: StakeholderRiskRow[] } }>('/admin/observability/stakeholder-risk', { params: baseParams }),
     enabled: activeTab === 'overview' || activeTab === 'auth-sessions' || activeTab === 'payments-risk',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const stakeholderDetailQuery = useQuery({
@@ -282,12 +332,18 @@ export default function ObservabilityPage() {
     queryKey: ['admin', 'observability', 'integrations', baseParams],
     queryFn: () => apiGet<{ data: { summary: Record<string, number>; providers: IntegrationProviderRow[]; recent: ObservabilityEvent[] } }>('/admin/observability/integrations', { params: baseParams }),
     enabled: activeTab === 'overview' || activeTab === 'payments-risk',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const incidentSuggestionsQuery = useQuery({
     queryKey: ['admin', 'observability', 'incident-suggestions', baseParams],
     queryFn: () => apiGet<{ data: IncidentSuggestionRow[] }>('/admin/observability/incidents/suggestions', { params: baseParams }),
     enabled: activeTab === 'incidents' || activeTab === 'overview',
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 15000,
   });
 
   const incidentDetailQuery = useQuery({
@@ -360,7 +416,7 @@ export default function ObservabilityPage() {
         <p className="text-muted-foreground">Security operations and cross-system investigation console for threats, bots, payments, audit, and infrastructure changes.</p>
       </div>
 
-      <GlobalFilterBar filters={filters} onChange={setFilters} onReset={resetFilters} />
+      <GlobalFilterBar filters={filters} onApply={setFilters} onReset={resetFilters} />
 
       <Tabs value={activeTab} defaultValue="overview" onValueChange={(value) => setActiveTab(value as ObservabilityTab)} className="space-y-6">
         <TabsList className="h-auto flex-wrap justify-start gap-2 rounded-2xl p-2">

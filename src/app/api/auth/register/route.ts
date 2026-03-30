@@ -89,7 +89,15 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, message: "Registration successful", data: responseData.data ?? responseData, errors: null },
+      {
+        success: true,
+        message:
+          (responseData.message as string) ||
+          "Registration successful. Please verify your email before signing in.",
+        data: responseData.data ?? responseData,
+        errors: null,
+        requires_email_verification: Boolean(responseData.requires_email_verification),
+      },
       { status: 201 }
     );
   } catch (error) {

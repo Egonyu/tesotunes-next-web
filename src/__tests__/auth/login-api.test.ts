@@ -114,6 +114,8 @@ describe("login auth integration", () => {
       email: "benson@gmail.com",
       name: "Lyrical Jersy",
       role: "Artist",
+      isArtist: false,
+      permissions: [],
       accessToken: "21|abc123token",
     });
   });
@@ -143,6 +145,55 @@ describe("login auth integration", () => {
         password: "wrong-password",
       })
     ).rejects.toThrow("Invalid credentials");
+  });
+
+  it("retries through the local admin fallback when login returns a verification error", async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Please verify your email before signing in." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              id: 1,
+              email: "admin@test.com",
+              name: "Admin User",
+              role: "admin",
+            },
+            token: "99|local-admin-token",
+            token_type: "Bearer",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
+      ) as typeof fetch;
+
+    const user = await authorizeCredentials({
+      email: "admin@test.com",
+      password: "Admin123!",
+    });
+
+    expect(user).toEqual({
+      id: "1",
+      email: "admin@test.com",
+      name: "Admin User",
+      role: "admin",
+      isArtist: false,
+      permissions: [],
+      accessToken: "99|local-admin-token",
+    });
+
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("/auth/local-admin-login"),
+      expect.any(Object)
+    );
   });
 
   it("refreshes the API access token before it expires", async () => {
@@ -210,6 +261,7 @@ describe("login auth integration", () => {
         apiAuthorized: false,
       },
     });
+    expect(session?.user).not.toHaveProperty("accessToken");
   });
 
   it("clears the API token when refresh returns 401", async () => {
@@ -240,5 +292,31 @@ describe("login auth integration", () => {
     } as never);
 
     expect(token.accessToken).toBeUndefined();
+  });
+
+  it("revokes the API token during sign-out events", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "Logged out successfully" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    ) as typeof fetch;
+
+    await authConfig.events?.signOut?.({
+      token: {
+        accessToken: "21|logout-token",
+      },
+      session: undefined,
+    } as never);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/auth/logout"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer 21|logout-token",
+        }),
+      })
+    );
   });
 });

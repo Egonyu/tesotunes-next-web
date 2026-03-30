@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { apiPost } from "@/lib/api";
+import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 
 /**
  * Sanitize callbackUrl to always be a relative path.
@@ -25,22 +27,56 @@ function sanitizeCallbackUrl(raw: string | null): string {
   }
 }
 
+function getRetryAfterSeconds(errorMessage: string): number | null {
+  const match = errorMessage.match(/try again in\s+(\d+)\s+seconds?/i);
+  if (!match) return null;
+
+  const seconds = Number(match[1]);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+function requiresEmailVerification(errorMessage: string): boolean {
+  return /verify your email/i.test(errorMessage);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: platformSettings } = usePublicPlatformSettings();
   const callbackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"));
+  const registered = searchParams.get("registered") === "true";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [error, setError] = useState("");
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
+  const authTitle = platformSettings?.appearance.auth_form_title || "Welcome back";
+  const authSubtitle =
+    platformSettings?.appearance.auth_form_subtitle ||
+    "Sign in to continue listening to your favorite music";
+
+  useEffect(() => {
+    if (retryAfterSeconds <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setRetryAfterSeconds((current) => (current > 1 ? current - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [retryAfterSeconds]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading || retryAfterSeconds > 0) return;
+
     setIsLoading(true);
     setError("");
+    setVerificationEmailSent(false);
 
     try {
       const result = await signIn("credentials", {
@@ -55,13 +91,18 @@ export default function LoginPage() {
         const message =
           result.error === "CredentialsSignin"
             ? "Invalid email or password"
-            : result.error.includes("Too many attempts")
-              ? "Too many login attempts from this local session. Please wait a minute and try again."
-            : result.error;
+            : result.error.includes("Too many login attempts")
+              ? result.error
+              : result.error;
+        const retryAfter = getRetryAfterSeconds(message);
+        if (retryAfter) {
+          setRetryAfterSeconds(retryAfter);
+        }
         setError(message);
         return;
       }
 
+      setRetryAfterSeconds(0);
       router.push(callbackUrl);
       router.refresh();
     } catch (err) {
@@ -72,16 +113,48 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!email || isResendingVerification) {
+      return;
+    }
+
+    setIsResendingVerification(true);
+    setVerificationEmailSent(false);
+
+    try {
+      await apiPost("/auth/email/resend", { email });
+      setVerificationEmailSent(true);
+      setError("");
+    } catch (err) {
+      console.error("[Login] Failed to resend verification email:", err);
+      setError("We couldn't resend the verification email right now. Please try again.");
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
+      <h2 className="text-2xl font-bold mb-2">{authTitle}</h2>
       <p className="text-muted-foreground mb-8">
-        Sign in to continue listening to your favorite music
+        {authSubtitle}
       </p>
+
+      {registered && !error && !verificationEmailSent && (
+        <div className="mb-6 p-4 rounded-lg bg-primary/10 text-sm">
+          Registration is complete. Verify your email before signing in.
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
+        </div>
+      )}
+
+      {verificationEmailSent && (
+        <div className="mb-6 p-4 rounded-lg bg-green-100 text-green-700 text-sm dark:bg-green-900/30 dark:text-green-400">
+          Verification email sent. Please check your inbox.
         </div>
       )}
 
@@ -97,6 +170,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
             required
+            disabled={isLoading || retryAfterSeconds > 0}
             className="w-full px-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -113,6 +187,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              disabled={isLoading || retryAfterSeconds > 0}
               className="w-full px-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary pr-10"
             />
             <button
@@ -136,6 +211,7 @@ export default function LoginPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isLoading || retryAfterSeconds > 0}
               className="rounded border-muted-foreground"
             />
             <span className="text-sm">Remember me</span>
@@ -150,7 +226,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || retryAfterSeconds > 0}
           className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
@@ -158,11 +234,31 @@ export default function LoginPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Signing in...
             </>
+          ) : retryAfterSeconds > 0 ? (
+            `Try again in ${retryAfterSeconds}s`
           ) : (
             "Sign In"
           )}
         </button>
       </form>
+
+      {requiresEmailVerification(error) && email && (
+        <button
+          type="button"
+          onClick={handleResendVerification}
+          disabled={isResendingVerification}
+          className="mt-4 w-full py-2.5 rounded-lg border font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isResendingVerification ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sending verification email...
+            </>
+          ) : (
+            "Resend Verification Email"
+          )}
+        </button>
+      )}
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}

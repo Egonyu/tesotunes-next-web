@@ -74,7 +74,12 @@ export default function ArtistLayoutShell({
   const hasActivePlayer = !!currentSong && !playerMinimized;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-0 top-0 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute right-0 top-32 h-[22rem] w-[22rem] rounded-full bg-rose-500/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-[20rem] w-[20rem] rounded-full bg-amber-400/10 blur-3xl" />
+      </div>
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -83,15 +88,18 @@ export default function ArtistLayoutShell({
       )}
 
       <aside className={cn(
-        'fixed top-0 left-0 z-50 h-full w-64 bg-card border-r transform transition-transform duration-200 lg:translate-x-0',
+        'fixed top-0 left-0 z-50 h-full w-64 border-r border-border/60 bg-card/95 backdrop-blur transform transition-transform duration-200 lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex items-center justify-between p-4 border-b">
           <Link href="/artist" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-linear-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary to-rose-500 text-white font-bold shadow-lg shadow-primary/20">
               T
             </div>
-            <span className="font-bold">Artist Studio</span>
+            <div>
+              <span className="font-bold">Artist Studio</span>
+              <p className="text-[11px] text-muted-foreground">Tesotunes creator workspace</p>
+            </div>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -101,27 +109,39 @@ export default function ArtistLayoutShell({
           </button>
         </div>
 
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-              {artistAvatar ? (
-                <SafeImage
-                  src={artistAvatar}
-                  alt={artistName}
-                  width={48}
-                  height={48}
-                  className="object-cover"
-                  fallback={<InitialsAvatar name={artistName} textClassName="text-base" />}
-                />
-              ) : (
-                <User className="h-6 w-6 text-muted-foreground" />
-              )}
+        <div className="border-b p-4">
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-3">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                {artistAvatar ? (
+                  <SafeImage
+                    src={artistAvatar}
+                    alt={artistName}
+                    width={48}
+                    height={48}
+                    className="object-cover"
+                    fallback={<InitialsAvatar name={artistName} textClassName="text-base" />}
+                  />
+                ) : (
+                  <User className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold">{artistName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isVerified ? '✓ Verified Artist' : 'Artist'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold">{artistName}</p>
-              <p className="text-xs text-muted-foreground">
-                {isVerified ? '✓ Verified Artist' : 'Artist'}
-              </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl border border-border/60 bg-card px-3 py-2">
+                <p className="text-muted-foreground">Workspace</p>
+                <p className="mt-1 font-medium">Creator mode</p>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-card px-3 py-2">
+                <p className="text-muted-foreground">Focus</p>
+                <p className="mt-1 font-medium">Music + growth</p>
+              </div>
             </div>
           </div>
         </div>
@@ -146,8 +166,8 @@ export default function ArtistLayoutShell({
                 className={cn(
                   'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background'
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -173,7 +193,7 @@ export default function ArtistLayoutShell({
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 h-16 bg-card/95 backdrop-blur border-b flex items-center justify-between px-4 lg:px-6">
+        <header className="sticky top-0 z-30 h-16 border-b border-border/60 bg-background/80 backdrop-blur flex items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -181,13 +201,16 @@ export default function ArtistLayoutShell({
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-lg font-semibold hidden sm:block">Artist Studio</h1>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-semibold">Artist Studio</h1>
+              <p className="text-xs text-muted-foreground">Manage releases, earnings, store and promotions</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
             <Link
               href="/artist/upload"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              className="hidden sm:flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
             >
               <Upload className="h-4 w-4" />
               Upload Music
@@ -251,13 +274,15 @@ export default function ArtistLayoutShell({
 
         <main
           className={cn(
-            'p-4 lg:p-6',
+            'relative p-4 lg:p-6',
             hasActivePlayer
               ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
               : 'pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8'
           )}
         >
-          {children}
+          <div className="mx-auto w-full max-w-[1500px]">
+            {children}
+          </div>
         </main>
       </div>
 

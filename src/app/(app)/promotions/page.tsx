@@ -1,68 +1,184 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  CheckCircle2,
-  CircleAlert,
+  BadgeCheck,
+  BriefcaseBusiness,
   Clock3,
   Coins,
+  Filter,
   Loader2,
   Megaphone,
   Radio,
-  ShoppingBag,
   Sparkles,
+  Store,
+  Ticket,
+  TrendingUp,
   Users,
-  Wallet,
 } from "lucide-react";
-import { usePromotions } from "@/hooks/usePromotions";
-import { usePromotionsStore } from "@/stores/promotions";
 import {
   PromotionCard,
   PromotionFilters,
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
-import {
-  promotionsAuditTasks,
-  promotionsDocumentationSources,
-  promotionsIntegrations,
-  promotionsKeyFindings,
-  promotionsMockMetrics,
-  promotionsOfferLanes,
-  type DeliveryStatus,
-} from "@/data/promotions-audit";
+import { usePromotions } from "@/hooks/usePromotions";
+import { formatCurrency, formatNumber } from "@/lib/utils";
+import { usePromotionsStore } from "@/stores/promotions";
+import type { BrowsePromotionsParams, PromotionListItem } from "@/types/promotions";
 
-const STATUS_STYLES: Record<DeliveryStatus, string> = {
-  live: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "mock-backed": "border-sky-200 bg-sky-50 text-sky-700",
-  partial: "border-amber-200 bg-amber-50 text-amber-700",
-  blocked: "border-rose-200 bg-rose-50 text-rose-700",
+type RecommendationLane = {
+  key: string;
+  title: string;
+  note: string;
+  actionLabel: string;
+  filters: Partial<BrowsePromotionsParams>;
+  promotion: PromotionListItem;
 };
 
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  live: "Live",
-  "mock-backed": "Mock-backed",
-  partial: "Partial",
-  blocked: "Blocked",
-};
+function labelFromSlug(value: string | null | undefined) {
+  if (!value) return "Other";
 
-function DeliveryBadge({ status }: { status: DeliveryStatus }) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function StatCard({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${STATUS_STYLES[status]}`}
-    >
-      {STATUS_LABELS[status]}
-    </span>
+    <div className="rounded-2xl border bg-card p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{note}</p>
+    </div>
   );
+}
+
+function PromotionCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="aspect-[16/9] animate-pulse bg-muted" />
+      <div className="space-y-3 p-4">
+        <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+        <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-full animate-pulse rounded bg-muted" />
+        <div className="h-3 w-5/6 animate-pulse rounded bg-muted" />
+        <div className="h-10 w-full animate-pulse rounded bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+function buildRecommendationLanes(promotions: PromotionListItem[]): RecommendationLane[] {
+  if (!promotions.length) {
+    return [];
+  }
+
+  const verified = promotions.filter((promotion) => promotion.promoter.is_verified);
+  const fastest = [...promotions].sort(
+    (a, b) => a.delivery_days_min - b.delivery_days_min || b.rating_average - a.rating_average
+  )[0];
+  const biggestReach = [...promotions].sort(
+    (a, b) => b.estimated_reach - a.estimated_reach || b.rating_average - a.rating_average
+  )[0];
+  const bestRated = [...promotions].sort(
+    (a, b) => b.rating_average - a.rating_average || b.completed_orders - a.completed_orders
+  )[0];
+  const radio = promotions.find((promotion) => promotion.platform === "radio");
+  const club = promotions.find((promotion) => promotion.platform === "club");
+
+  return [
+    fastest
+      ? {
+          key: "fast_turn",
+          title: "Fast-turn launch support",
+          note: "Prioritise quick delivery when release timing matters most.",
+          actionLabel: "Show fast-turn offers",
+          filters: {
+            platform: fastest.platform,
+            delivery_days_max: fastest.delivery_days_max,
+            sort: "best_match",
+          },
+          promotion: fastest,
+        }
+      : null,
+    biggestReach
+      ? {
+          key: "big_reach",
+          title: "Maximum audience reach",
+          note: "Great for artists who want the widest available visibility lane.",
+          actionLabel: "Show highest reach",
+          filters: {
+            platform: biggestReach.platform,
+            min_reach: biggestReach.estimated_reach,
+            sort: "best_match",
+          },
+          promotion: biggestReach,
+        }
+      : null,
+    bestRated
+      ? {
+          key: "trusted",
+          title: "Most trusted storefronts",
+          note: "Lean into stronger ratings, completed orders, and proven delivery.",
+          actionLabel: "Show trusted offers",
+          filters: {
+            platform: bestRated.platform,
+            rating_min: Math.max(4, Math.floor(bestRated.rating_average)),
+            verified: verified.length > 0 || undefined,
+            sort: "best_match",
+          },
+          promotion: bestRated,
+        }
+      : null,
+    radio
+      ? {
+          key: "radio",
+          title: "Regional radio placement",
+          note: "Useful for songs that need presenter context and broadcast proof.",
+          actionLabel: "Show radio fits",
+          filters: {
+            platform: "radio",
+            proof_type: radio.platform_specifics?.proof,
+            sort: "best_match",
+          },
+          promotion: radio,
+        }
+      : club
+        ? {
+            key: "club",
+            title: "Nightlife and DJ energy",
+            note: "For club-ready releases that need venue context and recap proof.",
+            actionLabel: "Show DJ and club fits",
+            filters: {
+              platform: "club",
+              placement: club.platform_specifics?.placement,
+              sort: "best_match",
+            },
+            promotion: club,
+          }
+        : null,
+  ].filter(Boolean) as RecommendationLane[];
 }
 
 export default function PromotionsBrowsePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { filters, setFilter } = usePromotionsStore();
+  const { filters, setFilter, resetFilters } = usePromotionsStore();
   const { data, isLoading, isError } = usePromotions(filters);
 
   const selectedEvent = useMemo(() => {
@@ -97,370 +213,677 @@ export default function PromotionsBrowsePage() {
     params.set("event_id", String(selectedEvent.id));
     params.set("event_name", selectedEvent.title);
 
-    if (selectedEvent.slug) {
-      params.set("event_slug", selectedEvent.slug);
-    }
-
-    if (selectedEvent.startsAt) {
-      params.set("event_starts_at", selectedEvent.startsAt);
-    }
-
-    if (selectedEvent.venue) {
-      params.set("event_venue", selectedEvent.venue);
-    }
-
-    if (selectedEvent.city) {
-      params.set("event_city", selectedEvent.city);
-    }
+    if (selectedEvent.slug) params.set("event_slug", selectedEvent.slug);
+    if (selectedEvent.startsAt) params.set("event_starts_at", selectedEvent.startsAt);
+    if (selectedEvent.venue) params.set("event_venue", selectedEvent.venue);
+    if (selectedEvent.city) params.set("event_city", selectedEvent.city);
 
     return `?${params.toString()}`;
   }, [selectedEvent]);
+
+  const promotions = data?.data ?? [];
+  const meta = data?.meta;
+  const activeFilterEntries = useMemo(
+    () =>
+      Object.entries(filters).filter(([key, value]) => {
+        if (key === "page" || key === "per_page" || key === "sort") {
+          return false;
+        }
+
+        if (typeof value === "boolean") {
+          return value;
+        }
+
+        return value !== undefined && value !== null && value !== "";
+      }),
+    [filters]
+  );
+  const hasActiveFilters = activeFilterEntries.length > 0;
+
+  const summary = useMemo(() => {
+    const verifiedPromoters = new Set(
+      promotions
+        .filter((promotion) => promotion.promoter.is_verified)
+        .map((promotion) => promotion.promoter.username)
+    ).size;
+
+    const avgReach =
+      promotions.length > 0
+        ? promotions.reduce((sum, promotion) => sum + promotion.estimated_reach, 0) / promotions.length
+        : 0;
+
+    const avgDelivery =
+      promotions.length > 0
+        ? promotions.reduce((sum, promotion) => sum + promotion.delivery_days_min, 0) / promotions.length
+        : 0;
+
+    const featured = promotions.filter((promotion) => promotion.is_featured);
+    const topPromoters = Array.from(
+      new Map(
+        promotions.map((promotion) => [
+          promotion.promoter.username,
+          {
+            username: promotion.promoter.username,
+            name: promotion.promoter.name,
+            verified: promotion.promoter.is_verified,
+            followerCount: promotion.promoter.follower_count,
+            platform: promotion.platform,
+            offerCount: promotions.filter(
+              (item) => item.promoter.username === promotion.promoter.username
+            ).length,
+          },
+        ])
+      ).values()
+    ).slice(0, 3);
+
+    return {
+      verifiedPromoters,
+      avgReach,
+      avgDelivery,
+      featured,
+      topPromoters,
+    };
+  }, [promotions]);
+  const recommendationLanes = useMemo(
+    () => buildRecommendationLanes(promotions).slice(0, 4),
+    [promotions]
+  );
 
   const clearEventContext = () => {
     router.replace("/promotions");
   };
 
-  const completedTasks = promotionsAuditTasks.filter(
-    (task) => task.status === "completed"
-  );
-  const todoTasks = promotionsAuditTasks.filter((task) => task.status === "todo");
+  const clearBrowseFilters = () => {
+    resetFilters();
+  };
+
+  const setQuickFilter = (key: keyof typeof filters, value: string | boolean | undefined) => {
+    setFilter(key as never, value as never);
+  };
+  const applyRecommendationLane = (lane: RecommendationLane) => {
+    resetFilters();
+    Object.entries(lane.filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        setFilter(key as keyof typeof filters, value as never);
+      }
+    });
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilter("page", page);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border bg-card">
-        <div className="bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.92))] px-6 py-8 text-white sm:px-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-white/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Promotions as a Service
+    <div className="container mx-auto px-4 py-8">
+      <div className="space-y-8">
+        <section className="rounded-3xl border bg-card">
+          <div className="border-b px-6 py-6 md:px-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  <Megaphone className="h-3.5 w-3.5" />
+                  Artist Promotion Marketplace
+                </div>
+
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                    Find a promoter who can push your song.
+                  </h1>
+                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                    Browse real promoter storefronts, compare service offers, and place an order for TikTok, radio, DJ, or creator promotion with proof and reviews handled through Tesotunes.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuickFilter("platform", "tiktok")}
+                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Start with TikTok promoters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickFilter("platform", "radio")}
+                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    <Radio className="h-4 w-4 text-primary" />
+                    Start with radio promoters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickFilter("verified", true)}
+                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    <BadgeCheck className="h-4 w-4 text-primary" />
+                    Only trusted storefronts
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
-                    <Megaphone className="h-6 w-6 text-orange-200" />
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:w-[26rem]">
+                <StatCard
+                  label="Live Offers"
+                  value={formatNumber(meta?.total ?? 0)}
+                  note="Promotion packages artists can compare right now."
+                />
+                <StatCard
+                  label="Trusted Promoters"
+                  value={formatNumber(summary.verifiedPromoters)}
+                  note="Verified storefronts in the current visible marketplace."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 px-6 py-6 md:px-8 lg:grid-cols-4">
+            <StatCard
+              label="Average Reach"
+              value={formatNumber(Math.round(summary.avgReach))}
+              note="Estimated audience across the visible promotion offers."
+            />
+            <StatCard
+              label="Fastest Turn"
+              value={
+                promotions.length > 0
+                  ? `${Math.min(...promotions.map((promotion) => promotion.delivery_days_min))} days`
+                  : "Flexible"
+              }
+              note="Useful when you need release-week momentum."
+            />
+            <StatCard
+              label="Booking"
+              value="UGX + Credits"
+              note="Tesotunes handles checkout, proof, and disputes."
+            />
+            <StatCard
+              label="Promoter Entry"
+              value="Live"
+              note="Promoters can publish offers, add proof, and manage orders."
+            />
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border bg-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Step 1
+            </p>
+            <h2 className="mt-2 text-lg font-semibold">Open a promoter storefront</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Start by checking the promoter, their reviews, portfolio, and the channels they actually use.
+            </p>
+          </div>
+          <div className="rounded-2xl border bg-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Step 2
+            </p>
+            <h2 className="mt-2 text-lg font-semibold">Compare the actual offer</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Check the price, time frame, deliverables, proof style, and whether the promoter is offering TikTok, radio, club, or another lane.
+            </p>
+          </div>
+          <div className="rounded-2xl border bg-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Step 3
+            </p>
+            <h2 className="mt-2 text-lg font-semibold">Book and track in Tesotunes</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Place the order, receive proof, confirm delivery, or dispute if the agreed promotion was not delivered.
+            </p>
+          </div>
+        </section>
+
+        {selectedEvent && (
+          <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  Event Promotion Context
+                </p>
+                <h2 className="text-lg font-semibold">{selectedEvent.title}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {selectedEvent.venue || "Venue pending"}
+                  {selectedEvent.city ? ` · ${selectedEvent.city}` : ""}
+                  {selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-background px-3 py-2 text-sm text-muted-foreground">
+                  <Ticket className="h-4 w-4" />
+                  Service detail pages will keep this event attached.
+                </div>
+                <button
+                  type="button"
+                  onClick={clearEventContext}
+                  className="rounded-full border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+                >
+                  Clear event mode
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
+          <aside className="space-y-4">
+            <div className="rounded-2xl border bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                <Filter className="h-4 w-4" />
+                Filters
+              </div>
+              <h2 className="mt-2 text-xl font-bold">Search and compare offers</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Use filters when you already know the channel, audience fit, timing, or proof style you want.
+              </p>
+              <div className="mt-5">
+                <PromotionFilters />
+              </div>
+              <button
+                type="button"
+                onClick={clearBrowseFilters}
+                className="mt-4 w-full rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                Reset filters
+              </button>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                Promoter Workspace
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                These tools are for promoters selling services, not for artists buying them.
+              </p>
+              <div className="mt-4 space-y-3">
+                <Link
+                  href="/artist/promotions"
+                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
+                >
+                  <div className="flex items-center gap-3">
+                    <Store className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold">Promotions dashboard</p>
+                      <p className="text-sm text-muted-foreground">Manage listings and orders.</p>
+                    </div>
                   </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+
+                <Link
+                  href="/artist/promotions/create"
+                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
+                >
+                  <div className="flex items-center gap-3">
+                    <Megaphone className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold">Create promotion offer</p>
+                      <p className="text-sm text-muted-foreground">Publish a service package.</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+
+                <Link
+                  href="/promotions/purchases"
+                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
+                >
+                  <div className="flex items-center gap-3">
+                    <BriefcaseBusiness className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold">Buyer order tracking</p>
+                      <p className="text-sm text-muted-foreground">View purchased campaigns.</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </div>
+            </div>
+          </aside>
+
+          <div className="space-y-6">
+            {recommendationLanes.length > 0 && !hasActiveFilters && (
+              <section className="rounded-2xl border bg-card p-5">
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h1 className="text-3xl font-semibold tracking-tight">
-                      Promotions marketplace, audit, and delivery tracker
-                    </h1>
-                    <p className="text-sm text-white/70">
-                      {selectedEvent
-                        ? `Running in event campaign mode for ${selectedEvent.title}.`
-                        : "One working surface for influencers, DJs, radio, artists, SACCO funding, store linkage, and commission readiness."}
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                      Quick Starting Points
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold">
+                      Start with the kind of promoter you need
+                    </h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      These suggestions help artists like Richo move quickly from goal to a shortlist of promoters and offers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {recommendationLanes.map((lane) => (
+                    <button
+                      key={lane.key}
+                      type="button"
+                      onClick={() => applyRecommendationLane(lane)}
+                      className="rounded-2xl border p-4 text-left transition hover:bg-muted"
+                    >
+                      <p className="text-sm font-semibold">{lane.title}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{lane.note}</p>
+                      <div className="mt-4 rounded-xl bg-muted/40 p-3">
+                        <p className="text-sm font-medium">{lane.promotion.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {lane.promotion.promoter.name} · {labelFromSlug(lane.promotion.platform)}
+                        </p>
+                      </div>
+                      <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary">
+                        {lane.actionLabel}
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+              <div className="rounded-2xl border bg-card p-5 lg:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  Start With Promoters
+                </p>
+                <h2 className="mt-2 text-2xl font-bold">
+                  Browse trusted storefronts before you place an order
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  If you already know you want someone like Papa Ti, start here. Open the storefront, review proof and reviews, then compare the service offer that matches your song rollout.
+                </p>
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {summary.topPromoters.length > 0 ? (
+                    summary.topPromoters.map((promoter) => (
+                      <Link
+                        key={promoter.username}
+                        href={`/promoters/${promoter.username}`}
+                        className="rounded-2xl border p-4 transition hover:bg-muted"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-sm font-semibold">{promoter.name}</p>
+                              {promoter.verified && (
+                                <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {labelFromSlug(promoter.platform)} promoter
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            {formatNumber(promoter.followerCount)}
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {formatNumber(promoter.offerCount)} live offers
+                          </span>
+                          <span className="font-medium text-primary">Open storefront</span>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground md:col-span-3">
+                      Promoter storefronts will appear here as active listings load.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  Marketplace Summary
+                </p>
+                <h2 className="mt-2 text-2xl font-bold">
+                  {formatNumber(meta?.total ?? 0)} service offers ready to book
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  After you shortlist a promoter, use the offer list below to compare price, timing, and delivery scope.
+                </p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Users className="h-4 w-4 text-primary" />
+                      Reach
+                    </div>
+                    <p className="mt-2 text-lg font-semibold">
+                      {formatNumber(Math.round(summary.avgReach))}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Average estimated audience</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Clock3 className="h-4 w-4 text-primary" />
+                      Delivery
+                    </div>
+                    <p className="mt-2 text-lg font-semibold">
+                      {summary.avgDelivery > 0 ? `${Math.round(summary.avgDelivery)} day avg` : "Flexible"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Typical minimum turnaround</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Coins className="h-4 w-4 text-primary" />
+                      Price
+                    </div>
+                    <p className="mt-2 text-lg font-semibold">
+                      {promotions.some((promotion) => promotion.accepts_ugx)
+                        ? formatCurrency(
+                            Math.min(
+                              ...promotions
+                                .filter((promotion) => promotion.accepts_ugx)
+                                .map((promotion) => promotion.price_ugx)
+                            )
+                          )
+                        : "Flexible"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Lowest visible UGX offer</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  Why This Works
+                </p>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold">Promoters are review-backed</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Richo should be able to judge Papa Ti by storefront proof, portfolio, and order history before paying.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold">Offers make the promise explicit</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Each service should clearly say the channel, price, timeframe, and proof expectation.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold">Tesotunes handles the workflow</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Booking, proof submission, buyer confirmation, disputes, and settlement all stay inside one flow.
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="max-w-2xl text-sm leading-6 text-white/78">
-                The docs already describe a full two-sided promotions economy, but local dev still spans live routes, placeholder APIs, and roadmap-only integrations. This page now tracks what is completed, what is still todo, and which related surfaces are safe to use today.
-              </p>
-            </div>
+            </section>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:w-[26rem]">
-              <div className="rounded-3xl border border-white/10 bg-white/8 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-white/60">Tracker</p>
-                <p className="mt-2 text-3xl font-semibold">
-                  {promotionsMockMetrics.completedTasks}
-                  <span className="text-lg text-white/55"> / {promotionsAuditTasks.length}</span>
-                </p>
-                <p className="mt-1 text-sm text-white/70">Completed workstreams visible today</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/8 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-white/60">Commission</p>
-                <p className="mt-2 text-3xl font-semibold">
-                  {promotionsMockMetrics.commissionSplit.platform}%
-                </p>
-                <p className="mt-1 text-sm text-white/70">
-                  Platform fee mock for promotions, with {promotionsMockMetrics.commissionSplit.promoter}% to the promoter
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 lg:grid-cols-4">
-            <div className="rounded-3xl border border-white/10 bg-black/15 p-4">
-              <div className="flex items-center gap-2 text-sm text-white/75">
-                <Users className="h-4 w-4" />
-                Offer lanes
-              </div>
-              <p className="mt-2 text-2xl font-semibold">{promotionsMockMetrics.activePromoterLanes}</p>
-              <p className="mt-1 text-sm text-white/60">Influencers, DJs, radio, and artist-led campaigns</p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-black/15 p-4">
-              <div className="flex items-center gap-2 text-sm text-white/75">
-                <ShoppingBag className="h-4 w-4" />
-                Live bridges
-              </div>
-              <p className="mt-2 text-2xl font-semibold">{promotionsMockMetrics.liveIntegrationSurfaces}</p>
-              <p className="mt-1 text-sm text-white/60">Storefront and wallet surfaces already usable</p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-black/15 p-4">
-              <div className="flex items-center gap-2 text-sm text-white/75">
-                <CircleAlert className="h-4 w-4" />
-                Blockers
-              </div>
-              <p className="mt-2 text-2xl font-semibold">{promotionsMockMetrics.blockedWorkstreams}</p>
-              <p className="mt-1 text-sm text-white/60">Contract drifts currently stopping end-to-end parity</p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-black/15 p-4">
-              <div className="flex items-center gap-2 text-sm text-white/75">
-                <Clock3 className="h-4 w-4" />
-                Todo queue
-              </div>
-              <p className="mt-2 text-2xl font-semibold">{promotionsMockMetrics.todoTasks}</p>
-              <p className="mt-1 text-sm text-white/60">Backend and shared integration tasks still outstanding</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {selectedEvent && (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Event Promotion Mode
-              </p>
-              <h2 className="text-lg font-semibold">{selectedEvent.title}</h2>
-              <p className="text-sm text-muted-foreground">
-                {selectedEvent.venue || "Venue pending"}
-                {selectedEvent.city ? ` · ${selectedEvent.city}` : ""}
-                {selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={clearEventContext}
-              className="rounded-lg border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Browse all promotions
-            </button>
-          </div>
-        </div>
-      )}
-
-      <section className="grid gap-4 lg:grid-cols-[1.3fr,0.7fr]">
-        <div className="rounded-3xl border bg-card p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Audit Tracker
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold">Completed vs todo</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                A truth-based tracker stitched from the docs, the current page inventory, and the Laravel controller audit.
-              </p>
-            </div>
-            <div className="rounded-3xl bg-muted/50 px-4 py-3 text-right">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
-              <p className="text-3xl font-semibold">
-                {completedTasks.length}
-                <span className="text-lg text-muted-foreground">/{promotionsAuditTasks.length}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/70 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                <CheckCircle2 className="h-4 w-4" />
-                Completed
-              </div>
-              <div className="mt-4 space-y-3">
-                {completedTasks.map((task) => (
-                  <div key={task.title} className="rounded-2xl bg-white/80 p-3">
-                    <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
+            {summary.featured.length > 0 && (
+              <section className="rounded-2xl border bg-card p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                      Featured Services
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold">Compare standout offers</h2>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-800">
-                <Clock3 className="h-4 w-4" />
-                Todo
-              </div>
-              <div className="mt-4 space-y-3">
-                {todoTasks.map((task) => (
-                  <div key={task.title} className="rounded-2xl bg-white/80 p-3">
-                    <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border bg-card p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-            Offer Map
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold">Who promotions serve</h2>
-          <div className="mt-5 space-y-3">
-            {promotionsOfferLanes.map((lane) => (
-              <div key={lane.title} className="rounded-2xl border bg-background/60 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">{lane.title}</p>
-                  <DeliveryBadge status={lane.status} />
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">{lane.detail}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 rounded-2xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-            Mock operating model: artists buy with wallet funds or credits, promoters complete external deliverables, the platform holds an 18% commission, and seller/admin dashboards close the loop once backend workflows are finished.
-          </div>
-        </div>
-      </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
-        <div className="rounded-3xl border bg-card p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-            Integrations
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold">Cross-module handoff</h2>
-          <div className="mt-5 space-y-3">
-            {promotionsIntegrations.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors hover:border-primary/40 hover:bg-muted/20"
-              >
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {summary.featured.slice(0, 3).map((promotion) => (
+                    <Link
+                      key={promotion.id}
+                      href={`/promotions/${promotion.slug}${promotionDetailSuffix}`}
+                      className="rounded-2xl border p-4 transition hover:bg-muted"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{promotion.title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {promotion.promoter.name}
+                          </p>
+                        </div>
+                        {promotion.promoter.is_verified && (
+                          <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
+                        )}
+                      </div>
+                      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                        {promotion.short_description}
+                      </p>
+                      <div className="mt-4 flex items-center justify-between text-sm">
+                        <span className="font-semibold text-primary">
+                          {promotion.accepts_credits
+                            ? `${formatNumber(promotion.price_credits)} credits`
+                            : formatCurrency(promotion.price_ugx)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {labelFromSlug(promotion.platform)}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="rounded-2xl border bg-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="font-semibold">{item.label}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.summary}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                    Service Offers
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">Browse active promotion offers</h2>
+                  {meta && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Page {meta.current_page} of {meta.last_page} · {formatNumber(meta.total)} total offers
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <DeliveryBadge status={item.status} />
-                  <ArrowRight className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                {hasActiveFilters && (
+                  <div className="flex flex-wrap gap-2">
+                    {activeFilterEntries.slice(0, 4).map(([key, value]) => (
+                      <span
+                        key={key}
+                        className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
+                      >
+                        {labelFromSlug(key)}: {String(value)}
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={clearBrowseFilters}
+                      className="rounded-full border bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isError ? (
+                <div className="mt-6 space-y-4">
+                  <PromotionsEmptyState
+                    title="We couldn’t load promotion services"
+                    description="Check that the local API is running, then refresh this page."
+                  />
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                    >
+                      Retry page
+                    </button>
+                    <Link
+                      href="/artist/promotions"
+                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                    >
+                      Open seller dashboard
+                    </Link>
+                  </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border bg-card p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-            Findings
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold">Main gaps from the audit</h2>
-          <div className="mt-5 space-y-3">
-            {promotionsKeyFindings.map((finding) => (
-              <div key={finding.title} className="rounded-2xl border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">{finding.title}</p>
-                  <DeliveryBadge status={finding.status} />
+              ) : isLoading ? (
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <PromotionCardSkeleton key={index} />
+                  ))}
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">{finding.detail}</p>
-              </div>
-            ))}
+              ) : promotions.length === 0 ? (
+                <div className="mt-6 space-y-4">
+                  <PromotionsEmptyState
+                    title="No promotion services match these filters"
+                    description="Try changing platform, budget, or audience targeting to widen the result set."
+                  />
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={clearBrowseFilters}
+                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                    >
+                      Reset browse filters
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickFilter("featured", true)}
+                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                    >
+                      Show featured only
+                    </button>
+                    <Link
+                      href="/artist/promotions/create"
+                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                    >
+                      Become a seller
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {promotions.map((promotion: PromotionListItem) => (
+                      <PromotionCard
+                        key={promotion.id}
+                        promotion={promotion}
+                        href={`/promotions/${promotion.slug}${promotionDetailSuffix}`}
+                      />
+                    ))}
+                  </div>
+
+                  {meta && (
+                    <PromotionsPagination
+                      currentPage={meta.current_page}
+                      lastPage={meta.last_page}
+                      onPageChange={handlePageChange}
+                    />
+                  )}
+                </>
+              )}
+            </section>
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <Coins className="h-3.5 w-3.5" />
-                Commission
-              </div>
-              <p className="mt-2 text-sm font-semibold">Store and promotions still need one payout source of truth.</p>
-            </div>
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <Radio className="h-3.5 w-3.5" />
-                Proof
-              </div>
-              <p className="mt-2 text-sm font-semibold">Radio and DJ offers need stronger verification payloads than current placeholder endpoints.</p>
-            </div>
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <Wallet className="h-3.5 w-3.5" />
-                Funding
-              </div>
-              <p className="mt-2 text-sm font-semibold">Wallet and SACCO paths exist, but campaign-specific financing rules are not yet connected.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border bg-card p-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-              Docs Inventory
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold">Scattered documentation, now consolidated here</h2>
-          </div>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            These are the main source documents behind the current implementation and gap analysis.
-          </p>
-        </div>
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          {promotionsDocumentationSources.map((source) => (
-            <div key={source.path} className="rounded-2xl border p-4">
-              <p className="font-semibold">{source.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{source.summary}</p>
-              <p className="mt-3 break-all text-xs text-muted-foreground">{source.path}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Filters */}
-      <PromotionFilters />
-
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-              Marketplace Feed
-            </p>
-            <h2 className="text-2xl font-semibold">Live browse results</h2>
-            <p className="text-sm text-muted-foreground">
-              This remains connected to the current promotions API surface so local dev still has a real browse experience underneath the audit tracker.
-            </p>
-          </div>
-        </div>
-
-      {/* Results */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : isError ? (
-        <PromotionsEmptyState
-          title="Something went wrong"
-          description="Failed to load promotions. Please try again later."
-        />
-      ) : !data?.data?.length ? (
-        <PromotionsEmptyState />
-      ) : (
-        <>
-          {/* Count */}
-          <p className="text-sm text-muted-foreground">
-            {data.meta.total} promotion{data.meta.total !== 1 ? "s" : ""} found
-          </p>
-
-          {/* Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {data.data.map((promo) => (
-              <PromotionCard
-                key={promo.id}
-                promotion={promo}
-                href={`/promotions/${promo.slug}${promotionDetailSuffix}`}
-              />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <PromotionsPagination
-            currentPage={data.meta.current_page}
-            lastPage={data.meta.last_page}
-            onPageChange={(page) => setFilter("page", page)}
-          />
-        </>
-      )}
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

@@ -7,54 +7,61 @@ import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  Star,
-  Users,
-  Clock,
-  ShieldCheck,
   BadgeCheck,
-  TrendingUp,
-  CreditCard,
-  Coins,
-  Loader2,
   CheckCircle,
+  Clock,
+  Coins,
+  CreditCard,
+  Loader2,
+  MapPin,
   MessageSquare,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatNumber, formatCurrency, formatDate } from "@/lib/utils";
-import { usePromotion, usePromotionReviews, usePurchasePromotion } from "@/hooks/usePromotions";
+import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { usePromotion, usePurchasePromotion } from "@/hooks/usePromotions";
 import { apiPost } from "@/lib/api";
+import { getPromotionProofGuide } from "@/lib/promotions-proof";
+import { ReviewFeed } from "@/components/reviews/review-feed";
+import { useMarkReviewHelpful, useReviews } from "@/hooks/useReviews";
+import { mapGenericReviewToFeedItem, mapPromotionReviewToFeedItem } from "@/lib/review-feed";
 import {
-  PROMOTION_TYPE_LABELS,
+  PROMOTION_AUDIENCE_NICHE_LABELS,
+  PROMOTION_CONTENT_FORMAT_LABELS,
   PROMOTION_PLATFORM_LABELS,
+  PROMOTION_TYPE_LABELS,
 } from "@/types/promotions";
 import type { PaymentMethod } from "@/types/promotions";
 import { toast } from "sonner";
 
-type Tab = "overview" | "requirements" | "deliverables" | "reviews";
+type Tab = "overview" | "fit" | "deliverables" | "reviews";
+
+function nice(value: string | null | undefined) {
+  if (!value) return "Other";
+  return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="rounded-2xl border bg-card px-4 py-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-xl font-bold">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+    </div>
+  );
+}
 
 export default function PromotionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
-
   const { data: promotion, isLoading, isError } = usePromotion(slug);
-  const { data: reviewsData } = usePromotionReviews(slug);
   const purchase = usePurchasePromotion(slug);
-  const submitEventPromotionRequest = useMutation({
-    mutationFn: (payload: {
-      promotion_slug?: string;
-      promotion_title: string;
-      promotion_type?: string;
-      promotion_platform?: string;
-      price_credits?: number;
-      price_ugx?: number;
-      request_notes?: string;
-      featured_image_url?: string | null;
-      payload?: Record<string, unknown>;
-    }) => apiPost<{ success: boolean; message: string }>(`/artist/events/${selectedEvent?.id}/promotion-requests`, payload),
-  });
-
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credits");
@@ -62,9 +69,7 @@ export default function PromotionDetailPage() {
   const [notes, setNotes] = useState("");
 
   const selectedEvent =
-    searchParams.get("target_type") === "event" &&
-    searchParams.get("event_id") &&
-    searchParams.get("event_name")
+    searchParams.get("target_type") === "event" && searchParams.get("event_id") && searchParams.get("event_name")
       ? {
           id: Number(searchParams.get("event_id")),
           title: searchParams.get("event_name") as string,
@@ -75,44 +80,59 @@ export default function PromotionDetailPage() {
         }
       : null;
 
-  const backToMarketplaceHref = selectedEvent
-    ? `/promotions?target_type=event&event_id=${selectedEvent.id}&event_name=${encodeURIComponent(selectedEvent.title)}${selectedEvent.slug ? `&event_slug=${encodeURIComponent(selectedEvent.slug)}` : ""}${selectedEvent.startsAt ? `&event_starts_at=${encodeURIComponent(selectedEvent.startsAt)}` : ""}${selectedEvent.venue ? `&event_venue=${encodeURIComponent(selectedEvent.venue)}` : ""}${selectedEvent.city ? `&event_city=${encodeURIComponent(selectedEvent.city)}` : ""}`
+  const submitEventPromotionRequest = useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      apiPost<{ success: boolean; message: string }>(`/artist/events/${selectedEvent?.id}/promotion-requests`, payload),
+  });
+
+  const backHref = selectedEvent
+    ? `/promotions?target_type=event&event_id=${selectedEvent.id}&event_name=${encodeURIComponent(selectedEvent.title)}`
     : "/promotions";
 
+  const { data: genericReviewsResponse } = useReviews("product", promotion?.id ?? 0);
+  const markReviewHelpful = useMarkReviewHelpful("product", promotion?.id ?? 0);
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (isError || !promotion) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-xl font-semibold mb-2">Promotion Not Found</h2>
-        <p className="text-muted-foreground mb-4">
-          This promotion may have been removed or is no longer available.
-        </p>
-        <Link
-          href="/promotions"
-          className="text-primary underline text-sm"
-        >
-          Browse all promotions
-        </Link>
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <h2 className="text-xl font-semibold">Promotion Not Found</h2>
+        <p className="mt-2 text-muted-foreground">This promotion may have been removed or is no longer available.</p>
+        <Link href="/promotions" className="mt-4 inline-block text-sm text-primary underline">Browse all promotions</Link>
       </div>
     );
   }
 
+  const typeLabel = PROMOTION_TYPE_LABELS[promotion.type] ?? nice(promotion.type);
+  const platformLabel = PROMOTION_PLATFORM_LABELS[promotion.platform] ?? nice(promotion.platform);
   const deliveryText =
     promotion.delivery_days_min === promotion.delivery_days_max
       ? `${promotion.delivery_days_min} day${promotion.delivery_days_min !== 1 ? "s" : ""}`
       : `${promotion.delivery_days_min}-${promotion.delivery_days_max} days`;
+  const completionRate = promotion.total_orders > 0 ? Math.round((promotion.completed_orders / promotion.total_orders) * 100) : 0;
+  const genericReviews = genericReviewsResponse?.data.data ?? [];
+  const reviewFeedItems = genericReviews.length
+    ? genericReviews.map((review) => mapGenericReviewToFeedItem(review))
+    : (promotion.reviews ?? []).map((review) => mapPromotionReviewToFeedItem(review));
+  const proofGuide = getPromotionProofGuide(promotion.platform, promotion.type);
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "fit", label: "Audience Fit" },
+    { key: "deliverables", label: "Deliverables" },
+    { key: "reviews", label: `Reviews (${promotion.rating_count})` },
+  ];
 
-  const completionRate =
-    promotion.total_orders > 0
-      ? Math.round((promotion.completed_orders / promotion.total_orders) * 100)
-      : 0;
+  const paymentLabels =
+    [
+      promotion.accepts_credits ? "Credits" : null,
+      promotion.accepts_ugx ? "UGX" : null,
+      promotion.accepts_hybrid ? "Hybrid" : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || "Flexible";
 
   const handlePurchase = () => {
     if (selectedEvent) {
@@ -126,21 +146,14 @@ export default function PromotionDetailPage() {
           price_ugx: promotion.price_ugx,
           request_notes: notes || undefined,
           featured_image_url: promotion.featured_image_url,
-          payload: {
-            target_type: "event",
-            event_id: selectedEvent.id,
-            payment_method: paymentMethod,
-            song_id: songId ? Number(songId) : undefined,
-          },
+          payload: { target_type: "event", event_id: selectedEvent.id, payment_method: paymentMethod, song_id: songId ? Number(songId) : undefined },
         },
         {
           onSuccess: (response) => {
             toast.success(response.message || "Promotion request submitted");
             router.push(`/artist/events/${selectedEvent.id}`);
           },
-          onError: (error: unknown) => {
-            toast.error(error instanceof Error ? error.message : "Failed to submit promotion request");
-          },
+          onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Failed to submit promotion request"),
         }
       );
       return;
@@ -154,490 +167,352 @@ export default function PromotionDetailPage() {
         song_id: songId ? Number(songId) : undefined,
         notes: notes || undefined,
       },
-      {
-        onSuccess: (data) => {
-          router.push(`/promotions/purchases/${data.order_id}`);
-        },
-      }
+      { onSuccess: (data) => router.push(`/promotions/purchases/${data.order_id}`) }
     );
   };
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "requirements", label: "Requirements" },
-    { key: "deliverables", label: "Deliverables" },
-    { key: "reviews", label: `Reviews (${promotion.rating_count})` },
-  ];
+  const handleMarkHelpful = (reviewId: number | string, helpful: boolean) => {
+    if (typeof reviewId !== "number") return;
+    markReviewHelpful.mutate({ id: reviewId, helpful });
+  };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-      {/* Back */}
-      <Link
-        href={backToMarketplaceHref}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {selectedEvent ? "Back to Event Promotions" : "Back to Promotions"}
-      </Link>
+    <div className="container mx-auto px-4 py-8">
+      <div className="space-y-8">
+        <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          {selectedEvent ? "Back to Event Promotions" : "Back to Promotions"}
+        </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Hero image */}
-          <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-            {promotion.featured_image_url ? (
-              <Image
-                src={promotion.featured_image_url}
-                alt={promotion.title}
-                fill
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <TrendingUp className="h-16 w-16 text-primary/30" />
-              </div>
-            )}
-          </div>
-
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{PROMOTION_TYPE_LABELS[promotion.type]}</span>
-            <span>·</span>
-            <span>{PROMOTION_PLATFORM_LABELS[promotion.platform]}</span>
-          </div>
-
-          {selectedEvent && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                    Promoted Event
-                  </p>
-                  <h2 className="font-semibold">{selectedEvent.title}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedEvent.venue || "Venue pending"}
-                    {selectedEvent.city ? ` · ${selectedEvent.city}` : ""}
-                    {selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}
-                  </p>
-                </div>
-                <Link
-                  href={`/events/${selectedEvent.id}`}
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View event
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* Title */}
-          <h1 className="text-2xl font-bold">{promotion.title}</h1>
-
-          {/* Promoter */}
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 rounded-full overflow-hidden bg-muted">
-              {promotion.promoter.avatar_url ? (
-                <Image
-                  src={promotion.promoter.avatar_url}
-                  alt={promotion.promoter.name}
-                  fill
-                  className="object-cover"
-                />
+        <section className="overflow-hidden rounded-[28px] border bg-card">
+          <div className="grid xl:grid-cols-[minmax(0,1.35fr)_380px]">
+            <div className="relative min-h-[320px] border-b xl:border-b-0 xl:border-r">
+              {promotion.featured_image_url ? (
+                <Image src={promotion.featured_image_url} alt={promotion.title} fill priority className="object-cover" />
               ) : (
-                <div className="h-full w-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                  {promotion.promoter.name[0]}
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-primary/5" />
               )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <Link
-                  href={`/promoters/${promotion.promoter.username}`}
-                  className="font-medium text-sm hover:text-primary transition-colors"
-                >
-                  {promotion.promoter.name}
-                </Link>
-                {promotion.promoter.is_verified && (
-                  <BadgeCheck className="h-4 w-4 text-blue-500" />
-                )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+              <div className="absolute left-0 right-0 top-0 flex flex-wrap gap-2 p-6">
+                <span className="rounded-full bg-background/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">{typeLabel}</span>
+                <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">{platformLabel}</span>
+                {promotion.is_featured && <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">Featured</span>}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {formatNumber(promotion.promoter.follower_count)} followers
-              </p>
-            </div>
-          </div>
-
-          {/* Stats bar */}
-          <div className="flex flex-wrap gap-6 py-4 border-y">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-              <div>
-                <span className="font-semibold">
-                  {promotion.rating_average.toFixed(1)}
-                </span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  ({promotion.rating_count} reviews)
-                </span>
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <h1 className="max-w-3xl text-3xl font-bold tracking-tight md:text-4xl">{promotion.title}</h1>
+                <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">{promotion.short_description}</p>
+                <div className="mt-5 flex flex-wrap gap-3 text-sm text-white/85">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Users className="h-4 w-4" />{formatNumber(promotion.estimated_reach)} reach</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Clock className="h-4 w-4" />{deliveryText}</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Star className="h-4 w-4 text-amber-300" />{promotion.rating_average.toFixed(1)} rating</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <span className="font-semibold">
-                  {formatNumber(promotion.estimated_reach)}
-                </span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  reach
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <span className="font-semibold">{deliveryText}</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  delivery
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <span className="font-semibold">{promotion.completed_orders}</span>
-                <span className="text-xs text-muted-foreground ml-1">
-                  completed ({completionRate}%)
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="border-b">
-            <div className="flex gap-6">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={cn(
-                    "pb-3 text-sm font-medium transition-colors border-b-2 -mb-px",
-                    activeTab === tab.key
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab content */}
-          <div className="min-h-[200px]">
-            {activeTab === "overview" && (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <p className="whitespace-pre-wrap">{promotion.description}</p>
-              </div>
-            )}
-
-            {activeTab === "requirements" && (
-              <div className="space-y-3">
-                {promotion.requirements ? (
-                  <>
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <h4 className="font-medium text-sm">What You Need To Do</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {promotion.requirements.action}
-                      </p>
-                      {promotion.requirements.duration_hours && (
-                        <p className="text-xs text-muted-foreground">
-                          Duration: {promotion.requirements.duration_hours} hours
-                        </p>
-                      )}
-                      {promotion.requirements.hashtags?.length ? (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {promotion.requirements.hashtags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No specific requirements listed.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === "deliverables" && (
-              <div className="space-y-2">
-                {promotion.deliverables?.length ? (
-                  <ul className="space-y-2">
-                    {promotion.deliverables.map((item, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-sm"
-                      >
-                        <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No deliverables listed.
-                  </p>
-                )}
-
-                {promotion.terms && (
-                  <div className="mt-6 bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-medium text-sm mb-2">Terms & Conditions</h4>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                      {promotion.terms}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "reviews" && (
-              <div className="space-y-4">
-                {reviewsData?.data?.length ? (
-                  reviewsData.data.map((review) => (
-                    <div key={review.id} className="border rounded-lg p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                            {review.reviewer.name[0]}
-                          </div>
-                          <span className="text-sm font-medium">
-                            {review.reviewer.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={cn(
-                                "h-3.5 w-3.5",
-                                i < review.rating
-                                  ? "text-amber-400 fill-amber-400"
-                                  : "text-gray-300"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {review.comment}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{formatDate(review.created_at)}</span>
-                        {review.would_recommend && (
-                          <span className="text-emerald-600">
-                            Would recommend
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground py-4">
-                    No reviews yet. Be the first to leave one after purchasing!
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right: Pricing card */}
-        <div className="space-y-4">
-          <div className="sticky top-24 space-y-4">
-            <div className="bg-card border rounded-xl p-6 space-y-5">
-              {/* Pricing */}
-              <div className="space-y-1">
-                {promotion.accepts_credits && (
-                  <div className="flex items-center gap-2">
-                    <Coins className="h-5 w-5 text-primary" />
-                    <span className="text-2xl font-bold text-primary">
-                      {formatNumber(promotion.price_credits)}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      credits
-                    </span>
-                  </div>
-                )}
-                {promotion.accepts_ugx && (
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-lg font-semibold">
-                      {formatCurrency(promotion.price_ugx)}
-                    </span>
-                  </div>
-                )}
-                {promotion.accepts_hybrid && (
-                  <p className="text-xs text-muted-foreground">
-                    Hybrid payment accepted (credits + UGX)
-                  </p>
-                )}
-              </div>
-
-              {/* Purchase button */}
-              {!showCheckout ? (
-                <button
-                  onClick={() => setShowCheckout(true)}
-                  className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                >
-                  {selectedEvent ? "Request Event Promotion Review" : "Purchase Promotion"}
-                </button>
-              ) : (
-                <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-medium text-sm">
-                    {selectedEvent ? "Submit Promotion Request" : "Complete Purchase"}
-                  </h4>
-
-                  {selectedEvent && (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-                      Tesotunes will review this promotion package for the selected event before it is activated.
-                    </div>
-                  )}
-
-                  {!selectedEvent && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Payment Method
-                      </label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {promotion.accepts_credits && (
-                          <button
-                            onClick={() => setPaymentMethod("credits")}
-                            className={cn(
-                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                              paymentMethod === "credits"
-                                ? "border-primary bg-primary/5"
-                                : "hover:border-muted-foreground/30"
-                            )}
-                          >
-                            <Coins className="h-4 w-4 text-primary" />
-                            Credits Only
-                          </button>
-                        )}
-                        {promotion.accepts_ugx && (
-                          <button
-                            onClick={() => setPaymentMethod("ugx")}
-                            className={cn(
-                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                              paymentMethod === "ugx"
-                                ? "border-primary bg-primary/5"
-                                : "hover:border-muted-foreground/30"
-                            )}
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            UGX (Mobile Money)
-                          </button>
-                        )}
-                        {promotion.accepts_hybrid && (
-                          <button
-                            onClick={() => setPaymentMethod("hybrid")}
-                            className={cn(
-                              "flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors",
-                              paymentMethod === "hybrid"
-                                ? "border-primary bg-primary/5"
-                                : "hover:border-muted-foreground/30"
-                            )}
-                          >
-                            <Coins className="h-4 w-4 text-primary" />
-                            Hybrid (Credits + UGX)
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Song ID */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      {selectedEvent
-                        ? "Song ID (optional support track)"
-                        : "Song ID (optional)"}
-                    </label>
-                    <input
-                      type="text"
-                      value={songId}
-                      onChange={(e) => setSongId(e.target.value)}
-                      placeholder={
-                        selectedEvent
-                          ? "Add a supporting song if this promotion also needs one"
-                          : "Enter your song ID"
-                      }
-                      className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  {/* Notes */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Notes for Promoter
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder={
-                        selectedEvent
-                          ? "Add event promo notes, audience goals, or special instructions..."
-                          : "Any special instructions..."
-                      }
-                      rows={3}
-                      className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                    />
-                  </div>
-
-                  {/* Confirm */}
-                  <button
-                    onClick={handlePurchase}
-                    disabled={purchase.isPending || submitEventPromotionRequest.isPending}
-                    className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                  >
-                    {(purchase.isPending || submitEventPromotionRequest.isPending) && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="p-6">
+              <div className="rounded-[24px] border bg-background/70 p-5">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-muted">
+                    {promotion.promoter.avatar_url ? (
+                      <Image src={promotion.promoter.avatar_url} alt={promotion.promoter.name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-primary/10 font-bold text-primary">{promotion.promoter.name[0]}</div>
                     )}
-                    {selectedEvent ? "Submit For Review" : "Confirm Purchase"}
-                  </button>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/promoters/${promotion.promoter.username}`} className="truncate font-semibold hover:text-primary">{promotion.promoter.name}</Link>
+                      {promotion.promoter.is_verified && <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground">@{promotion.promoter.username} · {formatNumber(promotion.promoter.follower_count)} followers</p>
+                  </div>
+                </div>
 
-                  <button
-                    onClick={() => setShowCheckout(false)}
-                    className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
+                {selectedEvent && (
+                  <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Event Context</p>
+                    <h2 className="mt-2 font-semibold">{selectedEvent.title}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{selectedEvent.venue || "Venue pending"}{selectedEvent.city ? ` · ${selectedEvent.city}` : ""}{selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}</p>
+                  </div>
+                )}
 
-              {/* Trust signals */}
-              <div className="flex flex-col gap-2 pt-2 border-t">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Payment held in escrow until verified
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MessageSquare className="h-4 w-4 text-blue-500" />
-                  Dispute resolution available
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                  Auto-verify after 7 days
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <Stat label="Completed Orders" value={formatNumber(promotion.completed_orders)} note={`${completionRate}% completion rate`} />
+                  <Stat label="Payment Modes" value={paymentLabels} note="Supported checkout methods" />
                 </div>
               </div>
             </div>
           </div>
+        </section>
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_380px]">
+          <div className="space-y-6">
+            <section className="grid gap-4 md:grid-cols-4">
+              <Stat label="Audience" value={formatNumber(promotion.estimated_reach)} note="Estimated reach" />
+              <Stat label="Delivery" value={deliveryText} note="Typical turnaround" />
+              <Stat label="Reviews" value={formatNumber(promotion.rating_count)} note={`${promotion.rating_average.toFixed(1)} avg rating`} />
+              <Stat label="Orders" value={formatNumber(promotion.total_orders)} note={`${formatNumber(promotion.completed_orders)} completed`} />
+            </section>
+
+            <section className="rounded-[24px] border bg-card p-5">
+              <div className="border-b">
+                <div className="flex gap-6 overflow-x-auto">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={cn("border-b-2 pb-3 text-sm font-medium -mb-px whitespace-nowrap", activeTab === tab.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="min-h-[260px] pt-5">
+                {activeTab === "overview" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h2 className="text-lg font-semibold">About this service</h2>
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{promotion.description}</p>
+                    </div>
+                    {promotion.terms && (
+                      <div className="rounded-2xl border bg-background/70 p-4">
+                        <h3 className="text-sm font-semibold">Terms and expectations</h3>
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{promotion.terms}</p>
+                      </div>
+                    )}
+                    {promotion.platform_specifics &&
+                      Object.values(promotion.platform_specifics).some(Boolean) && (
+                        <div className="rounded-2xl border bg-background/70 p-4">
+                          <h3 className="text-sm font-semibold">
+                            Channel-specific service details
+                          </h3>
+                          <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            {promotion.platform_specifics.channel ? (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                  Channel
+                                </p>
+                                <p className="mt-1 text-sm text-foreground">
+                                  {promotion.platform_specifics.channel}
+                                </p>
+                              </div>
+                            ) : null}
+                            {promotion.platform_specifics.placement ? (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                  Placement
+                                </p>
+                                <p className="mt-1 text-sm text-foreground">
+                                  {promotion.platform_specifics.placement}
+                                </p>
+                              </div>
+                            ) : null}
+                            {promotion.platform_specifics.timing ? (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                  Timing
+                                </p>
+                                <p className="mt-1 text-sm text-foreground">
+                                  {promotion.platform_specifics.timing}
+                                </p>
+                              </div>
+                            ) : null}
+                            {promotion.platform_specifics.proof ? (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                  Proof expectation
+                                </p>
+                                <p className="mt-1 text-sm text-foreground">
+                                  {promotion.platform_specifics.proof}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {activeTab === "fit" && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border bg-background/70 p-4">
+                      <div className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Audience Niches</h3></div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(promotion.audience_niches ?? []).length > 0 ? (
+                          promotion.audience_niches?.map((niche) => (
+                            <span key={niche} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{PROMOTION_AUDIENCE_NICHE_LABELS[niche] ?? nice(niche)}</span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No niche targeting listed.</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border bg-background/70 p-4">
+                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Audience Regions</h3></div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(promotion.audience_regions ?? []).length > 0 ? (
+                          promotion.audience_regions?.map((region) => (
+                            <span key={region} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{region}</span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No regional targeting listed.</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border bg-background/70 p-4">
+                      <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Formats</h3></div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(promotion.content_formats ?? []).length > 0 ? (
+                          promotion.content_formats?.map((format) => (
+                            <span key={format} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{PROMOTION_CONTENT_FORMAT_LABELS[format] ?? nice(format)}</span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No format preference listed.</span>
+                        )}
+                      </div>
+                    </div>
+                    {promotion.requirements && (
+                      <div className="rounded-2xl border bg-background/70 p-4 md:col-span-3">
+                        <h3 className="text-sm font-semibold">Requirements from the promoter</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">{promotion.requirements.action}</p>
+                        {promotion.requirements.duration_hours && <p className="mt-2 text-xs text-muted-foreground">Duration expectation: {promotion.requirements.duration_hours} hours</p>}
+                        {promotion.requirements.hashtags?.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {promotion.requirements.hashtags.map((tag) => (
+                              <span key={tag} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{tag}</span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "deliverables" && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border bg-background/70 p-4">
+                      <h2 className="text-lg font-semibold">What the artist receives</h2>
+                      {promotion.deliverables?.length ? (
+                        <ul className="mt-4 space-y-3">
+                          {promotion.deliverables.map((item, index) => (
+                            <li key={index} className="flex items-start gap-3 text-sm">
+                              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                              <span className="text-muted-foreground">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-sm text-muted-foreground">No structured deliverables are listed yet.</p>
+                      )}
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border bg-background/70 p-4">
+                        <h3 className="text-sm font-semibold">{proofGuide.title}</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {proofGuide.buyerPrompt}
+                        </p>
+                        <div className="mt-4 space-y-2">
+                          {proofGuide.proofExamples.map((item) => (
+                            <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border bg-background/70 p-4">
+                        <h3 className="text-sm font-semibold">Verification checklist</h3>
+                        <div className="mt-4 space-y-2">
+                          {proofGuide.checklist.map((item) => (
+                            <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "reviews" && (
+                  <ReviewFeed
+                    reviews={reviewFeedItems}
+                    emptyMessage="No reviews yet. The first buyer review will appear here after a completed order."
+                    onMarkHelpful={genericReviews.length ? handleMarkHelpful : undefined}
+                    markingHelpfulId={markReviewHelpful.variables?.id ?? null}
+                  />
+                )}
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="sticky top-24 space-y-4">
+              <section className="rounded-[24px] border bg-card p-6">
+                <div className="space-y-1">
+                  {promotion.accepts_credits && <div className="flex items-center gap-2"><Coins className="h-5 w-5 text-primary" /><span className="text-2xl font-bold text-primary">{formatNumber(promotion.price_credits)}</span><span className="text-sm text-muted-foreground">credits</span></div>}
+                  {promotion.accepts_ugx && <div className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-muted-foreground" /><span className="text-lg font-semibold">{formatCurrency(promotion.price_ugx)}</span></div>}
+                  {promotion.accepts_hybrid && <p className="text-xs text-muted-foreground">Hybrid payment accepted: credits + UGX</p>}
+                </div>
+
+                {!showCheckout ? (
+                  <button onClick={() => setShowCheckout(true)} className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                    {selectedEvent ? "Request Event Promotion Review" : "Purchase Promotion"}
+                  </button>
+                ) : (
+                  <div className="mt-5 border-t pt-5">
+                    {!selectedEvent && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">Payment Method</label>
+                        <div className="grid gap-2">
+                          {promotion.accepts_credits && <button onClick={() => setPaymentMethod("credits")} className={cn("rounded-xl border p-3 text-left text-sm", paymentMethod === "credits" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/30")}><Coins className="mr-2 inline h-4 w-4 text-primary" />Credits only</button>}
+                          {promotion.accepts_ugx && <button onClick={() => setPaymentMethod("ugx")} className={cn("rounded-xl border p-3 text-left text-sm", paymentMethod === "ugx" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/30")}><CreditCard className="mr-2 inline h-4 w-4" />UGX</button>}
+                          {promotion.accepts_hybrid && <button onClick={() => setPaymentMethod("hybrid")} className={cn("rounded-xl border p-3 text-left text-sm", paymentMethod === "hybrid" ? "border-primary bg-primary/5" : "hover:border-muted-foreground/30")}><Coins className="mr-2 inline h-4 w-4 text-primary" />Hybrid</button>}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">{selectedEvent ? "Song ID (optional support track)" : "Song ID (optional)"}</label>
+                      <input type="text" value={songId} onChange={(event) => setSongId(event.target.value)} placeholder="Enter your song ID" className="w-full rounded-xl border bg-background px-3 py-2 text-sm" />
+                    </div>
+                    <div className="mt-4 space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Notes for promoter</label>
+                      <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add campaign notes or instructions..." rows={4} className="w-full resize-none rounded-xl border bg-background px-3 py-2 text-sm" />
+                    </div>
+
+                    <button onClick={handlePurchase} disabled={purchase.isPending || submitEventPromotionRequest.isPending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+                      {(purchase.isPending || submitEventPromotionRequest.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {selectedEvent ? "Submit for review" : "Confirm purchase"}
+                    </button>
+                    <button onClick={() => setShowCheckout(false)} className="mt-2 w-full py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-[24px] border bg-card p-5">
+                <h2 className="text-lg font-semibold">Trust and delivery</h2>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-500" /><div><p className="text-sm font-medium">Escrow protection</p><p className="text-sm text-muted-foreground">Payment is held until delivery is verified or a dispute is resolved.</p></div></div>
+                  <div className="flex items-start gap-3"><MessageSquare className="mt-0.5 h-4 w-4 text-blue-500" /><div><p className="text-sm font-medium">Review-backed storefronts</p><p className="text-sm text-muted-foreground">Completed orders can be reviewed by buyers.</p></div></div>
+                  <div className="flex items-start gap-3"><Clock className="mt-0.5 h-4 w-4 text-amber-500" /><div><p className="text-sm font-medium">Verification flow</p><p className="text-sm text-muted-foreground">Proof is submitted after execution and can be disputed if expectations are not met.</p></div></div>
+                </div>
+                <div className="mt-4 rounded-2xl border bg-background/70 p-4">
+                  <p className="text-sm font-medium">Channel-specific proof expectation</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {proofGuide.buyerPrompt}
+                  </p>
+                </div>
+                <Link href={`/promoters/${promotion.promoter.username}`} className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                  Open promoter storefront
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+              </section>
+            </div>
+          </aside>
         </div>
       </div>
     </div>

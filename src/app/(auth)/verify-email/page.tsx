@@ -5,20 +5,59 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Loader2, CheckCircle, AlertCircle, Mail, RefreshCw } from 'lucide-react';
-import { apiPost, apiGet } from '@/lib/api';
+import { apiPost } from '@/lib/api';
+
+type VerificationStatus = 'verifying' | 'verified' | 'failed' | 'pending';
+
+function mapStatusFromQuery(rawStatus: string | null): VerificationStatus {
+  if (!rawStatus) {
+    return 'pending';
+  }
+
+  if (rawStatus === 'verified' || rawStatus === 'already-verified') {
+    return 'verified';
+  }
+
+  if (rawStatus === 'failed' || rawStatus === 'expired' || rawStatus === 'invalid') {
+    return 'failed';
+  }
+
+  return 'pending';
+}
+
+function mapErrorFromReason(reason: string | null): string {
+  if (reason === 'expired') {
+    return 'This verification link has expired. Please request a new one.';
+  }
+
+  if (reason === 'invalid-hash' || reason === 'invalid-signature' || reason === 'invalid-user' || reason === 'missing-parameters') {
+    return 'The verification link is invalid. Please request a new one.';
+  }
+
+  if (reason === 'user-not-found') {
+    return 'We could not find an account for this verification link.';
+  }
+
+  return 'Verification failed. The link may have expired.';
+}
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
 
-  // Support both link-based verification (?id=...&hash=...) and manual resend
+  const statusParam = searchParams.get('status');
+  const reasonParam = searchParams.get('reason');
+  const registered = searchParams.get('registered') === 'true';
+  const emailParam = searchParams.get('email');
+
+  // Support both backend redirect status and direct link-based verification params.
   const verifyId = searchParams.get('id');
   const verifyHash = searchParams.get('hash');
   const expires = searchParams.get('expires');
   const signature = searchParams.get('signature');
 
-  const [status, setStatus] = useState<'verifying' | 'verified' | 'failed' | 'pending'>('pending');
-  const [error, setError] = useState('');
+  const [status, setStatus] = useState<VerificationStatus>(mapStatusFromQuery(statusParam));
+  const [error, setError] = useState(reasonParam ? mapErrorFromReason(reasonParam) : '');
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
@@ -27,12 +66,14 @@ export default function VerifyEmailPage() {
 
     setStatus('verifying');
     try {
-      const params = new URLSearchParams();
-      if (expires) params.set('expires', expires);
-      if (signature) params.set('signature', signature);
-
-      await apiGet(`/auth/email/verify/${verifyId}/${verifyHash}?${params.toString()}`);
+      await apiPost('/auth/email/verify', {
+        id: Number(verifyId),
+        hash: verifyHash,
+        expires: expires ? Number(expires) : undefined,
+        signature,
+      });
       setStatus('verified');
+      setError('');
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
       setStatus('failed');
@@ -41,10 +82,10 @@ export default function VerifyEmailPage() {
   }, [verifyId, verifyHash, expires, signature]);
 
   useEffect(() => {
-    if (verifyId && verifyHash) {
+    if (!statusParam && verifyId && verifyHash) {
       verifyEmail();
     }
-  }, [verifyId, verifyHash, verifyEmail]);
+  }, [statusParam, verifyId, verifyHash, verifyEmail]);
 
   const handleResend = async () => {
     setIsResending(true);
@@ -52,7 +93,14 @@ export default function VerifyEmailPage() {
     setError('');
 
     try {
-      await apiPost('/auth/email/resend');
+      const emailAddress = emailParam || session?.user?.email;
+
+      if (!emailAddress) {
+        setError('Enter your email during registration or sign in to request another verification email.');
+        return;
+      }
+
+      await apiPost('/auth/email/resend', { email: emailAddress });
       setResendSuccess(true);
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
@@ -170,9 +218,15 @@ export default function VerifyEmailPage() {
       <div>
         <h2 className="text-2xl font-bold">Verify your email</h2>
         <p className="text-muted-foreground mt-2">
-          {session?.user?.email ? (
+          {registered && (emailParam || session?.user?.email) ? (
             <>
-              We&apos;ve sent a verification link to <strong>{session.user.email}</strong>.
+              Your account was created successfully. We&apos;ve sent a verification link to{' '}
+              <strong>{emailParam || session?.user?.email}</strong>.
+              Please open that email and verify your account before signing in.
+            </>
+          ) : emailParam || session?.user?.email ? (
+            <>
+              We&apos;ve sent a verification link to <strong>{emailParam || session?.user?.email}</strong>.
               Please check your inbox and click the link to verify your account.
             </>
           ) : (
@@ -196,7 +250,7 @@ export default function VerifyEmailPage() {
       )}
 
       <div className="space-y-3">
-        {session && (
+        {(session || emailParam) && (
           <button
             onClick={handleResend}
             disabled={isResending}

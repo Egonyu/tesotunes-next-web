@@ -20,7 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUploadSong, useArtistAlbums, UploadSongData } from '@/hooks/useArtist';
+import { useUploadSong, useArtistAlbums, UploadProgress, UploadSongData } from '@/hooks/useArtist';
 import { useGenres } from '@/hooks/api';
 import { useMySubscription } from '@/hooks/useSubscriptions';
 import { FeatureGate } from '@/components/subscription/FeatureGate';
@@ -54,6 +54,7 @@ export default function UploadPage() {
 
   // UI state
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<UploadProgress['detail']>('Ready to upload');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -71,6 +72,7 @@ export default function UploadPage() {
 
   const uploadMutation = useUploadSong((progress) => {
     setUploadProgress(progress.percent);
+    setUploadStatus(progress.detail ?? 'Uploading…');
   });
 
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,6 +140,7 @@ export default function UploadPage() {
 
     setError(null);
     setUploadProgress(0);
+    setUploadStatus('Preparing upload…');
 
     // Build upload data with ALL fields
     const uploadData: UploadSongData = {
@@ -223,6 +226,7 @@ export default function UploadPage() {
     setError(null);
     setSuccess(false);
     setUploadProgress(0);
+    setUploadStatus('Ready to upload');
   };
 
   // Success state
@@ -617,18 +621,21 @@ export default function UploadPage() {
         </div>
 
         {/* Upload Progress */}
-        {uploadMutation.isPending && uploadProgress > 0 && (
-          <div className="space-y-2">
+        {uploadMutation.isPending && (
+          <div className="space-y-3 rounded-xl border bg-card p-4">
             <div className="flex justify-between text-sm">
-              <span>Uploading...</span>
+              <span className="font-medium">{uploadStatus}</span>
               <span>{uploadProgress}%</span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
+                style={{ width: `${Math.max(uploadProgress, 4)}%` }}
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Large files upload directly to cloud storage, so the first few seconds may say “preparing” before the percentage starts moving.
+            </p>
           </div>
         )}
 

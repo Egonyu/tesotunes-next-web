@@ -151,8 +151,8 @@ export default function CreateSongPage() {
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 100 * 1024 * 1024) {
-        toast.error('Audio file must be under 100MB');
+      if (file.size > 500 * 1024 * 1024) {
+        toast.error('Audio file must be under 500MB');
         return;
       }
       updateField('audio', file);
@@ -310,7 +310,7 @@ export default function CreateSongPage() {
                       Click to upload audio file
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      MP3, WAV, FLAC, AAC, M4A, OGG — max 100MB
+                      MP3, WAV, FLAC, AAC, M4A, OGG — max 500MB
                     </p>
                     <input
                       type="file"

@@ -514,6 +514,8 @@ export interface UploadProgress {
   percent: number;
   loaded: number;
   total: number;
+  stage?: 'preparing' | 'uploading' | 'finalizing' | 'completed';
+  detail?: string;
 }
 
 function isRetryableDuplicateSongUploadError(error: unknown) {
@@ -622,6 +624,16 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       const submitMultipartUpload = (payload: UploadSongData) => {
         const uploadFormData = buildArtistSongUploadFormData(payload);
 
+        if (onProgress) {
+          onProgress({
+            percent: 1,
+            loaded: 0,
+            total: payload.audio_file.size + (payload.cover_image?.size ?? 0),
+            stage: 'preparing',
+            detail: 'Preparing upload…',
+          });
+        }
+
         return apiPostForm<UploadSongResponse>('/artist/songs', uploadFormData, {
           timeout: 300000,
           onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
@@ -630,6 +642,8 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
                 percent: Math.round((progressEvent.loaded * 100) / progressEvent.total),
                 loaded: progressEvent.loaded,
                 total: progressEvent.total,
+                stage: 'uploading',
+                detail: 'Uploading audio…',
               });
             }
           },
@@ -649,6 +663,15 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
 
         const totalBytes = payload.audio_file.size + (payload.cover_image?.size ?? 0);
         let uploadedBytes = 0;
+        if (onProgress) {
+          onProgress({
+            percent: 1,
+            loaded: 0,
+            total: totalBytes,
+            stage: 'preparing',
+            detail: 'Preparing secure cloud upload…',
+          });
+        }
         const emitProgress = (loaded: number, fileTotal: number) => {
           if (!onProgress) {
             return;
@@ -658,6 +681,10 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             percent: Math.min(99, Math.round(((uploadedBytes + loaded) * 100) / Math.max(totalBytes, 1))),
             loaded: uploadedBytes + loaded,
             total: totalBytes,
+            stage: 'uploading',
+            detail: payload.cover_image && uploadedBytes >= payload.audio_file.size
+              ? 'Uploading cover art…'
+              : 'Uploading audio…',
           });
         };
 
@@ -682,6 +709,16 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
           cover_mime_type: payload.cover_image?.type || undefined,
         });
 
+        if (onProgress) {
+          onProgress({
+            percent: 99,
+            loaded: totalBytes,
+            total: totalBytes,
+            stage: 'finalizing',
+            detail: 'Finalizing song record…',
+          });
+        }
+
         const response = await apiPost<UploadSongResponse>('/artist/songs', finalizePayload, {
           timeout: 300000,
         });
@@ -691,6 +728,8 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             percent: 100,
             loaded: totalBytes,
             total: totalBytes,
+            stage: 'completed',
+            detail: 'Upload complete.',
           });
         }
 

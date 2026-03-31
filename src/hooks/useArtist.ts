@@ -553,7 +553,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       const submitUpload = (payload: UploadSongData) => {
         const uploadFormData = buildArtistSongUploadFormData(payload);
 
-        return api.post<UploadSongResponse>('/artist/songs', uploadFormData, {
+        return apiPostForm<UploadSongResponse>('/artist/songs', uploadFormData, {
           timeout: 300000,
           onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
             if (onProgress && progressEvent.total) {
@@ -564,7 +564,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
               });
             }
           },
-        }).then((res) => res.data);
+        });
       };
 
       try {

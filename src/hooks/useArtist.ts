@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { api, apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
+import { api, apiGet, apiPost, apiPut, apiDelete, apiPostForm, buildDirectApiUrl, getBrowserUploadAccessToken } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import { slugify } from "@/lib/utils";
 import {
   buildArtistAlbumCreateFormData,
   buildArtistAlbumUpdateFormData,
+  buildArtistSongDirectUploadPayload,
   buildArtistSongUploadFormData,
   type ArtistAlbumPayload,
   type ArtistSongUploadPayload,
@@ -545,12 +546,80 @@ function buildRetrySongSlug(title: string) {
   return `${baseSlug}-${Date.now()}`;
 }
 
+interface DirectUploadTarget {
+  method: string;
+  key: string;
+  upload_url: string;
+  headers?: Record<string, string>;
+  max_file_size_bytes: number;
+}
+
+async function requestArtistSongUploadTarget(
+  accessToken: string,
+  kind: "audio" | "cover",
+  file: File
+) {
+  const response = await axios.post<{ data: DirectUploadTarget }>(
+    buildDirectApiUrl("/artist/songs/upload-target"),
+    {
+      kind,
+      filename: file.name,
+      content_type: file.type || undefined,
+      size_bytes: file.size,
+    },
+    {
+      timeout: 30000,
+      withCredentials: false,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return response.data.data;
+}
+
+async function uploadFileToDirectTarget(
+  target: DirectUploadTarget,
+  file: File,
+  onProgress?: (loaded: number, total: number) => void
+) {
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(target.method || "PUT", target.upload_url);
+
+    Object.entries(target.headers ?? {}).forEach(([header, value]) => {
+      xhr.setRequestHeader(header, value);
+    });
+
+    xhr.upload.onprogress = (event) => {
+      if (onProgress && event.lengthComputable) {
+        onProgress(event.loaded, event.total);
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Direct cloud upload failed before the file finished uploading."));
+    xhr.onabort = () => reject(new Error("Direct cloud upload was canceled."));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`Direct cloud upload failed with status ${xhr.status}.`));
+    };
+
+    xhr.send(file);
+  });
+}
+
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: UploadSongData) => {
-      const submitUpload = (payload: UploadSongData) => {
+      const submitMultipartUpload = (payload: UploadSongData) => {
         const uploadFormData = buildArtistSongUploadFormData(payload);
 
         return apiPostForm<UploadSongResponse>('/artist/songs', uploadFormData, {
@@ -565,6 +634,75 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             }
           },
         });
+      };
+
+      const submitDirectUpload = async (payload: UploadSongData) => {
+        const accessToken = await getBrowserUploadAccessToken();
+        if (!accessToken) {
+          const uploadAuthorizationError = new Error(
+            "Your upload session needs a refresh before files can be sent. Please reload the page and try again."
+          ) as Error & { code?: string; isUploadAuthorizationError?: boolean };
+          uploadAuthorizationError.code = "UPLOAD_TOKEN_UNAVAILABLE";
+          uploadAuthorizationError.isUploadAuthorizationError = true;
+          throw uploadAuthorizationError;
+        }
+
+        const totalBytes = payload.audio_file.size + (payload.cover_image?.size ?? 0);
+        let uploadedBytes = 0;
+        const emitProgress = (loaded: number, fileTotal: number) => {
+          if (!onProgress) {
+            return;
+          }
+
+          onProgress({
+            percent: Math.min(99, Math.round(((uploadedBytes + loaded) * 100) / Math.max(totalBytes, 1))),
+            loaded: uploadedBytes + loaded,
+            total: totalBytes,
+          });
+        };
+
+        const audioTarget = await requestArtistSongUploadTarget(accessToken, "audio", payload.audio_file);
+        await uploadFileToDirectTarget(audioTarget, payload.audio_file, emitProgress);
+        uploadedBytes += payload.audio_file.size;
+
+        let coverTarget: DirectUploadTarget | null = null;
+        if (payload.cover_image) {
+          coverTarget = await requestArtistSongUploadTarget(accessToken, "cover", payload.cover_image);
+          await uploadFileToDirectTarget(coverTarget, payload.cover_image, emitProgress);
+          uploadedBytes += payload.cover_image.size;
+        }
+
+        const finalizePayload = buildArtistSongDirectUploadPayload(payload, {
+          audio_key: audioTarget.key,
+          audio_original_name: payload.audio_file.name,
+          audio_size_bytes: payload.audio_file.size,
+          audio_mime_type: payload.audio_file.type || undefined,
+          cover_key: coverTarget?.key,
+          cover_original_name: payload.cover_image?.name,
+          cover_mime_type: payload.cover_image?.type || undefined,
+        });
+
+        const response = await apiPost<UploadSongResponse>('/artist/songs', finalizePayload, {
+          timeout: 300000,
+        });
+
+        if (onProgress) {
+          onProgress({
+            percent: 100,
+            loaded: totalBytes,
+            total: totalBytes,
+          });
+        }
+
+        return response;
+      };
+
+      const submitUpload = async (payload: UploadSongData) => {
+        if (typeof window === "undefined") {
+          return submitMultipartUpload(payload);
+        }
+
+        return submitDirectUpload(payload);
       };
 
       try {

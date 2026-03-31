@@ -32,14 +32,14 @@ function normalizeApiPath(url: string): string {
   return url.startsWith("/") ? url : `/${url}`;
 }
 
-function buildDirectApiUrl(url: string): string {
+export function buildDirectApiUrl(url: string): string {
   const normalizedBaseUrl = API_URL.replace(/\/+$/, "");
   const normalizedPath = normalizeApiPath(url);
 
   return `${normalizedBaseUrl}${normalizedPath}`;
 }
 
-async function getBrowserUploadAccessToken(): Promise<string | null> {
+export async function getBrowserUploadAccessToken(): Promise<string | null> {
   if (typeof window === "undefined") {
     return null;
   }

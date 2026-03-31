@@ -20,6 +20,16 @@ export interface ArtistSongUploadPayload extends ArtistSongPayload {
   cover_image?: File;
 }
 
+export interface ArtistSongDirectUploadReferences {
+  audio_key: string;
+  audio_original_name: string;
+  audio_size_bytes: number;
+  audio_mime_type?: string;
+  cover_key?: string;
+  cover_original_name?: string;
+  cover_mime_type?: string;
+}
+
 export interface ArtistSongUpdatePayload extends Partial<ArtistSongPayload> {
   cover_image?: File;
 }
@@ -86,6 +96,35 @@ export function buildArtistSongUploadFormData(payload: ArtistSongUploadPayload) 
   appendArtistSongFields(formData, payload);
 
   return formData;
+}
+
+export function buildArtistSongDirectUploadPayload(
+  payload: ArtistSongPayload,
+  uploads: ArtistSongDirectUploadReferences
+) {
+  return {
+    title: payload.title.trim(),
+    ...(payload.slug?.trim() ? { slug: payload.slug.trim() } : {}),
+    uploaded_audio_key: uploads.audio_key,
+    uploaded_audio_original_name: uploads.audio_original_name,
+    uploaded_audio_size_bytes: uploads.audio_size_bytes,
+    ...(uploads.audio_mime_type ? { uploaded_audio_mime_type: uploads.audio_mime_type } : {}),
+    ...(uploads.cover_key ? { uploaded_cover_key: uploads.cover_key } : {}),
+    ...(uploads.cover_original_name ? { uploaded_cover_original_name: uploads.cover_original_name } : {}),
+    ...(uploads.cover_mime_type ? { uploaded_cover_mime_type: uploads.cover_mime_type } : {}),
+    ...(payload.album_id ? { album_id: payload.album_id } : {}),
+    ...(payload.genre?.trim() ? { genre_id: payload.genre.trim() } : {}),
+    ...(payload.featured_artists?.trim() ? { featured_artists: payload.featured_artists.trim() } : {}),
+    ...(payload.lyrics?.trim() ? { lyrics: payload.lyrics.trim() } : {}),
+    ...(payload.release_date ? { release_date: payload.release_date } : {}),
+    ...(payload.price !== undefined && payload.price !== "" ? { price: payload.price } : {}),
+    ...(payload.description?.trim() ? { description: payload.description.trim() } : {}),
+    ...(payload.composer?.trim() ? { composer: payload.composer.trim() } : {}),
+    ...(payload.producer?.trim() ? { producer: payload.producer.trim() } : {}),
+    ...(payload.is_explicit !== undefined ? { is_explicit: payload.is_explicit } : {}),
+    ...(payload.is_downloadable !== undefined ? { is_downloadable: payload.is_downloadable } : {}),
+    ...(payload.is_free !== undefined ? { is_free: payload.is_free } : {}),
+  };
 }
 
 export function buildArtistSongUpdateFormData(payload: ArtistSongUpdatePayload) {

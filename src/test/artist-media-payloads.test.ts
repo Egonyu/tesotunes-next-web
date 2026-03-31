@@ -1,6 +1,7 @@
 import {
   buildArtistAlbumCreateFormData,
   buildArtistAlbumUpdateFormData,
+  buildArtistSongDirectUploadPayload,
   buildArtistSongUpdateFormData,
   buildArtistSongUploadFormData,
 } from "@/lib/artist-media-payloads";
@@ -56,6 +57,40 @@ describe("artist media payload builders", () => {
     expect(formData.get("genre_id")).toBe("afrobeats");
     expect(formData.get("is_free")).toBe("1");
     expect(formData.get("cover")).toBe(cover);
+  });
+
+  it("builds the direct-upload finalize payload for artist songs", () => {
+    const payload = buildArtistSongDirectUploadPayload(
+      {
+        title: "  Mixtape Drop  ",
+        genre: "12",
+        is_free: false,
+        is_downloadable: true,
+        description: "  Big upload ",
+      },
+      {
+        audio_key: "songs/audio/direct/7/file.mp3",
+        audio_original_name: "mixtape.mp3",
+        audio_size_bytes: 234_567_890,
+        audio_mime_type: "audio/mpeg",
+        cover_key: "songs/artwork/direct/7/cover.jpg",
+        cover_original_name: "cover.jpg",
+        cover_mime_type: "image/jpeg",
+      }
+    );
+
+    expect(payload).toMatchObject({
+      title: "Mixtape Drop",
+      genre_id: "12",
+      uploaded_audio_key: "songs/audio/direct/7/file.mp3",
+      uploaded_audio_original_name: "mixtape.mp3",
+      uploaded_audio_size_bytes: 234_567_890,
+      uploaded_cover_key: "songs/artwork/direct/7/cover.jpg",
+      uploaded_cover_original_name: "cover.jpg",
+      is_free: false,
+      is_downloadable: true,
+      description: "Big upload",
+    });
   });
 
   it("builds artist album create payloads with the expected field names", () => {

@@ -90,9 +90,9 @@ export default function UploadPage() {
         setError('Please select a valid audio file (MP3, WAV, FLAC, AAC, M4A, or OGG)');
         return;
       }
-      // Validate file size (100MB max)
-      if (file.size > 100 * 1024 * 1024) {
-        setError('File size must be less than 100MB');
+      // Validate file size (500MB max for direct cloud uploads)
+      if (file.size > 500 * 1024 * 1024) {
+        setError('File size must be less than 500MB');
         return;
       }
       setAudioFile(file);
@@ -327,7 +327,7 @@ export default function UploadPage() {
               </div>
               <p className="text-lg font-medium mb-2">Click to select audio file</p>
               <p className="text-sm text-muted-foreground">
-                MP3, WAV, FLAC, AAC, M4A, OGG • Max 100MB
+                MP3, WAV, FLAC, AAC, M4A, OGG • Direct cloud upload • Max 500MB
               </p>
             </div>
           ) : (

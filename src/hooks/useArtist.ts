@@ -552,7 +552,7 @@ interface DirectUploadTarget {
   method: string;
   key: string;
   upload_url: string;
-  headers?: Record<string, string>;
+  fields?: Record<string, string>;
   max_file_size_bytes: number;
 }
 
@@ -587,33 +587,46 @@ async function uploadFileToDirectTarget(
   file: File,
   onProgress?: (loaded: number, total: number) => void
 ) {
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open(target.method || "PUT", target.upload_url);
+  const uploadFormData = new FormData();
+  Object.entries(target.fields ?? {}).forEach(([field, value]) => {
+    uploadFormData.append(field, value);
+  });
+  uploadFormData.append("file", file);
 
-    Object.entries(target.headers ?? {}).forEach(([header, value]) => {
-      xhr.setRequestHeader(header, value);
+  let uploadedEstimate = 0;
+  const maxEstimate = Math.max(file.size - 1, 1);
+  const interval = typeof window !== "undefined"
+    ? window.setInterval(() => {
+      uploadedEstimate = Math.min(maxEstimate, uploadedEstimate + Math.max(Math.round(file.size / 20), 1));
+      onProgress?.(uploadedEstimate, file.size);
+    }, 350)
+    : null;
+
+  try {
+    const response = await fetch(target.upload_url, {
+      method: target.method || "POST",
+      body: uploadFormData,
+      mode: "no-cors",
+      credentials: "omit",
+      cache: "no-store",
     });
 
-    xhr.upload.onprogress = (event) => {
-      if (onProgress && event.lengthComputable) {
-        onProgress(event.loaded, event.total);
-      }
-    };
+    if (response.type !== "opaque" && !response.ok) {
+      throw new Error(`Direct cloud upload failed with status ${response.status}.`);
+    }
 
-    xhr.onerror = () => reject(new Error("Direct cloud upload failed before the file finished uploading."));
-    xhr.onabort = () => reject(new Error("Direct cloud upload was canceled."));
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-        return;
-      }
-
-      reject(new Error(`Direct cloud upload failed with status ${xhr.status}.`));
-    };
-
-    xhr.send(file);
-  });
+    onProgress?.(file.size, file.size);
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Direct cloud upload failed before the file finished uploading."
+    );
+  } finally {
+    if (interval !== null) {
+      window.clearInterval(interval);
+    }
+  }
 }
 
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {

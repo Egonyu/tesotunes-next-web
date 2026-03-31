@@ -175,7 +175,7 @@ export default function UploadPage() {
           if (axiosError.response?.status === 401) {
             errorMessage = 'Your session has expired. Please log in again to upload.';
           } else if (axiosError.response?.status === 413) {
-            errorMessage = 'This upload is larger than the server currently accepts. Please choose a smaller file or contact support.';
+            errorMessage = 'This upload did not reach the direct music API. Please refresh the page and try again. If it keeps happening, sign out and sign back in.';
           } else if (axiosError.response?.status === 502) {
             errorMessage = 'The upload gateway could not reach the music API. Please try again in a moment.';
           } else if (axiosError.response?.data?.message) {
@@ -186,7 +186,11 @@ export default function UploadPage() {
             errorMessage = `Server error (${axiosError.response.status}). Please try again.`;
           }
         } else if (err instanceof Error) {
-          errorMessage = err.message;
+          if ((err as Error & { code?: string }).code === 'UPLOAD_TOKEN_UNAVAILABLE') {
+            errorMessage = 'Your upload session needs a refresh. Reload the page and try again. If that does not help, sign out and sign back in.';
+          } else {
+            errorMessage = err.message;
+          }
         }
         setError(errorMessage);
       },

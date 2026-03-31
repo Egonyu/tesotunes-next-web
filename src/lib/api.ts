@@ -177,6 +177,17 @@ export async function apiPostForm<T>(
 
       return response.data;
     }
+
+    const uploadAuthorizationError = new Error(
+      "Your upload session needs a refresh before files can be sent. Please reload the page and try again."
+    ) as Error & {
+      code?: string;
+      isUploadAuthorizationError?: boolean;
+    };
+    uploadAuthorizationError.code = "UPLOAD_TOKEN_UNAVAILABLE";
+    uploadAuthorizationError.isUploadAuthorizationError = true;
+
+    throw uploadAuthorizationError;
   }
 
   const response = await api.post<T>(normalizeApiPath(url), formData, {

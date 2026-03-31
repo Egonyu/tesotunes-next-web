@@ -331,7 +331,7 @@ export default function UploadPage() {
               </div>
               <p className="text-lg font-medium mb-2">Click to select audio file</p>
               <p className="text-sm text-muted-foreground">
-                MP3, WAV, FLAC, AAC, M4A, OGG • Direct cloud upload • Max 500MB
+                MP3, WAV, FLAC, AAC, M4A, OGG • Chunked cloud upload • Max 500MB
               </p>
             </div>
           ) : (
@@ -634,7 +634,7 @@ export default function UploadPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Large files upload directly to cloud storage, so the first few seconds may say “preparing” before the percentage starts moving.
+              Large files upload to cloud storage in chunks, so the progress bar advances as each chunk finishes and then finalizes the song record.
             </p>
           </div>
         )}

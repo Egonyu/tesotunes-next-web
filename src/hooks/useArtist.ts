@@ -553,7 +553,25 @@ interface DirectUploadTarget {
   key: string;
   upload_url: string;
   fields?: Record<string, string>;
+  max_file_size_bytes?: number;
+  expected_size_bytes?: number;
+}
+
+interface SongUploadSessionTarget {
+  id: string;
+  kind: "audio";
+  part_size_bytes: number;
+  total_parts: number;
   max_file_size_bytes: number;
+  expires_at?: string;
+}
+
+interface SongUploadSessionCompleteResponse {
+  id: string;
+  status: "completed";
+  key: string;
+  size_bytes: number;
+  original_filename: string;
 }
 
 async function requestArtistSongUploadTarget(
@@ -582,24 +600,104 @@ async function requestArtistSongUploadTarget(
   return response.data.data;
 }
 
-async function uploadFileToDirectTarget(
+async function requestArtistSongUploadSession(accessToken: string, file: File) {
+  const response = await axios.post<{ data: SongUploadSessionTarget }>(
+    buildDirectApiUrl("/artist/songs/upload-sessions"),
+    {
+      filename: file.name,
+      content_type: file.type || undefined,
+      size_bytes: file.size,
+    },
+    {
+      timeout: 30000,
+      withCredentials: false,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return response.data.data;
+}
+
+async function requestArtistSongUploadSessionPartTarget(
+  accessToken: string,
+  sessionId: string,
+  partNumber: number
+) {
+  const response = await axios.post<{ data: DirectUploadTarget }>(
+    buildDirectApiUrl(`/artist/songs/upload-sessions/${sessionId}/parts`),
+    {
+      part_number: partNumber,
+    },
+    {
+      timeout: 30000,
+      withCredentials: false,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return response.data.data;
+}
+
+async function completeArtistSongUploadSession(accessToken: string, sessionId: string) {
+  const response = await axios.post<{ data: SongUploadSessionCompleteResponse }>(
+    buildDirectApiUrl(`/artist/songs/upload-sessions/${sessionId}/complete`),
+    {},
+    {
+      timeout: 300000,
+      withCredentials: false,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return response.data.data;
+}
+
+async function abortArtistSongUploadSession(accessToken: string, sessionId: string) {
+  try {
+    await axios.post(
+      buildDirectApiUrl(`/artist/songs/upload-sessions/${sessionId}/abort`),
+      {},
+      {
+        timeout: 30000,
+        withCredentials: false,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+  } catch {
+    // Best effort cleanup. The session will expire server-side even if abort fails.
+  }
+}
+
+async function uploadBlobToDirectTarget(
   target: DirectUploadTarget,
-  file: File,
+  blob: Blob,
   onProgress?: (loaded: number, total: number) => void
 ) {
   const uploadFormData = new FormData();
   Object.entries(target.fields ?? {}).forEach(([field, value]) => {
     uploadFormData.append(field, value);
   });
-  uploadFormData.append("file", file);
+  uploadFormData.append("file", blob);
 
   let uploadedEstimate = 0;
-  const maxEstimate = Math.max(file.size - 1, 1);
+  const maxEstimate = Math.max(blob.size - 1, 1);
   const interval = typeof window !== "undefined"
     ? window.setInterval(() => {
-      uploadedEstimate = Math.min(maxEstimate, uploadedEstimate + Math.max(Math.round(file.size / 20), 1));
-      onProgress?.(uploadedEstimate, file.size);
-    }, 350)
+      uploadedEstimate = Math.min(maxEstimate, uploadedEstimate + Math.max(Math.round(blob.size / 25), 1));
+      onProgress?.(uploadedEstimate, blob.size);
+    }, 250)
     : null;
 
   try {
@@ -615,7 +713,7 @@ async function uploadFileToDirectTarget(
       throw new Error(`Direct cloud upload failed with status ${response.status}.`);
     }
 
-    onProgress?.(file.size, file.size);
+    onProgress?.(blob.size, blob.size);
   } catch (error) {
     throw new Error(
       error instanceof Error
@@ -700,20 +798,58 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
               : 'Uploading audio…',
           });
         };
+        let audioSessionId: string | null = null;
 
-        const audioTarget = await requestArtistSongUploadTarget(accessToken, "audio", payload.audio_file);
-        await uploadFileToDirectTarget(audioTarget, payload.audio_file, emitProgress);
-        uploadedBytes += payload.audio_file.size;
+        try {
+          const audioSession = await requestArtistSongUploadSession(accessToken, payload.audio_file);
+          audioSessionId = audioSession.id;
+
+          for (let partNumber = 1; partNumber <= audioSession.total_parts; partNumber += 1) {
+            const start = (partNumber - 1) * audioSession.part_size_bytes;
+            const end = Math.min(start + audioSession.part_size_bytes, payload.audio_file.size);
+            const chunk = payload.audio_file.slice(start, end);
+            const chunkTarget = await requestArtistSongUploadSessionPartTarget(accessToken, audioSession.id, partNumber);
+
+            if (onProgress) {
+              onProgress({
+                percent: Math.min(95, Math.round(((uploadedBytes + 1) * 100) / Math.max(totalBytes, 1))),
+                loaded: uploadedBytes,
+                total: totalBytes,
+                stage: 'uploading',
+                detail: `Uploading audio chunk ${partNumber} of ${audioSession.total_parts}…`,
+              });
+            }
+
+            await uploadBlobToDirectTarget(chunkTarget, chunk, emitProgress);
+            uploadedBytes += chunk.size;
+          }
+        } catch (error) {
+          if (audioSessionId) {
+            await abortArtistSongUploadSession(accessToken, audioSessionId);
+          }
+
+          throw error;
+        }
+
+        if (!audioSessionId) {
+          throw new Error("The upload session could not be created. Please try again.");
+        }
+
+        const completedAudio = await completeArtistSongUploadSession(accessToken, audioSessionId);
 
         let coverTarget: DirectUploadTarget | null = null;
         if (payload.cover_image) {
           coverTarget = await requestArtistSongUploadTarget(accessToken, "cover", payload.cover_image);
-          await uploadFileToDirectTarget(coverTarget, payload.cover_image, emitProgress);
+          await uploadBlobToDirectTarget(coverTarget, payload.cover_image, emitProgress);
           uploadedBytes += payload.cover_image.size;
         }
 
-        const finalizePayload = buildArtistSongDirectUploadPayload(payload, {
-          audio_key: audioTarget.key,
+        const buildFinalizePayload = (slugOverride?: string) => buildArtistSongDirectUploadPayload({
+          ...payload,
+          ...(slugOverride ? { slug: slugOverride } : {}),
+        }, {
+          audio_session_id: completedAudio.id,
+          audio_key: completedAudio.key,
           audio_original_name: payload.audio_file.name,
           audio_size_bytes: payload.audio_file.size,
           audio_mime_type: payload.audio_file.type || undefined,
@@ -722,19 +858,32 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
           cover_mime_type: payload.cover_image?.type || undefined,
         });
 
-        if (onProgress) {
-          onProgress({
-            percent: 99,
-            loaded: totalBytes,
-            total: totalBytes,
-            stage: 'finalizing',
-            detail: 'Finalizing song record…',
-          });
-        }
+        const finalizeUpload = async (slugOverride?: string) => {
+          if (onProgress) {
+            onProgress({
+              percent: 99,
+              loaded: totalBytes,
+              total: totalBytes,
+              stage: 'finalizing',
+              detail: 'Finalizing song record…',
+            });
+          }
 
-        const response = await apiPost<UploadSongResponse>('/artist/songs', finalizePayload, {
-          timeout: 300000,
-        });
+          return apiPost<UploadSongResponse>('/artist/songs', buildFinalizePayload(slugOverride), {
+            timeout: 300000,
+          });
+        };
+
+        let response: UploadSongResponse;
+        try {
+          response = await finalizeUpload();
+        } catch (error) {
+          if (!payload.slug && isRetryableDuplicateSongUploadError(error)) {
+            response = await finalizeUpload(buildRetrySongSlug(payload.title));
+          } else {
+            throw error;
+          }
+        }
 
         if (onProgress) {
           onProgress({
@@ -760,7 +909,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
       try {
         return await submitUpload(data);
       } catch (error) {
-        if (!data.slug && isRetryableDuplicateSongUploadError(error)) {
+        if (typeof window === "undefined" && !data.slug && isRetryableDuplicateSongUploadError(error)) {
           return submitUpload({
             ...data,
             slug: buildRetrySongSlug(data.title),

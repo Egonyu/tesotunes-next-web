@@ -21,6 +21,7 @@ export interface ArtistSongUploadPayload extends ArtistSongPayload {
 }
 
 export interface ArtistSongDirectUploadReferences {
+  audio_session_id?: string;
   audio_key: string;
   audio_original_name: string;
   audio_size_bytes: number;
@@ -105,6 +106,7 @@ export function buildArtistSongDirectUploadPayload(
   return {
     title: payload.title.trim(),
     ...(payload.slug?.trim() ? { slug: payload.slug.trim() } : {}),
+    ...(uploads.audio_session_id ? { uploaded_audio_session_id: uploads.audio_session_id } : {}),
     uploaded_audio_key: uploads.audio_key,
     uploaded_audio_original_name: uploads.audio_original_name,
     uploaded_audio_size_bytes: uploads.audio_size_bytes,

@@ -69,6 +69,7 @@ describe("artist media payload builders", () => {
         description: "  Big upload ",
       },
       {
+        audio_session_id: "123e4567-e89b-12d3-a456-426614174000",
         audio_key: "songs/audio/direct/7/file.mp3",
         audio_original_name: "mixtape.mp3",
         audio_size_bytes: 234_567_890,
@@ -82,6 +83,7 @@ describe("artist media payload builders", () => {
     expect(payload).toMatchObject({
       title: "Mixtape Drop",
       genre_id: "12",
+      uploaded_audio_session_id: "123e4567-e89b-12d3-a456-426614174000",
       uploaded_audio_key: "songs/audio/direct/7/file.mp3",
       uploaded_audio_original_name: "mixtape.mp3",
       uploaded_audio_size_bytes: 234_567_890,

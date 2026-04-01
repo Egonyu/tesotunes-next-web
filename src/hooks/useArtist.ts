@@ -585,6 +585,7 @@ interface SongUploadSessionPartVerificationResponse {
 
 const ARTIST_UPLOAD_CHUNK_MAX_ATTEMPTS = 3;
 const ARTIST_UPLOAD_RETRY_DELAY_MS = 1200;
+const ARTIST_UPLOAD_FINALIZE_TIMEOUT_MS = 900000;
 
 async function requestArtistSongUploadTarget(
   accessToken: string,
@@ -686,7 +687,7 @@ async function completeArtistSongUploadSession(accessToken: string, sessionId: s
     buildDirectApiUrl(`/artist/songs/upload-sessions/${sessionId}/complete`),
     {},
     {
-      timeout: 300000,
+      timeout: ARTIST_UPLOAD_FINALIZE_TIMEOUT_MS,
       withCredentials: false,
       headers: {
         Accept: "application/json",
@@ -789,7 +790,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
         }
 
         return apiPostForm<UploadSongResponse>('/artist/songs', uploadFormData, {
-          timeout: 300000,
+          timeout: ARTIST_UPLOAD_FINALIZE_TIMEOUT_MS,
           onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
             if (onProgress && progressEvent.total) {
               onProgress({
@@ -968,7 +969,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
           }
 
           return apiPost<UploadSongResponse>('/artist/songs', buildFinalizePayload(slugOverride), {
-            timeout: 300000,
+            timeout: ARTIST_UPLOAD_FINALIZE_TIMEOUT_MS,
           });
         };
 

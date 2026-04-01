@@ -174,7 +174,14 @@ export default function UploadPage() {
         // Extract detailed error message from axios error
         let errorMessage = 'Upload failed. Please try again.';
         if (err && typeof err === 'object' && 'response' in err) {
-          const axiosError = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> }; status?: number } };
+          const axiosError = err as {
+            response?: { data?: { message?: string; errors?: Record<string, string[]> }; status?: number };
+            code?: string;
+            message?: string;
+          };
+          if (axiosError.code === 'ECONNABORTED' || (axiosError.message ?? '').toLowerCase().includes('timeout')) {
+            errorMessage = 'Upload processing took too long. Please retry once. If the song is very large, keep this tab open until completion.';
+          } else
           if (axiosError.response?.status === 401) {
             errorMessage = 'Your session has expired. Please log in again to upload.';
           } else if (axiosError.response?.status === 413) {

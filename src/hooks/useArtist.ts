@@ -574,6 +574,18 @@ interface SongUploadSessionCompleteResponse {
   original_filename: string;
 }
 
+interface SongUploadSessionPartVerificationResponse {
+  verified: boolean;
+  message: string;
+  key: string;
+  part_number: number;
+  size_bytes: number;
+  expected_size_bytes: number;
+}
+
+const ARTIST_UPLOAD_CHUNK_MAX_ATTEMPTS = 3;
+const ARTIST_UPLOAD_RETRY_DELAY_MS = 1200;
+
 async function requestArtistSongUploadTarget(
   accessToken: string,
   kind: "audio" | "cover",
@@ -642,6 +654,31 @@ async function requestArtistSongUploadSessionPartTarget(
   );
 
   return response.data.data;
+}
+
+async function verifyArtistSongUploadSessionPart(
+  accessToken: string,
+  sessionId: string,
+  partNumber: number
+) {
+  const response = await axios.post<{ data: SongUploadSessionPartVerificationResponse }>(
+    buildDirectApiUrl(`/artist/songs/upload-sessions/${sessionId}/parts/${partNumber}/verify`),
+    {},
+    {
+      timeout: 30000,
+      withCredentials: false,
+      validateStatus: (status) => status === 200 || status === 409,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return {
+    status: response.status,
+    data: response.data.data,
+  };
 }
 
 async function completeArtistSongUploadSession(accessToken: string, sessionId: string) {
@@ -727,6 +764,12 @@ async function uploadBlobToDirectTarget(
   }
 }
 
+function waitForArtistUploadRetry(delayMs: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
 export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
   const queryClient = useQueryClient();
 
@@ -808,19 +851,74 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             const start = (partNumber - 1) * audioSession.part_size_bytes;
             const end = Math.min(start + audioSession.part_size_bytes, payload.audio_file.size);
             const chunk = payload.audio_file.slice(start, end);
-            const chunkTarget = await requestArtistSongUploadSessionPartTarget(accessToken, audioSession.id, partNumber);
+            let chunkVerified = false;
+            let lastChunkError: Error | null = null;
 
-            if (onProgress) {
-              onProgress({
-                percent: Math.min(95, Math.round(((uploadedBytes + 1) * 100) / Math.max(totalBytes, 1))),
-                loaded: uploadedBytes,
-                total: totalBytes,
-                stage: 'uploading',
-                detail: `Uploading audio chunk ${partNumber} of ${audioSession.total_parts}…`,
-              });
+            for (let attempt = 1; attempt <= ARTIST_UPLOAD_CHUNK_MAX_ATTEMPTS; attempt += 1) {
+              const chunkTarget = await requestArtistSongUploadSessionPartTarget(accessToken, audioSession.id, partNumber);
+
+              if (onProgress) {
+                onProgress({
+                  percent: Math.min(95, Math.round(((uploadedBytes + 1) * 100) / Math.max(totalBytes, 1))),
+                  loaded: uploadedBytes,
+                  total: totalBytes,
+                  stage: 'uploading',
+                  detail: `Uploading audio chunk ${partNumber} of ${audioSession.total_parts}…`,
+                });
+              }
+
+              try {
+                await uploadBlobToDirectTarget(chunkTarget, chunk, emitProgress);
+              } catch (error) {
+                lastChunkError = error instanceof Error
+                  ? error
+                  : new Error("The chunk upload did not reach cloud storage.");
+              }
+
+              if (!lastChunkError) {
+                if (onProgress) {
+                  onProgress({
+                    percent: Math.min(96, Math.round(((uploadedBytes + chunk.size) * 100) / Math.max(totalBytes, 1))),
+                    loaded: uploadedBytes + chunk.size,
+                    total: totalBytes,
+                    stage: 'uploading',
+                    detail: `Verifying audio chunk ${partNumber} of ${audioSession.total_parts}…`,
+                  });
+                }
+
+                const verification = await verifyArtistSongUploadSessionPart(accessToken, audioSession.id, partNumber);
+                if (verification.status === 200 && verification.data.verified) {
+                  chunkVerified = true;
+                  break;
+                }
+
+                lastChunkError = new Error(
+                  verification.data.message || "The uploaded chunk could not be confirmed in cloud storage."
+                );
+              }
+
+              if (attempt < ARTIST_UPLOAD_CHUNK_MAX_ATTEMPTS) {
+                if (onProgress) {
+                  onProgress({
+                    percent: Math.min(95, Math.round(((uploadedBytes + 1) * 100) / Math.max(totalBytes, 1))),
+                    loaded: uploadedBytes,
+                    total: totalBytes,
+                    stage: 'uploading',
+                    detail: `Retrying audio chunk ${partNumber} of ${audioSession.total_parts}…`,
+                  });
+                }
+
+                await waitForArtistUploadRetry(ARTIST_UPLOAD_RETRY_DELAY_MS * attempt);
+                lastChunkError = null;
+              }
             }
 
-            await uploadBlobToDirectTarget(chunkTarget, chunk, emitProgress);
+            if (!chunkVerified) {
+              throw lastChunkError ?? new Error(
+                `Audio chunk ${partNumber} could not be confirmed after multiple attempts.`
+              );
+            }
+
             uploadedBytes += chunk.size;
           }
         } catch (error) {

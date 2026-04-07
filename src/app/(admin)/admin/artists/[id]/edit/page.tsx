@@ -90,6 +90,21 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function appendOptionalUrl(formData: FormData, key: string, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || !isHttpUrl(trimmed)) return;
+  formData.append(key, trimmed);
+}
+
 export default function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
@@ -162,7 +177,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       request.append('is_verified', payload.is_verified ? '1' : '0');
 
       if (payload.bio.trim()) request.append('bio', payload.bio.trim());
-      if (payload.website.trim()) request.append('website', payload.website.trim());
+      appendOptionalUrl(request, 'website', payload.website);
       if (payload.genre_id) request.append('genre_ids[0]', payload.genre_id);
 
       const socialFields: Array<
@@ -184,8 +199,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       ];
 
       for (const field of socialFields) {
-        const value = payload[field].trim();
-        if (value) request.append(field, value);
+        appendOptionalUrl(request, field, payload[field]);
       }
 
       if (profileFile) request.append('profile_image', profileFile);
@@ -331,7 +345,9 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
 
                 <FormField label="Website" error={errors.website}>
                   <input
-                    type="url"
+                    type="text"
+                    inputMode="url"
+                    autoComplete="url"
                     value={formData.website}
                     onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
                     className="w-full rounded-lg border px-4 py-2 bg-background"
@@ -377,7 +393,8 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                 ] as Array<[keyof ArtistFormData, string]>).map(([field, label]) => (
                   <FormField key={field} label={label} error={errors[field]}>
                     <input
-                      type="url"
+                      type="text"
+                      inputMode="url"
                       value={formData[field] as string}
                       onChange={(e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }))}
                       className="w-full rounded-lg border px-4 py-2 bg-background"

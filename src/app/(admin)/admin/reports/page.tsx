@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiGet, apiPost } from '@/lib/api';
 import {
   Search,
@@ -24,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
+import { isModeratorRole } from '@/lib/roles';
 
 interface Report {
   id: number;
@@ -68,12 +70,23 @@ const typeIcons: Record<string, typeof Flag> = {
 };
 
 export default function AdminReportsPage() {
-  if (!ADMIN_REPORTS_ENABLED) {
+  const { data: session, status } = useSession();
+  const reportsEnabled = ADMIN_REPORTS_ENABLED || isModeratorRole(session?.user?.role);
+
+  if (status === 'loading' && !ADMIN_REPORTS_ENABLED) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (status !== 'loading' && !reportsEnabled) {
     return (
       <div className="rounded-2xl border border-dashed bg-card p-8">
         <h1 className="text-2xl font-bold">Reports & Moderation</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Reports are hidden until the backend rollout is confirmed live. Set `NEXT_PUBLIC_ENABLE_ADMIN_REPORTS=true` after the new admin reports APIs are deployed.
+          Reports are hidden for full admins until the backend rollout is confirmed live, but moderator accounts can access this workspace directly.
         </p>
       </div>
     );

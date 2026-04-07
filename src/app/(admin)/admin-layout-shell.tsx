@@ -18,18 +18,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
-  Activity,
   Search,
   LogOut,
   Menu,
   PieChart,
   Headphones,
   FileText,
-  Shield,
   Megaphone,
-  ScrollText,
-  Flag,
-  Percent,
   BarChart3,
   Trophy,
   Tags,
@@ -41,7 +36,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasAnyPermission } from '@/lib/permissions';
-import { isAdminRole } from '@/lib/roles';
+import { getEffectiveAdminPermissions } from '@/lib/admin-access';
+import { isAdminRole, isModeratorRole } from '@/lib/roles';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { api } from '@/lib/api';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
@@ -51,7 +47,7 @@ import { usePlayerStore, useUIStore } from '@/stores';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view'] },
+  { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
   { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*'] },
   { href: '/admin/albums', label: 'Albums', icon: Disc3, requiredPermissions: ['admin.music', 'album.*'] },
   { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*'] },
@@ -68,19 +64,13 @@ const navItems = [
   { href: '/admin/promotions/disputes', label: 'Promotion Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/analytics', label: 'Promotion Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
   { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
-  { href: '/admin/sacco', label: 'SACCO', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
-  { href: '/admin/sacco/board-meetings', label: 'Board Meetings', icon: Building2, requiredPermissions: ['manage-sacco'] },
+  { href: '/admin/sacco', label: 'SACCO Ops', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
+  { href: '/admin/sacco/board-meetings', label: 'Governance', icon: Building2, requiredPermissions: ['manage-sacco'] },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: Crown, requiredPermissions: ['admin.settings', 'admin.users'] },
   { href: '/admin/forums', label: 'Forums', icon: MessageSquare, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/polls', label: 'Polls', icon: BarChart3, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports'] },
+  { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports', 'manage-reports', 'moderate-content', 'report.handle'] },
   { href: '/admin/analytics', label: 'Analytics', icon: PieChart, requiredPermissions: ['admin.reports', 'view-analytics'] },
-  { href: '/admin/observability', label: 'Observability', icon: Activity, requiredPermissions: ['admin.settings', 'admin.reports'] },
-  { href: '/admin/security', label: 'Security', icon: Shield, requiredPermissions: ['admin.settings'] },
-  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, requiredPermissions: ['admin.settings'] },
-  { href: '/admin/feature-flags', label: 'Feature Flags', icon: Flag, requiredPermissions: ['admin.settings'] },
-  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield, requiredPermissions: ['manage-roles', 'manage-settings', 'manage-users', 'admin.settings', 'admin.users'] },
-  { href: '/admin/system', label: 'System Health', icon: Activity, requiredPermissions: ['admin.settings'] },
   { href: '/admin/settings', label: 'Settings', icon: Settings, requiredPermissions: ['admin.settings', 'manage-settings'] },
 ];
 
@@ -117,14 +107,16 @@ export default function AdminLayoutShell({
   const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
   const shouldFallbackToRoleVisibility = isAdminRole(userRole) && userPermissions.length === 0;
   const isSuperAdmin = ['super admin', 'super_admin'].includes(normalizeRole(userRole));
+  const effectiveUserPermissions = getEffectiveAdminPermissions(userRole, userPermissions);
+  const reportsVisible = ADMIN_REPORTS_ENABLED || isModeratorRole(userRole);
 
-  const visibleNavItems = (ADMIN_REPORTS_ENABLED ? navItems : navItems.filter((item) => item.href !== '/admin/reports'))
+  const visibleNavItems = (reportsVisible ? navItems : navItems.filter((item) => item.href !== '/admin/reports'))
     .filter((item) => {
       if (isSuperAdmin) return true;
       if (shouldFallbackToRoleVisibility) return true;
       const permissions = item.requiredPermissions as string[] | undefined;
       if (!permissions || permissions.length === 0) return true;
-      return hasAnyPermission(userPermissions, permissions);
+      return hasAnyPermission(effectiveUserPermissions, permissions);
     });
   const hasActivePlayer = !!currentSong && !playerMinimized;
 

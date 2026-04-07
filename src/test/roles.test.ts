@@ -1,4 +1,4 @@
-import { canAccessArtistStudio, isAdminRole, isArtistRole } from '@/lib/roles';
+import { canAccessArtistStudio, isAdminRole, isArtistRole, isModeratorRole, isPrivilegedAdminRole } from '@/lib/roles';
 
 describe('role helpers', () => {
   it('matches admin roles case-insensitively', () => {
@@ -11,6 +11,17 @@ describe('role helpers', () => {
     expect(isArtistRole('artist')).toBe(true);
     expect(isArtistRole(' Artist ')).toBe(true);
     expect(isArtistRole('label')).toBe(false);
+  });
+
+  it('matches moderator roles and privileged admin access helpers', () => {
+    expect(isModeratorRole('moderator')).toBe(true);
+    expect(isModeratorRole('Moderator')).toBe(true);
+    expect(isModeratorRole('content_moderator')).toBe(true);
+    expect(isModeratorRole('Forum Moderator')).toBe(true);
+    expect(isModeratorRole('catalog-moderator')).toBe(true);
+    expect(isPrivilegedAdminRole('moderator')).toBe(true);
+    expect(isPrivilegedAdminRole('admin')).toBe(true);
+    expect(isPrivilegedAdminRole('user')).toBe(false);
   });
 
   it('allows artist studio for artist and admin roles only', () => {

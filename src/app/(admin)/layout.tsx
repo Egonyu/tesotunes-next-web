@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import AccessNotice from '@/components/auth/AccessNotice';
+import { canAccessAdminShell } from '@/lib/admin-access';
 import { authConfig } from '@/lib/auth';
-import { isAdminRole } from '@/lib/roles';
 import AdminLayoutShell from './admin-layout-shell';
 
 export default async function AdminLayout({
@@ -33,11 +33,11 @@ export default async function AdminLayout({
     );
   }
 
-  if (!isAdminRole(userRole)) {
+  if (!canAccessAdminShell(userRole)) {
     return (
       <AccessNotice
         title="Access Restricted"
-        description="Your account is signed in but does not have admin privileges for this area."
+        description="Your account is signed in but does not have the required privileged access for this area."
         callbackUrl="/admin"
         role={userRole ?? undefined}
         variant="forbidden"

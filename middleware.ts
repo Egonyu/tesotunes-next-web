@@ -2,9 +2,31 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 
-const ADMIN_ROLE_NAMES = new Set(['admin', 'super admin', 'super_admin']);
+const MODERATOR_ROLE_NAMES = new Set([
+  'moderator',
+  'content moderator',
+  'content_moderator',
+  'content-moderator',
+  'forum moderator',
+  'forum_moderator',
+  'forum-moderator',
+  'catalog moderator',
+  'catalog_moderator',
+  'catalog-moderator',
+]);
+const ADMIN_ROLE_NAMES = new Set(['admin', 'super admin', 'super_admin', ...MODERATOR_ROLE_NAMES]);
 const UNRESTRICTED_ADMIN_ROLE_NAMES = new Set(['super admin', 'super_admin']);
 const ARTIST_ROLE_NAMES = new Set(['artist']);
+const MODERATOR_DEFAULT_ADMIN_PERMISSIONS = [
+  'view-reports',
+  'manage-reports',
+  'moderate-content',
+  'report.handle',
+  'catalog.claim.review',
+  'music.moderate',
+  'comment.moderate',
+  'user.moderate',
+];
 const NEXTAUTH_SESSION_COOKIE_CANDIDATES = [
   '__Secure-next-auth.session-token',
   'next-auth.session-token',
@@ -36,16 +58,20 @@ const ADMIN_PERMISSION_RULES: Array<{ prefix: string; permissions: string[] }> =
   { prefix: '/admin/security', permissions: ['admin.settings'] },
   { prefix: '/admin/system', permissions: ['admin.settings'] },
   { prefix: '/admin/payments', permissions: ['manage-payments', 'payment.manage', 'admin.payments'] },
-  { prefix: '/admin/reports', permissions: ['view-reports', 'admin.reports'] },
+  { prefix: '/admin/reports', permissions: ['view-reports', 'admin.reports', 'manage-reports', 'moderate-content', 'report.handle'] },
   { prefix: '/admin/analytics', permissions: ['view-analytics', 'admin.reports'] },
   { prefix: '/admin/catalog/claims', permissions: ['catalog.claim.review'] },
   { prefix: '/admin/catalog', permissions: ['catalog.view', 'catalog.upload'] },
   { prefix: '/admin/sacco', permissions: ['manage-sacco'] },
-  { prefix: '/admin/users', permissions: ['view-users', 'manage-users', 'user.view', 'admin.users'] },
+  { prefix: '/admin/users', permissions: ['view-users', 'manage-users', 'user.view', 'user.moderate', 'admin.users'] },
 ];
 
 function normalize(value: string | null | undefined): string {
   return value?.trim().toLowerCase() ?? '';
+}
+
+function isModeratorRole(role: string): boolean {
+  return MODERATOR_ROLE_NAMES.has(role);
 }
 
 function wildcardToRegex(pattern: string): RegExp {
@@ -172,12 +198,15 @@ export async function middleware(request: NextRequest) {
     const grantedPermissions = Array.isArray(token.permissions)
       ? token.permissions.filter((permission): permission is string => typeof permission === 'string')
       : [];
+    const effectivePermissions = isModeratorRole(role)
+      ? Array.from(new Set([...grantedPermissions, ...MODERATOR_DEFAULT_ADMIN_PERMISSIONS]))
+      : grantedPermissions;
 
-    if (grantedPermissions.length === 0) {
+    if (effectivePermissions.length === 0) {
       return redirectToAccessRequired(request, 'forbidden');
     }
 
-    if (!hasAnyPermission(grantedPermissions, requiredPermissions)) {
+    if (!hasAnyPermission(effectivePermissions, requiredPermissions)) {
       return redirectToAccessRequired(request, 'forbidden');
     }
   }

@@ -1,8 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { apiGet } from '@/lib/api';
+import AccessNotice from '@/components/auth/AccessNotice';
+import { getAdminEntryPath } from '@/lib/admin-access';
+import { isModeratorRole } from '@/lib/roles';
 import {
   Users,
   Music,
@@ -31,6 +37,9 @@ interface DashboardStats {
     published: number;
     pending_review: number;
     draft: number;
+    isrc_assigned: number;
+    isrc_ready: number;
+    isrc_blocked: number;
     total_plays: number;
     plays_today: number;
     change_percentage: number;
@@ -114,8 +123,43 @@ function formatCurrency(amount: number | null | undefined, currency = 'UGX'): st
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const userRole = session?.user?.role ?? null;
+  const userPermissions = session?.user?.permissions ?? [];
+  const moderatorEntryPath = getAdminEntryPath(userRole, userPermissions);
+  const redirectingModerator = isModeratorRole(userRole) && moderatorEntryPath !== null && moderatorEntryPath !== '/admin';
+  const dashboardEnabled = !isModeratorRole(userRole);
+
+  useEffect(() => {
+    if (redirectingModerator && moderatorEntryPath) {
+      router.replace(moderatorEntryPath);
+    }
+  }, [moderatorEntryPath, redirectingModerator, router]);
+
+  if (sessionStatus === 'loading' || redirectingModerator) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isModeratorRole(userRole) && moderatorEntryPath === null) {
+    return (
+      <AccessNotice
+        title="No Moderator Workspace Available"
+        description="Your account is recognized as a moderator, but it does not currently include a web-accessible admin area. Ask an administrator to assign at least one moderator permission such as user review or report moderation."
+        callbackUrl="/admin"
+        role={userRole ?? undefined}
+        variant="forbidden"
+      />
+    );
+  }
+
   const { data: statsData, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
+    enabled: dashboardEnabled,
     queryFn: async () => {
       try {
         const res = await apiGet<{ data: DashboardStats }>('/admin/dashboard/stats?live=1');
@@ -134,7 +178,7 @@ export default function AdminDashboardPage() {
         return {
           data: {
             users: { total: total(usersRes), new_today: 0, new_this_week: 0, change_percentage: 0, active_users: 0, premium_users: 0 },
-            songs: { total: total(songsRes), published: 0, pending_review: 0, draft: 0, total_plays: 0, plays_today: 0, change_percentage: 0 },
+            songs: { total: total(songsRes), published: 0, pending_review: 0, draft: 0, isrc_assigned: 0, isrc_ready: 0, isrc_blocked: 0, total_plays: 0, plays_today: 0, change_percentage: 0 },
             albums: { total: total(albumsRes), released: 0, upcoming: 0 },
             artists: { total: artistStats?.total ?? total(artistsRes), verified: artistStats?.verified ?? 0, pending_verification: artistStats?.pending_verification ?? 0 },
              revenue: { total: 0, this_month: 0, last_month: 0, change_percentage: 0, currency: 'UGX' },
@@ -154,6 +198,7 @@ export default function AdminDashboardPage() {
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'dashboard', 'activity'],
+    enabled: dashboardEnabled,
     queryFn: async () => {
       try {
         return await apiGet<{ data: RecentActivity }>('/admin/dashboard/recent-activity');
@@ -198,6 +243,14 @@ export default function AdminDashboardPage() {
       icon: Music,
       color: 'bg-purple-500',
       subtext: `${stats.songs?.pending_review ?? 0} pending review`
+    },
+    {
+      label: 'ISRC Ready',
+      value: formatNumber(stats.songs?.isrc_ready),
+      change: 0,
+      icon: Disc3,
+      color: 'bg-sky-500',
+      subtext: `${stats.songs?.isrc_blocked ?? 0} blocked`
     },
     {
       label: 'Revenue (MTD)',
@@ -273,7 +326,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           const isPositive = stat.change >= 0;
@@ -313,7 +366,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-2xl font-bold">{stats?.songs?.published ?? 0}</p>
               <p className="text-sm text-muted-foreground">Published Songs</p>
@@ -329,6 +382,10 @@ export default function AdminDashboardPage() {
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-2xl font-bold">{stats?.albums?.total ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Albums</p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-2xl font-bold">{stats?.songs?.isrc_assigned ?? 0}</p>
+              <p className="text-sm text-muted-foreground">ISRC Assigned</p>
             </div>
           </div>
 
@@ -361,6 +418,24 @@ export default function AdminDashboardPage() {
                   <span>Songs pending review</span>
                 </div>
                 <span className="text-lg font-bold">{stats?.songs?.pending_review ?? 0}</span>
+              </div>
+            </Link>
+            <Link href="/admin/songs?isrc_status=ready" className="block p-3 rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Disc3 className="h-5 w-5 text-sky-500" />
+                  <span>Songs ready for ISRC</span>
+                </div>
+                <span className="text-lg font-bold">{stats?.songs?.isrc_ready ?? 0}</span>
+              </div>
+            </Link>
+            <Link href="/admin/songs?isrc_status=blocked" className="block p-3 rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Disc3 className="h-5 w-5 text-amber-500" />
+                  <span>ISRC-blocked songs</span>
+                </div>
+                <span className="text-lg font-bold">{stats?.songs?.isrc_blocked ?? 0}</span>
               </div>
             </Link>
             <Link href="/admin/artists?status=pending" className="block p-3 rounded-lg hover:bg-muted transition-colors">

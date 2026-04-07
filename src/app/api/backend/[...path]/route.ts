@@ -16,6 +16,17 @@ const NEXTAUTH_SESSION_COOKIE_CANDIDATES = [
   "next-auth.session-token",
 ];
 
+function applyCanonicalForwardedHeaders(headers: Headers) {
+  const upstreamUrl = new URL(API_URL);
+  const upstreamProtocol = upstreamUrl.protocol.replace(/:$/, "");
+  const upstreamPort = upstreamUrl.port || (upstreamProtocol === "https" ? "443" : "80");
+
+  headers.delete("forwarded");
+  headers.set("x-forwarded-host", upstreamUrl.host);
+  headers.set("x-forwarded-proto", upstreamProtocol);
+  headers.set("x-forwarded-port", upstreamPort);
+}
+
 async function resolveProxyToken(request: NextRequest) {
   const baseOptions = {
     req: request,
@@ -83,6 +94,7 @@ async function proxyToBackend(
   headers.delete("connection");
   headers.delete("content-length");
   headers.set("accept", headers.get("accept") || "application/json");
+  applyCanonicalForwardedHeaders(headers);
 
   if (token?.accessToken) {
     headers.set("authorization", `Bearer ${token.accessToken}`);

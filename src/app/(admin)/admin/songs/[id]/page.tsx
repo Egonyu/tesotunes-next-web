@@ -3,6 +3,7 @@
 import { use, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ import {
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 import { formatResolvedDuration, resolveDurationSeconds } from '@/lib/utils';
 import { toast } from 'sonner';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 interface Song {
   id: string;
@@ -121,6 +123,8 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   const { data: song, isLoading } = useQuery({
     queryKey: ['admin', 'song', id],
@@ -293,12 +297,14 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
               <Edit className="h-4 w-4" />
               Edit
             </Link>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="p-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {!isModeratorOnly && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="p-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         }
       />
@@ -562,13 +568,15 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                 <span>{s.status === 'published' ? 'Unpublish' : 'Publish'}</span>
                 <StatusBadge status={s.status === 'published' ? 'draft' : 'published'} />
               </button>
-              <button
-                onClick={() => toggleFeatureMutation.mutate()}
-                className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted"
-                disabled={toggleFeatureMutation.isPending}
-              >
-                {s.is_featured ? 'Remove from Featured' : 'Add to Featured'}
-              </button>
+              {!isModeratorOnly && (
+                <button
+                  onClick={() => toggleFeatureMutation.mutate()}
+                  className="w-full px-4 py-2 text-left border rounded-lg hover:bg-muted"
+                  disabled={toggleFeatureMutation.isPending}
+                >
+                  {s.is_featured ? 'Remove from Featured' : 'Add to Featured'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -719,16 +727,18 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Song"
-        description={`Are you sure you want to delete "${s.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        variant="destructive"
-        isLoading={deleteMutation.isPending}
-        onConfirm={() => deleteMutation.mutate()}
-      />
+      {!isModeratorOnly && (
+        <ConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Delete Song"
+          description={`Are you sure you want to delete "${s.title}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          variant="destructive"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      )}
 
       {/* Reject Reason Dialog */}
       {showRejectDialog && (

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import {
   Search,
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { pickMediaUrl } from '@/lib/media';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 interface User {
   id: number;
@@ -67,6 +69,8 @@ export default function UsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   const { data: usersData, isLoading, error } = useQuery({
     queryKey: ['admin', 'users', { page: currentPage, role: roleFilter, status: statusFilter, search: searchQuery }],
@@ -171,20 +175,24 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold">Users</h1>
           <p className="text-muted-foreground">Manage platform users</p>
         </div>
-        <Link
-          href="/admin/users/new"
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Add User
-        </Link>
-        <Link
-          href="/admin/users/new?mode=organizer"
-          className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
-        >
-          <Shield className="h-4 w-4" />
-          Add Organizer
-        </Link>
+        {!isModeratorOnly && (
+          <>
+            <Link
+              href="/admin/users/new"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+              Add User
+            </Link>
+            <Link
+              href="/admin/users/new?mode=organizer"
+              className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
+            >
+              <Shield className="h-4 w-4" />
+              Add Organizer
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Filters */}
@@ -207,7 +215,7 @@ export default function UsersPage() {
           <option value="all">All Roles</option>
           <option value="user">Users</option>
           <option value="artist">Artists</option>
-          <option value="admin">Admins</option>
+          {!isModeratorOnly && <option value="admin">Admins</option>}
         </select>
         <select
           value={statusFilter}
@@ -227,7 +235,7 @@ export default function UsersPage() {
       </div>
 
       {/* Bulk Actions */}
-      {selectedUsers.length > 0 && (
+      {selectedUsers.length > 0 && !isModeratorOnly && (
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
           <span className="text-sm font-medium">{selectedUsers.length} selected</span>
           <button className="flex items-center gap-1 px-3 py-1 text-sm bg-background border rounded hover:bg-muted">
@@ -337,21 +345,25 @@ export default function UsersPage() {
                       >
                         <Eye className="h-4 w-4" />
                       </Link>
-                      <Link
-                        href={`/admin/users/${user.id}/edit`}
-                        className="p-2 hover:bg-muted rounded-lg"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Link>
-                      <button
-                        onClick={() => deleteMutation.mutate(user.id)}
-                        disabled={deleteMutation.isPending}
-                        className="p-2 hover:bg-muted rounded-lg text-red-500 disabled:opacity-50"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {!isModeratorOnly && (
+                        <>
+                          <Link
+                            href={`/admin/users/${user.id}/edit`}
+                            className="p-2 hover:bg-muted rounded-lg"
+                            title="Edit"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                          <button
+                            onClick={() => deleteMutation.mutate(user.id)}
+                            disabled={deleteMutation.isPending}
+                            className="p-2 hover:bg-muted rounded-lg text-red-500 disabled:opacity-50"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

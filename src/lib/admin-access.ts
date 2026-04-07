@@ -2,17 +2,27 @@ import { hasAnyPermission } from './permissions';
 import { isAdminRole, isModeratorRole, isPrivilegedAdminRole } from './roles';
 
 export const MODERATOR_DEFAULT_ADMIN_PERMISSIONS = [
+  'song.view',
+  'song.edit',
+  'song.upload',
+  'song.review',
+  'artist.view',
+  'artist.edit',
+  'artist.review',
+  'music.moderate',
   'view-reports',
   'manage-reports',
   'moderate-content',
   'report.handle',
   'catalog.claim.review',
-  'music.moderate',
   'comment.moderate',
   'user.moderate',
+  'view-users',
 ];
 
 const MODERATOR_ENTRY_CANDIDATES: Array<{ href: string; permissions: string[] }> = [
+  { href: '/admin/songs?status=pending', permissions: ['song.review', 'song.view', 'song.edit', 'song.upload', 'music.moderate'] },
+  { href: '/admin/artists', permissions: ['artist.review', 'artist.view', 'artist.edit'] },
   { href: '/admin/reports', permissions: ['manage-reports', 'view-reports', 'admin.reports', 'moderate-content', 'report.handle'] },
   { href: '/admin/catalog/claims', permissions: ['catalog.claim.review'] },
   { href: '/admin/catalog', permissions: ['catalog.view', 'catalog.upload'] },

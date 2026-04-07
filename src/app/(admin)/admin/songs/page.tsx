@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn, formatResolvedDuration } from '@/lib/utils';
 import { toast } from 'sonner';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 interface Song {
   id: number;
@@ -105,6 +107,8 @@ export default function SongsPage() {
   const [playingSong, setPlayingSong] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   const { data: songsData, isLoading } = useQuery({
     queryKey: ['admin', 'songs', { page: currentPage, status: statusFilter, isrcStatus: isrcFilter, search: searchQuery }],
@@ -338,10 +342,12 @@ export default function SongsPage() {
             <XCircle className="h-4 w-4" />
             Reject
           </button>
-          <button className="flex items-center gap-1 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+          {!isModeratorOnly && (
+            <button className="flex items-center gap-1 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+          )}
         </div>
       )}
 
@@ -467,14 +473,16 @@ export default function SongsPage() {
                       >
                         <Edit className="h-4 w-4" />
                       </Link>
-                      <button
-                        onClick={() => deleteMutation.mutate(song.id)}
-                        disabled={deleteMutation.isPending}
-                        className="p-2 hover:bg-muted rounded-lg text-red-500 disabled:opacity-50"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {!isModeratorOnly && (
+                        <button
+                          onClick={() => deleteMutation.mutate(song.id)}
+                          disabled={deleteMutation.isPending}
+                          className="p-2 hover:bg-muted rounded-lg text-red-500 disabled:opacity-50"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

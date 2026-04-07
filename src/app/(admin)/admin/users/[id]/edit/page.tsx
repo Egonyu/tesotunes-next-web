@@ -3,11 +3,13 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api';
 import { normalizeCountryCode } from '@/lib/country';
 import { PageHeader, FormActions, FormField, FormSection } from '@/components/admin';
 import { toast } from 'sonner';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 type UserDetail = {
   id: number;
@@ -95,6 +97,8 @@ function parseError(error: unknown): { message: string; fields: Record<string, s
 export default function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -129,6 +133,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
   const { data: rolesRes } = useQuery({
     queryKey: ['admin', 'roles', 'assignable'],
     queryFn: () => apiGet<{ data: RoleOption[] }>('/admin/roles'),
+    enabled: !isModeratorOnly,
   });
 
   const user = userRes?.data;
@@ -234,6 +239,26 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
 
     updateUserMutation.mutate(formData);
   };
+
+  if (isModeratorOnly) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="User Editing Restricted"
+          description="Moderators can review music and artist records, but user account changes are reserved for administrators."
+          breadcrumbs={[
+            { label: 'Admin', href: '/admin' },
+            { label: 'Users', href: '/admin/users' },
+            { label: 'Restricted' },
+          ]}
+          backHref={`/admin/users/${id}`}
+        />
+        <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+          Use the artist and song workflows for moderation tasks. Administrator and super administrator records remain hidden from moderator access.
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !user) {
     return (

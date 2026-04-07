@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
 import {
@@ -27,6 +28,7 @@ import {
 import { toast } from 'sonner';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { pickMediaUrl } from '@/lib/media';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 type Artist = {
   id: number;
@@ -118,6 +120,8 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
   const [deleteSongId, setDeleteSongId] = useState<number | null>(null);
   const [showRejectComposer, setShowRejectComposer] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   // --- Queries ---
 
@@ -323,12 +327,14 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
               <Edit className="h-4 w-4" />
               Edit Artist
             </Link>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {!isModeratorOnly && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         }
       />
@@ -525,27 +531,31 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                                   </button>
                                 );
                               })}
-                            <button
-                              onClick={() => toggleSongFeaturedMutation.mutate(song.id)}
-                              disabled={toggleSongFeaturedMutation.isPending}
-                              className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950 disabled:opacity-50"
-                              title={song.is_featured ? 'Unfeature' : 'Feature'}
-                            >
-                              <Music className="h-3 w-3" /> {song.is_featured ? 'Unfeature' : 'Feature'}
-                            </button>
+                            {!isModeratorOnly && (
+                              <button
+                                onClick={() => toggleSongFeaturedMutation.mutate(song.id)}
+                                disabled={toggleSongFeaturedMutation.isPending}
+                                className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950 disabled:opacity-50"
+                                title={song.is_featured ? 'Unfeature' : 'Feature'}
+                              >
+                                <Music className="h-3 w-3" /> {song.is_featured ? 'Unfeature' : 'Feature'}
+                              </button>
+                            )}
                             <Link href={`/admin/songs/${song.id}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted">
                               <Eye className="h-3 w-3" /> View
                             </Link>
                             <Link href={`/admin/songs/${song.id}/edit`} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-muted">
                               <Edit className="h-3 w-3" /> Edit
                             </Link>
-                            <button
-                              onClick={() => setDeleteSongId(song.id)}
-                              className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                              title="Delete song"
-                            >
-                              <Trash2 className="h-3 w-3" /> Delete
-                            </button>
+                            {!isModeratorOnly && (
+                              <button
+                                onClick={() => setDeleteSongId(song.id)}
+                                className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                title="Delete song"
+                              >
+                                <Trash2 className="h-3 w-3" /> Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -709,12 +719,14 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
                   {suspendArtistMutation.isPending ? 'Suspending artist...' : 'Suspend artist'}
                 </button>
               )}
-              <button
-                onClick={() => toggleFeaturedMutation.mutate()}
-                className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
-              >
-                {artist.is_featured ? 'Remove from featured' : 'Add to featured'}
-              </button>
+              {!isModeratorOnly && (
+                <button
+                  onClick={() => toggleFeaturedMutation.mutate()}
+                  className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  {artist.is_featured ? 'Remove from featured' : 'Add to featured'}
+                </button>
+              )}
             </div>
             {showRejectComposer && (
               <div className="mt-4 space-y-2 rounded-lg border border-red-200 bg-red-50/60 p-3">
@@ -758,27 +770,31 @@ export default function ArtistDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Delete Artist Dialog */}
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Artist"
-        description="This action cannot be undone."
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={() => deleteMutation.mutate()}
-      />
+      {!isModeratorOnly && (
+        <ConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Delete Artist"
+          description="This action cannot be undone."
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      )}
 
       {/* Delete Song Dialog */}
-      <ConfirmDialog
-        open={deleteSongId !== null}
-        onOpenChange={(open) => { if (!open) setDeleteSongId(null); }}
-        title="Delete Song"
-        description="This will permanently delete the song and its audio files. This action cannot be undone."
-        confirmLabel="Delete Song"
-        variant="destructive"
-        onConfirm={() => { if (deleteSongId) deleteSongMutation.mutate(deleteSongId); }}
-        isLoading={deleteSongMutation.isPending}
-      />
+      {!isModeratorOnly && (
+        <ConfirmDialog
+          open={deleteSongId !== null}
+          onOpenChange={(open) => { if (!open) setDeleteSongId(null); }}
+          title="Delete Song"
+          description="This will permanently delete the song and its audio files. This action cannot be undone."
+          confirmLabel="Delete Song"
+          variant="destructive"
+          onConfirm={() => { if (deleteSongId) deleteSongMutation.mutate(deleteSongId); }}
+          isLoading={deleteSongMutation.isPending}
+        />
+      )}
     </div>
   );
 }

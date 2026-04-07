@@ -48,9 +48,9 @@ import { usePlayerStore, useUIStore } from '@/stores';
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
-  { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'song.view', 'song.edit', 'song.upload', 'song.review'] },
   { href: '/admin/albums', label: 'Albums', icon: Disc3, requiredPermissions: ['admin.music', 'album.*'] },
-  { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*'] },
+  { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'artist.view', 'artist.edit', 'artist.review'] },
   { href: '/admin/catalog', label: 'Catalog Intake', icon: FolderUp, requiredPermissions: ['catalog.view', 'catalog.upload'] },
   { href: '/admin/catalog/claims', label: 'Claim Review', icon: BadgeCheck, requiredPermissions: ['catalog.claim.review'] },
   { href: '/admin/genres', label: 'Genres', icon: Tags, requiredPermissions: ['admin.music', 'music.*'] },

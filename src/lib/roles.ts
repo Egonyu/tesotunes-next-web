@@ -25,6 +25,10 @@ export function isModeratorRole(role: string | null | undefined): boolean {
   return MODERATOR_ROLE_NAMES.includes(normalizeRole(role));
 }
 
+export function isModeratorOnlyRole(role: string | null | undefined): boolean {
+  return isModeratorRole(role) && !isAdminRole(role);
+}
+
 export function isPrivilegedAdminRole(role: string | null | undefined): boolean {
   return isAdminRole(role) || isModeratorRole(role);
 }

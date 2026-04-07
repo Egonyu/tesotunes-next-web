@@ -5,10 +5,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiDelete, apiGet, apiPost } from '@/lib/api';
 import { PageHeader, ConfirmDialog } from '@/components/admin';
 import { Ban, Building2, CheckCircle, Edit, Mail, MapPin, Phone, Trash2, User, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+import { isModeratorOnlyRole } from '@/lib/roles';
 
 type UserDetail = {
   id: number;
@@ -48,6 +50,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
+  const { data: session } = useSession();
+  const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
@@ -123,19 +127,23 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         backHref="/admin/users"
         actions={
           <div className="flex items-center gap-2">
-            <Link
-              href={`/admin/users/${id}/edit`}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-            >
-              <Edit className="h-4 w-4" />
-              Edit User
-            </Link>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {!isModeratorOnly && (
+              <>
+                <Link
+                  href={`/admin/users/${id}/edit`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit User
+                </Link>
+                <button
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
         }
       />
@@ -224,26 +232,28 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl border bg-card p-6">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Account Actions</h3>
-            <div className="space-y-2">
-              {user.is_active ? (
-                <button
-                  onClick={() => setShowBanDialog(true)}
-                  className="inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <Ban className="h-4 w-4" /> Ban User
-                </button>
-              ) : (
-                <button
-                  onClick={() => activateMutation.mutate()}
-                  className="inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <CheckCircle className="h-4 w-4" /> Activate User
-                </button>
-              )}
+          {!isModeratorOnly && (
+            <div className="rounded-xl border bg-card p-6">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Account Actions</h3>
+              <div className="space-y-2">
+                {user.is_active ? (
+                  <button
+                    onClick={() => setShowBanDialog(true)}
+                    className="inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <Ban className="h-4 w-4" /> Ban User
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => activateMutation.mutate()}
+                    className="inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <CheckCircle className="h-4 w-4" /> Activate User
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rounded-xl border bg-card p-6 text-xs text-muted-foreground">
             <p>Created: {new Date(user.created_at).toLocaleString()}</p>
@@ -252,25 +262,29 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Deactivate User"
-        description="This user will be deactivated."
-        confirmLabel="Deactivate"
-        variant="destructive"
-        onConfirm={() => deleteMutation.mutate()}
-      />
+      {!isModeratorOnly && (
+        <ConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Deactivate User"
+          description="This user will be deactivated."
+          confirmLabel="Deactivate"
+          variant="destructive"
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      )}
 
-      <ConfirmDialog
-        open={showBanDialog}
-        onOpenChange={setShowBanDialog}
-        title="Ban User"
-        description="This action marks the account inactive and restricted."
-        confirmLabel="Ban"
-        variant="destructive"
-        onConfirm={() => banMutation.mutate()}
-      />
+      {!isModeratorOnly && (
+        <ConfirmDialog
+          open={showBanDialog}
+          onOpenChange={setShowBanDialog}
+          title="Ban User"
+          description="This action marks the account inactive and restricted."
+          confirmLabel="Ban"
+          variant="destructive"
+          onConfirm={() => banMutation.mutate()}
+        />
+      )}
     </div>
   );
 }

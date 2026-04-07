@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -22,18 +22,19 @@ import {
   MinusSquare,
   X
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration, resolveDurationSeconds } from '@/lib/utils';
 import { useMyArtistSongs, useDeleteSong, useBulkDeleteSongs, useBulkUpdateSongStatus } from '@/hooks/useArtist';
 import { toast } from 'sonner';
-import { pickMediaUrl } from '@/lib/media';
+import { pickMediaUrl, resolvePlayableAudioUrl } from '@/lib/media';
 import { SafeImage } from '@/components/ui/safe-image';
+import { usePlayerStore } from '@/stores';
+import { mapArtistSongToPlayerSong } from '@/lib/artist-player-song';
 
 export default function ArtistSongsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const [page, setPage] = useState(1);
-  const [playingId, setPlayingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchMode, setBatchMode] = useState(false);
 
@@ -49,10 +50,12 @@ export default function ArtistSongsPage() {
   const deleteSong = useDeleteSong();
   const bulkDelete = useBulkDeleteSongs();
   const bulkStatus = useBulkUpdateSongStatus();
+  const { currentSong, isPlaying, play, pause, resume } = usePlayerStore();
 
   const songs = songsData?.data || [];
   const pagination = songsData?.pagination || { current_page: 1, last_page: 1, per_page: 10, total: 0 };
   const statusCounts = songsData?.status_counts || { total: 0, published: 0, pending: 0, draft: 0 };
+  const playerQueue = useMemo(() => songs.map(mapArtistSongToPlayerSong), [songs]);
 
   const allSelected = songs.length > 0 && songs.every((s: { id: number }) => selectedIds.has(s.id));
   const someSelected = songs.some((s: { id: number }) => selectedIds.has(s.id));
@@ -120,6 +123,27 @@ export default function ArtistSongsPage() {
     if (confirm(`Are you sure you want to delete "${title}"?`)) {
       deleteSong.mutate(id);
     }
+  };
+
+  const handlePlaySong = (songId: number) => {
+    const queueSong = playerQueue.find((item) => item.id === songId);
+    if (!queueSong || !resolvePlayableAudioUrl(queueSong)) {
+      toast.error('This track is not currently streamable.');
+
+      return;
+    }
+
+    if (currentSong?.id === queueSong.id) {
+      if (isPlaying) {
+        pause();
+      } else {
+        resume();
+      }
+
+      return;
+    }
+
+    play(queueSong, playerQueue);
   };
 
   if (isLoading) {
@@ -279,7 +303,9 @@ export default function ArtistSongsPage() {
           </div>
         ) : songs.map((song) => (
           (() => {
-            const artworkUrl = pickMediaUrl(song.artwork_url, song.cover);
+            const artworkUrl = pickMediaUrl(song.artwork_url);
+            const isCurrentSong = currentSong?.id === song.id;
+            const isSongPlaying = isCurrentSong && isPlaying;
 
             return (
           <div
@@ -321,10 +347,10 @@ export default function ArtistSongsPage() {
                 )}
               </div>
               <button
-                onClick={() => setPlayingId(playingId === song.id ? null : song.id)}
+                onClick={() => handlePlaySong(song.id)}
                 className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
               >
-                {playingId === song.id ? (
+                {isSongPlaying ? (
                   <Pause className="h-6 w-6 text-white" />
                 ) : (
                   <Play className="h-6 w-6 text-white" />
@@ -336,7 +362,7 @@ export default function ArtistSongsPage() {
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{song.title}</p>
               <p className="text-sm text-muted-foreground truncate">
-                {song.album || 'Single'} • {(() => { const d = song.duration_seconds || Number(song.duration) || 0; return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`; })()}
+                {song.album || 'Single'} • {formatDuration(resolveDurationSeconds(undefined, song.duration_seconds))}
               </p>
             </div>
 

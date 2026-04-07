@@ -13,6 +13,7 @@ import { useToggleLike, useLikeStatus } from "@/hooks/useSocial";
 import { useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
+import { AddToPlaylistAction } from "@/components/playlists/AddToPlaylistAction";
 
 function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): SharePayload {
   const fallbackShareUrl = typeof window !== "undefined"
@@ -227,6 +228,10 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                       </button>
                     )}
                   >
+                    <AddToPlaylistAction
+                      songId={song.id}
+                      songTitle={song.title}
+                    />
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();

@@ -17,7 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatDuration, formatNumber, formatResolvedDuration } from "@/lib/utils";
 
 interface MoodDetail {
   id: number;
@@ -33,10 +33,10 @@ interface MoodDetail {
     id: number;
     title: string;
     slug: string;
-    duration: number;
     duration_seconds?: number;
+    duration_formatted?: string;
     play_count: number;
-    cover_url: string | null;
+    artwork_url?: string | null;
     artist: {
       id: number;
       name: string;
@@ -52,7 +52,7 @@ interface MoodDetail {
     id: number;
     name: string;
     slug: string;
-    cover_url: string | null;
+    artwork_url?: string | null;
     tracks_count: number;
   }[];
   related_moods: {
@@ -208,9 +208,9 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
 
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
-                      {song.cover_url ? (
+                      {song.artwork_url ? (
                         <Image
-                          src={song.cover_url}
+                          src={song.artwork_url}
                           alt={song.title}
                           fill
                           className="object-cover"
@@ -251,7 +251,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
                       <Heart className="h-4 w-4" />
                     </button>
                     <span className="text-sm text-muted-foreground">
-                      {formatDuration(song.duration_seconds || song.duration || 0)}
+                      {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
                     </span>
                   </div>
                 </div>
@@ -273,9 +273,9 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
                       className="flex items-center gap-3 p-3 bg-card rounded-lg border hover:border-primary transition-colors"
                     >
                       <div className="relative w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                        {playlist.cover_url ? (
+                        {playlist.artwork_url ? (
                           <Image
-                            src={playlist.cover_url}
+                            src={playlist.artwork_url}
                             alt={playlist.name}
                             fill
                             className="object-cover"

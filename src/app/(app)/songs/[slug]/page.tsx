@@ -24,7 +24,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
-import { formatDuration, formatNumber, formatDate } from "@/lib/utils";
+import { formatDuration, formatNumber, formatDate, resolveDurationSeconds } from "@/lib/utils";
 import { toast } from "sonner";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
@@ -32,6 +32,7 @@ import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBo
 import { DownloadGate } from "@/components/social/DownloadGate";
 import { SongPurchaseModal } from "@/components/music/SongPurchaseModal";
 import { TipModal } from "@/components/music/TipModal";
+import { AddToPlaylistAction } from "@/components/playlists/AddToPlaylistAction";
 import { useCheckPurchase } from "@/hooks/api";
 import { usePlayerStore } from "@/stores/player";
 import { useSession } from "next-auth/react";
@@ -41,7 +42,8 @@ interface SongDetail {
   id: number;
   title: string;
   slug: string;
-  duration_seconds: number;
+  duration_seconds?: number;
+  duration_formatted?: string;
   play_count: number;
   release_date: string | null;
   artwork_url: string | null;
@@ -52,7 +54,9 @@ interface SongDetail {
   price?: number;
   like_count: number;
   download_count: number;
-  audio_url?: string;
+  audio_url?: string | null;
+  stream_url?: string | null;
+  preview_url?: string | null;
   lyrics?: string;
   description?: string;
   composer?: string;
@@ -114,14 +118,17 @@ interface SongDetail {
 
 /** Convert SongDetail to the Song type the player store expects */
 function toPlayerSong(detail: SongDetail): Song {
+  const durationSeconds = resolveDurationSeconds(undefined, detail.duration_seconds);
+
   return {
     id: detail.id,
     title: detail.title,
     slug: detail.slug,
     artist_id: detail.artist.id,
     album_id: detail.album?.id,
-    duration: detail.duration_seconds || 0,
-    duration_seconds: detail.duration_seconds,
+    duration: durationSeconds,
+    duration_seconds: durationSeconds,
+    duration_formatted: detail.duration_formatted,
     play_count: detail.play_count,
     download_count: detail.download_count,
     like_count: detail.like_count,
@@ -130,7 +137,9 @@ function toPlayerSong(detail: SongDetail): Song {
     is_explicit: detail.is_explicit,
     is_featured: detail.is_featured,
     status: "published",
-    audio_url: detail.audio_url || "",
+    audio_url: detail.audio_url ?? detail.stream_url ?? detail.preview_url ?? null,
+    stream_url: detail.stream_url ?? detail.audio_url ?? null,
+    preview_url: detail.preview_url ?? null,
     artwork_url: detail.artwork_url ?? undefined,
     lyrics: detail.lyrics,
     artist: {
@@ -374,7 +383,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
               </div>
             )}
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <LikeButton
                 likeableType="song"
                 likeableId={song.id}
@@ -389,6 +398,11 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                 <ListPlus className="h-5 w-5" />
                 <span className="text-xs">Queue</span>
               </button>
+              <AddToPlaylistAction
+                songId={song.id}
+                songTitle={song.title}
+                variant="card"
+              />
               <button
                 onClick={handleShare}
                 className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted transition-colors"
@@ -457,7 +471,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ slug: str
                   <Clock className="h-4 w-4 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold leading-tight">{formatDuration(song.duration_seconds || 0)}</p>
+                <p className="text-lg font-bold leading-tight">{song.duration_formatted || formatDuration(resolveDurationSeconds(undefined, song.duration_seconds))}</p>
                   <p className="text-xs text-muted-foreground">Duration</p>
                 </div>
               </div>

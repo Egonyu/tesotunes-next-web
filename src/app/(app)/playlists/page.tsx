@@ -28,6 +28,9 @@ async function getFeaturedPlaylists(): Promise<Playlist[]> {
 }
 
 function PlaylistCard({ playlist }: { playlist: Playlist }) {
+  const isPublic = playlist.visibility === "public" || playlist.is_public === true;
+  const owner = playlist.owner ?? playlist.user;
+
   return (
     <Link
       href={`/playlists/${playlist.slug || playlist.id}`}
@@ -51,16 +54,16 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
         {playlist.name}
       </h3>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {playlist.is_public ? (
+        {isPublic ? (
           <Globe className="h-3 w-3" />
         ) : (
           <Lock className="h-3 w-3" />
         )}
         <span>{playlist.song_count || 0} songs</span>
       </div>
-      {playlist.user && (
+      {owner && (
         <p className="text-xs text-muted-foreground mt-1 truncate">
-          by {playlist.user.name}
+          by {owner.name}
         </p>
       )}
     </Link>

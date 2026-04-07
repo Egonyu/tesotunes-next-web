@@ -21,7 +21,9 @@ export function usePublicPlatformSettings() {
         return defaultPlatformSettings;
       }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     retry: 1,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }

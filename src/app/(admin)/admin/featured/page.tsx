@@ -125,7 +125,7 @@ function parseEntityOptions(items: Record<string, unknown>[], type: LinkedEntity
           subtitle,
           defaultSubtitle: subtitle,
           link: `/songs/${slug}`,
-          image_url: getString(item.artwork_url) || getString(item.cover_url) || null,
+          image_url: getString(item.artwork_url) || null,
           song_id: id,
         };
       }

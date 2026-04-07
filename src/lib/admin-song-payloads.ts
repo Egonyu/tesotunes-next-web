@@ -6,7 +6,7 @@ export interface AdminSongPayload {
   is_featured: boolean;
   slug?: string;
   album_id?: string;
-  duration?: string;
+  duration_seconds?: string;
   release_date?: string;
   track_number?: string;
   disc_number?: string;
@@ -60,7 +60,7 @@ function appendBaseAdminSongFields(formData: FormData, payload: AdminSongPayload
   formData.append("is_featured", payload.is_featured ? "1" : "0");
   appendTrimmed(formData, "slug", payload.slug);
   appendIfPresent(formData, "album_id", payload.album_id);
-  appendTrimmed(formData, "duration", payload.duration);
+  appendTrimmed(formData, "duration_seconds", payload.duration_seconds);
   appendIfPresent(formData, "release_date", payload.release_date);
   appendIfPresent(formData, "track_number", payload.track_number);
   appendIfPresent(formData, "disc_number", payload.disc_number);

@@ -11,10 +11,11 @@ import {
   Disc3,
   Share2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatResolvedDuration } from '@/lib/utils';
 import { LikeButton } from '@/components/social/LikeButton';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { ShareBottomSheet, type SharePayload } from '@/components/social/ShareBottomSheet';
+import { AddToPlaylistAction } from '@/components/playlists/AddToPlaylistAction';
 import type { Song, PaginatedResponse } from '@/types';
 
 function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): SharePayload {
@@ -57,12 +58,6 @@ export default function NewReleasesPage() {
   });
 
   const songs = data?.data || [];
-
-  const formatDuration = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
 
   const handleShare = async (song: Song) => {
     const requestId = ++latestShareRequest.current;
@@ -184,7 +179,7 @@ export default function NewReleasesPage() {
                   />
                 </span>
                 <span className="text-sm text-muted-foreground w-12 text-right">
-                  {formatDuration(song.duration_seconds || song.duration || 0)}
+                    {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
                 </span>
                 <DropdownMenu
                   align="end"
@@ -198,6 +193,10 @@ export default function NewReleasesPage() {
                     </button>
                   )}
                 >
+                  <AddToPlaylistAction
+                    songId={song.id}
+                    songTitle={song.title}
+                  />
                   <DropdownMenuItem
                     onClick={() => {
                       void handleShare(song);

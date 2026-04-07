@@ -23,7 +23,7 @@ type SongDetail = {
   status?: 'draft' | 'pending' | 'published' | 'rejected' | string;
   is_featured?: boolean;
   is_explicit?: boolean;
-  cover_url?: string | null;
+  artwork_url?: string | null;
   audio_file_url?: string | null;
   artist_id?: number | null;
   album_id?: number | null;
@@ -52,7 +52,7 @@ type SongFormState = {
   release_date: string;
   track_number: string;
   disc_number: string;
-  duration: string;
+  duration_seconds: string;
   genre_ids: string[];
   featured_artists: string[];
   isrc: string;
@@ -90,7 +90,7 @@ const EMPTY_FORM: SongFormState = {
   release_date: '',
   track_number: '',
   disc_number: '',
-  duration: '',
+  duration_seconds: '',
   genre_ids: [],
   featured_artists: [],
   isrc: '',
@@ -194,7 +194,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
       release_date: toDateInput(song.release_date),
       track_number: song.track_number ? String(song.track_number) : '',
       disc_number: song.disc_number ? String(song.disc_number) : '',
-      duration: song.duration_seconds ? String(song.duration_seconds) : '',
+      duration_seconds: song.duration_seconds ? String(song.duration_seconds) : '',
       genre_ids: genreIds,
       featured_artists: normalizeFeaturedArtists(song.featured_artists),
       isrc: song.isrc || '',
@@ -206,7 +206,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
       meta_description: song.meta_description || '',
     });
 
-    setCoverPreview(song.cover_url || null);
+    setCoverPreview(song.artwork_url || null);
     setCoverFile(null);
     setAudioFile(null);
     setErrors({});
@@ -232,7 +232,7 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
         is_featured: formData.is_featured,
         slug: formData.slug,
         album_id: formData.album_id,
-        duration: formData.duration,
+        duration_seconds: formData.duration_seconds,
         release_date: formData.release_date,
         track_number: formData.track_number,
         disc_number: formData.disc_number,
@@ -504,10 +504,10 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
                   />
                 </FormField>
 
-                <FormField label="Duration (seconds or mm:ss)" error={errors.duration}>
+                <FormField label="Duration (seconds or mm:ss)" error={errors.duration_seconds}>
                   <input
-                    value={formData.duration}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
+                    value={formData.duration_seconds}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, duration_seconds: e.target.value }))}
                     className="w-full rounded-lg border px-4 py-2 bg-background"
                     placeholder="245 or 04:05"
                   />

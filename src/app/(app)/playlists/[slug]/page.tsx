@@ -3,9 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Play,
-  Share2,
-  MoreHorizontal,
-  Clock,
   ListMusic,
   Shuffle,
   Globe,
@@ -14,9 +11,12 @@ import {
 } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Playlist, Song } from "@/types";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatDuration, formatNumber, resolveDurationSeconds } from "@/lib/utils";
 import PlaylistCollaboration from "@/components/PlaylistCollaboration";
 import { SocialActions } from "@/components/social/SocialActions";
+import { PlaylistShareButton } from "@/components/playlists/PlaylistShareButton";
+import { PlaylistOwnerMenu } from "@/components/playlists/PlaylistOwnerMenu";
+import { PlaylistTracksSection } from "@/components/playlists/PlaylistTracksSection";
 
 interface PlaylistPageProps {
   params: Promise<{ slug: string }>;
@@ -53,11 +53,13 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
 
   // Calculate total duration
   const totalDuration = tracks.reduce(
-    (acc, track) => acc + (track.duration_seconds || track.duration || 0),
+    (acc, track) => acc + resolveDurationSeconds(undefined, track.duration_seconds),
     0
   );
   const hours = Math.floor(totalDuration / 3600);
   const minutes = Math.floor((totalDuration % 3600) / 60);
+  const isPublic = playlist.visibility === "public" || playlist.is_public === true;
+  const owner = playlist.owner ?? playlist.user;
 
   return (
     <div>
@@ -88,7 +90,7 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
           {/* Playlist Info */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-sm">
-              {playlist.is_public ? (
+              {isPublic ? (
                 <>
                   <Globe className="h-4 w-4" />
                   <span>Public Playlist</span>
@@ -111,29 +113,16 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
             )}
 
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              {playlist.user && (
+              {owner && (
                 <>
-                  <Link
-                    href={`/users/${playlist.user.id}`}
-                    className="flex items-center gap-2 hover:underline"
-                  >
+                  <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-full bg-muted overflow-hidden">
-                      {playlist.user.profile_image_url ? (
-                        <Image
-                          src={playlist.user.profile_image_url}
-                          alt={playlist.user.name}
-                          width={24}
-                          height={24}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      )}
+                      <div className="flex h-full w-full items-center justify-center">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                      </div>
                     </div>
-                    <span className="font-medium">{playlist.user.name}</span>
-                  </Link>
+                    <span className="font-medium">{owner.name}</span>
+                  </div>
                   <span className="text-muted-foreground">•</span>
                 </>
               )}
@@ -170,109 +159,17 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
           initialFollowerCount={playlist.follower_count || 0}
           showComments={false}
         />
-        <button className="p-3 text-muted-foreground hover:text-foreground">
-          <Share2 className="h-6 w-6" />
-        </button>
+        <PlaylistShareButton slug={playlist.slug || String(playlist.id)} name={playlist.name} />
         <PlaylistCollaboration
           playlistId={playlist.id}
-          isOwner={true}
+          isOwner={playlist.is_owner === true}
           isCollaborative={playlist.is_collaborative}
+          collaborationRequiresApproval={playlist.collaboration_requires_approval}
         />
-        <button className="p-3 text-muted-foreground hover:text-foreground">
-          <MoreHorizontal className="h-6 w-6" />
-        </button>
+        <PlaylistOwnerMenu playlist={playlist} />
       </div>
 
-      {/* Track List */}
-      <div className="px-6 pb-8">
-        {/* Header */}
-        <div className="hidden md:grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-4 py-2 text-sm text-muted-foreground border-b mb-2">
-          <span className="w-8 text-center">#</span>
-          <span>Title</span>
-          <span>Album</span>
-          <span className="w-20 text-right">Added</span>
-          <span className="w-12 text-right">
-            <Clock className="h-4 w-4 inline" />
-          </span>
-        </div>
-
-        {/* Tracks */}
-        <div className="space-y-1">
-          {tracks.length > 0 ? (
-            tracks.map((track, index) => (
-              <div
-                key={track.id}
-                className="group grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_1fr_1fr_auto_auto] gap-4 items-center p-2 md:px-4 rounded-lg hover:bg-muted transition-colors"
-              >
-                {/* Track Number / Play */}
-                <span className="w-8 text-center text-muted-foreground group-hover:hidden">
-                  {index + 1}
-                </span>
-                <button className="w-8 hidden group-hover:flex items-center justify-center text-foreground">
-                  <Play className="h-4 w-4" />
-                </button>
-
-                {/* Track Info */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
-                    {track.artwork_url && (
-                      <Image
-                        src={track.artwork_url}
-                        alt={track.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{track.title}</p>
-                    {track.artist && (
-                      <Link
-                        href={`/artists/${track.artist.slug || track.artist.id}`}
-                        className="text-sm text-muted-foreground hover:underline truncate block"
-                      >
-                        {track.artist.name}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Album */}
-                <div className="hidden md:block min-w-0">
-                  {track.album && (
-                    <Link
-                      href={`/albums/${track.album.slug || track.album.id}`}
-                      className="text-sm text-muted-foreground hover:underline truncate block"
-                    >
-                      {track.album.title}
-                    </Link>
-                  )}
-                </div>
-
-                {/* Date Added */}
-                <span className="hidden md:block w-20 text-right text-sm text-muted-foreground">
-                  {track.pivot?.created_at
-                    ? new Date(track.pivot.created_at).toLocaleDateString()
-                    : "-"}
-                </span>
-
-                {/* Duration */}
-                <span className="w-12 text-right text-sm text-muted-foreground">
-                  {formatDuration(track.duration_seconds || track.duration || 0)}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <ListMusic className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>This playlist is empty</p>
-              <p className="text-sm mt-2">
-                Add songs to start building your playlist
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      <PlaylistTracksSection playlist={playlist} tracks={tracks} />
 
       {/* Comments Section */}
       <div className="px-6 pb-8">

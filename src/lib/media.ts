@@ -59,3 +59,18 @@ export function isRemoteMediaUrl(value?: string | null): boolean {
   const resolved = resolveMediaUrl(value);
   return !!resolved && /^https?:\/\//i.test(resolved);
 }
+
+type PlayableMedia = {
+  audio_url?: string | null;
+  stream_url?: string | null;
+  file_url?: string | null;
+  preview_url?: string | null;
+};
+
+export function resolvePlayableAudioUrl(song?: PlayableMedia | null): string | null {
+  if (!song) {
+    return null;
+  }
+
+  return pickMediaUrl(song.audio_url, song.stream_url, song.file_url, song.preview_url);
+}

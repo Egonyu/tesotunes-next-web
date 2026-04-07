@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { resolveDurationSeconds } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -22,7 +23,6 @@ interface QueueTrack {
     slug: string;
     artwork_url: string;
   };
-  duration: number;
   duration_seconds?: number;
   is_playing?: boolean;
 }
@@ -109,7 +109,7 @@ function QueueTrackRow({
       )}
 
       <span className="text-sm text-gray-500 w-12 text-right">
-        {formatDuration(track.duration_seconds || track.duration || 0)}
+        {formatDuration(resolveDurationSeconds(undefined, track.duration_seconds))}
       </span>
 
       {onRemove && (

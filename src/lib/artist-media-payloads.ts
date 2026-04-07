@@ -16,8 +16,8 @@ export interface ArtistSongPayload {
 }
 
 export interface ArtistSongUploadPayload extends ArtistSongPayload {
-  audio_file: File;
-  cover_image?: File;
+  audio: File;
+  cover?: File;
 }
 
 export interface ArtistSongDirectUploadReferences {
@@ -32,7 +32,7 @@ export interface ArtistSongDirectUploadReferences {
 }
 
 export interface ArtistSongUpdatePayload extends Partial<ArtistSongPayload> {
-  cover_image?: File;
+  cover?: File;
 }
 
 export interface ArtistAlbumPayload {
@@ -88,10 +88,10 @@ export function buildArtistSongUploadFormData(payload: ArtistSongUploadPayload) 
   const formData = new FormData();
   formData.append("title", payload.title.trim());
   appendTrimmed(formData, "slug", payload.slug);
-  formData.append("audio", payload.audio_file);
+  formData.append("audio", payload.audio);
 
-  if (payload.cover_image) {
-    formData.append("cover", payload.cover_image);
+  if (payload.cover) {
+    formData.append("cover", payload.cover);
   }
 
   appendArtistSongFields(formData, payload);
@@ -136,8 +136,8 @@ export function buildArtistSongUpdateFormData(payload: ArtistSongUpdatePayload) 
 
   appendArtistSongFields(formData, payload);
 
-  if (payload.cover_image) {
-    formData.append("cover", payload.cover_image);
+  if (payload.cover) {
+    formData.append("cover", payload.cover);
   }
 
   return formData;

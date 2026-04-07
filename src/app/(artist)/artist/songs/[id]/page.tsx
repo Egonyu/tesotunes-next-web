@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPut, apiDelete } from '@/lib/api';
+import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api';
 import {
   ArrowLeft,
   Play,
@@ -28,27 +28,49 @@ import {
   XCircle,
   MoreVertical,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatResolvedDuration } from '@/lib/utils';
 import { toast } from 'sonner';
+import { usePlayerStore } from '@/stores';
+import { mapArtistSongToPlayerSong } from '@/lib/artist-player-song';
+import { resolvePlayableAudioUrl } from '@/lib/media';
 
 interface Song {
   id: number;
   title: string;
-  cover: string | null;
+  slug?: string;
+  artwork_url?: string | null;
+  audio_url?: string;
+  stream_url?: string;
+  preview_url?: string | null;
+  artist?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   album: string | null;
   album_id: number | null;
   plays: number;
   downloads: number;
-  duration: string;
+  duration_formatted?: string;
   duration_seconds?: number;
   status: string;
   release_date: string;
   lyrics: string | null;
   description: string | null;
+  isrc?: string | null;
+  isrc_assignment?: {
+    assigned: boolean;
+    eligible: boolean;
+    status: 'assigned' | 'eligible' | 'blocked';
+    code?: string | null;
+    blockers: string[];
+    blocker_messages: string[];
+  };
   is_explicit: boolean;
   genre: string | null;
   price: number;
   is_free: boolean;
+  created_at?: string;
 }
 
 export default function SongDetailPage() {
@@ -57,7 +79,6 @@ export default function SongDetailPage() {
   const queryClient = useQueryClient();
   const songId = params.id as string;
 
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '',
@@ -91,7 +112,22 @@ export default function SongDetailPage() {
     onError: () => toast.error('Failed to delete song'),
   });
 
+  const assignIsrcMutation = useMutation({
+    mutationFn: () => apiPost(`/songs/${songId}/generate-isrc`),
+    onSuccess: () => {
+      toast.success('ISRC assigned successfully');
+      queryClient.invalidateQueries({ queryKey: ['artist-song', songId] });
+      queryClient.invalidateQueries({ queryKey: ['artist-songs'] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to assign ISRC';
+      toast.error(message);
+    },
+  });
+
   const song = data;
+  const { currentSong, isPlaying, play, pause, resume } = usePlayerStore();
+  const playerSong = useMemo(() => (song ? mapArtistSongToPlayerSong(song) : null), [song]);
 
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this song? This action cannot be undone.')) {
@@ -113,6 +149,26 @@ export default function SongDetailPage() {
 
   const handleSaveEdit = () => {
     updateMutation.mutate(editForm);
+  };
+
+  const handlePlaySong = () => {
+    if (!playerSong || !resolvePlayableAudioUrl(playerSong)) {
+      toast.error('This track is not currently streamable.');
+
+      return;
+    }
+
+    if (currentSong?.id === playerSong.id) {
+      if (isPlaying) {
+        pause();
+      } else {
+        resume();
+      }
+
+      return;
+    }
+
+    play(playerSong, [playerSong]);
   };
 
   const getStatusBadge = (status: string) => {
@@ -193,19 +249,19 @@ export default function SongDetailPage() {
         {/* Cover Art & Play */}
         <div className="space-y-4">
           <div className="aspect-square rounded-xl overflow-hidden bg-muted relative">
-            {song.cover ? (
-              <Image src={song.cover} alt={song.title} fill className="object-cover" />
+            {song.artwork_url ? (
+              <Image src={song.artwork_url} alt={song.title} fill className="object-cover" />
             ) : (
               <div className="h-full w-full flex items-center justify-center">
                 <Music className="h-20 w-20 text-muted-foreground" />
               </div>
             )}
             <button
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={handlePlaySong}
               className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
             >
               <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center">
-                {isPlaying ? (
+                {currentSong?.id === song.id && isPlaying ? (
                   <Pause className="h-8 w-8 text-primary-foreground" />
                 ) : (
                   <Play className="h-8 w-8 text-primary-foreground ml-1" />
@@ -244,7 +300,7 @@ export default function SongDetailPage() {
                 <Clock className="h-4 w-4" />
                 <span className="text-sm">Duration</span>
               </div>
-              <p className="text-2xl font-bold">{(() => { const d = song.duration_seconds || Number(song.duration) || 0; return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`; })()}</p>
+              <p className="text-2xl font-bold">{formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}</p>
             </div>
             <div className="p-4 rounded-xl bg-card border">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -276,6 +332,65 @@ export default function SongDetailPage() {
                 <p className="font-medium">{song.is_explicit ? 'Yes' : 'No'}</p>
               </div>
             </div>
+          </div>
+
+          {/* ISRC Status */}
+          <div className="p-6 rounded-xl bg-card border space-y-4">
+            <h3 className="font-semibold">ISRC Status</h3>
+
+            {song.isrc_assignment?.status === 'assigned' && (
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-300">Assigned</p>
+                    <p className="font-mono text-sm text-muted-foreground">{song.isrc_assignment.code || song.isrc}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {song.isrc_assignment?.status === 'eligible' && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-800 dark:text-blue-300">Ready for assignment</p>
+                    <p className="text-sm text-muted-foreground">
+                      This song is approved for release/distribution and can be assigned an ISRC when needed.
+                    </p>
+                    <button
+                      onClick={() => assignIsrcMutation.mutate()}
+                      disabled={assignIsrcMutation.isPending}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {assignIsrcMutation.isPending ? 'Assigning…' : 'Assign ISRC'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(!song.isrc_assignment || song.isrc_assignment.status === 'blocked') && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Not ready yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      ISRC is only assigned once a song is approved or otherwise authorized for release/distribution.
+                    </p>
+                    {!!song.isrc_assignment?.blocker_messages?.length && (
+                      <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                        {song.isrc_assignment.blocker_messages.map((message) => (
+                          <li key={message}>{message}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}

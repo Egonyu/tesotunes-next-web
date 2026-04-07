@@ -51,7 +51,7 @@ export function PlayerBar() {
     return null;
   }
 
-  const currentArtwork = currentSong.artwork_url || currentSong.cover_url || currentSong.album?.artwork_url;
+  const currentArtwork = currentSong.artwork_url || currentSong.album?.artwork_url;
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 

@@ -154,6 +154,13 @@ export const socialApi = {
 
   /** Toggle follow on any followable entity */
   toggleFollow(type: FollowableType, id: number, isCurrentlyFollowing: boolean) {
+    if (type === 'playlist') {
+      if (isCurrentlyFollowing) {
+        return apiDelete<FollowToggleResponse>(`/playlists/${id}/follow`);
+      }
+      return apiPost<FollowToggleResponse>(`/playlists/${id}/follow`);
+    }
+
     if (isCurrentlyFollowing) {
       return apiDelete<FollowToggleResponse>(`/artists/${id}/follow`);
     }
@@ -163,6 +170,9 @@ export const socialApi = {
   /** Check follow status for an entity */
   async getFollowStatus(type: FollowableType, id: number): Promise<FollowStatusResponse> {
     try {
+      if (type === 'playlist') {
+        return await apiGet<FollowStatusResponse>(`/playlists/${id}/follow/status`);
+      }
       if (type === 'artist') {
         return await apiGet<FollowStatusResponse>(`/artists/${id}/follow/status`);
       }

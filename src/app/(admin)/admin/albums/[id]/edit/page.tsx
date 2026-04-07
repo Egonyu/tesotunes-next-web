@@ -50,7 +50,7 @@ interface Album {
   status: string;
   is_featured: boolean;
   explicit: boolean;
-  cover_url: string;
+  artwork_url: string;
   artist: { id: string; name: string };
   featured_artists: { id: string; name: string }[];
   genres: { id: string; name: string }[];
@@ -146,8 +146,8 @@ export default function EditAlbumPage({ params }: { params: Promise<{ id: string
         meta_title: a.meta_title || '',
         meta_description: a.meta_description || '',
       });
-      if (a.cover_url) {
-        setCoverPreview(a.cover_url);
+      if (a.artwork_url) {
+        setCoverPreview(a.artwork_url);
       }
     }
   }, [album]);

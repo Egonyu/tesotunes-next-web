@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Users
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 import { useUploadSong, useArtistAlbums, UploadProgress, UploadSongData } from '@/hooks/useArtist';
 import { useGenres } from '@/hooks/api';
 import { useMySubscription } from '@/hooks/useSubscriptions';
@@ -34,6 +34,8 @@ export default function UploadPage() {
 
   // File state
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null);
+  const [isReadingAudioMetadata, setIsReadingAudioMetadata] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
@@ -75,7 +77,7 @@ export default function UploadPage() {
     setUploadStatus(progress.detail ?? 'Uploading…');
   });
 
-  const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type — mobile browsers report varied MIME types
@@ -98,11 +100,23 @@ export default function UploadPage() {
         return;
       }
       setAudioFile(file);
+      setAudioDurationSeconds(null);
       setError(null);
       // Auto-set title from filename
       if (!title) {
         const fileName = file.name.replace(/\.[^/.]+$/, '');
         setTitle(fileName);
+      }
+
+      setIsReadingAudioMetadata(true);
+      try {
+        const durationSeconds = await readAudioDurationSeconds(file);
+        setAudioDurationSeconds(durationSeconds > 0 ? durationSeconds : null);
+      } catch (metadataError) {
+        console.warn('Could not read local audio duration', metadataError);
+        setAudioDurationSeconds(null);
+      } finally {
+        setIsReadingAudioMetadata(false);
       }
     }
   };
@@ -145,11 +159,11 @@ export default function UploadPage() {
     // Build upload data with ALL fields
     const uploadData: UploadSongData = {
       title: title.trim(),
-      audio_file: audioFile,
+      audio: audioFile,
     };
 
     // Optional fields
-    if (coverFile) uploadData.cover_image = coverFile;
+    if (coverFile) uploadData.cover = coverFile;
     if (albumId) uploadData.album_id = Number(albumId);
     if (genreId) uploadData.genre = genreId;
     if (featuredArtists.trim()) uploadData.featured_artists = featuredArtists.trim();
@@ -215,6 +229,8 @@ export default function UploadPage() {
 
   const resetForm = () => {
     setAudioFile(null);
+    setAudioDurationSeconds(null);
+    setIsReadingAudioMetadata(false);
     setCoverFile(null);
     setCoverPreview(null);
     setTitle('');
@@ -350,11 +366,20 @@ export default function UploadPage() {
                 <p className="font-medium truncate">{audioFile.name}</p>
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(audioFile.size)}
+                  {isReadingAudioMetadata
+                    ? ' • Reading duration…'
+                    : audioDurationSeconds
+                      ? ` • ${formatDuration(audioDurationSeconds)}`
+                      : ''}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setAudioFile(null)}
+                onClick={() => {
+                  setAudioFile(null);
+                  setAudioDurationSeconds(null);
+                  setIsReadingAudioMetadata(false);
+                }}
                 className="p-2 hover:bg-muted rounded"
               >
                 <X className="h-5 w-5" />
@@ -681,4 +706,30 @@ export default function UploadPage() {
       </form>
     </div>
   );
+}
+
+function readAudioDurationSeconds(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const audio = document.createElement('audio');
+    const objectUrl = URL.createObjectURL(file);
+
+    const cleanup = () => {
+      audio.removeAttribute('src');
+      audio.load();
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      const duration = Number.isFinite(audio.duration) ? Math.round(audio.duration) : 0;
+      cleanup();
+      resolve(duration > 0 ? duration : 0);
+    };
+    audio.onerror = () => {
+      cleanup();
+      reject(new Error('Could not load audio metadata.'));
+    };
+
+    audio.src = objectUrl;
+  });
 }

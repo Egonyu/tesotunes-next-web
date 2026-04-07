@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Play, Music, Shuffle, ChevronRight } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Genre, Song, Artist, Album, PaginatedResponse } from "@/types";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatDuration, formatNumber, formatResolvedDuration } from "@/lib/utils";
 
 interface GenrePageProps {
   params: Promise<{ slug: string }>;
@@ -161,7 +161,7 @@ export default async function GenrePage({ params }: GenrePageProps) {
                   {formatNumber(song.play_count || 0)}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {formatDuration(song.duration_seconds || song.duration || 0)}
+                    {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
                 </span>
               </div>
             ))}

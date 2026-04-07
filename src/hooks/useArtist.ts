@@ -66,15 +66,24 @@ export interface ArtistDashboard {
 export interface ArtistSong {
   id: number;
   title: string;
-  cover: string;
   artwork_url?: string;
+  slug?: string;
+  audio_url?: string;
+  stream_url?: string;
+  preview_url?: string;
+  artist?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   album: string | null;
   plays: number;
   downloads: number;
-  duration: string;
+  duration_formatted?: string;
   duration_seconds?: number;
   status: 'published' | 'pending' | 'draft' | 'rejected';
   release_date: string;
+  created_at?: string;
 }
 
 export interface SongsResponse {
@@ -507,6 +516,8 @@ export interface UploadSongResponse {
     title: string;
     status: 'pending' | 'published' | 'draft';
     artwork_url: string | null;
+    duration_seconds?: number;
+    duration_formatted?: string;
   };
 }
 
@@ -783,7 +794,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
           onProgress({
             percent: 1,
             loaded: 0,
-            total: payload.audio_file.size + (payload.cover_image?.size ?? 0),
+        total: payload.audio.size + (payload.cover?.size ?? 0),
             stage: 'preparing',
             detail: 'Preparing upload…',
           });
@@ -816,7 +827,7 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
           throw uploadAuthorizationError;
         }
 
-        const totalBytes = payload.audio_file.size + (payload.cover_image?.size ?? 0);
+      const totalBytes = payload.audio.size + (payload.cover?.size ?? 0);
         let uploadedBytes = 0;
         if (onProgress) {
           onProgress({
@@ -837,21 +848,21 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
             loaded: uploadedBytes + loaded,
             total: totalBytes,
             stage: 'uploading',
-            detail: payload.cover_image && uploadedBytes >= payload.audio_file.size
-              ? 'Uploading cover art…'
-              : 'Uploading audio…',
+          detail: payload.cover && uploadedBytes >= payload.audio.size
+            ? 'Uploading cover art…'
+            : 'Uploading audio…',
           });
         };
         let audioSessionId: string | null = null;
 
         try {
-          const audioSession = await requestArtistSongUploadSession(accessToken, payload.audio_file);
+        const audioSession = await requestArtistSongUploadSession(accessToken, payload.audio);
           audioSessionId = audioSession.id;
 
           for (let partNumber = 1; partNumber <= audioSession.total_parts; partNumber += 1) {
             const start = (partNumber - 1) * audioSession.part_size_bytes;
-            const end = Math.min(start + audioSession.part_size_bytes, payload.audio_file.size);
-            const chunk = payload.audio_file.slice(start, end);
+            const end = Math.min(start + audioSession.part_size_bytes, payload.audio.size);
+            const chunk = payload.audio.slice(start, end);
             let chunkVerified = false;
             let lastChunkError: Error | null = null;
 
@@ -937,10 +948,10 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
         const completedAudio = await completeArtistSongUploadSession(accessToken, audioSessionId);
 
         let coverTarget: DirectUploadTarget | null = null;
-        if (payload.cover_image) {
-          coverTarget = await requestArtistSongUploadTarget(accessToken, "cover", payload.cover_image);
-          await uploadBlobToDirectTarget(coverTarget, payload.cover_image, emitProgress);
-          uploadedBytes += payload.cover_image.size;
+        if (payload.cover) {
+          coverTarget = await requestArtistSongUploadTarget(accessToken, "cover", payload.cover);
+          await uploadBlobToDirectTarget(coverTarget, payload.cover, emitProgress);
+          uploadedBytes += payload.cover.size;
         }
 
         const buildFinalizePayload = (slugOverride?: string) => buildArtistSongDirectUploadPayload({
@@ -949,12 +960,12 @@ export function useUploadSong(onProgress?: (progress: UploadProgress) => void) {
         }, {
           audio_session_id: completedAudio.id,
           audio_key: completedAudio.key,
-          audio_original_name: payload.audio_file.name,
-          audio_size_bytes: payload.audio_file.size,
-          audio_mime_type: payload.audio_file.type || undefined,
+          audio_original_name: payload.audio.name,
+          audio_size_bytes: payload.audio.size,
+          audio_mime_type: payload.audio.type || undefined,
           cover_key: coverTarget?.key,
-          cover_original_name: payload.cover_image?.name,
-          cover_mime_type: payload.cover_image?.type || undefined,
+          cover_original_name: payload.cover?.name,
+          cover_mime_type: payload.cover?.type || undefined,
         });
 
         const finalizeUpload = async (slugOverride?: string) => {

@@ -15,7 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import { apiGet, apiDelete, apiPost } from "@/lib/api";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, resolveDurationSeconds } from "@/lib/utils";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
@@ -28,9 +28,8 @@ interface HistoryEntry {
     id: number;
     title: string;
     slug: string;
-    duration: number;
     duration_seconds?: number;
-    cover_url: string | null;
+    artwork_url: string | null;
     artist: {
       id: number;
       name: string;
@@ -62,7 +61,7 @@ function buildHistorySharePayload(entry: HistoryEntry, source?: Partial<SharePay
     share_url: shareUrl,
     og_title: shareTitle,
     og_description: shareDescription,
-    og_image: source?.og_image ?? entry.song.cover_url ?? null,
+    og_image: source?.og_image ?? entry.song.artwork_url ?? null,
     caption,
     platform_links: {
       copy: source?.platform_links?.copy || shareUrl,
@@ -287,9 +286,9 @@ export default function HistoryPage() {
 
                     {/* Cover */}
                     <div className="relative w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                      {entry.song.cover_url ? (
+                      {entry.song.artwork_url ? (
                         <Image
-                          src={entry.song.cover_url}
+                          src={entry.song.artwork_url}
                           alt={entry.song.title}
                           fill
                           className="object-cover"
@@ -332,7 +331,7 @@ export default function HistoryPage() {
 
                     {/* Duration */}
                     <div className="w-16 text-sm text-muted-foreground text-right">
-                      {formatDuration(entry.song.duration_seconds || entry.song.duration || 0)}
+                      {formatDuration(resolveDurationSeconds(undefined, entry.song.duration_seconds))}
                     </div>
 
                     {/* Actions */}

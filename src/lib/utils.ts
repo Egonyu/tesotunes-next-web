@@ -6,6 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return "0:00";
+  }
+
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.floor(seconds % 60);
@@ -13,6 +17,66 @@ export function formatDuration(seconds: number): string {
     return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
   }
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+export function parseDurationToSeconds(duration: number | string | null | undefined): number {
+  if (typeof duration === "number") {
+    return Number.isFinite(duration) && duration > 0 ? Math.floor(duration) : 0;
+  }
+
+  if (typeof duration !== "string") {
+    return 0;
+  }
+
+  const trimmed = duration.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    return Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : 0;
+  }
+
+  const parts = trimmed.split(":");
+  if (parts.length < 2 || parts.length > 3) {
+    return 0;
+  }
+
+  const numbers = parts.map((part) => Number(part));
+  if (numbers.some((part) => !Number.isInteger(part) || part < 0)) {
+    return 0;
+  }
+
+  if (parts.length === 2) {
+    return numbers[0] * 60 + numbers[1];
+  }
+
+  return numbers[0] * 3600 + numbers[1] * 60 + numbers[2];
+}
+
+export function resolveDurationSeconds(
+  duration: number | string | null | undefined,
+  explicitDurationSeconds?: number | null
+): number {
+  const canonicalDuration = parseDurationToSeconds(explicitDurationSeconds);
+  if (canonicalDuration > 0) {
+    return canonicalDuration;
+  }
+
+  return parseDurationToSeconds(duration);
+}
+
+export function formatResolvedDuration(
+  duration: number | string | null | undefined,
+  explicitDurationSeconds?: number | null,
+  formattedDuration?: string | null
+): string {
+  if (typeof formattedDuration === "string" && formattedDuration.trim()) {
+    return formattedDuration.trim();
+  }
+
+  return formatDuration(resolveDurationSeconds(duration, explicitDurationSeconds));
 }
 
 export function formatNumber(num: number): string {

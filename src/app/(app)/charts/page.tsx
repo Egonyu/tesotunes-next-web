@@ -19,7 +19,7 @@ import {
   Headphones,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatNumber, formatResolvedDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/stores";
 import type { Song, PaginatedResponse } from "@/types";
 
@@ -255,7 +255,7 @@ export default function ChartsPage() {
                 {/* Duration */}
                 <div className="text-right">
                   <span className="text-sm text-muted-foreground">
-                    {formatDuration(song.duration_seconds || song.duration || 0)}
+                        {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
                   </span>
                 </div>
               </div>

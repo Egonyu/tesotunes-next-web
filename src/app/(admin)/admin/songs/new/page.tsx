@@ -43,6 +43,7 @@ interface SongFormState {
   featured_artists: string[];
   lyrics: string;
   release_date: string;
+  duration_seconds: string;
   price: string;
   is_explicit: boolean;
   description: string;
@@ -64,6 +65,7 @@ const INITIAL_FORM: SongFormState = {
   featured_artists: [],
   lyrics: '',
   release_date: '',
+  duration_seconds: '',
   price: '',
   is_explicit: false,
   description: '',
@@ -184,6 +186,7 @@ export default function CreateSongPage() {
       is_featured: false,
       album_id: form.album_id,
       release_date: form.release_date,
+      duration_seconds: form.duration_seconds,
       lyrics: form.lyrics,
       description: form.description,
       genre_ids: form.genre_ids.length > 0 ? form.genre_ids : (form.genre_id ? [form.genre_id] : []),
@@ -524,6 +527,16 @@ export default function CreateSongPage() {
                   value={form.release_date}
                   onChange={(e) => updateField('release_date', e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-background"
+                />
+              </FormField>
+
+              <FormField label="Duration (seconds or mm:ss)" error={errors.duration_seconds}>
+                <input
+                  type="text"
+                  value={form.duration_seconds}
+                  onChange={(e) => updateField('duration_seconds', e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-background"
+                  placeholder="245 or 04:05"
                 />
               </FormField>
 

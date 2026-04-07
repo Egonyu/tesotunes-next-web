@@ -13,13 +13,14 @@ import {
   Headphones, Plus, MoreHorizontal, GripVertical
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
+import { formatResolvedDuration } from '@/lib/utils';
 
 interface Song {
   id: string;
   title: string;
   slug: string;
-  duration: number;
   duration_seconds?: number;
+  duration_formatted?: string;
   track_number: number;
   disc_number: number;
   plays: number;
@@ -43,7 +44,7 @@ interface Album {
   status: string;
   is_featured: boolean;
   explicit: boolean;
-  cover_url: string;
+  artwork_url: string;
   artist: { id: string; name: string; slug: string };
   featured_artists: { id: string; name: string; slug: string }[];
   genres: { id: string; name: string }[];
@@ -166,9 +167,9 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
           <div className="rounded-xl border bg-card p-6">
             <div className="flex gap-6">
               <div className="relative w-48 h-48 flex-shrink-0 rounded-xl overflow-hidden shadow-xl">
-                {a.cover_url ? (
+                {a.artwork_url ? (
                   <Image
-                    src={a.cover_url}
+                    src={a.artwork_url}
                     alt={a.title}
                     fill
                     className="object-cover"
@@ -311,7 +312,7 @@ export default function AlbumDetailPage({ params }: { params: Promise<{ id: stri
                       {formatNumber(song.plays)} plays
                     </span>
                     <span className="text-sm text-muted-foreground w-12 text-right">
-                      {formatDuration(song.duration_seconds || song.duration || 0)}
+                    {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
                     </span>
                     <button className="p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100">
                       <MoreHorizontal className="h-4 w-4" />

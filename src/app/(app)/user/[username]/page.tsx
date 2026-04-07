@@ -67,7 +67,7 @@ interface UserProfile {
     id: number;
     name: string;
     slug: string;
-    cover_url: string | null;
+    artwork_url?: string | null;
     tracks_count: number;
     followers_count: number;
   }[];
@@ -318,9 +318,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
                       className="flex items-center gap-4 p-4 bg-card rounded-lg border hover:border-primary transition-colors"
                     >
                       <div className="relative w-16 h-16 rounded bg-muted overflow-hidden flex-shrink-0">
-                        {playlist.cover_url ? (
+                        {playlist.artwork_url ? (
                           <Image
-                            src={playlist.cover_url}
+                            src={playlist.artwork_url}
                             alt={playlist.name}
                             fill
                             className="object-cover"

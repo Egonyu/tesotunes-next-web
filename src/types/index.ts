@@ -26,8 +26,8 @@ export interface Song {
   slug: string;
   artist_id: number;
   album_id?: number;
-  duration: number;
   duration_seconds?: number;
+  duration_formatted?: string;
   play_count: number;
   download_count: number;
   like_count: number;
@@ -36,17 +36,25 @@ export interface Song {
   is_explicit?: boolean;
   is_featured?: boolean;
   status: SongStatus;
-  audio_url: string;
-  stream_url?: string;
+  audio_url?: string | null;
+  stream_url?: string | null;
   file_url?: string;
-  preview_url?: string;
-  artwork_url?: string;
-  cover_url?: string;
+  preview_url?: string | null;
+  artwork_url?: string | null;
   waveform_data?: number[];
   genres: Genre[];
   artist: Artist;
   album?: Album;
   lyrics?: string;
+  isrc?: string | null;
+  isrc_assignment?: {
+    assigned: boolean;
+    eligible: boolean;
+    status: "assigned" | "eligible" | "blocked";
+    code?: string | null;
+    blockers: string[];
+    blocker_messages: string[];
+  };
   featured_artists?: Artist[];
   pivot?: { created_at?: string; position?: number };
   created_at: string;
@@ -104,7 +112,7 @@ export interface Album {
   artwork_url?: string;
   release_date?: string;
   track_count: number;
-  duration: number;
+  total_duration_seconds?: number;
   status: string;
   artist: Artist;
   songs?: Song[];
@@ -132,14 +140,43 @@ export interface Playlist {
   description?: string;
   artwork_url?: string;
   user_id: number;
-  is_public: boolean;
+  visibility?: "public" | "private" | string;
+  is_public?: boolean;
   is_collaborative: boolean;
-  track_count: number;
+  collaboration_requires_approval?: boolean;
+  track_count?: number;
   song_count?: number;
-  duration: number;
+  total_duration_seconds?: number;
   follower_count: number;
-  user: User;
+  owner?: Pick<User, "id" | "name"> | null;
+  user?: User;
+  is_owner?: boolean;
+  can_edit?: boolean;
+  collaborator_role?: "owner" | "admin" | "editor" | "viewer" | null;
   songs?: Song[];
+}
+
+export interface PlaylistCollaborator {
+  id: number | string;
+  user: {
+    id: number;
+    name: string;
+    username?: string;
+    avatar_url?: string | null;
+  };
+  role: "owner" | "admin" | "editor" | "viewer";
+  status: "accepted" | "pending" | "invited";
+  added_at?: string | null;
+  approved_at?: string | null;
+  joined_at?: string | null;
+  invited_by?: {
+    id: number;
+    name: string;
+    username?: string;
+    avatar_url?: string | null;
+  } | null;
+  can_edit?: boolean;
+  can_manage?: boolean;
 }
 
 // Player types

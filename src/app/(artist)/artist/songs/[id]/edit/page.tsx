@@ -26,13 +26,11 @@ import { toast } from 'sonner';
 interface SongDetail {
   id: number;
   title: string;
-  cover: string | null;
   artwork_url?: string | null;
   album: string | null;
   album_id: number | null;
   plays: number;
   downloads: number;
-  duration: string;
   duration_seconds?: number;
   status: string;
   release_date: string;
@@ -105,7 +103,7 @@ export default function EditSongPage() {
       setProducer(s.producer || '');
       setIsDownloadable(s.is_downloadable !== false);
       setIsFree(s.is_free !== false);
-      setCoverPreview(s.artwork_url || s.cover || null);
+      setCoverPreview(s.artwork_url || null);
       setFormLoaded(true);
     }
   }, [song, formLoaded]);
@@ -152,7 +150,7 @@ export default function EditSongPage() {
         producer,
         is_downloadable: isDownloadable,
         is_free: isFree,
-        cover_image: coverFile || undefined,
+        cover: coverFile || undefined,
       });
 
       await apiPostForm(`/artist/songs/${songId}`, formData);
@@ -271,7 +269,7 @@ export default function EditSongPage() {
                   onClick={() => {
                     setCoverFile(null);
                     const s = song as unknown as SongDetail;
-                    setCoverPreview(s.artwork_url || s.cover || null);
+                    setCoverPreview(s.artwork_url || null);
                   }}
                   className="block text-xs text-muted-foreground hover:text-foreground"
                 >

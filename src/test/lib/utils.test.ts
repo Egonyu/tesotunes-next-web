@@ -1,5 +1,15 @@
 import { describe, it, expect } from '@jest/globals';
-import { formatDuration, formatCurrency, formatNumber, cn, getInitials, slugify } from '@/lib/utils';
+import {
+  formatDuration,
+  formatCurrency,
+  formatNumber,
+  cn,
+  formatResolvedDuration,
+  getInitials,
+  parseDurationToSeconds,
+  resolveDurationSeconds,
+  slugify,
+} from '@/lib/utils';
 
 describe('Utils - cn (class merging)', () => {
   it('merges class names', () => {
@@ -32,6 +42,31 @@ describe('Utils - formatDuration', () => {
   it('formats hours correctly', () => {
     expect(formatDuration(3600)).toBe('1:00:00');
     expect(formatDuration(3661)).toBe('1:01:01');
+  });
+});
+
+describe('Utils - duration parsing', () => {
+  it('parses formatted duration strings', () => {
+    expect(parseDurationToSeconds('3:05')).toBe(185);
+    expect(parseDurationToSeconds('1:02:03')).toBe(3723);
+  });
+
+  it('parses numeric durations safely', () => {
+    expect(parseDurationToSeconds(185)).toBe(185);
+    expect(parseDurationToSeconds('185')).toBe(185);
+    expect(parseDurationToSeconds('')).toBe(0);
+    expect(parseDurationToSeconds('bad-data')).toBe(0);
+  });
+
+  it('prefers canonical duration_seconds when available', () => {
+    expect(resolveDurationSeconds('3:05', 200)).toBe(200);
+    expect(resolveDurationSeconds('3:05', undefined)).toBe(185);
+  });
+
+  it('formats resolved durations with formatted values preferred', () => {
+    expect(formatResolvedDuration(185, 185, '3:05')).toBe('3:05');
+    expect(formatResolvedDuration(0, 185)).toBe('3:05');
+    expect(formatResolvedDuration('1:02', undefined)).toBe('1:02');
   });
 });
 

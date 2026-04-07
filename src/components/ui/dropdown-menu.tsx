@@ -5,6 +5,10 @@ import { cn } from '@/lib/utils';
 
 const DropdownMenuContext = React.createContext<{ close: () => void } | null>(null);
 
+function useDropdownMenuContext() {
+  return React.useContext(DropdownMenuContext);
+}
+
 interface DropdownMenuProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
@@ -101,4 +105,4 @@ function DropdownMenuLabel({ className, inset, ...props }: React.HTMLAttributes<
   );
 }
 
-export { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel };
+export { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, useDropdownMenuContext };

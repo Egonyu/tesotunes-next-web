@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiPostForm } from "@/lib/api";
 import { toast } from "sonner";
-import type { Song, Artist, Album, Genre, Playlist, PaginatedResponse, CatalogClaimRequest } from "@/types";
+import type { Song, Artist, Album, Genre, Playlist, PlaylistCollaborator, PaginatedResponse, CatalogClaimRequest } from "@/types";
 
 // ============================================================================
 // Songs Hooks
@@ -253,13 +253,14 @@ export function usePlaylist(idOrSlug: string | number) {
   });
 }
 
-export function useUserPlaylists() {
+export function useUserPlaylists(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["playlists", "user"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Playlist[] }>("/playlists");
+      const res = await apiGet<{ data: Playlist[] }>("/playlists/mine");
       return res.data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -267,12 +268,40 @@ export function useCreatePlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; is_public?: boolean }) => {
-      const res = await apiPost<{ data: Playlist }>("/playlists", data);
+    mutationFn: async (data: { name: string; description?: string; is_public?: boolean; is_collaborative?: boolean; collaboration_requires_approval?: boolean } | FormData) => {
+      const res = data instanceof FormData
+        ? await apiPostForm<{ data: Playlist }>("/playlists", data)
+        : await apiPost<{ data: Playlist }>("/playlists", data);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["library", "playlists"] });
+    },
+  });
+}
+
+export function useUpdatePlaylist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      playlistId,
+      data,
+    }: {
+      playlistId: number | string;
+      data: { name?: string; description?: string; is_public?: boolean; is_collaborative?: boolean; collaboration_requires_approval?: boolean; remove_artwork?: boolean } | FormData;
+    }) => {
+      const res = data instanceof FormData
+        ? await apiPostForm<{ data: Playlist }>(`/playlists/${playlistId}`, data)
+        : await apiPut<{ data: Playlist }>(`/playlists/${playlistId}`, data);
+      return res.data;
+    },
+    onSuccess: (playlist) => {
+      queryClient.invalidateQueries({ queryKey: ["playlist", playlist.id] });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["library", "playlists"] });
     },
   });
 }
@@ -281,10 +310,12 @@ export function useAddToPlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
-      apiPost(`/playlists/${playlistId}/songs`, { song_id: songId }),
+    mutationFn: ({ playlistId, songId }: { playlistId: number | string; songId: number }) =>
+      apiPost(`/playlists/${playlistId}/tracks`, { song_id: songId }),
     onSuccess: (_, { playlistId }) => {
       queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist"] });
+      queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
     },
   });
 }
@@ -293,11 +324,106 @@ export function useRemoveFromPlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ playlistId, songId }: { playlistId: number; songId: number }) =>
+    mutationFn: ({ playlistId, songId }: { playlistId: number | string; songId: number }) =>
       apiDelete(`/playlists/${playlistId}/songs/${songId}`),
     onSuccess: (_, { playlistId }) => {
       queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist"] });
     },
+  });
+}
+
+export function useDeletePlaylist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (playlistId: number | string) => apiDelete(`/playlists/${playlistId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["library", "playlists"] });
+    },
+  });
+}
+
+export function useRemovePlaylistArtwork() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (playlistId: number | string) => apiDelete(`/playlists/${playlistId}/artwork`),
+    onSuccess: (_, playlistId) => {
+      queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist"] });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
+    },
+  });
+}
+
+export function useReorderPlaylistSongs() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ playlistId, songIds }: { playlistId: number | string; songIds: number[] }) =>
+      apiPost(`/playlists/${playlistId}/reorder`, { song_ids: songIds }),
+    onSuccess: (_, { playlistId }) => {
+      queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist"] });
+    },
+  });
+}
+
+export function useSuggestedPlaylistSongs(playlistId: number | string, options?: { enabled?: boolean; limit?: number }) {
+  return useQuery({
+    queryKey: ["playlist", playlistId, "suggested-songs", options?.limit],
+    queryFn: async () => {
+      const res = await apiGet<{ data: Song[] }>(`/playlists/${playlistId}/suggested-songs`, {
+        params: { limit: options?.limit ?? 8 },
+      });
+      return res.data;
+    },
+    enabled: (options?.enabled ?? true) && !!playlistId,
+  });
+}
+
+export function useGeneratePlaylistInviteLink() {
+  return useMutation({
+    mutationFn: ({ playlistId, expiresInHours }: { playlistId: number | string; expiresInHours?: number }) =>
+      apiPost<{ data: { invite_token: string; invite_url: string; expires_at?: string | null; requires_approval: boolean } }>(`/playlists/${playlistId}/invite-link`, {
+        expires_in_hours: expiresInHours,
+      }),
+  });
+}
+
+export function useJoinPlaylistInvite() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => apiPost(`/playlists/invites/${token}/join`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["library", "playlists"] });
+    },
+  });
+}
+
+export function usePlaylistInvitePreview(token: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["playlist", "invite-preview", token],
+    queryFn: () => apiGet<{ data: { playlist: Playlist; requires_approval: boolean; expires_at?: string | null; membership?: { status: string; role: string } | null } }>(`/playlists/invites/${token}`),
+    enabled: (options?.enabled ?? true) && !!token,
+    retry: false,
+  });
+}
+
+export function usePlaylistCollaborators(playlistId: number | string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["playlist-collaborators", playlistId],
+    queryFn: async () => {
+      const res = await apiGet<{ data: PlaylistCollaborator[] }>(`/playlists/${playlistId}/collaborators`);
+      return res.data;
+    },
+    enabled: (options?.enabled ?? true) && !!playlistId,
   });
 }
 
@@ -382,7 +508,7 @@ export function useLibrary() {
   const playlistsQuery = useQuery({
     queryKey: ["library", "playlists"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Playlist[] }>("/playlists");
+      const res = await apiGet<{ data: Playlist[] }>("/playlists/mine");
       return res.data;
     },
   });

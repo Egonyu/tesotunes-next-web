@@ -11,9 +11,10 @@ import {
   Edit, Trash2, Music, Play, Pause, Eye, ArrowUpRight,
   Calendar, TrendingUp, Clock, Disc, User, Tag, Heart,
   Download, Share2, BarChart2, Headphones, Volume2, VolumeX,
-  CheckCircle, XCircle,
+  CheckCircle, XCircle, AlertCircle,
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
+import { formatResolvedDuration, resolveDurationSeconds } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Song {
@@ -23,6 +24,7 @@ interface Song {
   description?: string;
   duration_seconds?: number;
   duration?: number;
+  duration_formatted?: string;
   play_count?: number;
   download_count?: number;
   like_count?: number;
@@ -31,6 +33,14 @@ interface Song {
   explicit?: boolean;
   lyrics?: string;
   isrc?: string;
+  isrc_assignment?: {
+    assigned: boolean;
+    eligible: boolean;
+    status: 'assigned' | 'eligible' | 'blocked';
+    code?: string | null;
+    blockers: string[];
+    blocker_messages: string[];
+  };
   bpm?: number;
   key?: string;
   track_number?: number;
@@ -39,11 +49,10 @@ interface Song {
   status: string;
   is_featured?: boolean;
   artwork_url?: string;
-  cover_url?: string;
   audio_url?: string;
   artist: { id: string; name: string; slug: string; avatar_url?: string };
   featured_artists?: { id: string; name: string; slug: string }[];
-  album?: { id: string; title: string; slug: string; artwork_url?: string; cover_url?: string };
+  album?: { id: string; title: string; slug: string; artwork_url?: string };
   genre?: { id: string; name: string; slug?: string };
   genres?: { id: string; name: string }[];
   credits?: { role: string; name: string }[];
@@ -54,6 +63,36 @@ interface Song {
 interface PlayHistory {
   date: string;
   plays: number;
+}
+
+interface BulkApproveResponse {
+  success: boolean;
+  message: string;
+  data: {
+    count: number;
+    approved_count: number;
+    isrc_assigned_count: number;
+    isrc_already_assigned_count: number;
+    isrc_blocked_count: number;
+  };
+}
+
+function buildApproveToastMessage(payload: BulkApproveResponse['data']): string {
+  const parts = ['Song approved and published'];
+
+  if (payload.isrc_assigned_count > 0) {
+    parts.push('ISRC assigned');
+  }
+
+  if (payload.isrc_already_assigned_count > 0) {
+    parts.push('ISRC already present');
+  }
+
+  if (payload.isrc_blocked_count > 0) {
+    parts.push('ISRC still blocked');
+  }
+
+  return parts.join(' • ');
 }
 
 function formatDuration(seconds: number): string {
@@ -116,9 +155,9 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => apiPost('/admin/songs/bulk-approve', { song_ids: [Number(id)] }),
-    onSuccess: () => {
-      toast.success('Song approved and published');
+    mutationFn: () => apiPost<BulkApproveResponse>('/admin/songs/bulk-approve', { song_ids: [Number(id)] }),
+    onSuccess: (response) => {
+      toast.success(buildApproveToastMessage(response.data));
       queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
@@ -135,6 +174,19 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
     onError: () => toast.error('Failed to reject song'),
+  });
+
+  const assignIsrcMutation = useMutation({
+    mutationFn: () => apiPost(`/songs/${id}/generate-isrc`),
+    onSuccess: () => {
+      toast.success('ISRC assigned successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'song', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to assign ISRC';
+      toast.error(message);
+    },
   });
 
   if (isLoading) {
@@ -162,6 +214,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const s = song.data;
+  const isrcAssignment = s.isrc_assignment;
 
   const togglePlay = () => {
     if (!audioRef.current || !s.audio_url) return;
@@ -257,9 +310,9 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
           <div className="rounded-xl border bg-card p-6">
             <div className="flex gap-6">
               <div className="relative w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden">
-                {(s.artwork_url || s.cover_url) ? (
+                {s.artwork_url ? (
                   <Image
-                    src={s.artwork_url || s.cover_url || ''}
+                    src={s.artwork_url}
                     alt={s.title}
                     fill
                     className="object-cover"
@@ -323,7 +376,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex items-center gap-6 text-sm">
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDuration(s.duration_seconds || s.duration || 0)}</span>
+              <span>{formatResolvedDuration(undefined, s.duration_seconds, s.duration_formatted)}</span>
                   </div>
                   {s.album && (
                     <div className="flex items-center gap-1.5">
@@ -370,7 +423,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{formatDuration(Math.floor(currentTime))}</span>
-                    <span>{formatDuration(Math.floor(duration || s.duration_seconds || s.duration || 0))}</span>
+              <span>{formatDuration(Math.floor(duration || resolveDurationSeconds(undefined, s.duration_seconds)))}</span>
                   </div>
                 </div>
 
@@ -550,6 +603,65 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               )}
             </dl>
+          </div>
+
+          {/* ISRC Readiness */}
+          <div className="rounded-xl border bg-card p-6">
+            <h3 className="font-semibold mb-4">ISRC Readiness</h3>
+
+            {isrcAssignment?.status === 'assigned' && (
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-green-800 dark:text-green-300">ISRC assigned</p>
+                    <p className="text-sm text-muted-foreground font-mono">{isrcAssignment.code || s.isrc}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isrcAssignment?.status === 'eligible' && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-blue-800 dark:text-blue-300">Ready for ISRC assignment</p>
+                    <p className="text-sm text-muted-foreground">
+                      This song is approved for release or distribution and can safely receive an ISRC.
+                    </p>
+                    <button
+                      onClick={() => assignIsrcMutation.mutate()}
+                      disabled={assignIsrcMutation.isPending}
+                      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {assignIsrcMutation.isPending ? 'Assigning…' : 'Assign ISRC'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(!isrcAssignment || isrcAssignment.status === 'blocked') && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Not ready for ISRC yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      ISRC should only be assigned once a song is approved or otherwise authorized for release/distribution.
+                    </p>
+                    {!!isrcAssignment?.blocker_messages?.length && (
+                      <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                        {isrcAssignment.blocker_messages.map((message) => (
+                          <li key={message}>{message}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Genres */}

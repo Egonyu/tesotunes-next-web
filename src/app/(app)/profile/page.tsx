@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import {
   User,
   Mail,
@@ -334,13 +335,21 @@ export default function ProfilePage() {
               {playlists.slice(0, 5).map((playlist) => (
                 <Link
                   key={playlist.id}
-                  href={`/playlists/${playlist.id}`}
+                  href={`/playlists/${playlist.slug || playlist.id}`}
                   className="flex items-center gap-3 p-3 rounded-lg bg-card border hover:bg-muted/50 transition-colors"
                 >
-                  <div
-                    className="h-10 w-10 rounded-lg flex items-center justify-center font-bold text-white bg-primary/70"
-                  >
-                    <ListMusic className="h-5 w-5" />
+                  <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                    {playlist.artwork_url ? (
+                      <Image
+                        src={playlist.artwork_url}
+                        alt={playlist.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <ListMusic className="h-5 w-5" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{playlist.name}</p>

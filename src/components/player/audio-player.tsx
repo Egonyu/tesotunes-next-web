@@ -6,6 +6,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useMySubscription } from "@/hooks/useSubscriptions";
 import { useRecordPlay } from "@/hooks/api";
 import { useSession } from "next-auth/react";
+import { resolvePlayableAudioUrl } from "@/lib/media";
 
 /**
  * Maps subscription audio_quality_kbps to the quality param accepted by
@@ -80,9 +81,8 @@ export function AudioPlayer() {
 
   /** Resolve the best audio URL for a song, enforcing subscription quality. */
   const resolveAudioUrl = useCallback(
-    (song: { audio_url?: string; stream_url?: string; file_url?: string; preview_url?: string } | null): string => {
-      if (!song) return "";
-      const raw = song.audio_url || song.stream_url || song.file_url || song.preview_url || "";
+    (song: { audio_url?: string | null; stream_url?: string | null; file_url?: string | null; preview_url?: string | null } | null): string => {
+      const raw = resolvePlayableAudioUrl(song);
       if (!raw) return "";
       return applyQualityToUrl(raw, qualityParam);
     },

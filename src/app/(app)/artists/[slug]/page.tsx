@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useArtist, useArtistSongs, usePublicArtistAlbums } from "@/hooks/api";
 import { usePlayerStore } from "@/stores";
-import { formatNumber, cn } from "@/lib/utils";
+import { formatNumber, cn, formatDuration, resolveDurationSeconds } from "@/lib/utils";
 import type { Song } from "@/types";
 import { FollowButton } from "@/components/social/FollowButton";
 import { LikeButton } from "@/components/social/LikeButton";
@@ -31,7 +31,7 @@ import { ShareBottomSheet } from "@/components/social/ShareBottomSheet";
 import { TipModal } from "@/components/music/TipModal";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { pickMediaUrl } from "@/lib/media";
+import { pickMediaUrl, resolvePlayableAudioUrl } from "@/lib/media";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 export default function ArtistPage() {
@@ -90,7 +90,7 @@ export default function ArtistPage() {
   };
 
   const handlePlaySong = (song: Song) => {
-    const playableUrl = song.audio_url || song.stream_url || song.file_url || song.preview_url;
+    const playableUrl = resolvePlayableAudioUrl(song);
     if (!playableUrl) {
       toast.error('This track is not currently streamable for your account.');
 
@@ -342,7 +342,7 @@ export default function ArtistPage() {
           </div>
           <div className="space-y-1">
             {songs.slice(0, 10).map((song, index) => {
-              const songArtworkUrl = pickMediaUrl(song.artwork_url, song.cover_url, song.album?.artwork_url);
+              const songArtworkUrl = pickMediaUrl(song.artwork_url, song.album?.artwork_url);
               const isCurrentSong = currentSong?.id === song.id;
               const isSongPlaying = isCurrentSong && isPlaying;
 
@@ -410,8 +410,7 @@ export default function ArtistPage() {
 
                   {/* Duration */}
                   <span className="text-sm text-muted-foreground w-12 text-right">
-                    {Math.floor((song.duration_seconds || song.duration || 0) / 60)}:
-                    {String((song.duration_seconds || song.duration || 0) % 60).padStart(2, "0")}
+                          {song.duration_formatted || formatDuration(resolveDurationSeconds(undefined, song.duration_seconds))}
                   </span>
                 </div>
               );
@@ -439,7 +438,7 @@ export default function ArtistPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {albums.map((album) => {
-              const albumArtworkUrl = pickMediaUrl(album.artwork_url, (album as { cover_url?: string }).cover_url);
+              const albumArtworkUrl = pickMediaUrl(album.artwork_url);
               return (
                 <Link
                   key={album.id}

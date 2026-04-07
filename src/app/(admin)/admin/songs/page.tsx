@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { useSearchParams } from 'next/navigation';
 import {
   Search,
   Plus,
@@ -23,7 +24,7 @@ import {
   Clock,
   Loader2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatResolvedDuration } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Song {
@@ -32,8 +33,8 @@ interface Song {
   artist: { id: number; name: string } | null;
   album: { id: number; title: string } | null;
   artwork_url: string | null;
-  duration: number;
   duration_seconds?: number;
+  duration_formatted?: string;
   plays_count: number | null;
   play_count: number | null;
   status: string;
@@ -56,23 +57,63 @@ interface SongsStats {
   pending: number;
   draft: number;
   rejected?: number;
+  isrc_assigned?: number;
+  isrc_ready?: number;
+  isrc_blocked?: number;
+}
+
+interface BulkApproveResponse {
+  success: boolean;
+  message: string;
+  data: {
+    count: number;
+    approved_count: number;
+    isrc_assigned_count: number;
+    isrc_already_assigned_count: number;
+    isrc_blocked_count: number;
+  };
+}
+
+function buildApproveToastMessage(payload: BulkApproveResponse['data'], singularLabel: string, pluralLabel: string): string {
+  const approvedCount = payload.approved_count || payload.count || 0;
+  const label = approvedCount === 1 ? singularLabel : pluralLabel;
+  const parts = [`${approvedCount} ${label} approved`];
+
+  if (payload.isrc_assigned_count > 0) {
+    parts.push(`${payload.isrc_assigned_count} ISRC assigned`);
+  }
+
+  if (payload.isrc_already_assigned_count > 0) {
+    parts.push(`${payload.isrc_already_assigned_count} already had ISRC`);
+  }
+
+  if (payload.isrc_blocked_count > 0) {
+    parts.push(`${payload.isrc_blocked_count} not yet eligible for ISRC`);
+  }
+
+  return parts.join(' • ');
 }
 
 export default function SongsPage() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get('status') ?? 'all';
+  const initialIsrcStatus = searchParams.get('isrc_status') ?? 'all';
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [isrcFilter, setIsrcFilter] = useState<string>(initialIsrcStatus);
   const [selectedSongs, setSelectedSongs] = useState<number[]>([]);
   const [playingSong, setPlayingSong] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const { data: songsData, isLoading } = useQuery({
-    queryKey: ['admin', 'songs', { page: currentPage, status: statusFilter, search: searchQuery }],
+    queryKey: ['admin', 'songs', { page: currentPage, status: statusFilter, isrcStatus: isrcFilter, search: searchQuery }],
     queryFn: () => {
       const params = new URLSearchParams();
       params.set('page', String(currentPage));
       params.set('per_page', '20');
       if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (isrcFilter !== 'all') params.set('isrc_status', isrcFilter);
       if (searchQuery) params.set('search', searchQuery);
       return apiGet<SongsResponse>(`/admin/songs?${params.toString()}`);
     },
@@ -84,9 +125,9 @@ export default function SongsPage() {
   });
 
   const bulkApproveMutation = useMutation({
-    mutationFn: (songIds: number[]) => apiPost('/admin/songs/bulk-approve', { song_ids: songIds }),
-    onSuccess: () => {
-      toast.success('Songs approved successfully');
+    mutationFn: (songIds: number[]) => apiPost<BulkApproveResponse>('/admin/songs/bulk-approve', { song_ids: songIds }),
+    onSuccess: (response) => {
+      toast.success(buildApproveToastMessage(response.data, 'song', 'songs'));
       setSelectedSongs([]);
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
@@ -113,9 +154,9 @@ export default function SongsPage() {
   });
 
   const approveSingleMutation = useMutation({
-    mutationFn: (songId: number) => apiPost('/admin/songs/bulk-approve', { song_ids: [songId] }),
-    onSuccess: () => {
-      toast.success('Song approved');
+    mutationFn: (songId: number) => apiPost<BulkApproveResponse>('/admin/songs/bulk-approve', { song_ids: [songId] }),
+    onSuccess: (response) => {
+      toast.success(buildApproveToastMessage(response.data, 'song', 'songs'));
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
     onError: () => toast.error('Failed to approve song'),
@@ -155,13 +196,6 @@ export default function SongsPage() {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
     return count.toString();
-  };
-
-  const formatDuration = (seconds: number | null | undefined) => {
-    const secs = seconds ?? 0;
-    const mins = Math.floor(secs / 60);
-    const rem = secs % 60;
-    return `${mins}:${rem.toString().padStart(2, '0')}`;
   };
 
   const toggleSelectAll = () => {
@@ -206,7 +240,7 @@ export default function SongsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-8 gap-4">
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold">{formatPlays(stats?.total || 0)}</p>
           <p className="text-sm text-muted-foreground">Total Songs</p>
@@ -226,6 +260,18 @@ export default function SongsPage() {
         <div className="p-4 rounded-xl border bg-card">
           <p className="text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
           <p className="text-sm text-muted-foreground">Rejected</p>
+        </div>
+        <div className="p-4 rounded-xl border bg-card">
+          <p className="text-2xl font-bold text-emerald-600">{stats?.isrc_assigned || 0}</p>
+          <p className="text-sm text-muted-foreground">ISRC Assigned</p>
+        </div>
+        <div className="p-4 rounded-xl border bg-card">
+          <p className="text-2xl font-bold text-blue-600">{stats?.isrc_ready || 0}</p>
+          <p className="text-sm text-muted-foreground">ISRC Ready</p>
+        </div>
+        <div className="p-4 rounded-xl border bg-card">
+          <p className="text-2xl font-bold text-amber-600">{stats?.isrc_blocked || 0}</p>
+          <p className="text-sm text-muted-foreground">ISRC Blocked</p>
         </div>
       </div>
 
@@ -251,6 +297,16 @@ export default function SongsPage() {
           <option value="pending">Pending Review</option>
           <option value="rejected">Rejected</option>
           <option value="draft">Draft</option>
+        </select>
+        <select
+          value={isrcFilter}
+          onChange={(e) => { setIsrcFilter(e.target.value); setCurrentPage(1); }}
+          className="px-4 py-2 border rounded-lg bg-background"
+        >
+          <option value="all">All ISRC States</option>
+          <option value="assigned">ISRC Assigned</option>
+          <option value="ready">ISRC Ready</option>
+          <option value="blocked">ISRC Blocked</option>
         </select>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted">
           <Filter className="h-4 w-4" />
@@ -362,7 +418,7 @@ export default function SongsPage() {
                     </div>
                   </td>
                   <td className="p-4 text-sm">{song.artist?.name || 'Unknown'}</td>
-                  <td className="p-4 text-sm text-muted-foreground">{formatDuration(song.duration_seconds || song.duration || 0)}</td>
+                  <td className="p-4 text-sm text-muted-foreground">{formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}</td>
                   <td className="p-4 text-sm">{formatPlays(song.play_count ?? song.plays_count)}</td>
                   <td className="p-4">
                     <span className={cn(

@@ -14,8 +14,8 @@ describe("artist media payload builders", () => {
     const formData = buildArtistSongUploadFormData({
       title: "  Test Song  ",
       slug: "test-song-123",
-      audio_file: audio,
-      cover_image: cover,
+      audio,
+      cover,
       album_id: 5,
       genre: "12",
       featured_artists: "Guest Artist",
@@ -49,7 +49,7 @@ describe("artist media payload builders", () => {
       title: "Updated Song",
       genre: "afrobeats",
       is_free: true,
-      cover_image: cover,
+      cover,
     });
 
     expect(formData.get("_method")).toBe("PUT");

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLibrary } from "@/hooks";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn, formatResolvedDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/stores";
 import type { Song, Album, Artist, Playlist } from "@/types";
 import { useMySubscription } from "@/hooks/useSubscriptions";
@@ -331,7 +331,7 @@ function LikedSongsSection({
             </p>
           </div>
           <span className="text-sm text-muted-foreground">
-            {formatDuration(song.duration_seconds || song.duration || 0)}
+                    {formatResolvedDuration(undefined, song.duration_seconds, song.duration_formatted)}
           </span>
         </button>
       ))}

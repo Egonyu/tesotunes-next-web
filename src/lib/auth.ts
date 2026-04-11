@@ -88,7 +88,7 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
  * Fetch fresh user data from the API to refresh role.
  * Returns null if the request fails (keeps existing role).
  */
-async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[]; isArtist: boolean } | { expired: true } | null> {
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[]; isArtist: boolean; isEventOrganizer: boolean } | { expired: true } | null> {
   try {
     const baseUrls = buildAuthApiBaseUrls(API_URL);
     let response: Response | null = null;
@@ -128,13 +128,15 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string; 
     const user = (data.data as Record<string, unknown>) ?? data;
     const role = user.role as string;
     const isArtist = Boolean(user.is_artist) || Boolean(user.artist);
+    const eventOrganizer = user.event_organizer as Record<string, unknown> | undefined;
+    const isEventOrganizer = Boolean(eventOrganizer?.enabled);
     const permissionsRaw = user.permissions;
     const permissions = Array.isArray(permissionsRaw)
       ? permissionsRaw.filter((p): p is string => typeof p === "string")
       : [];
 
     if (role) {
-      return { role, permissions, isArtist };
+      return { role, permissions, isArtist, isEventOrganizer };
     }
     return null;
   } catch (error) {
@@ -220,6 +222,7 @@ function extractAuthorizedUser(data: Record<string, unknown>) {
     name: user.name as string,
     role: (user.role as string) || "user",
     isArtist: Boolean(user.is_artist) || Boolean(user.artist),
+    isEventOrganizer: Boolean((user.event_organizer as Record<string, unknown> | undefined)?.enabled),
     permissions: Array.isArray(user.permissions)
       ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
       : [],
@@ -378,6 +381,7 @@ export const authConfig: NextAuthOptions = {
         token.name = user.name;
         token.role = user.role;
         token.isArtist = user.isArtist;
+        token.isEventOrganizer = user.isEventOrganizer;
         token.permissions = user.permissions;
         token.accessToken = user.accessToken;
         token.accessTokenRefreshedAt = Date.now();
@@ -417,12 +421,14 @@ export const authConfig: NextAuthOptions = {
         } else if (freshData && 'role' in freshData) {
           token.role = freshData.role;
           token.isArtist = freshData.isArtist;
+          token.isEventOrganizer = freshData.isEventOrganizer;
           token.permissions = freshData.permissions;
         }
 
         if (freshData && 'role' in freshData) {
           token.role = freshData.role;
           token.isArtist = freshData.isArtist;
+          token.isEventOrganizer = freshData.isEventOrganizer;
           token.permissions = freshData.permissions;
         }
 
@@ -436,6 +442,7 @@ export const authConfig: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.isArtist = Boolean(token.isArtist);
+        session.user.isEventOrganizer = Boolean(token.isEventOrganizer);
         session.user.permissions = (token.permissions as string[] | undefined) ?? [];
         session.user.apiAuthorized = Boolean(token.accessToken);
       }

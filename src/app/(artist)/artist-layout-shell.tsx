@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
   Music,
@@ -54,17 +54,23 @@ type ArtistLayoutShellProps = {
   children: React.ReactNode;
   userName: string;
   userImage?: string | null;
+  shouldLoadArtistProfile?: boolean;
 };
 
 export default function ArtistLayoutShell({
   children,
   userName,
   userImage,
+  shouldLoadArtistProfile = true,
 }: ArtistLayoutShellProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { data: profile } = useArtistProfile({ enabled: true });
+  const { data: session } = useSession();
+  const sessionLooksArtistBacked =
+    Boolean(session?.user?.isArtist) || session?.user?.role === 'artist';
+  const loadArtistProfile = shouldLoadArtistProfile && sessionLooksArtistBacked;
+  const { data: profile } = useArtistProfile({ enabled: loadArtistProfile });
   const { currentSong } = usePlayerStore();
   const { playerMinimized } = useUIStore();
 
@@ -75,11 +81,6 @@ export default function ArtistLayoutShell({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-0 top-0 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute right-0 top-32 h-[22rem] w-[22rem] rounded-full bg-rose-500/10 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-[20rem] w-[20rem] rounded-full bg-amber-400/10 blur-3xl" />
-      </div>
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -93,7 +94,7 @@ export default function ArtistLayoutShell({
       )}>
         <div className="flex items-center justify-between p-4 border-b">
           <Link href="/artist" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary to-rose-500 text-white font-bold shadow-lg shadow-primary/20">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold">
               T
             </div>
             <div>
@@ -166,7 +167,7 @@ export default function ArtistLayoutShell({
                 className={cn(
                   'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background'
                 )}
               >
@@ -210,7 +211,7 @@ export default function ArtistLayoutShell({
           <div className="flex items-center gap-4">
             <Link
               href="/artist/upload"
-              className="hidden sm:flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+              className="hidden sm:flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
             >
               <Upload className="h-4 w-4" />
               Upload Music

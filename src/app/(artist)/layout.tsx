@@ -8,8 +8,9 @@ export default async function ArtistLayout({ children }: { children: React.React
   const session = await getServerSession(authConfig);
   const userRole = session?.user?.role ?? null;
   const isArtist = Boolean(session?.user?.isArtist);
+  const isEventOrganizer = Boolean(session?.user?.isEventOrganizer);
   const hasApiAccess = session?.user?.apiAuthorized ?? false;
-  const hasArtistAccess = hasApiAccess && canAccessArtistStudio(userRole, isArtist);
+  const hasArtistAccess = hasApiAccess && canAccessArtistStudio(userRole, isArtist, isEventOrganizer);
 
   if (!session?.user) {
     return (
@@ -47,6 +48,7 @@ export default async function ArtistLayout({ children }: { children: React.React
     <ArtistLayoutShell
       userName={session.user.name ?? 'Artist'}
       userImage={session.user.image}
+      shouldLoadArtistProfile={isArtist || userRole === 'artist'}
     >
       {children}
     </ArtistLayoutShell>

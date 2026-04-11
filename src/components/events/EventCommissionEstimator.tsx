@@ -16,7 +16,7 @@ interface SimulationTierInput {
 }
 
 interface EventCommissionEstimatorProps {
-  endpoint: string;
+  endpoint?: string;
   ticketingMode?: 'tesotunes_managed' | 'hybrid' | 'external_only' | 'free_rsvp';
   ticketTiers: SimulationTierInput[];
   organizerUserId?: string | number | null;
@@ -84,6 +84,77 @@ function formatMoney(value: number, currency = 'UGX') {
   return `${currency} ${Math.round(value).toLocaleString()}`;
 }
 
+function buildLocalSimulation(
+  ticketingMode: NonNullable<EventCommissionEstimatorProps['ticketingMode']>,
+  currency: string,
+  ticketTiers: Array<{ name: string; price: number; quantity: number }>
+): EventCommissionSimulation {
+  const modeLabelMap: Record<string, string> = {
+    tesotunes_managed: 'Tesotunes managed',
+    hybrid: 'Hybrid ticketing',
+    external_only: 'External only',
+    free_rsvp: 'Free RSVP',
+  };
+
+  const items = ticketTiers.map((tier) => {
+    const grossRevenue = tier.price * tier.quantity;
+
+    return {
+      name: tier.name,
+      quantity: tier.quantity,
+      gross_revenue: grossRevenue,
+      tesotunes_fee_revenue: 0,
+      organizer_net_amount: grossRevenue,
+    };
+  });
+
+  const grossRevenue = items.reduce((sum, item) => sum + item.gross_revenue, 0);
+  const ticketCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const scenarioPercents = [25, 50, 75, 100];
+
+  return {
+    ticketing_mode: ticketingMode,
+    mode_label: modeLabelMap[ticketingMode] ?? 'Ticketing',
+    tesotunes_checkout_enabled: !['external_only'].includes(ticketingMode),
+    currency,
+    fee_source: 'local_planner',
+    organizer_plan: null,
+    platform_commission_percent: 0,
+    processing_fee_percent: 0,
+    totals: {
+      ticket_count: ticketCount,
+      gross_revenue: grossRevenue,
+      customer_paid_total: grossRevenue,
+      tesotunes_fee_revenue: 0,
+      platform_commission_amount: 0,
+      processing_fee_amount: 0,
+      organizer_net_amount: grossRevenue,
+    },
+    items,
+    scenarios: scenarioPercents.map((percent) => {
+      const multiplier = percent / 100;
+
+      return {
+        key: `sell-through-${percent}`,
+        label: `${percent}% sell-through`,
+        sell_through_percent: percent,
+        ticket_count: Math.round(ticketCount * multiplier),
+        gross_revenue: grossRevenue * multiplier,
+        customer_paid_total: grossRevenue * multiplier,
+        tesotunes_fee_revenue: 0,
+        organizer_net_amount: grossRevenue * multiplier,
+      };
+    }),
+    upgrade_nudges: [],
+    notes: [
+      'This is a local planning estimate.',
+      ticketingMode === 'free_rsvp'
+        ? 'Free RSVP events show attendance potential only, with no paid checkout revenue.'
+        : 'Server-side fee simulation is unavailable here, so fees are shown as 0 and net matches gross.',
+    ],
+  };
+}
+
 export default function EventCommissionEstimator({
   endpoint,
   ticketingMode = 'tesotunes_managed',
@@ -113,17 +184,35 @@ export default function EventCommissionEstimator({
   }, [currency, organizerUserId, ticketTiers, ticketingMode]);
 
   const canSimulate = payload.ticket_tiers.length > 0;
+  const localSimulation = useMemo(
+    () => buildLocalSimulation(ticketingMode, currency, payload.ticket_tiers),
+    [currency, payload.ticket_tiers, ticketingMode]
+  );
 
   const simulationMutation = useMutation({
     mutationFn: () =>
-      apiPost<{ data: EventCommissionSimulation; success?: boolean }>(endpoint, payload),
+      apiPost<{ data: EventCommissionSimulation; success?: boolean }>(endpoint as string, payload),
     onSuccess: (response) => {
       setSimulation(response.data);
     },
     onError: (error: unknown) => {
-      toast.error(getErrorMessage(error, 'Failed to simulate commission'));
+      setSimulation(localSimulation);
+      toast.error(getErrorMessage(error, 'Server estimate unavailable. Showing local planning estimate instead.'));
     },
   });
+
+  const runEstimate = () => {
+    if (!canSimulate) {
+      return;
+    }
+
+    if (!endpoint) {
+      setSimulation(localSimulation);
+      return;
+    }
+
+    simulationMutation.mutate();
+  };
 
   return (
     <section className={cn('rounded-2xl border bg-card p-5 space-y-4', className)}>
@@ -139,7 +228,7 @@ export default function EventCommissionEstimator({
         </div>
         <button
           type="button"
-          onClick={() => simulationMutation.mutate()}
+          onClick={runEstimate}
           disabled={!canSimulate || simulationMutation.isPending}
           className={cn(
             'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',

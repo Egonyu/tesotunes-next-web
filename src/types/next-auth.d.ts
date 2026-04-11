@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string;
       role: string;
       isArtist?: boolean;
+      isEventOrganizer?: boolean;
       permissions?: string[];
       apiAuthorized?: boolean;
     } & DefaultSession["user"];
@@ -15,6 +16,7 @@ declare module "next-auth" {
   interface User extends DefaultUser {
     role: string;
     isArtist?: boolean;
+    isEventOrganizer?: boolean;
     permissions?: string[];
     accessToken: string;
   }
@@ -25,6 +27,7 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     isArtist?: boolean;
+    isEventOrganizer?: boolean;
     permissions?: string[];
     accessToken?: string;
     accessTokenRefreshedAt?: number;

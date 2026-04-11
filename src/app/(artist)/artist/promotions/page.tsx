@@ -67,36 +67,27 @@ export default function ArtistPromotionsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[28px] border border-border/60 bg-card/90 p-6 shadow-xl shadow-black/5">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-amber-400/10" />
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <Megaphone className="h-3.5 w-3.5" />
-              Seller Promotions Studio
-            </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">Turn your audience into a service storefront</h1>
-            <p className="mt-3 text-sm text-muted-foreground lg:text-base">
-              Package your TikTok reach, DJ co-sign, radio slot, or creator influence into offers that artists can discover, book, and track on Tesotunes.
+      <section className="rounded-lg border bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Promotion management</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create services, update live listings, and manage booking status from one place.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/artist/promotions/profile"
-              className="rounded-2xl border border-border/60 bg-background/80 px-4 py-4 transition hover:border-primary/40 hover:bg-background"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              <Eye className="h-5 w-5 text-primary" />
-              <p className="mt-3 font-semibold">Promoter profile</p>
-              <p className="mt-1 text-xs text-muted-foreground">Edit your public showcase and proof points</p>
+              Promoter profile
             </Link>
             <Link
               href="/artist/promotions/create"
-              className="rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              <Plus className="h-5 w-5" />
-              <p className="mt-3 font-semibold">Create service</p>
-              <p className="mt-1 text-xs text-primary-foreground/80">Publish a new promotion listing</p>
+              Create service
             </Link>
           </div>
         </div>

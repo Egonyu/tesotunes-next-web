@@ -24,10 +24,11 @@ describe('role helpers', () => {
     expect(isPrivilegedAdminRole('user')).toBe(false);
   });
 
-  it('allows artist studio for artist and admin roles only', () => {
+  it('allows artist studio for artists, admins, and event organizers', () => {
     expect(canAccessArtistStudio('artist')).toBe(true);
     expect(canAccessArtistStudio('admin')).toBe(true);
     expect(canAccessArtistStudio('super_admin')).toBe(true);
+    expect(canAccessArtistStudio('user', false, true)).toBe(true);
     expect(canAccessArtistStudio('user')).toBe(false);
   });
 });

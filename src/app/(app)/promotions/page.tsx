@@ -318,463 +318,71 @@ export default function PromotionsBrowsePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="space-y-8">
-        <section className="rounded-3xl border bg-card">
-          <div className="border-b px-6 py-6 md:px-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl space-y-4">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                  <Megaphone className="h-3.5 w-3.5" />
-                  Artist Promotion Marketplace
-                </div>
-
-                <div className="space-y-3">
-                  <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                    Find a promoter who can push your song.
-                  </h1>
-                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-                    Browse real promoter storefronts, compare service offers, and place an order for TikTok, radio, DJ, or creator promotion with proof and reviews handled through Tesotunes.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setQuickFilter("platform", "tiktok")}
-                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
-                  >
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Start with TikTok promoters
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickFilter("platform", "radio")}
-                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
-                  >
-                    <Radio className="h-4 w-4 text-primary" />
-                    Start with radio promoters
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickFilter("verified", true)}
-                    className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
-                  >
-                    <BadgeCheck className="h-4 w-4 text-primary" />
-                    Only trusted storefronts
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:w-[26rem]">
-                <StatCard
-                  label="Live Offers"
-                  value={formatNumber(meta?.total ?? 0)}
-                  note="Promotion packages artists can compare right now."
-                />
-                <StatCard
-                  label="Trusted Promoters"
-                  value={formatNumber(summary.verifiedPromoters)}
-                  note="Verified storefronts in the current visible marketplace."
-                />
-              </div>
+      <div className="space-y-6">
+        <section className="rounded-lg border bg-card p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">Promotion services</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Browse live offers, filter quickly, and open a service when you are ready to book.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/artist/promotions" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+                Seller dashboard
+              </Link>
+              <Link href="/artist/promotions/create" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                Create service
+              </Link>
+              <Link href="/promotions/purchases" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+                My purchases
+              </Link>
             </div>
           </div>
 
-          <div className="grid gap-4 px-6 py-6 md:px-8 lg:grid-cols-4">
-            <StatCard
-              label="Average Reach"
-              value={formatNumber(Math.round(summary.avgReach))}
-              note="Estimated audience across the visible promotion offers."
-            />
-            <StatCard
-              label="Fastest Turn"
-              value={
-                promotions.length > 0
-                  ? `${Math.min(...promotions.map((promotion) => promotion.delivery_days_min))} days`
-                  : "Flexible"
-              }
-              note="Useful when you need release-week momentum."
-            />
-            <StatCard
-              label="Booking"
-              value="UGX + Credits"
-              note="Tesotunes handles checkout, proof, and disputes."
-            />
-            <StatCard
-              label="Promoter Entry"
-              value="Live"
-              note="Promoters can publish offers, add proof, and manage orders."
-            />
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border bg-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-              Step 1
-            </p>
-            <h2 className="mt-2 text-lg font-semibold">Open a promoter storefront</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Start by checking the promoter, their reviews, portfolio, and the channels they actually use.
-            </p>
-          </div>
-          <div className="rounded-2xl border bg-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-              Step 2
-            </p>
-            <h2 className="mt-2 text-lg font-semibold">Compare the actual offer</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Check the price, time frame, deliverables, proof style, and whether the promoter is offering TikTok, radio, club, or another lane.
-            </p>
-          </div>
-          <div className="rounded-2xl border bg-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-              Step 3
-            </p>
-            <h2 className="mt-2 text-lg font-semibold">Book and track in Tesotunes</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Place the order, receive proof, confirm delivery, or dispute if the agreed promotion was not delivered.
-            </p>
-          </div>
-        </section>
-
-        {selectedEvent && (
-          <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                  Event Promotion Context
-                </p>
-                <h2 className="text-lg font-semibold">{selectedEvent.title}</h2>
+          {selectedEvent && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{selectedEvent.title}</p>
                 <p className="text-sm text-muted-foreground">
                   {selectedEvent.venue || "Venue pending"}
                   {selectedEvent.city ? ` · ${selectedEvent.city}` : ""}
-                  {selectedEvent.startsAt ? ` · ${selectedEvent.startsAt}` : ""}
                 </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-background px-3 py-2 text-sm text-muted-foreground">
-                  <Ticket className="h-4 w-4" />
-                  Service detail pages will keep this event attached.
-                </div>
-                <button
-                  type="button"
-                  onClick={clearEventContext}
-                  className="rounded-full border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Clear event mode
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <div className="rounded-2xl border bg-card p-5">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                <Filter className="h-4 w-4" />
-                Filters
-              </div>
-              <h2 className="mt-2 text-xl font-bold">Search and compare offers</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Use filters when you already know the channel, audience fit, timing, or proof style you want.
-              </p>
-              <div className="mt-5">
-                <PromotionFilters />
               </div>
               <button
                 type="button"
-                onClick={clearBrowseFilters}
-                className="mt-4 w-full rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                onClick={clearEventContext}
+                className="rounded-lg border px-3 py-2 text-sm hover:bg-muted"
               >
-                Reset filters
+                Clear event mode
               </button>
             </div>
+          )}
+        </section>
 
-            <div className="rounded-2xl border bg-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                Promoter Workspace
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                These tools are for promoters selling services, not for artists buying them.
-              </p>
-              <div className="mt-4 space-y-3">
-                <Link
-                  href="/artist/promotions"
-                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
-                >
-                  <div className="flex items-center gap-3">
-                    <Store className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-semibold">Promotions dashboard</p>
-                      <p className="text-sm text-muted-foreground">Manage listings and orders.</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-
-                <Link
-                  href="/artist/promotions/create"
-                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
-                >
-                  <div className="flex items-center gap-3">
-                    <Megaphone className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-semibold">Create promotion offer</p>
-                      <p className="text-sm text-muted-foreground">Publish a service package.</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-
-                <Link
-                  href="/promotions/purchases"
-                  className="flex items-center justify-between rounded-xl border p-4 transition hover:bg-muted"
-                >
-                  <div className="flex items-center gap-3">
-                    <BriefcaseBusiness className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-semibold">Buyer order tracking</p>
-                      <p className="text-sm text-muted-foreground">View purchased campaigns.</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </div>
+        <section className="space-y-6">
+          <section className="rounded-lg border bg-card p-5">
+            <PromotionFilters />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => setQuickFilter("platform", "tiktok")} className="rounded-full border px-3 py-1.5 text-sm hover:bg-muted">
+                TikTok
+              </button>
+              <button type="button" onClick={() => setQuickFilter("platform", "radio")} className="rounded-full border px-3 py-1.5 text-sm hover:bg-muted">
+                Radio
+              </button>
+              <button type="button" onClick={() => setQuickFilter("platform", "club")} className="rounded-full border px-3 py-1.5 text-sm hover:bg-muted">
+                Club / DJ
+              </button>
+              <button type="button" onClick={() => setQuickFilter("verified", true)} className="rounded-full border px-3 py-1.5 text-sm hover:bg-muted">
+                Verified
+              </button>
             </div>
-          </aside>
+          </section>
 
-          <div className="space-y-6">
-            {recommendationLanes.length > 0 && !hasActiveFilters && (
-              <section className="rounded-2xl border bg-card p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                      Quick Starting Points
-                    </p>
-                    <h2 className="mt-2 text-2xl font-bold">
-                      Start with the kind of promoter you need
-                    </h2>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      These suggestions help artists like Richo move quickly from goal to a shortlist of promoters and offers.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {recommendationLanes.map((lane) => (
-                    <button
-                      key={lane.key}
-                      type="button"
-                      onClick={() => applyRecommendationLane(lane)}
-                      className="rounded-2xl border p-4 text-left transition hover:bg-muted"
-                    >
-                      <p className="text-sm font-semibold">{lane.title}</p>
-                      <p className="mt-2 text-sm text-muted-foreground">{lane.note}</p>
-                      <div className="mt-4 rounded-xl bg-muted/40 p-3">
-                        <p className="text-sm font-medium">{lane.promotion.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {lane.promotion.promoter.name} · {labelFromSlug(lane.promotion.platform)}
-                        </p>
-                      </div>
-                      <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary">
-                        {lane.actionLabel}
-                        <ArrowRight className="h-4 w-4" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
-              <div className="rounded-2xl border bg-card p-5 lg:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                  Start With Promoters
-                </p>
-                <h2 className="mt-2 text-2xl font-bold">
-                  Browse trusted storefronts before you place an order
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  If you already know you want someone like Papa Ti, start here. Open the storefront, review proof and reviews, then compare the service offer that matches your song rollout.
-                </p>
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  {summary.topPromoters.length > 0 ? (
-                    summary.topPromoters.map((promoter) => (
-                      <Link
-                        key={promoter.username}
-                        href={`/promoters/${promoter.username}`}
-                        className="rounded-2xl border p-4 transition hover:bg-muted"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-semibold">{promoter.name}</p>
-                              {promoter.verified && (
-                                <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
-                              )}
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {labelFromSlug(promoter.platform)} promoter
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <TrendingUp className="h-3.5 w-3.5" />
-                            {formatNumber(promoter.followerCount)}
-                          </div>
-                        </div>
-                        <div className="mt-4 flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {formatNumber(promoter.offerCount)} live offers
-                          </span>
-                          <span className="font-medium text-primary">Open storefront</span>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground md:col-span-3">
-                      Promoter storefronts will appear here as active listings load.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border bg-card p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                  Marketplace Summary
-                </p>
-                <h2 className="mt-2 text-2xl font-bold">
-                  {formatNumber(meta?.total ?? 0)} service offers ready to book
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  After you shortlist a promoter, use the offer list below to compare price, timing, and delivery scope.
-                </p>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl bg-muted/40 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Users className="h-4 w-4 text-primary" />
-                      Reach
-                    </div>
-                    <p className="mt-2 text-lg font-semibold">
-                      {formatNumber(Math.round(summary.avgReach))}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Average estimated audience</p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Clock3 className="h-4 w-4 text-primary" />
-                      Delivery
-                    </div>
-                    <p className="mt-2 text-lg font-semibold">
-                      {summary.avgDelivery > 0 ? `${Math.round(summary.avgDelivery)} day avg` : "Flexible"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Typical minimum turnaround</p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Coins className="h-4 w-4 text-primary" />
-                      Price
-                    </div>
-                    <p className="mt-2 text-lg font-semibold">
-                      {promotions.some((promotion) => promotion.accepts_ugx)
-                        ? formatCurrency(
-                            Math.min(
-                              ...promotions
-                                .filter((promotion) => promotion.accepts_ugx)
-                                .map((promotion) => promotion.price_ugx)
-                            )
-                          )
-                        : "Flexible"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Lowest visible UGX offer</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border bg-card p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                  Why This Works
-                </p>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold">Promoters are review-backed</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Richo should be able to judge Papa Ti by storefront proof, portfolio, and order history before paying.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold">Offers make the promise explicit</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Each service should clearly say the channel, price, timeframe, and proof expectation.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold">Tesotunes handles the workflow</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Booking, proof submission, buyer confirmation, disputes, and settlement all stay inside one flow.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {summary.featured.length > 0 && (
-              <section className="rounded-2xl border bg-card p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                      Featured Services
-                    </p>
-                    <h2 className="mt-2 text-2xl font-bold">Compare standout offers</h2>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  {summary.featured.slice(0, 3).map((promotion) => (
-                    <Link
-                      key={promotion.id}
-                      href={`/promotions/${promotion.slug}${promotionDetailSuffix}`}
-                      className="rounded-2xl border p-4 transition hover:bg-muted"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{promotion.title}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {promotion.promoter.name}
-                          </p>
-                        </div>
-                        {promotion.promoter.is_verified && (
-                          <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
-                        )}
-                      </div>
-                      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
-                        {promotion.short_description}
-                      </p>
-                      <div className="mt-4 flex items-center justify-between text-sm">
-                        <span className="font-semibold text-primary">
-                          {promotion.accepts_credits
-                            ? `${formatNumber(promotion.price_credits)} credits`
-                            : formatCurrency(promotion.price_ugx)}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {labelFromSlug(promotion.platform)}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className="rounded-2xl border bg-card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+          <section className="rounded-lg border bg-card p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                    Service Offers
-                  </p>
-                  <h2 className="mt-2 text-2xl font-bold">Browse active promotion offers</h2>
+                  <h2 className="text-lg font-semibold">Live services</h2>
                   {meta && (
                     <p className="mt-2 text-sm text-muted-foreground">
                       Page {meta.current_page} of {meta.last_page} · {formatNumber(meta.total)} total offers
@@ -783,7 +391,7 @@ export default function PromotionsBrowsePage() {
                 </div>
                 {hasActiveFilters && (
                   <div className="flex flex-wrap gap-2">
-                    {activeFilterEntries.slice(0, 4).map(([key, value]) => (
+                    {activeFilterEntries.map(([key, value]) => (
                       <span
                         key={key}
                         className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
@@ -800,7 +408,7 @@ export default function PromotionsBrowsePage() {
                     </button>
                   </div>
                 )}
-              </div>
+            </div>
 
               {isError ? (
                 <div className="mt-6 space-y-4">
@@ -812,13 +420,13 @@ export default function PromotionsBrowsePage() {
                     <button
                       type="button"
                       onClick={() => window.location.reload()}
-                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                      className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
                       Retry page
                     </button>
                     <Link
                       href="/artist/promotions"
-                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                      className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
                       Open seller dashboard
                     </Link>
@@ -834,26 +442,19 @@ export default function PromotionsBrowsePage() {
                 <div className="mt-6 space-y-4">
                   <PromotionsEmptyState
                     title="No promotion services match these filters"
-                    description="Try changing platform, budget, or audience targeting to widen the result set."
+                    description="Try another platform, loosen the budget, or clear the filters."
                   />
                   <div className="flex flex-wrap justify-center gap-3">
                     <button
                       type="button"
                       onClick={clearBrowseFilters}
-                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                      className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                      Reset browse filters
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickFilter("featured", true)}
-                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
-                    >
-                      Show featured only
+                      Reset filters
                     </button>
                     <Link
                       href="/artist/promotions/create"
-                      className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
+                      className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
                       Become a seller
                     </Link>
@@ -880,8 +481,7 @@ export default function PromotionsBrowsePage() {
                   )}
                 </>
               )}
-            </section>
-          </div>
+          </section>
         </section>
       </div>
     </div>

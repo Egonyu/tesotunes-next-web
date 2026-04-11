@@ -88,6 +88,53 @@ describe("backend proxy route", () => {
     expect(response.headers.get("transfer-encoding")).toBeNull();
   });
 
+  it("normalizes proxied JSON media URLs to the canonical API origin", async () => {
+    const mockFetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            cover_url: "http://127.0.0.1:3000/storage/artists/covers/example.png?v=123",
+            profile_url: "/storage/artists/avatars/example.png?v=456",
+            nested: {
+              gallery: [
+                "storage/artists/covers/secondary.png?v=789",
+                "https://cdn.example.com/leave-alone.png",
+              ],
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+
+    global.fetch = mockFetch as typeof fetch;
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/backend/admin/artists/42"
+    );
+
+    const response = await GET(request, {
+      params: Promise.resolve({ path: ["admin", "artists", "42"] }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        cover_url: "https://api.tesotunes.com/storage/artists/covers/example.png?v=123",
+        profile_url: "https://api.tesotunes.com/storage/artists/avatars/example.png?v=456",
+        nested: {
+          gallery: [
+            "https://api.tesotunes.com/storage/artists/covers/secondary.png?v=789",
+            "https://cdn.example.com/leave-alone.png",
+          ],
+        },
+      },
+    });
+  });
+
   it("returns a structured 502 response when upstream fetch retries are exhausted", async () => {
     const mockFetch = jest.fn().mockRejectedValue(new TypeError("fetch failed"));
 

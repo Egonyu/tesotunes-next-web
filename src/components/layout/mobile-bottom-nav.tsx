@@ -47,6 +47,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { usePlayerStore, useUIStore } from "@/stores";
 import { STORE_ENABLED } from "@/lib/features";
+import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
 
 const mainTabs = [
   { href: "/", label: "Home", icon: Home },
@@ -185,6 +186,7 @@ export function MobileBottomNav() {
   const { data: session } = useSession();
   const { currentSong } = usePlayerStore();
   const { playerMinimized } = useUIStore();
+  const { hasAlbums, hasRadioStations } = useNavigationAvailability();
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
   const isArtist = userRole.toLowerCase().includes("artist");
@@ -204,6 +206,11 @@ export function MobileBottomNav() {
   const visibleModuleItems = moduleItems.filter((item) => {
     if (item.href === "/store" && !STORE_ENABLED) return false;
     if (item.href === "/sacco") return false;
+    return true;
+  });
+  const visibleBrowseItems = browseItems.filter((item) => {
+    if (item.href === "/albums" && !hasAlbums) return false;
+    if (item.href === "/radio" && !hasRadioStations) return false;
     return true;
   });
 
@@ -308,7 +315,7 @@ export function MobileBottomNav() {
                   Browse
                 </h3>
                 <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
-                  {browseItems.map((item) => (
+                  {visibleBrowseItems.map((item) => (
                     <MenuItem key={item.href} {...item} onClick={closeMenu} />
                   ))}
                 </div>

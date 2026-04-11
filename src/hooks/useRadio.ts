@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
+import type { Song } from "@/types";
 
 // ============================================================================
 // Types
@@ -8,6 +9,7 @@ import { apiGet } from "@/lib/api";
 export interface RadioStation {
   id: string;
   name: string;
+  slug: string;
   genre: string;
   description: string;
   image: string;
@@ -43,6 +45,7 @@ function normalizeRadioStation(station: RadioStationsApiStation): RadioStation {
   return {
     id,
     name,
+    slug: station.slug || id,
     genre: station.is_featured ? "Featured station" : `Curated by ${curator}`,
     description:
       station.description ||
@@ -80,5 +83,28 @@ export function useFeaturedStation() {
 
       return response.data.map(normalizeRadioStation)[0] ?? null;
     },
+  });
+}
+
+export async function fetchRadioStationTracks(stationId: string) {
+  const response = await apiGet<{ data: Song[] }>(`/playlists/${stationId}/tracks`, {
+    params: { limit: 24 },
+  });
+
+  return response.data;
+}
+
+export function useRadioStationTracks(stationId?: string | null) {
+  return useQuery({
+    queryKey: ["radio", "station", stationId, "tracks"],
+    queryFn: async () => {
+      if (!stationId) {
+        return [] as Song[];
+      }
+
+      return fetchRadioStationTracks(stationId);
+    },
+    enabled: Boolean(stationId),
+    staleTime: 2 * 60 * 1000,
   });
 }

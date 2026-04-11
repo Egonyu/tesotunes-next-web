@@ -2,41 +2,72 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '@/lib/api';
 import {
   Search,
   ArrowLeft,
   Store,
   Loader2,
-  ExternalLink,
   MapPin,
   Star,
   Package,
+  Mail,
+  ShieldCheck,
+  CircleOff,
+  BadgeCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Shop {
   id: number;
+  uuid?: string;
   name: string;
-  owner: string;
-  description: string;
-  product_count: number;
-  total_sales: number;
-  rating: number;
-  location: string;
+  description?: string | null;
+  status: string;
+  store_type?: string | null;
+  owner_name?: string | null;
+  owner_email?: string | null;
+  products_count: number;
+  rating?: number | string | null;
+  city?: string | null;
+  country?: string | null;
   is_verified: boolean;
-  is_active: boolean;
+  suspended_reason?: string | null;
   created_at: string;
 }
 
 export default function AdminStoreShopsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: shops, isLoading } = useQuery({
     queryKey: ['admin', 'store', 'shops', searchQuery],
     queryFn: () => apiGet<{ data: Shop[] }>(`/admin/store/shops?search=${searchQuery}`).then(r => r.data),
   });
+
+  const shopAction = useMutation({
+    mutationFn: async ({ shopId, action }: { shopId: number; action: 'approve' | 'suspend' | 'verify' | 'unverify' }) =>
+      apiPost<{ message?: string }>(`/admin/store/shops/${shopId}/${action}`),
+    onSuccess: (response, variables) => {
+      toast.success(response.message ?? `Shop ${variables.action}d successfully.`);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'shops'] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to update shop.';
+      toast.error(message);
+    },
+  });
+
+  const runShopAction = (shopId: number, action: 'approve' | 'suspend' | 'verify' | 'unverify') => {
+    shopAction.mutate({ shopId, action });
+  };
+
+  const isBusy = (shopId: number, action: 'approve' | 'suspend' | 'verify' | 'unverify') =>
+    shopAction.isPending &&
+    shopAction.variables?.shopId === shopId &&
+    shopAction.variables?.action === action;
 
   return (
     <div className="space-y-6">
@@ -66,7 +97,7 @@ export default function AdminStoreShopsPage() {
       ) : shops && shops.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {shops.map((shop) => (
-            <div key={shop.id} className="rounded-xl border p-5 hover:shadow-md transition-shadow">
+            <div key={shop.id} className="rounded-xl border p-5 transition-shadow hover:shadow-md">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -79,21 +110,73 @@ export default function AdminStoreShopsPage() {
                         <span className="px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Verified</span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">by {shop.owner}</p>
+                    <p className="text-sm text-muted-foreground">by {shop.owner_name || 'Unknown owner'}</p>
                   </div>
                 </div>
                 <span className={cn(
                   'px-2 py-1 rounded-full text-xs font-medium',
-                  shop.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600'
+                  shop.status === 'active'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : shop.status === 'suspended'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                 )}>
-                  {shop.is_active ? 'Active' : 'Inactive'}
+                  {shop.status}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{shop.description}</p>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1"><Package className="h-3.5 w-3.5" />{shop.product_count} products</div>
-                <div className="flex items-center gap-1"><Star className="h-3.5 w-3.5 text-yellow-400" />{shop.rating}</div>
-                <div className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{shop.location}</div>
+              <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                {shop.description || 'No store description added yet.'}
+              </p>
+              <div className="grid gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2"><Package className="h-3.5 w-3.5" />{shop.products_count} products</div>
+                <div className="flex items-center gap-2"><Star className="h-3.5 w-3.5 text-yellow-400" />{shop.rating ?? 0}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" />{[shop.city, shop.country].filter(Boolean).join(', ') || 'Location not set'}</div>
+                <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" />{shop.owner_email || 'No owner email'}</div>
+              </div>
+              {shop.suspended_reason ? (
+                <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  Suspension reason: {shop.suspended_reason}
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {shop.status !== 'active' ? (
+                  <button
+                    onClick={() => runShopAction(shop.id, 'approve')}
+                    disabled={shopAction.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background disabled:opacity-60"
+                  >
+                    {isBusy(shop.id, 'approve') ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                    Approve
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => runShopAction(shop.id, 'suspend')}
+                    disabled={shopAction.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-60"
+                  >
+                    {isBusy(shop.id, 'suspend') ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleOff className="h-4 w-4" />}
+                    Suspend
+                  </button>
+                )}
+                {shop.is_verified ? (
+                  <button
+                    onClick={() => runShopAction(shop.id, 'unverify')}
+                    disabled={shopAction.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-60"
+                  >
+                    {isBusy(shop.id, 'unverify') ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                    Remove verification
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => runShopAction(shop.id, 'verify')}
+                    disabled={shopAction.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-60"
+                  >
+                    {isBusy(shop.id, 'verify') ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                    Verify
+                  </button>
+                )}
               </div>
             </div>
           ))}

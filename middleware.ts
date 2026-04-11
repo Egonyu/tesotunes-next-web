@@ -174,8 +174,9 @@ export async function middleware(request: NextRequest) {
   if (matchesRoutePrefix(pathname, '/artist') || matchesRoutePrefix(pathname, '/artist-dashboard')) {
     const role = normalize((token.role as string | undefined) ?? '');
     const isArtist = Boolean(token.isArtist);
+    const isEventOrganizer = Boolean(token.isEventOrganizer);
 
-    if (!ADMIN_ROLE_NAMES.has(role) && !ARTIST_ROLE_NAMES.has(role) && !isArtist) {
+    if (!ADMIN_ROLE_NAMES.has(role) && !ARTIST_ROLE_NAMES.has(role) && !isArtist && !isEventOrganizer) {
       return redirectToAccessRequired(request, 'forbidden');
     }
   }

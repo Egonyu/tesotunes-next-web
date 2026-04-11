@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { API_URL } from "@/lib/api-config";
+import { API_ORIGIN, API_URL } from "@/lib/api-config";
 import { buildLocalApiBaseUrls, fetchApiWithFallback, isRetryableNetworkError } from "@/lib/api-fallback";
 
 const PROXY_RESPONSE_HEADERS_TO_STRIP = [
@@ -80,6 +80,66 @@ function buildProxyErrorResponse(error: unknown) {
   );
 }
 
+function rewriteMediaUrlCandidate(value: string, requestOrigin: string): string {
+  if (!value) {
+    return value;
+  }
+
+  const normalizedRequestOrigin = requestOrigin.replace(/\/+$/, "");
+  const normalizedApiOrigin = API_ORIGIN.replace(/\/+$/, "");
+
+  if (value.startsWith("/storage/") || value.startsWith("/store-media/")) {
+    return `${normalizedApiOrigin}${value}`;
+  }
+
+  if (value.startsWith("storage/") || value.startsWith("store-media/")) {
+    return `${normalizedApiOrigin}/${value.replace(/^\/+/, "")}`;
+  }
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    return value;
+  }
+
+  const pathname = parsed.pathname;
+  const isMediaPath = pathname.startsWith("/storage/") || pathname.startsWith("/store-media/");
+  const candidateOrigin = parsed.origin.replace(/\/+$/, "");
+
+  if (!isMediaPath) {
+    return value;
+  }
+
+  if (candidateOrigin === normalizedRequestOrigin || candidateOrigin === "http://127.0.0.1:3000" || candidateOrigin === "http://localhost:3000") {
+    return `${normalizedApiOrigin}${pathname}${parsed.search}`;
+  }
+
+  return value;
+}
+
+function normalizeProxyJsonPayload(value: unknown, requestOrigin: string): unknown {
+  if (typeof value === "string") {
+    return rewriteMediaUrlCandidate(value, requestOrigin);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeProxyJsonPayload(entry, requestOrigin));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        normalizeProxyJsonPayload(entry, requestOrigin),
+      ])
+    );
+  }
+
+  return value;
+}
+
 async function proxyToBackend(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
@@ -132,6 +192,28 @@ async function proxyToBackend(
     responseHeaders.delete(header);
   }
   responseHeaders.set("cache-control", "no-store");
+
+  const contentType = upstreamResponse.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const text = await upstreamResponse.text();
+
+    try {
+      const payload = JSON.parse(text) as unknown;
+      const normalizedPayload = normalizeProxyJsonPayload(payload, request.nextUrl.origin);
+
+      return NextResponse.json(normalizedPayload, {
+        status: upstreamResponse.status,
+        headers: responseHeaders,
+      });
+    } catch {
+      return new NextResponse(text, {
+        status: upstreamResponse.status,
+        statusText: upstreamResponse.statusText,
+        headers: responseHeaders,
+      });
+    }
+  }
 
   return new NextResponse(upstreamResponse.body, {
     status: upstreamResponse.status,

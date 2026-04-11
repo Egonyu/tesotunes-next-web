@@ -23,6 +23,7 @@ import type {
   UpdatePromoterProfileRequest,
 } from "@/types/promotions";
 import * as api from "@/lib/promotions-api";
+import { isApiError } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Query Keys (centralised for cache invalidation)
@@ -127,8 +128,7 @@ export function useUpdateMyPromoterProfile() {
       api.updateMyPromoterProfile(data),
     onSuccess: () => {
       toast.success("Promoter profile updated!");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromoterProfile() });
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
     onError: () => {
       toast.error("Failed to update promoter profile.");
@@ -236,10 +236,15 @@ export function useCreatePromotion() {
       api.createPromotion(data),
     onSuccess: () => {
       toast.success("Promotion created! Pending admin approval.");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
-    onError: () => {
-      toast.error("Failed to create promotion.");
+    onError: (error) => {
+      const message = isApiError(error)
+        ? error.response?.data?.message || "Failed to create promotion."
+        : error instanceof Error
+          ? error.message
+          : "Failed to create promotion.";
+      toast.error(message);
     },
   });
 }
@@ -252,8 +257,7 @@ export function useUpdatePromotion(id: number) {
       api.updatePromotion(id, data),
     onSuccess: () => {
       toast.success("Promotion updated!");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotion(id) });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
     onError: () => {
       toast.error("Failed to update promotion.");
@@ -268,7 +272,7 @@ export function useDeletePromotion() {
     mutationFn: (id: number) => api.deletePromotion(id),
     onSuccess: () => {
       toast.success("Promotion deleted.");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
     onError: () => {
       toast.error("Failed to delete promotion.");
@@ -283,7 +287,7 @@ export function usePausePromotion() {
     mutationFn: (id: number) => api.pausePromotion(id),
     onSuccess: () => {
       toast.success("Promotion paused.");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
   });
 }
@@ -295,7 +299,7 @@ export function useActivatePromotion() {
     mutationFn: (id: number) => api.activatePromotion(id),
     onSuccess: () => {
       toast.success("Promotion activated!");
-      qc.invalidateQueries({ queryKey: promotionKeys.myPromotions() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
   });
 }
@@ -397,8 +401,7 @@ export function useAdminApprovePromotion() {
     mutationFn: (id: number) => api.adminApprovePromotion(id),
     onSuccess: () => {
       toast.success("Promotion approved!");
-      qc.invalidateQueries({ queryKey: adminListPrefix });
-      qc.invalidateQueries({ queryKey: promotionKeys.adminAnalytics() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
     onError: () => {
       toast.error("Failed to approve promotion.");
@@ -414,8 +417,7 @@ export function useAdminRejectPromotion() {
       api.adminRejectPromotion(id, { reason }),
     onSuccess: () => {
       toast.success("Promotion rejected.");
-      qc.invalidateQueries({ queryKey: adminListPrefix });
-      qc.invalidateQueries({ queryKey: promotionKeys.adminAnalytics() });
+      qc.invalidateQueries({ queryKey: promotionKeys.all });
     },
     onError: () => {
       toast.error("Failed to reject promotion.");

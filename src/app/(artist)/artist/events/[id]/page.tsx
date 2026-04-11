@@ -72,6 +72,10 @@ interface DiscountCodeDraft {
   applies_to_ticket_ids: number[];
 }
 
+const sectionCardClass = 'rounded-lg border bg-card p-5';
+const insetCardClass = 'rounded-lg border bg-card p-4';
+const mutedPanelClass = 'rounded-lg bg-muted/30 p-4 text-sm';
+
 export default function ArtistEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [campaignName, setCampaignName] = useState('tesotunes-promote');
@@ -242,43 +246,8 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       toast.error(message);
     },
   });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error || !event) {
-    return (
-      <div className="text-center py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-        <h2 className="text-xl font-semibold mb-2">Event not found</h2>
-        <Link href="/artist/events" className="text-primary hover:underline">Back to Events</Link>
-      </div>
-    );
-  }
-
-  const statusColors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-    published: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    postponed: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  };
-
-  const ticketsSold = event.tickets_sold || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_sold || 0), 0) || 0;
-  const totalTickets = getEventCapacity(event) || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || t.quantity || 0), 0) || 0;
-  const sellThrough = totalTickets > 0 ? Math.round((ticketsSold / totalTickets) * 100) : 0;
-  const coverImage = getEventImage(event);
-  const eventDate = getEventStartDate(event);
-  const eventTime = getEventTimeLabel(event);
   const analytics = analyticsResponse?.data;
-  const isHybrid = event.ticketing_mode === 'hybrid';
-  const isExternalOnly = event.ticketing_mode === 'external_only';
-  const ticketingSummary = event.ticketing_summary;
+
   useEffect(() => {
     const nextRows = new Map<string, CampaignSpendRow>();
 
@@ -379,6 +348,42 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
     return `/promotions?${params.toString()}`;
   }, [event]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="text-center py-20">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <h2 className="text-xl font-semibold mb-2">Event not found</h2>
+        <Link href="/artist/events" className="text-primary hover:underline">Back to Events</Link>
+      </div>
+    );
+  }
+
+  const statusColors: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    published: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    postponed: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  };
+
+  const ticketsSold = event.tickets_sold || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_sold || 0), 0) || 0;
+  const totalTickets = getEventCapacity(event) || event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || t.quantity || 0), 0) || 0;
+  const sellThrough = totalTickets > 0 ? Math.round((ticketsSold / totalTickets) * 100) : 0;
+  const coverImage = getEventImage(event);
+  const eventDate = getEventStartDate(event);
+  const eventTime = getEventTimeLabel(event);
+  const isHybrid = event.ticketing_mode === 'hybrid';
+  const isExternalOnly = event.ticketing_mode === 'external_only';
+  const ticketingSummary = event.ticketing_summary;
 
   const handleShare = async () => {
     const url = `${window.location.origin}/events/${id}`;
@@ -574,7 +579,8 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-center gap-3">
         <Link href="/artist/events" className="p-2 rounded-lg hover:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -585,8 +591,14 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               {event.status}
             </span>
           </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span>{eventDate ? new Date(eventDate).toLocaleDateString() : 'Date TBA'}</span>
+            <span>{eventTime}</span>
+            <span>{event.is_virtual ? 'Online event' : getEventVenueLabel(event) || 'Venue TBA'}</span>
+          </div>
         </div>
-        <div className="flex gap-2">
+        </div>
+        <div className="flex gap-2 self-start">
           <button onClick={handleShare} className="p-2 rounded-lg border hover:bg-muted" title="Share">
             <Share2 className="h-4 w-4" />
           </button>
@@ -601,7 +613,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Cover Image */}
-      <div className="relative h-64 rounded-xl overflow-hidden bg-gradient-to-r from-primary/20 to-primary/5">
+      <div className="relative h-48 overflow-hidden rounded-lg border bg-muted">
         {coverImage ? (
           <Image src={coverImage} alt={event.title} fill className="object-cover" />
         ) : (
@@ -612,29 +624,29 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-card border">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className={insetCardClass}>
           <div className="flex items-center gap-2 mb-2">
             <Ticket className="h-5 w-5 text-blue-500" />
             <span className="text-sm text-muted-foreground">Tickets Sold</span>
           </div>
           <p className="text-2xl font-bold">{ticketsSold} / {totalTickets || '∞'}</p>
         </div>
-        <div className="p-4 rounded-xl bg-card border">
+        <div className={insetCardClass}>
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="h-5 w-5 text-orange-500" />
             <span className="text-sm text-muted-foreground">Sell-Through</span>
           </div>
           <p className="text-2xl font-bold">{sellThrough}%</p>
         </div>
-        <div className="p-4 rounded-xl bg-card border">
+        <div className={insetCardClass}>
           <div className="flex items-center gap-2 mb-2">
             <Users className="h-5 w-5 text-green-500" />
             <span className="text-sm text-muted-foreground">Attendees</span>
           </div>
           <p className="text-2xl font-bold">{event.attendee_count || ticketsSold}</p>
         </div>
-        <div className="p-4 rounded-xl bg-card border">
+        <div className={insetCardClass}>
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="h-5 w-5 text-purple-500" />
             <span className="text-sm text-muted-foreground">Ticket Tiers</span>
@@ -644,7 +656,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {(isHybrid || isExternalOnly) && ticketingSummary && (
-        <div className={`rounded-xl border p-6 ${isHybrid ? 'border-sky-200 bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/20' : 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20'}`}>
+        <div className={sectionCardClass}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold">
@@ -657,17 +669,17 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+              <div className="rounded-lg border bg-background p-3 text-sm">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Tesotunes available</p>
                 <p className="mt-1 font-semibold">
                   {ticketingSummary.tesotunes_available == null ? 'Open' : ticketingSummary.tesotunes_available.toLocaleString()}
                 </p>
               </div>
-              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+              <div className="rounded-lg border bg-background p-3 text-sm">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">External reserved</p>
                 <p className="mt-1 font-semibold">{ticketingSummary.external_allocated.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg border bg-background/80 p-3 text-sm">
+              <div className="rounded-lg border bg-background p-3 text-sm">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Tesotunes sold</p>
                 <p className="mt-1 font-semibold">{ticketingSummary.tesotunes_sold.toLocaleString()}</p>
               </div>
@@ -676,7 +688,39 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      <div className="rounded-xl border p-6">
+      <div className="flex flex-wrap gap-2">
+        {[
+          ['overview', 'Overview'],
+          ['operations', 'Operations'],
+          ['finance', 'Finance'],
+          ['promotion', 'Promotion'],
+          ['details', 'Details'],
+        ].map(([href, label]) => (
+          <a
+            key={href}
+            href={`#${href}`}
+            className="rounded-lg border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+
+      <section id="overview" className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Overview</p>
+          <h2 className="mt-1 text-lg font-semibold">Core event snapshot</h2>
+        </div>
+      </section>
+
+      <section id="operations" className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Operations</p>
+          <h2 className="mt-1 text-lg font-semibold">Staff, ticket handling, and door control</h2>
+        </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Event Staff</h2>
@@ -725,7 +769,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 space-y-3">
           {(event.staff_members || []).map((member) => (
-            <div key={member.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-4 text-sm">
+            <div key={member.id} className="flex items-center justify-between rounded-lg border bg-muted/20 p-4 text-sm">
               <div>
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{member.user?.name || 'Unknown user'}</p>
@@ -752,7 +796,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="rounded-xl border p-6">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Offline Sales Reconciliation</h2>
@@ -894,7 +938,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           />
         </div>
 
-        <div className="mt-4 rounded-xl border p-4">
+        <div className="mt-4 rounded-lg border p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-medium">Printed Ticket Import</h3>
@@ -965,7 +1009,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border p-4">
+        <div className="mt-4 rounded-lg border p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-medium">Printed Batch Sync</h3>
@@ -1051,7 +1095,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 space-y-3">
           {offlineSales.length > 0 ? offlineSales.map((sale) => (
-            <div key={sale.order_id} className="rounded-xl border p-4 text-sm">
+            <div key={sale.order_id} className="rounded-lg border p-4 text-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1126,14 +1170,16 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               </div>
             </div>
           )) : (
-            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+            <div className={mutedPanelClass + ' text-muted-foreground'}>
               No offline ticket batches logged yet. Use this for physical tickets, door sales, and manual phone bookings.
             </div>
           )}
         </div>
       </div>
+      </div>
 
-      <div className="rounded-xl border p-6">
+      <div className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">External Capacity Allocation</h2>
@@ -1229,7 +1275,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 space-y-3">
           {externalAllocations.length > 0 ? externalAllocations.map((allocation) => (
-            <div key={allocation.id} className="rounded-xl border p-4 text-sm">
+            <div key={allocation.id} className="rounded-lg border p-4 text-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1285,14 +1331,14 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               </div>
             </div>
           )) : (
-            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+            <div className={mutedPanelClass + ' text-muted-foreground'}>
               No external capacity reserved yet. Add reservations here when hybrid events need inventory held back for partner outlets or other non-Tesotunes channels.
             </div>
           )}
         </div>
       </div>
 
-      <div className="rounded-xl border p-6">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Check-In Console</h2>
@@ -1333,7 +1379,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           {(lookupTickets.data?.data.matches || []).map((match) => {
             const isSelected = selectedTicketNumber === match.ticket_number;
             return (
-              <div key={match.id} className={`rounded-xl border p-4 text-sm ${isSelected ? 'border-primary' : ''}`}>
+              <div key={match.id} className={`rounded-lg border p-4 text-sm ${isSelected ? 'border-primary' : ''}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -1390,14 +1436,15 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           })}
 
           {lookupTickets.isSuccess && (lookupTickets.data?.data.matches || []).length === 0 && (
-            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+            <div className={mutedPanelClass + ' text-muted-foreground'}>
               No ticket matches found for that search.
             </div>
           )}
         </div>
       </div>
+      </div>
 
-      <div className="rounded-xl border p-6">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Ticket Support Queue</h2>
@@ -1412,19 +1459,19 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
           {analytics?.support_cases && (
             <div className="mt-4 grid gap-4 md:grid-cols-4">
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Open cases</p>
                 <p className="mt-1 font-semibold">{analytics.support_cases.open}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Approved</p>
               <p className="mt-1 font-semibold">{analytics.support_cases.approved}</p>
             </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Refund requests</p>
                 <p className="mt-1 font-semibold">{analytics.support_cases.refund_requests}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Chargeback review</p>
                 <p className="mt-1 font-semibold">{analytics.support_cases.chargeback_review_cases}</p>
               </div>
@@ -1433,11 +1480,11 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
           {analytics?.support_cases && (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Chargeback exposure</p>
                 <p className="mt-1 font-semibold">UGX {analytics.support_cases.chargeback_exposure_amount.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Approved refund amount</p>
                 <p className="mt-1 font-semibold">UGX {analytics.support_cases.approved_refund_amount.toLocaleString()}</p>
               </div>
@@ -1456,7 +1503,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 space-y-3">
           {ticketCases.length > 0 ? ticketCases.map((item) => (
-            <div key={item.id} className="rounded-xl border p-4 text-sm">
+            <div key={item.id} className="rounded-lg border p-4 text-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1547,15 +1594,22 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               </div>
             </div>
           )) : (
-            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+            <div className={mutedPanelClass + ' text-muted-foreground'}>
               No ticket support cases yet. Refund reviews and payment disputes will appear here when buyers raise them.
             </div>
           )}
         </div>
       </div>
+      </section>
 
       {analytics && (
-        <div className="rounded-xl border p-6">
+        <section id="finance" className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Finance</p>
+            <h2 className="mt-1 text-lg font-semibold">Revenue, payout readiness, and reporting</h2>
+          </div>
+
+        <div className={sectionCardClass}>
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <h2 className="font-semibold">Revenue Snapshot</h2>
@@ -1578,59 +1632,59 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border bg-card p-4">
+            <div className={insetCardClass}>
               <p className="text-sm text-muted-foreground">Gross Ticket Revenue</p>
               <p className="mt-2 text-2xl font-bold">UGX {analytics.gross_revenue.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
+            <div className={insetCardClass}>
               <p className="text-sm text-muted-foreground">Tesotunes Fee Revenue</p>
               <p className="mt-2 text-2xl font-bold">UGX {analytics.tesotunes_fee_revenue.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
+            <div className={insetCardClass}>
               <p className="text-sm text-muted-foreground">Estimated Organizer Payout</p>
               <p className="mt-2 text-2xl font-bold">UGX {analytics.estimated_organizer_payout.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
+            <div className={insetCardClass}>
               <p className="text-sm text-muted-foreground">Average Order Value</p>
               <p className="mt-2 text-2xl font-bold">UGX {analytics.average_order_value.toLocaleString()}</p>
             </div>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Customer paid total</p>
               <p className="mt-1 font-semibold">UGX {analytics.customer_paid_total.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Platform commission</p>
               <p className="mt-1 font-semibold">UGX {analytics.platform_commission_revenue.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Processing fees</p>
               <p className="mt-1 font-semibold">UGX {analytics.processing_fee_revenue.toLocaleString()}</p>
             </div>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className={insetCardClass + ' text-sm'}>
               <p className="text-muted-foreground">Pending payout</p>
               <p className="mt-1 font-semibold">UGX {analytics.payouts.pending_balance.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className={insetCardClass + ' text-sm'}>
               <p className="text-muted-foreground">Ready to settle</p>
               <p className="mt-1 font-semibold">UGX {analytics.payouts.ready_balance.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className={insetCardClass + ' text-sm'}>
               <p className="text-muted-foreground">Paid out</p>
               <p className="mt-1 font-semibold">UGX {analytics.payouts.settled_balance.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className={insetCardClass + ' text-sm'}>
               <p className="text-muted-foreground">Failed payout value</p>
               <p className="mt-1 font-semibold">UGX {analytics.payouts.failed_balance.toLocaleString()}</p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border bg-card p-4">
+          <div className={'mt-4 ' + insetCardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-medium">Promotion Funnel</h3>
@@ -1645,19 +1699,19 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-4">
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Visits</p>
                 <p className="mt-1 font-semibold">{analytics.funnel.totals.visits.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Checkout starts</p>
                 <p className="mt-1 font-semibold">{analytics.funnel.totals.checkout_starts.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Paid orders</p>
                 <p className="mt-1 font-semibold">{analytics.funnel.totals.paid_orders.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Tickets sold</p>
                 <p className="mt-1 font-semibold">{analytics.funnel.totals.tickets_sold.toLocaleString()}</p>
               </div>
@@ -1706,7 +1760,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <div className="mt-4 rounded-xl border bg-card p-4">
+          <div className={'mt-4 ' + insetCardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-medium">Promotion Attribution</h3>
@@ -1723,7 +1777,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             {analytics.marketing.top_sources.length > 0 ? (
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {analytics.marketing.top_sources.slice(0, 4).map((source) => (
-                  <div key={source.source} className="rounded-xl bg-muted/40 p-4 text-sm">
+                  <div key={source.source} className={mutedPanelClass}>
                     <p className="font-medium">{source.source}</p>
                     <p className="mt-1 text-muted-foreground">
                       {source.orders} orders, {source.tickets_sold} tickets
@@ -1744,7 +1798,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <div className="mt-4 rounded-xl border bg-card p-4">
+          <div className={'mt-4 ' + insetCardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-medium">Sales Channels</h3>
@@ -1762,7 +1816,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {analytics.sales_channels.channels.map((channel) => (
-                <div key={channel.key} className="rounded-xl bg-muted/40 p-4 text-sm">
+                <div key={channel.key} className={mutedPanelClass}>
                   <p className="font-medium">{channel.label}</p>
                   <p className="mt-1 text-muted-foreground">
                     {channel.orders} orders, {channel.tickets_sold} tickets
@@ -1781,7 +1835,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border bg-card p-4">
+          <div className={'mt-4 ' + insetCardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-medium">Source ROI</h3>
@@ -1796,19 +1850,19 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-4">
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Tracked spend</p>
                 <p className="mt-1 font-semibold">UGX {analytics.roi.total_spend.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Gross revenue</p>
                 <p className="mt-1 font-semibold">UGX {analytics.roi.total_gross_revenue.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Organizer payout</p>
                 <p className="mt-1 font-semibold">UGX {analytics.roi.total_organizer_payout.toLocaleString()}</p>
               </div>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm">
+              <div className={mutedPanelClass}>
                 <p className="text-muted-foreground">Tracked sources</p>
                 <p className="mt-1 font-semibold">{analytics.roi.tracked_sources}</p>
               </div>
@@ -1816,7 +1870,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
             <div className="mt-4 space-y-3">
               {analytics.roi.by_source.length > 0 ? analytics.roi.by_source.map((source) => (
-                <div key={source.key} className="rounded-xl bg-muted/40 p-4 text-sm">
+                <div key={source.key} className={mutedPanelClass}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-medium">{source.label}</p>
@@ -1842,7 +1896,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            <div className="mt-4 rounded-xl border p-4">
+            <div className="mt-4 rounded-lg border p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h4 className="font-medium">Campaign Comparison</h4>
@@ -1900,7 +1954,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            <div className="mt-4 rounded-xl border p-4">
+            <div className="mt-4 rounded-lg border p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h4 className="font-medium">Campaign Spend Tracker</h4>
@@ -1967,7 +2021,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border bg-card p-4">
+          <div className={'mt-4 ' + insetCardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-medium">Settlement Reports</h3>
@@ -1983,7 +2037,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {(analytics.settlements.by_campaign.length > 0 ? analytics.settlements.by_campaign.slice(0, 4) : []).map((campaign) => (
-                <div key={campaign.label} className="rounded-xl bg-muted/40 p-4 text-sm">
+                <div key={campaign.label} className={mutedPanelClass}>
                   <p className="font-medium">{campaign.label}</p>
                   <p className="mt-1 text-muted-foreground">
                     {campaign.orders} orders, {campaign.tickets_sold} tickets
@@ -2001,7 +2055,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             {analytics.settlements.by_payout_cycle.length > 0 ? (
               <div className="mt-4 space-y-3">
                 {analytics.settlements.by_payout_cycle.slice(0, 4).map((cycle, index) => (
-                  <div key={`${cycle.cycle_date || 'unassigned'}-${index}`} className="flex items-center justify-between rounded-xl bg-muted/40 p-4 text-sm">
+                  <div key={`${cycle.cycle_date || 'unassigned'}-${index}`} className="flex items-center justify-between rounded-lg border bg-muted/20 p-4 text-sm">
                     <div>
                       <p className="font-medium">
                         {cycle.cycle_date ? new Date(cycle.cycle_date).toLocaleDateString() : 'Unassigned cycle'}
@@ -2026,10 +2080,11 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
         </div>
+        </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border p-6">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={sectionCardClass}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="font-semibold">Payout Center</h2>
@@ -2043,19 +2098,19 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Payout method</p>
               <p className="mt-1 font-semibold">{event.payout_center?.method_label || 'Not configured'}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Verification status</p>
               <p className="mt-1 font-semibold capitalize">{event.payout_center?.verification_status || 'pending'}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Ready balance</p>
               <p className="mt-1 font-semibold">UGX {(event.payout_center?.ready_balance || 0).toLocaleString()}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Minimum payout</p>
               <p className="mt-1 font-semibold">UGX {(event.payout_center?.minimum_payout || 0).toLocaleString()}</p>
             </div>
@@ -2076,14 +2131,14 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <div className="rounded-xl border p-6">
+        <div className={sectionCardClass}>
           <h2 className="font-semibold">Operations Summary</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             These rules shape buyer confidence, support requests, and door operations.
           </p>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Registration deadline</p>
               <p className="mt-1 font-semibold">
                 {event.registration_deadline
@@ -2091,15 +2146,15 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                   : 'Not set'}
               </p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Age restriction</p>
               <p className="mt-1 font-semibold">{event.contact_info?.age_restriction || 'Not set'}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Support email</p>
               <p className="mt-1 font-semibold">{event.contact_info?.support_email || 'Not set'}</p>
             </div>
-            <div className="rounded-xl bg-muted/40 p-4 text-sm">
+            <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Support phone</p>
               <p className="mt-1 font-semibold">{event.contact_info?.support_phone || 'Not set'}</p>
             </div>
@@ -2148,7 +2203,14 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="rounded-xl border p-6">
+      <section id="promotion" className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Promotion</p>
+          <h2 className="mt-1 text-lg font-semibold">Offers, campaigns, and marketplace visibility</h2>
+        </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Discount Codes</h2>
@@ -2260,7 +2322,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 space-y-3">
           {(event.discount_codes || []).length > 0 ? (event.discount_codes || []).map((discountCode) => (
-            <div key={discountCode.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-4 text-sm">
+            <div key={discountCode.id} className="flex items-center justify-between rounded-lg border bg-muted/20 p-4 text-sm">
               <div>
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{discountCode.code}</p>
@@ -2292,7 +2354,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="rounded-xl border p-6">
+      <div className={sectionCardClass}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold">Promote With Tesotunes</h2>
@@ -2303,7 +2365,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href={promotionMarketplaceLink}
-              className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
               Buy marketplace promotion
             </Link>
@@ -2319,7 +2381,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
           <div className="mt-4 flex flex-wrap gap-2">
             {event.promotion_requests && event.promotion_requests.length > 0 && (
-              <div className="w-full rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="w-full rounded-lg border p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h3 className="font-medium">Marketplace Promotion Requests</h3>
@@ -2334,7 +2396,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {event.promotion_requests.map((request) => (
-                    <div key={request.id} className="rounded-xl bg-background/80 p-4 shadow-sm">
+                    <div key={request.id} className="rounded-lg border bg-background p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-medium">{request.promotion_title}</p>
@@ -2426,7 +2488,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl bg-muted/40 p-4">
+        <div className={mutedPanelClass}>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tracked link</p>
           <p className="mt-2 break-all font-mono text-sm">{campaignLink}</p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -2469,7 +2531,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border p-4">
+        <div className="mt-4 rounded-lg border p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="font-medium">Saved Campaign Presets</h3>
@@ -2488,7 +2550,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
           <div className="mt-4 space-y-3">
             {campaignPresetRows.map((preset, index) => (
-              <div key={`${preset.key}-${index}`} className="rounded-xl bg-muted/40 p-4">
+              <div key={`${preset.key}-${index}`} className="rounded-lg border bg-muted/20 p-4">
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
                   <input
                     type="text"
@@ -2574,10 +2636,18 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
+      </div>
+      </section>
 
       {/* Event Details + Ticket Tiers */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border p-6 space-y-4">
+      <section id="details" className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Details</p>
+          <h2 className="mt-1 text-lg font-semibold">What buyers and staff need to know</h2>
+        </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={sectionCardClass + ' space-y-4'}>
           <h2 className="font-semibold">Event Details</h2>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -2622,7 +2692,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        <div className="rounded-xl border p-6">
+        <div className={sectionCardClass}>
           <h2 className="font-semibold mb-3">Description</h2>
           <p className="text-muted-foreground whitespace-pre-wrap">{event.description || 'No description provided.'}</p>
         </div>
@@ -2630,7 +2700,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
 
       {/* Ticket Tiers */}
       {event.ticket_tiers && event.ticket_tiers.length > 0 && (
-        <div className="rounded-xl border p-6">
+        <div className={sectionCardClass}>
           <h2 className="font-semibold mb-4">Ticket Tiers</h2>
           <div className="space-y-3">
             {event.ticket_tiers.map((tier) => {
@@ -2687,6 +2757,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       )}
+      </section>
     </div>
   );
 }

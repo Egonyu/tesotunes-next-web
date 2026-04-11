@@ -722,7 +722,6 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
         </section>
 
         <EventCommissionEstimator
-          endpoint="/artist/events/commission-simulation"
           ticketingMode={ticketingMode}
           currency="UGX"
           ticketTiers={ticketTiers.map((tier) => ({

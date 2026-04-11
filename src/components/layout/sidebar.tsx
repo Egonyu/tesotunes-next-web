@@ -37,6 +37,7 @@ import { apiGet } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { STORE_ENABLED } from "@/lib/features";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 const mainNavItems = [
@@ -104,6 +105,7 @@ export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const { data: session } = useSession();
   const { data: platformSettings } = usePlatformSettings();
+  const { hasAlbums, hasRadioStations } = useNavigationAvailability();
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
   // Case-insensitive check for artist role
@@ -130,6 +132,11 @@ export function Sidebar() {
   const visibleModuleItems = moduleItems.filter((item) => {
     if (item.href === "/store" && !STORE_ENABLED) return false;
     if (item.href === "/sacco") return false;
+    return true;
+  });
+  const visibleBrowseItems = browseItems.filter((item) => {
+    if (item.href === "/albums" && !hasAlbums) return false;
+    if (item.href === "/radio" && !hasRadioStations) return false;
     return true;
   });
 
@@ -189,7 +196,7 @@ export function Sidebar() {
               Browse
             </h3>
           )}
-          {browseItems.map((item) => (
+          {visibleBrowseItems.map((item) => (
             <NavItem
               key={item.href}
               {...item}

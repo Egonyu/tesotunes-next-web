@@ -160,46 +160,33 @@ export default function AdminPromotionsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[28px] border border-primary/20 bg-primary/5 p-6">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-              <Megaphone className="h-3.5 w-3.5" />
-              Promotions Marketplace Admin
-            </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight">
-              Moderate live promotion listings from one canonical queue
-            </h1>
-            <p className="mt-3 text-sm text-muted-foreground md:text-base">
-              This admin surface now governs the same seller-created marketplace used by
-              `/promotions`, seller studios, buyer purchases, disputes, and analytics.
+      <section className="rounded-lg border bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Promotion moderation</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review live listings, approve or reject pending submissions, and jump into disputes or analytics.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/promotions/analytics"
-              className="rounded-2xl border bg-background px-4 py-4 transition hover:bg-muted"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <p className="mt-3 font-semibold">Analytics</p>
-              <p className="mt-1 text-xs text-muted-foreground">Platform GMV and performance</p>
+              Analytics
             </Link>
             <Link
               href="/admin/promotions/disputes"
-              className="rounded-2xl border bg-background px-4 py-4 transition hover:bg-muted"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              <AlertTriangle className="h-5 w-5 text-primary" />
-              <p className="mt-3 font-semibold">Disputes</p>
-              <p className="mt-1 text-xs text-muted-foreground">Resolve buyer and seller conflicts</p>
+              Disputes
             </Link>
             <Link
               href="/promotions"
-              className="rounded-2xl border bg-background px-4 py-4 transition hover:bg-muted"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              <Eye className="h-5 w-5 text-primary" />
-              <p className="mt-3 font-semibold">Public View</p>
-              <p className="mt-1 text-xs text-muted-foreground">See the live marketplace browse page</p>
+              Public view
             </Link>
           </div>
         </div>

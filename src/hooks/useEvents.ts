@@ -1234,6 +1234,9 @@ export function useCreateEvent() {
           if (!data.city && typeof value === 'string') {
             formData.append('city', value);
           }
+        } else if (typeof value === 'boolean') {
+          const mappedKey = fieldMap[key] || key;
+          formData.append(mappedKey, value ? '1' : '0');
         } else if (value instanceof File) {
           const mappedKey = fieldMap[key] || key;
           formData.append(mappedKey, value);
@@ -1277,6 +1280,8 @@ export function useUpdateEvent() {
           if (!data.city && typeof value === 'string') {
             formData.append('city', value);
           }
+        } else if (typeof value === 'boolean') {
+          formData.append(fieldMap[key] || key, value ? '1' : '0');
         } else if (value instanceof File) {
           formData.append(fieldMap[key] || key, value);
         } else if (value !== undefined && value !== null) {

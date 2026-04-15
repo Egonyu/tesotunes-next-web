@@ -1477,7 +1477,7 @@ export default function AdminSettingsPage() {
             tone="amber"
           />
           <SettingPanel
-            title="Credentials update signal"
+            title="Environment file update signal"
             description={formatLastUpdated(environmentData?.data.last_updated_at)}
             tone="blue"
           />

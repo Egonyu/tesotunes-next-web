@@ -1,5 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import FacebookProvider from "next-auth/providers/facebook";
+import GoogleProvider from "next-auth/providers/google";
 import { API_URL } from "./api-config";
 import {
   AUTH_SERVICE_UNAVAILABLE_MESSAGE,
@@ -230,6 +232,49 @@ function extractAuthorizedUser(data: Record<string, unknown>) {
   };
 }
 
+async function authorizeSocialProvider(provider: string, tokens: { accessToken?: string; idToken?: string }) {
+  const response = await fetchAuthApi(`/auth/social/${provider}/exchange`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      access_token: tokens.accessToken,
+      id_token: tokens.idToken,
+      platform: "web",
+      device_name: "nextauth_social",
+    }),
+  });
+
+  const data = await safeJsonParse(response);
+  if (!response.ok || !data) {
+    const message = (data?.message as string | undefined) || "Social login failed";
+    throw new Error(message);
+  }
+
+  const userPayload = (data.data as Record<string, unknown> | undefined) ?? {};
+  const user = (userPayload.data as Record<string, unknown> | undefined) ?? userPayload;
+  const accessToken = data.token as string | undefined;
+
+  if (!user?.id || !accessToken) {
+    throw new Error("Incomplete social login response");
+  }
+
+  return {
+    id: String(user.id),
+    email: (user.email as string | undefined) ?? "",
+    name: (user.name as string | undefined) ?? "",
+    role: (user.role as string) || "user",
+    isArtist: Boolean(user.is_artist) || Boolean(user.artist),
+    isEventOrganizer: Boolean((user.event_organizer as Record<string, unknown> | undefined)?.enabled),
+    permissions: Array.isArray(user.permissions)
+      ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
+      : [],
+    accessToken,
+  };
+}
+
 export async function authorizeCredentials(
   credentials: Record<string, string | boolean | undefined> | undefined
 ) {
@@ -373,7 +418,30 @@ export const authConfig: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (
+        account?.provider &&
+        account.provider !== "credentials" &&
+        (typeof account.access_token === "string" || typeof account.id_token === "string")
+      ) {
+        const socialAuthUser = await authorizeSocialProvider(account.provider, {
+          accessToken: typeof account.access_token === "string" ? account.access_token : undefined,
+          idToken: typeof account.id_token === "string" ? account.id_token : undefined,
+        });
+        token.id = socialAuthUser.id;
+        token.email = socialAuthUser.email;
+        token.name = socialAuthUser.name;
+        token.role = socialAuthUser.role;
+        token.isArtist = socialAuthUser.isArtist;
+        token.isEventOrganizer = socialAuthUser.isEventOrganizer;
+        token.permissions = socialAuthUser.permissions;
+        token.accessToken = socialAuthUser.accessToken;
+        token.accessTokenRefreshedAt = Date.now();
+        token.roleRefreshedAt = Date.now();
+
+        return token;
+      }
+
       // Initial sign in - set all user data
       if (user) {
         token.id = user.id;
@@ -468,6 +536,32 @@ export const authConfig: NextAuthOptions = {
       },
       authorize: authorizeCredentials,
     }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                scope: "openid email profile",
+              },
+            },
+          }),
+        ]
+      : []),
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
+      ? [
+          FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+            authorization: {
+              params: {
+                scope: "email public_profile",
+              },
+            },
+          }),
+        ]
+      : []),
   ],
   secret: process.env.NEXTAUTH_SECRET,
 };

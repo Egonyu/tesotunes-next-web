@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getProviders, signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { apiPost } from "@/lib/api";
@@ -55,6 +55,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
+  const [socialProviders, setSocialProviders] = useState<Record<string, { id: string; name: string }> | null>(null);
+  const [socialLoadingProvider, setSocialLoadingProvider] = useState<string | null>(null);
   const authTitle = platformSettings?.appearance.auth_form_title || "Welcome back";
   const authSubtitle =
     platformSettings?.appearance.auth_form_subtitle ||
@@ -69,6 +71,27 @@ export default function LoginPage() {
 
     return () => window.clearInterval(timer);
   }, [retryAfterSeconds]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProviders = async () => {
+      try {
+        const providers = await getProviders();
+        if (!mounted) return;
+        setSocialProviders(providers as Record<string, { id: string; name: string }> | null);
+      } catch {
+        if (!mounted) return;
+        setSocialProviders(null);
+      }
+    };
+
+    void loadProviders();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +156,23 @@ export default function LoginPage() {
     }
   };
 
+  const handleSocialSignIn = async (providerId: string) => {
+    setError("");
+    setVerificationEmailSent(false);
+    setSocialLoadingProvider(providerId);
+
+    try {
+      await signIn(providerId, { callbackUrl });
+    } catch {
+      setError("Unable to start social sign-in. Please try again.");
+      setSocialLoadingProvider(null);
+    }
+  };
+
+  const enabledSocialProviders = Object.values(socialProviders ?? {}).filter(
+    (provider) => provider.id !== "credentials"
+  );
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-2">{authTitle}</h2>
@@ -155,6 +195,37 @@ export default function LoginPage() {
       {verificationEmailSent && (
         <div className="mb-6 p-4 rounded-lg bg-green-100 text-green-700 text-sm dark:bg-green-900/30 dark:text-green-400">
           Verification email sent. Please check your inbox.
+        </div>
+      )}
+
+      {enabledSocialProviders.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {enabledSocialProviders.map((provider) => (
+            <button
+              key={provider.id}
+              type="button"
+              onClick={() => void handleSocialSignIn(provider.id)}
+              disabled={Boolean(socialLoadingProvider)}
+              className="w-full py-2.5 rounded-lg border font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {socialLoadingProvider === provider.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Connecting {provider.name}...
+                </>
+              ) : (
+                <>Continue with {provider.name}</>
+              )}
+            </button>
+          ))}
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">or sign in with email</span>
+            </div>
+          </div>
         </div>
       )}
 

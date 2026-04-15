@@ -140,7 +140,7 @@ const sections: SectionItem[] = [
   { id: 'payments', label: 'Payment Settings', subtitle: 'Mobile Money & API', icon: CreditCard, colorClasses: 'bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300', tabs: [{ id: 'gateway', label: 'Gateway', mode: 'settings' }, { id: 'operations', label: 'Operations', mode: 'settings' }, { id: 'provider', label: 'Provider Notes', mode: 'info' }] },
   { id: 'notifications', label: 'Notifications', subtitle: 'Email & SMS alerts', icon: Bell, colorClasses: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300', tabs: [{ id: 'channels', label: 'Channels', mode: 'settings' }, { id: 'delivery', label: 'Delivery Health', mode: 'settings' }, { id: 'email', label: 'Email Setup', mode: 'settings' }] },
   { id: 'mobile', label: 'Mobile Verification', subtitle: 'SMS verification', icon: Smartphone, colorClasses: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300', tabs: [{ id: 'policy', label: 'Verification Policy', mode: 'settings' }, { id: 'operations', label: 'Operations', mode: 'links' }] },
-  { id: 'security', label: 'Security & Auth', subtitle: 'Security, authentication & social login', icon: Shield, colorClasses: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300', tabs: [{ id: 'authentication', label: '2FA & Sessions', mode: 'settings' }, { id: 'password', label: 'Password Policy', mode: 'settings' }, { id: 'access', label: 'Access Control', mode: 'links' }, { id: 'social', label: 'Social Login', mode: 'settings' }] },
+  { id: 'security', label: 'Security & Auth', subtitle: 'Security, authentication & social login', icon: Shield, colorClasses: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300', tabs: [{ id: 'authentication', label: '2FA & Sessions', mode: 'settings' }, { id: 'password', label: 'Password Policy', mode: 'settings' }, { id: 'access', label: 'Access Control', mode: 'links' }, { id: 'social', label: 'Social Login', mode: 'environment' }] },
   { id: 'awards', label: 'Awards System', subtitle: 'Achievements & badges', icon: Star, colorClasses: 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300', tabs: [{ id: 'overview', label: 'Overview', mode: 'links' }, { id: 'operations', label: 'Operations', mode: 'links' }] },
   { id: 'events', label: 'Events & Tickets', subtitle: 'Event management', icon: CalendarDays, colorClasses: 'bg-pink-100 text-pink-600 dark:bg-pink-950/40 dark:text-pink-300', tabs: [{ id: 'overview', label: 'Overview', mode: 'links' }, { id: 'commerce', label: 'Commercial Flow', mode: 'links' }] },
   { id: 'artists', label: 'Artist Management', subtitle: 'Artist settings', icon: Users, colorClasses: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-950/40 dark:text-cyan-300', tabs: [{ id: 'catalog', label: 'Catalog', mode: 'links' }, { id: 'podcasts', label: 'Podcasts', mode: 'links' }, { id: 'featured', label: 'Featured', mode: 'links' }] },
@@ -1426,6 +1426,80 @@ export default function AdminSettingsPage() {
           links={sectionLinks.security_access}
           tone="red"
         />
+      );
+    }
+
+    if (currentTab.id === 'social') {
+      if (!isSuperAdmin) {
+        return <SettingPanel title="Social credentials restricted" description="Only super admins can manage OAuth credentials from this page." tone="amber" />;
+      }
+
+      if (environmentLoading && !environmentData) {
+        return (
+          <div className="flex min-h-[220px] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        );
+      }
+
+      if (environmentError) {
+        return <SettingPanel title="Social credentials unavailable" description="Failed to load environment settings." tone="red" />;
+      }
+
+      const oauthGroups = environmentData?.data.groups.filter((group) => group.id === 'oauth') ?? [];
+
+      return (
+        <div className="space-y-5">
+          <SettingPanel
+            title="Social provider credentials"
+            description="Update OAuth client IDs and secrets used by the API social token exchange flow. Frontend runtime keys still require deployment environment updates."
+            tone="amber"
+          />
+          {oauthGroups.length === 0 ? (
+            <SettingPanel
+              title="No OAuth fields configured"
+              description="The API environment service did not return OAuth credential fields."
+              tone="red"
+            />
+          ) : null}
+          {oauthGroups.map((group) => (
+            <div key={group.id} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
+              <div className="mb-4">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">{group.label}</div>
+                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">{group.description}</div>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                {group.fields.map((field) => (
+                  <TextField key={field.key} label={field.label} description={field.description}>
+                    {field.options?.length ? (
+                      <Select
+                        value={String(environmentDraft[field.key] ?? '')}
+                        onChange={(e) => setEnvironmentDraft((current) => ({ ...current, [field.key]: e.target.value }))}
+                      >
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        type={field.secret ? 'password' : field.type === 'integer' || field.type === 'number' ? 'number' : 'text'}
+                        value={String(environmentDraft[field.key] ?? '')}
+                        onChange={(e) =>
+                          setEnvironmentDraft((current) => ({
+                            ...current,
+                            [field.key]: field.type === 'integer' || field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value,
+                          }))
+                        }
+                      />
+                    )}
+                  </TextField>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       );
     }
 

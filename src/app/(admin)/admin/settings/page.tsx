@@ -88,6 +88,7 @@ interface EnvironmentSettingsResponse {
   data: {
     scope: 'api';
     file: string;
+    last_updated_at?: string | null;
     restart_required: boolean;
     frontend_note: string;
     groups: EnvironmentGroup[];
@@ -263,6 +264,26 @@ const sectionLinks: Record<string, SurfaceLink[]> = {
 
 function normalizeRole(role: string | null | undefined): string {
   return role?.trim().toLowerCase() ?? '';
+}
+
+function formatLastUpdated(value: string | null | undefined): string {
+  if (!value) {
+    return 'Last updated: unavailable';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Last updated: unavailable';
+  }
+
+  return `Last updated: ${new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(parsed)}`;
 }
 
 function buildEnvironmentDraft(groups: EnvironmentGroup[]): Record<string, EnvironmentDraftValue> {
@@ -1454,6 +1475,11 @@ export default function AdminSettingsPage() {
             title="Social provider credentials"
             description="Update OAuth client IDs and secrets used by the API social token exchange flow. Frontend runtime keys still require deployment environment updates."
             tone="amber"
+          />
+          <SettingPanel
+            title="Credentials update signal"
+            description={formatLastUpdated(environmentData?.data.last_updated_at)}
+            tone="blue"
           />
           {oauthGroups.length === 0 ? (
             <SettingPanel

@@ -116,6 +116,16 @@ const nextConfig: NextConfig = {
     const apiBase = normalised.replace(/\/api$/, "");  // origin only
     return {
       beforeFiles: [
+        // Proxy Laravel media paths so relative src values like /storage/* and
+        // /store-media/* work on both local and hosted frontend domains.
+        {
+          source: "/storage/:path*",
+          destination: `${apiBase}/storage/:path*`,
+        },
+        {
+          source: "/store-media/:path*",
+          destination: `${apiBase}/store-media/:path*`,
+        },
         // Pin /api/auth/* to the filesystem so the NextAuth route always wins,
         // even if Turbopack hasn't compiled the route yet
         {

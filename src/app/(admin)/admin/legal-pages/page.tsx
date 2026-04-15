@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { AlertCircle, CheckCircle, FileText, Plus, Edit, Archive, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+type LegalPageStatus = 'draft' | 'published' | 'archived';
+
+interface LegalPage {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  type: string;
+  description: string | null;
+  content: string;
+  applies_to: string;
+  requires_acceptance: boolean;
+  effective_date: string | null;
+  status: LegalPageStatus;
+  version: number;
+}
+
+interface LegalPageFormData {
+  title: string;
+  subtitle: string;
+  type: string;
+  description: string;
+  content: string;
+  applies_to: string;
+  requires_acceptance: boolean;
+  effective_date: string;
+}
 
 const LEGAL_PAGE_TYPES = [
   { value: 'terms', label: 'Terms of Service' },
@@ -36,8 +63,8 @@ const APPLIES_TO_OPTIONS = [
 export default function LegalPageAdmin() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<LegalPageFormData>({
     title: '',
     subtitle: '',
     type: 'terms',
@@ -51,7 +78,7 @@ export default function LegalPageAdmin() {
   const queryClient = useQueryClient();
 
   // Fetch legal pages
-  const { data: legalPages = [], isLoading } = useQuery({
+  const { data: legalPages = [], isLoading } = useQuery<LegalPage[]>({
     queryKey: ['legal-pages', search, filter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -61,13 +88,13 @@ export default function LegalPageAdmin() {
       const response = await fetch(`/api/admin/legal-pages?${params}`);
       if (!response.ok) throw new Error('Failed to fetch legal pages');
       const data = await response.json();
-      return data.data || [];
+      return (data.data as LegalPage[]) || [];
     },
   });
 
   // Create/Update mutation
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: LegalPageFormData) => {
       const url = editingId
         ? `/api/admin/legal-pages/${editingId}`
         : '/api/admin/legal-pages';
@@ -87,14 +114,15 @@ export default function LegalPageAdmin() {
       resetForm();
       alert(editingId ? 'Legal page updated successfully' : 'Legal page created successfully');
     },
-    onError: (error) => {
-      alert('Error saving legal page: ' + error.message);
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert('Error saving legal page: ' + message);
     },
   });
 
   // Publish mutation
   const publishMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: number) => {
       const response = await fetch(`/api/admin/legal-pages/${id}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +139,7 @@ export default function LegalPageAdmin() {
 
   // Archive mutation
   const archiveMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: number) => {
       const response = await fetch(`/api/admin/legal-pages/${id}/archive`, {
         method: 'POST',
       });
@@ -127,7 +155,7 @@ export default function LegalPageAdmin() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: number) => {
       const response = await fetch(`/api/admin/legal-pages/${id}`, {
         method: 'DELETE',
       });
@@ -155,7 +183,7 @@ export default function LegalPageAdmin() {
     setEditingId(null);
   };
 
-  const handleEdit = (page) => {
+  const handleEdit = (page: LegalPage) => {
     setFormData({
       title: page.title,
       subtitle: page.subtitle || '',
@@ -170,7 +198,7 @@ export default function LegalPageAdmin() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     saveMutation.mutate(formData);
   };
@@ -218,33 +246,29 @@ export default function LegalPageAdmin() {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Document Type *</label>
-                    <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEGAL_PAGE_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    >
+                      {LEGAL_PAGE_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Applies To *</label>
-                    <Select value={formData.applies_to} onValueChange={(value) => setFormData({ ...formData, applies_to: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {APPLIES_TO_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select
+                      value={formData.applies_to}
+                      onChange={(e) => setFormData({ ...formData, applies_to: e.target.value })}
+                    >
+                      {APPLIES_TO_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>
@@ -319,16 +343,11 @@ export default function LegalPageAdmin() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="flex-1"
                 />
-                <Select value={filter} onValueChange={setFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
+                <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="w-40">
+                  <option value="all">All Status</option>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
                 </Select>
               </div>
             </CardHeader>
@@ -343,7 +362,7 @@ export default function LegalPageAdmin() {
                 </Alert>
               ) : (
                 <div className="space-y-3">
-                  {legalPages.map((page) => (
+                  {legalPages.map((page: LegalPage) => (
                     <div key={page.id} className="border rounded-lg p-4 hover:bg-accent/50 transition">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

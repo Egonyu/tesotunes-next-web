@@ -23,6 +23,7 @@ import {
   Clock,
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
+import { pickMediaUrl } from "@/lib/media";
 import { formatNumber, formatDate } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -130,14 +131,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
   }
 
   const isOwnProfile = Number(session?.user?.id) === profile.id;
+  const resolvedCoverUrl = pickMediaUrl(profile.cover_url);
+  const resolvedAvatarUrl = pickMediaUrl(profile.avatar_url);
 
   return (
     <div>
       {/* Cover Image */}
       <div className="relative h-48 md:h-64 bg-linear-to-br from-primary/30 to-primary/10">
-        {profile.cover_url && (
+        {resolvedCoverUrl && (
           <Image
-            src={profile.cover_url}
+            src={resolvedCoverUrl}
             alt="Cover"
             fill
             className="object-cover"
@@ -152,9 +155,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
             {/* Avatar */}
             <div className="relative">
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background bg-muted overflow-hidden">
-                {profile.avatar_url ? (
+                {resolvedAvatarUrl ? (
                   <Image
-                    src={profile.avatar_url}
+                    src={resolvedAvatarUrl}
                     alt={profile.name}
                     width={160}
                     height={160}
@@ -184,7 +187,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
                 )}
               </div>
               <p className="text-muted-foreground">@{profile.username}</p>
-              
+
               {profile.bio && (
                 <p className="mt-3 max-w-2xl">{profile.bio}</p>
               )}

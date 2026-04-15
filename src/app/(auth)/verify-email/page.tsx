@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Loader2, CheckCircle, AlertCircle, Mail, RefreshCw } from 'lucide-react';
 import { apiPost } from '@/lib/api';
+import { attemptNativeAppHandoff, buildNativeVerificationUrl, shouldAttemptNativeHandoff } from '@/lib/native-app-handoff';
 
 type VerificationStatus = 'verifying' | 'verified' | 'failed' | 'pending';
+type NativeHandoffState = 'idle' | 'opening' | 'fallback';
 
 function mapStatusFromQuery(rawStatus: string | null): VerificationStatus {
   if (!rawStatus) {
@@ -55,11 +57,52 @@ export default function VerifyEmailPage() {
   const verifyHash = searchParams.get('hash');
   const expires = searchParams.get('expires');
   const signature = searchParams.get('signature');
+  const nativeVerificationUrl = useMemo(() => buildNativeVerificationUrl(searchParams), [searchParams]);
 
   const [status, setStatus] = useState<VerificationStatus>(mapStatusFromQuery(statusParam));
   const [error, setError] = useState(reasonParam ? mapErrorFromReason(reasonParam) : '');
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [nativeHandoffState, setNativeHandoffState] = useState<NativeHandoffState>('idle');
+
+  useEffect(() => {
+    if (!nativeVerificationUrl || statusParam) {
+      return;
+    }
+
+    if (!shouldAttemptNativeHandoff(window.navigator.userAgent)) {
+      return;
+    }
+
+    let handoffComplete = false;
+    setNativeHandoffState('opening');
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handoffComplete = true;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (!handoffComplete) {
+        setNativeHandoffState('fallback');
+      }
+    }, 1500);
+
+    try {
+      attemptNativeAppHandoff(nativeVerificationUrl);
+    } catch {
+      window.clearTimeout(fallbackTimer);
+      setNativeHandoffState('fallback');
+    }
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [nativeVerificationUrl, statusParam]);
 
   const verifyEmail = useCallback(async () => {
     if (!verifyId || !verifyHash) return;
@@ -116,12 +159,17 @@ export default function VerifyEmailPage() {
       <div className="text-center space-y-6">
         <div className="flex justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
+      </div>
         <div>
           <h2 className="text-2xl font-bold">Verifying your email...</h2>
           <p className="text-muted-foreground mt-2">
             Please wait while we verify your email address.
           </p>
+          {nativeHandoffState === 'opening' ? (
+            <p className="text-sm text-muted-foreground mt-3">
+              If TesoTunes is installed, we&apos;re also opening the app so verification can finish there.
+            </p>
+          ) : null}
         </div>
       </div>
     );
@@ -177,6 +225,14 @@ export default function VerifyEmailPage() {
           <p className="text-muted-foreground mt-2">{error || 'The verification link is invalid or has expired.'}</p>
         </div>
         <div className="space-y-3">
+          {nativeVerificationUrl ? (
+            <a
+              href={nativeVerificationUrl}
+              className="block w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 text-center"
+            >
+              Open In TesoTunes App
+            </a>
+          ) : null}
           {session && (
             <button
               onClick={handleResend}
@@ -248,6 +304,21 @@ export default function VerifyEmailPage() {
           Verification email sent! Please check your inbox.
         </div>
       )}
+
+      {nativeHandoffState === 'opening' ? (
+        <div className="p-3 rounded-lg bg-primary/10 text-sm text-primary">
+          Opening the TesoTunes app for a smoother verification flow...
+        </div>
+      ) : null}
+
+      {nativeHandoffState === 'fallback' && nativeVerificationUrl ? (
+        <div className="p-3 rounded-lg bg-muted text-sm text-muted-foreground space-y-2">
+          <p>If the app did not open automatically, continue in your browser or open TesoTunes manually.</p>
+          <a href={nativeVerificationUrl} className="font-medium text-primary hover:underline">
+            Open TesoTunes App
+          </a>
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         {(session || emailParam) && (

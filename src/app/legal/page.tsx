@@ -9,29 +9,47 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface LegalPageSummary {
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+}
+
+interface LegalPageDetail {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  type_display: string;
+  version: number;
+  published_at: string | null;
+  requires_acceptance: boolean;
+  content: string;
+}
+
 export default function LegalPagesPage() {
   const [selectedPage, setSelectedPage] = useState<string | null>(null);
 
   // Fetch all published legal pages
-  const { data: legalPages = [], isLoading, error } = useQuery({
+  const { data: legalPages = [], isLoading, error } = useQuery<LegalPageSummary[]>({
     queryKey: ['legal-pages-public'],
     queryFn: async () => {
       const response = await fetch('/api/legal-pages');
       if (!response.ok) throw new Error('Failed to fetch legal pages');
       const data = await response.json();
-      return data.data || [];
+      return (data.data as LegalPageSummary[]) || [];
     },
   });
 
   // Fetch selected page content
-  const { data: selectedPageContent } = useQuery({
+  const { data: selectedPageContent } = useQuery<LegalPageDetail | null>({
     queryKey: ['legal-page', selectedPage],
     queryFn: async () => {
       if (!selectedPage) return null;
       const response = await fetch(`/api/legal-pages/${selectedPage}`);
       if (!response.ok) throw new Error('Failed to fetch page');
       const data = await response.json();
-      return data.data;
+      return data.data as LegalPageDetail;
     },
     enabled: !!selectedPage,
   });
@@ -46,7 +64,7 @@ export default function LegalPagesPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Alert variant="destructive">
+        <Alert variant="error">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Error loading legal pages. Please try again later.</AlertDescription>
         </Alert>
@@ -78,7 +96,7 @@ export default function LegalPagesPage() {
                   ) : legalPages.length === 0 ? (
                     <div className="text-sm text-muted-foreground">No documents available</div>
                   ) : (
-                    legalPages.map((page) => (
+                    legalPages.map((page: LegalPageSummary) => (
                       <button
                         key={page.id}
                         onClick={() => setSelectedPage(page.slug)}

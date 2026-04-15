@@ -1485,6 +1485,7 @@ export default function AdminSettingsPage() {
                     ) : (
                       <Input
                         type={field.secret ? 'password' : field.type === 'integer' || field.type === 'number' ? 'number' : 'text'}
+                        autoComplete={field.secret ? 'new-password' : undefined}
                         value={String(environmentDraft[field.key] ?? '')}
                         onChange={(e) =>
                           setEnvironmentDraft((current) => ({

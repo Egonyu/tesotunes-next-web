@@ -8,11 +8,25 @@ import {
   buildAuthApiBaseUrls,
   fetchAuthApi,
 } from "./auth-api";
+import {
+  getEnabledSocialAuthProvidersForPlatformSettings,
+  isSocialAuthProviderEnabled,
+  type SocialProviderId,
+} from "./social-auth";
+import type { PlatformSettings } from "./platform-settings";
 
 // Refresh role and access posture every 5 minutes so artist/admin changes
 // propagate quickly without requiring a fresh sign-in.
 const ROLE_REFRESH_INTERVAL = 5 * 60 * 1000;
 const ACCESS_TOKEN_REFRESH_INTERVAL = 12 * 60 * 60 * 1000;
+const RUNTIME_SOCIAL_SETTINGS_TTL_MS = 60 * 1000;
+
+type PlatformSocialSettings = Pick<PlatformSettings, "users" | "security">;
+
+let runtimeSocialSettingsCache: {
+  value: PlatformSocialSettings | null;
+  expiresAt: number;
+} | null = null;
 
 // Detect production/HTTPS environment
 const isProduction = process.env.NODE_ENV === "production";
@@ -82,6 +96,46 @@ async function safeJsonParse(response: Response): Promise<Record<string, unknown
     return JSON.parse(text);
   } catch {
     console.error("[Auth] Failed to parse JSON response:", text.substring(0, 200));
+    return null;
+  }
+}
+
+async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null> {
+  const now = Date.now();
+  if (runtimeSocialSettingsCache && runtimeSocialSettingsCache.expiresAt > now) {
+    return runtimeSocialSettingsCache.value;
+  }
+
+  try {
+    const response = await fetchAuthApi("/platform-settings", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      runtimeSocialSettingsCache = {
+        value: null,
+        expiresAt: now + RUNTIME_SOCIAL_SETTINGS_TTL_MS,
+      };
+      return null;
+    }
+
+    const data = await safeJsonParse(response);
+    const settings = (data?.data as PlatformSocialSettings | undefined) ?? null;
+
+    runtimeSocialSettingsCache = {
+      value: settings,
+      expiresAt: now + RUNTIME_SOCIAL_SETTINGS_TTL_MS,
+    };
+
+    return settings;
+  } catch {
+    runtimeSocialSettingsCache = {
+      value: null,
+      expiresAt: now + RUNTIME_SOCIAL_SETTINGS_TTL_MS,
+    };
     return null;
   }
 }
@@ -418,6 +472,24 @@ export const authConfig: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
+    async signIn({ account }) {
+      if (!account?.provider || account.provider === "credentials") {
+        return true;
+      }
+
+      if (!["google", "facebook", "twitter", "apple"].includes(account.provider)) {
+        return true;
+      }
+
+      const runtimeSocialSettings = await getRuntimeSocialSettings();
+      if (!runtimeSocialSettings) {
+        return false;
+      }
+
+      const enabledProviders = getEnabledSocialAuthProvidersForPlatformSettings(runtimeSocialSettings);
+
+      return enabledProviders.has(account.provider as SocialProviderId);
+    },
     async jwt({ token, user, account }) {
       if (
         account?.provider &&
@@ -536,7 +608,7 @@ export const authConfig: NextAuthOptions = {
       },
       authorize: authorizeCredentials,
     }),
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ...(isSocialAuthProviderEnabled("google") && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
@@ -549,7 +621,7 @@ export const authConfig: NextAuthOptions = {
           }),
         ]
       : []),
-    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
+    ...(isSocialAuthProviderEnabled("facebook") && process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
       ? [
           FacebookProvider({
             clientId: process.env.FACEBOOK_CLIENT_ID,

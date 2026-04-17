@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
+import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
 
 /**
  * Sanitize callbackUrl to always be a relative path.
@@ -61,6 +62,7 @@ export default function LoginPage() {
   const authSubtitle =
     platformSettings?.appearance.auth_form_subtitle ||
     "Sign in to continue listening to your favorite music";
+  const enabledProviders = getEnabledSocialAuthProvidersForPlatformSettings(platformSettings);
 
   useEffect(() => {
     if (retryAfterSeconds <= 0) return;
@@ -170,7 +172,7 @@ export default function LoginPage() {
   };
 
   const enabledSocialProviders = Object.values(socialProviders ?? {}).filter(
-    (provider) => provider.id !== "credentials"
+    (provider) => provider.id !== "credentials" && enabledProviders.has(provider.id as "google" | "facebook" | "twitter" | "apple")
   );
 
   return (

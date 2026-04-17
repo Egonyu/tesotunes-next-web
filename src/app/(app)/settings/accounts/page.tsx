@@ -20,6 +20,8 @@ import {
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { getEnabledSocialAuthProvidersForPlatformSettings } from '@/lib/social-auth';
+import { usePublicPlatformSettings } from '@/hooks/usePublicPlatformSettings';
 
 interface ConnectedAccount {
   id: number;
@@ -53,6 +55,8 @@ const SOCIAL_PLATFORMS = [
 ] as const;
 
 export default function ConnectedAccountsPage() {
+  const { data: platformSettings } = usePublicPlatformSettings();
+  const enabledProviders = getEnabledSocialAuthProvidersForPlatformSettings(platformSettings);
   const queryClient = useQueryClient();
   const [editingLinks, setEditingLinks] = useState(false);
   const [links, setLinks] = useState<Record<string, string>>({});
@@ -142,7 +146,7 @@ export default function ConnectedAccountsPage() {
           Connect accounts for faster sign-in. You must keep at least one login method active.
         </p>
         <div className="space-y-3">
-          {SOCIAL_PROVIDERS.map((provider) => {
+          {SOCIAL_PROVIDERS.filter((provider) => enabledProviders.has(provider.id)).map((provider) => {
             const connected = isConnected(provider.id);
             const account = getConnectedAccount(provider.id);
             const Icon = provider.icon;

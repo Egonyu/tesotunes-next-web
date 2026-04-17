@@ -1533,6 +1533,46 @@ export default function AdminSettingsPage() {
     return (
       <div className="space-y-5">
         <SettingPanel title="Expose social sign-in" description="Master switch for allowing social providers on the login screen." action={<ToggleSwitch checked={settings.users.social_login_enabled} onChange={(value) => updateField('users', 'social_login_enabled', value)} />} />
+        <SettingPanel title="Provider presets" description="Use one click to apply common social-auth provider combinations.">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                updateField('users', 'social_login_enabled', true);
+                updateField('security', 'google_login_enabled', true);
+                updateField('security', 'facebook_login_enabled', false);
+                updateField('security', 'apple_login_enabled', false);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
+            >
+              Google only
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateField('users', 'social_login_enabled', true);
+                updateField('security', 'google_login_enabled', true);
+                updateField('security', 'facebook_login_enabled', true);
+                updateField('security', 'apple_login_enabled', false);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
+            >
+              Google + Facebook
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateField('users', 'social_login_enabled', false);
+                updateField('security', 'google_login_enabled', false);
+                updateField('security', 'facebook_login_enabled', false);
+                updateField('security', 'apple_login_enabled', false);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-red-300 hover:bg-red-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-red-700 dark:hover:bg-red-950/30"
+            >
+              Disable all
+            </button>
+          </div>
+        </SettingPanel>
         <div className="grid gap-4 md:grid-cols-3">
           <SettingPanel title="Google login" description="Enable Google as a sign-in provider once environment keys are configured." action={<ToggleSwitch checked={settings.security.google_login_enabled} onChange={(value) => updateField('security', 'google_login_enabled', value)} />} />
           <SettingPanel title="Facebook login" description="Enable Facebook sign-in for supported users." action={<ToggleSwitch checked={settings.security.facebook_login_enabled} onChange={(value) => updateField('security', 'facebook_login_enabled', value)} />} />

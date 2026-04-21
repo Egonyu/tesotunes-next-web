@@ -50,8 +50,7 @@ export async function generateMetadata({ params }: PlaylistPageProps): Promise<M
 
   const title = playlist.name;
   const description = playlist.description || `${playlist.name} — a curated playlist on TesoTunes.`;
-  const image = (playlist as Record<string, unknown>).cover_url as string | undefined
-    || (playlist as Record<string, unknown>).artwork_url as string | undefined;
+  const image = playlist.artwork_url;
 
   return {
     title,

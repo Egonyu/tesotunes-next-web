@@ -29,7 +29,10 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "TesoTunes" }],
   creator: "TesoTunes",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://tesotunes.com' : 'http://localhost:3000')
+  ),
   openGraph: {
     type: "website",
     locale: "en_US",

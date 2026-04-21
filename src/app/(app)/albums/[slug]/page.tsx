@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import { cache } from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
+import { JsonLd } from "@/components/seo/JsonLd";
 import Link from "next/link";
 import {
   Play,
@@ -18,14 +21,14 @@ interface AlbumPageProps {
   params: Promise<{ slug: string }>;
 }
 
-async function getAlbum(slug: string): Promise<Album | null> {
+const getAlbum = cache(async (slug: string): Promise<Album | null> => {
   try {
     const res = await serverFetch<{ data: Album }>(`/albums/${slug}`);
     return res.data;
   } catch {
     return null;
   }
-}
+})
 
 async function getAlbumTracks(albumId: number) {
   try {
@@ -33,6 +36,40 @@ async function getAlbumTracks(albumId: number) {
   } catch {
     return { data: [] };
   }
+}
+
+export async function generateStaticParams() {
+  try {
+    const res = await serverFetch<{ data: { slug: string }[] }>('/albums?limit=200&status=published')
+    return (res.data || []).map((a) => ({ slug: a.slug }))
+  } catch {
+    return []
+  }
+}
+
+export async function generateMetadata({ params }: AlbumPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const album = await getAlbum(slug);
+
+  if (!album) return { title: 'Album Not Found' };
+
+  const title = album.artist ? `${album.title} by ${album.artist.name}` : album.title;
+  const description = album.description ||
+    `${album.title} — stream the full album on TesoTunes.`;
+  const image = album.artwork_url || undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/albums/${slug}` },
+    openGraph: {
+      type: 'music.album',
+      title,
+      description,
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: { title, description, images: image ? [image] : undefined },
+  };
 }
 
 export default async function AlbumPage({ params }: AlbumPageProps) {
@@ -52,8 +89,41 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   );
   const totalMinutes = Math.floor(totalDuration / 60);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicAlbum',
+    name: album.title,
+    url: `https://tesotunes.com/albums/${slug}`,
+    image: album.artwork_url || undefined,
+    datePublished: album.release_date || undefined,
+    byArtist: album.artist ? {
+      '@type': 'MusicGroup',
+      name: album.artist.name,
+      url: `https://tesotunes.com/artists/${album.artist.slug || album.artist.id}`,
+    } : undefined,
+    numTracks: tracks.length,
+    track: tracks.slice(0, 20).map((t, i) => ({
+      '@type': 'MusicRecording',
+      name: t.title,
+      position: i + 1,
+    })),
+  }
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
+      { '@type': 'ListItem', position: 2, name: 'Albums', item: 'https://tesotunes.com/albums' },
+      { '@type': 'ListItem', position: 3, name: album.title, item: `https://tesotunes.com/albums/${slug}` },
+    ],
+  }
+
   return (
-    <div>
+    <>
+      <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumb} />
+      <div>
       {/* Hero Section */}
       <div className="relative">
         {/* Background Gradient */}
@@ -262,5 +332,6 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
         </div>
       )}
     </div>
+    </>
   );
 }

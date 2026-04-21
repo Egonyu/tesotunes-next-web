@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { User, Filter, CheckCircle2, Sparkles } from "lucide-react";
 import { serverFetch } from "@/lib/api";
@@ -8,6 +9,23 @@ import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
 // Render on-demand so the build doesn't depend on the API being available
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}): Promise<Metadata> {
+  const { page } = await searchParams
+  const currentPage = parseInt(page || '1', 10)
+  const isPaginated = currentPage > 1
+
+  return {
+    title: isPaginated ? `Artists — Page ${currentPage}` : 'Artists',
+    description: 'Discover East African artists on TesoTunes — stream their music, follow their journey.',
+    alternates: { canonical: '/artists' },
+    robots: isPaginated ? { index: false, follow: true } : { index: true, follow: true },
+  }
+}
 
 async function getArtists(page = 1, limit = 24) {
   try {

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -48,6 +49,37 @@ async function getGenreAlbums(genreId: number, limit = 10) {
   } catch {
     return { data: [] };
   }
+}
+
+export async function generateStaticParams() {
+  try {
+    const res = await serverFetch<{ data: { slug: string }[] }>('/genres?limit=100')
+    return (res.data || []).map((g) => ({ slug: g.slug }))
+  } catch {
+    return []
+  }
+}
+
+export async function generateMetadata({ params }: GenrePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const genre = await getGenre(slug);
+
+  if (!genre) return { title: 'Genre Not Found' };
+
+  const title = `${genre.name} Music`;
+  const description = `Explore ${genre.name} music on TesoTunes — stream top songs, artists, and albums.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/genres/${slug}` },
+    openGraph: {
+      title,
+      description,
+      images: genre.image_url ? [{ url: genre.image_url }] : undefined,
+    },
+    twitter: { title, description },
+  };
 }
 
 export default async function GenrePage({ params }: GenrePageProps) {

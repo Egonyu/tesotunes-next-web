@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Disc, Filter } from "lucide-react";
@@ -6,6 +7,23 @@ import { serverFetch } from "@/lib/api";
 import type { Album, PaginatedResponse } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}): Promise<Metadata> {
+  const { page } = await searchParams
+  const currentPage = parseInt(page || '1', 10)
+  const isPaginated = currentPage > 1
+
+  return {
+    title: isPaginated ? `Albums — Page ${currentPage}` : 'Albums',
+    description: 'Browse the latest albums from East African artists on TesoTunes.',
+    alternates: { canonical: '/albums' },
+    robots: isPaginated ? { index: false, follow: true } : { index: true, follow: true },
+  }
+}
 
 async function getAlbums(page = 1, limit = 20) {
   try {

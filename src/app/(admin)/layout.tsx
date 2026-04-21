@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import AccessNotice from '@/components/auth/AccessNotice';
 import { canAccessAdminShell } from '@/lib/admin-access';
@@ -14,23 +15,11 @@ export default async function AdminLayout({
   const hasApiAccess = session?.user?.apiAuthorized ?? false;
 
   if (!session?.user) {
-    return (
-      <AccessNotice
-        title="Sign In Required"
-        description="Admin pages are protected. Please sign in with an admin account to continue."
-        callbackUrl="/admin"
-      />
-    );
+    redirect('/login?callbackUrl=/admin');
   }
 
   if (!hasApiAccess) {
-    return (
-      <AccessNotice
-        title="Session Expired"
-        description="Your sign-in session no longer has API access. Please sign in again to continue using admin pages."
-        callbackUrl="/admin"
-      />
-    );
+    redirect('/login?callbackUrl=/admin&reason=session_expired');
   }
 
   if (!canAccessAdminShell(userRole)) {

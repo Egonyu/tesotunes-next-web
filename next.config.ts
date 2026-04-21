@@ -94,6 +94,28 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Block search engine indexing for protected/admin routes
+  async headers() {
+    return [
+      {
+        source: '/admin/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/artist/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/artist-dashboard/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/(profile|settings|credits|history|library|messages|notifications|referrals|sacco|tickets|transactions|wallet|loyalty|ojokotau)/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ];
+  },
+
   // API rewrites for Laravel backend (excluding NextAuth routes)
   async rewrites() {
     const isHostedDeployment =

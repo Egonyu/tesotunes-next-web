@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -39,6 +40,30 @@ async function getPlaylistTracks(playlistId: number) {
   } catch {
     return { data: [] };
   }
+}
+
+export async function generateMetadata({ params }: PlaylistPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const playlist = await getPlaylist(slug);
+
+  if (!playlist) return { title: 'Playlist Not Found' };
+
+  const title = playlist.name;
+  const description = playlist.description || `${playlist.name} — a curated playlist on TesoTunes.`;
+  const image = (playlist as Record<string, unknown>).cover_url as string | undefined
+    || (playlist as Record<string, unknown>).artwork_url as string | undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/playlists/${slug}` },
+    openGraph: {
+      title,
+      description,
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: { title, description },
+  };
 }
 
 export default async function PlaylistPage({ params }: PlaylistPageProps) {

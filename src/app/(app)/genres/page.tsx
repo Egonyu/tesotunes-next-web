@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Music } from "lucide-react";
@@ -6,6 +7,12 @@ import { serverFetch } from "@/lib/api";
 import type { Genre } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: 'Music Genres',
+  description: 'Explore East African music genres on TesoTunes — from Afrobeats to gospel, dancehall and more.',
+  alternates: { canonical: '/genres' },
+};
 
 const gradientColors = [
   "from-rose-500 to-pink-600",

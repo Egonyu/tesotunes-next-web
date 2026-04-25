@@ -361,17 +361,3 @@ export interface DatabaseCollectorBreakdownRow {
   max_risk_score: number;
   last_seen_at?: string | null;
 }
-r;
-      suspicious_events: number;
-      avg_risk_score: number;
-    }>;
-  };
-  changes: ObservabilityEvent[];
-}
-
-export interface DatabaseCollectorBreakdownRow {
-  type: string;
-  events: number;
-  max_risk_score: number;
-  last_seen_at?: string | null;
-}

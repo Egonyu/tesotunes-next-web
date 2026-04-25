@@ -1,7 +1,6 @@
 import { test as setup, expect } from '@playwright/test';
-import path from 'path';
 
-export const STORAGE_STATE = path.join(__dirname, '../.playwright/auth/admin.json');
+export const STORAGE_STATE = '.playwright/auth/admin.json';
 
 const ADMIN_EMAIL = (process.env.E2E_ADMIN_EMAIL || '').trim();
 const ADMIN_PASSWORD = (process.env.E2E_ADMIN_PASSWORD || '').trim();

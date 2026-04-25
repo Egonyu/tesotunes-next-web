@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
 
-export const ADMIN_STORAGE_STATE = path.join(__dirname, '.playwright/auth/admin.json');
+// path.resolve() works in both ESM and CJS — no __dirname needed
+export const ADMIN_STORAGE_STATE = '.playwright/auth/admin.json';
 
 export default defineConfig({
   testDir: './e2e',

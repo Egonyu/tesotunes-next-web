@@ -294,7 +294,11 @@ export interface CollectorHostRow {
   max_risk_score: number;
   max_severity: string;
   status: 'healthy' | 'stale' | string;
+  /** Presentational state derived server-side: 'ok' | 'stale' | 'down'. See rebuild plan §4 item 5. */
+  state?: 'ok' | 'stale' | 'down' | string;
   last_seen_at?: string | null;
+  /** Alias for `last_seen_at` — the preferred name going forward. */
+  last_heartbeat_at?: string | null;
   coverage_score: number;
   missing_signals: string[];
 }
@@ -344,6 +348,20 @@ export interface SystemHostDetail {
       bucket_start?: string | null;
       dimension_key: string;
       total_events: number;
+      suspicious_events: number;
+      avg_risk_score: number;
+    }>;
+  };
+  changes: ObservabilityEvent[];
+}
+
+export interface DatabaseCollectorBreakdownRow {
+  type: string;
+  events: number;
+  max_risk_score: number;
+  last_seen_at?: string | null;
+}
+r;
       suspicious_events: number;
       avg_risk_score: number;
     }>;

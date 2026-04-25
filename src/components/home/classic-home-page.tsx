@@ -7,6 +7,7 @@ import { ArtistCarousel } from "@/components/home/artist-carousel";
 import { GenreGrid } from "@/components/home/genre-grid";
 import { DiscoverSections } from "@/components/home/discover-sections";
 import { ClassicHomeRecommendations } from "@/components/home/classic-home-recommendations";
+import { PlaylistGrid } from "@/components/home/playlist-grid";
 
 function SectionHeader({
   title,
@@ -63,6 +64,17 @@ export function ClassicHomePage() {
       </Suspense>
 
       <ClassicHomeRecommendations />
+
+      <section>
+        <SectionHeader
+          title="Curated Playlists"
+          href="/playlists"
+          subtitle="Handpicked collections for every mood"
+        />
+        <Suspense fallback={<LoadingSkeleton />}>
+          <PlaylistGrid />
+        </Suspense>
+      </section>
 
       <section>
         <SectionHeader

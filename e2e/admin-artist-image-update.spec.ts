@@ -1,8 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 
 const ARTIST_ID = process.env.E2E_ARTIST_ID;
-const ADMIN_EMAIL = (process.env.E2E_ADMIN_EMAIL || '').trim();
-const ADMIN_PASSWORD = (process.env.E2E_ADMIN_PASSWORD || '').trim();
 
 const RED_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8z8AARQABywGf3n6vWQAAAABJRU5ErkJggg==';
@@ -17,16 +15,12 @@ function extractRealImageUrl(rawSrc: string | null, currentPageUrl: string): str
     return absolute.toString();
   }
 
-  const encoded = absolute.searchParams.get('url') || '';
-  return decodeURIComponent(encoded);
+  return decodeURIComponent(absolute.searchParams.get('url') || '');
 }
 
 async function getOptionalImageSrc(page: Parameters<typeof test>[0]['page'], selector: string): Promise<string> {
   const image = page.locator(selector).first();
-  if ((await image.count()) === 0) {
-    return '';
-  }
-
+  if ((await image.count()) === 0) return '';
   const src = await image.getAttribute('src');
   return extractRealImageUrl(src, page.url());
 }
@@ -35,10 +29,7 @@ async function getOptionalLocatorImageSrc(
   page: Parameters<typeof test>[0]['page'],
   locator: Locator
 ): Promise<string> {
-  if ((await locator.count()) === 0) {
-    return '';
-  }
-
+  if ((await locator.count()) === 0) return '';
   const src = await locator.first().getAttribute('src');
   return extractRealImageUrl(src, page.url());
 }
@@ -48,66 +39,47 @@ async function resolveArtistImageInputs(page: Parameters<typeof test>[0]['page']
   const coverByTestId = page.getByTestId('artist-cover-image-input');
 
   if ((await profileByTestId.count()) > 0 && (await coverByTestId.count()) > 0) {
-    return {
-      profile: profileByTestId.first(),
-      cover: coverByTestId.first(),
-    };
+    return { profile: profileByTestId.first(), cover: coverByTestId.first() };
   }
 
   const profileByAria = page.locator('input[type="file"][aria-label="Profile image file"]');
   const coverByAria = page.locator('input[type="file"][aria-label="Cover image file"]');
 
   if ((await profileByAria.count()) > 0 && (await coverByAria.count()) > 0) {
-    return {
-      profile: profileByAria.first(),
-      cover: coverByAria.first(),
-    };
+    return { profile: profileByAria.first(), cover: coverByAria.first() };
   }
 
   const allFileInputs = page.locator('input[type="file"]');
   const fileInputCount = await allFileInputs.count();
 
   if (fileInputCount >= 2) {
-    return {
-      profile: allFileInputs.nth(0),
-      cover: allFileInputs.nth(1),
-    };
+    return { profile: allFileInputs.nth(0), cover: allFileInputs.nth(1) };
   }
 
   throw new Error(`Expected at least 2 file inputs on ${page.url()}, found ${fileInputCount}`);
 }
 
 async function resolveArtistId(page: Parameters<typeof test>[0]['page']): Promise<string> {
-  if (ARTIST_ID) {
-    return ARTIST_ID;
-  }
+  if (ARTIST_ID) return ARTIST_ID;
 
   await page.goto('/admin/artists');
   await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible();
 
-  // Try to find an artist edit link with a short timeout (10s)
   const editLink = page.locator('a[href*="/admin/artists/"][href$="/edit"]').first();
 
   try {
     await editLink.waitFor({ timeout: 10000, state: 'visible' });
   } catch {
     throw new Error(
-      'No artist found. Please ensure at least one artist exists in the database or set E2E_ARTIST_ID env var. ' +
-      'Use env var E2E_ARTIST_ID to specify a specific artist ID for testing.'
+      'No artist found. Ensure at least one artist exists or set E2E_ARTIST_ID.'
     );
   }
 
   const href = await editLink.getAttribute('href');
-
-  if (!href) {
-    throw new Error('Expected at least one admin artist edit link, but none was found.');
-  }
+  if (!href) throw new Error('Expected an admin artist edit link but none found.');
 
   const match = href.match(/\/admin\/artists\/(\d+)\/edit$/);
-
-  if (!match) {
-    throw new Error(`Could not extract artist id from href: ${href}`);
-  }
+  if (!match) throw new Error(`Could not extract artist id from href: ${href}`);
 
   return match[1];
 }
@@ -130,41 +102,6 @@ async function resolveDetailImageLocators(
   return { coverImg, avatarImg };
 }
 
-async function loginAsAdmin(page: Parameters<typeof test>[0]['page']) {
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    await page.goto('/login');
-
-    const email = page.locator('input#email, input[name="email"]').first();
-    const password = page.locator('input#password, input[name="password"]').first();
-    await email.fill(ADMIN_EMAIL);
-    await password.fill(ADMIN_PASSWORD);
-
-    await page.locator('button[type="submit"]').first().click();
-    const authError = page.getByText(
-      /invalid credentials|invalid email or password|invalid login|authentication failed|unauthorized/i
-    ).first();
-
-    const loginOutcome = await Promise.race([
-      page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 20000 }).then(() => 'ok' as const),
-      authError.waitFor({ state: 'visible', timeout: 20000 }).then(() => 'auth_error' as const),
-    ]).catch(() => 'timeout' as const);
-
-    if (loginOutcome === 'auth_error') {
-      throw new Error(
-        'Admin login failed: invalid credentials. Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to valid admin credentials.'
-      );
-    }
-
-    if (loginOutcome === 'ok') {
-      await page.goto('/admin/artists');
-      await expect(page.getByRole('heading', { name: 'Artists' }).first()).toBeVisible({ timeout: 10000 });
-      return;
-    }
-  }
-
-  throw new Error(`Admin login did not reach Artists navigation within 20s. Current URL: ${page.url()}`);
-}
-
 async function fetchArtistDetailPayload(
   page: Parameters<typeof test>[0]['page'],
   artistId: string
@@ -173,11 +110,7 @@ async function fetchArtistDetailPayload(
     const response = await fetch(`/api/backend/admin/artists/${resolvedArtistId}`, {
       credentials: 'include',
     });
-
-    if (!response.ok) {
-      return {};
-    }
-
+    if (!response.ok) return {};
     const payload = await response.json() as { data?: { cover_url?: string | null; profile_url?: string | null } };
     return payload.data ?? {};
   }, artistId);
@@ -185,13 +118,7 @@ async function fetchArtistDetailPayload(
 
 test.describe('Admin artist image update', () => {
   test('updates profile and cover images and reflects new URLs', async ({ page }) => {
-    test.setTimeout(120000); // Increase to 2 minutes
-
-    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-      throw new Error('Missing E2E_ADMIN_EMAIL or E2E_ADMIN_PASSWORD for admin image update E2E test.');
-    }
-
-    await loginAsAdmin(page);
+    test.setTimeout(120000);
 
     const artistId = await resolveArtistId(page);
 
@@ -204,46 +131,36 @@ test.describe('Admin artist image update', () => {
 
     const { profile: profileImageInput, cover: coverImageInput } = await resolveArtistImageInputs(page);
 
-    // Set profile image with explicit attachment check
     await profileImageInput.setInputFiles({
       name: `profile-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(RED_PNG_BASE64, 'base64'),
     });
-    const profileFileCount = await profileImageInput.evaluate((el) => {
-      return (el as HTMLInputElement).files?.length ?? 0;
-    });
-    expect(profileFileCount).toBe(1);
+    expect(await profileImageInput.evaluate((el) => (el as HTMLInputElement).files?.length ?? 0)).toBe(1);
 
-    // Set cover image with explicit attachment check
     await coverImageInput.setInputFiles({
       name: `cover-${Date.now()}.png`,
       mimeType: 'image/png',
       buffer: Buffer.from(GREEN_PNG_BASE64, 'base64'),
     });
-    const coverFileCount = await coverImageInput.evaluate((el) => {
-      return (el as HTMLInputElement).files?.length ?? 0;
-    });
-    expect(coverFileCount).toBe(1);
+    expect(await coverImageInput.evaluate((el) => (el as HTMLInputElement).files?.length ?? 0)).toBe(1);
 
-    // Wait a bit for state updates
     await page.waitForTimeout(500);
 
     const updateResponsePromise = page.waitForResponse((response) => {
       const req = response.request();
       const { pathname } = new URL(response.url());
-      const matchesLegacyEndpoint = pathname.endsWith(`/api/admin/artists/${artistId}`);
-      const matchesBackendEndpoint = pathname.endsWith(`/api/backend/admin/artists/${artistId}`);
-      const isUpdateMethod = ['POST', 'PUT', 'PATCH'].includes(req.method());
-      const isSuccessStatus = [200, 201].includes(response.status());
-
-      return isUpdateMethod && (matchesLegacyEndpoint || matchesBackendEndpoint) && isSuccessStatus;
+      const matchesEndpoint =
+        pathname.endsWith(`/api/admin/artists/${artistId}`) ||
+        pathname.endsWith(`/api/backend/admin/artists/${artistId}`);
+      return ['POST', 'PUT', 'PATCH'].includes(req.method()) && matchesEndpoint && [200, 201].includes(response.status());
     }, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'Save Artist Profile' }).click();
 
     const updateResponse = await updateResponsePromise;
     expect(updateResponse.headers()['content-type'] || '').toContain('application/json');
+
     const updatePayload = (await updateResponse.json()) as {
       success: boolean;
       data?: { name?: string; profile_url?: string; cover_url?: string };
@@ -255,12 +172,8 @@ test.describe('Admin artist image update', () => {
     expect(updatePayload.data?.profile_url).toContain('?v=');
     expect(updatePayload.data?.cover_url).toContain('?v=');
 
-    if (beforeCoverSrc) {
-      expect(updatePayload.data?.cover_url).not.toBe(beforeCoverSrc);
-    }
-    if (beforeProfileSrc) {
-      expect(updatePayload.data?.profile_url).not.toBe(beforeProfileSrc);
-    }
+    if (beforeCoverSrc) expect(updatePayload.data?.cover_url).not.toBe(beforeCoverSrc);
+    if (beforeProfileSrc) expect(updatePayload.data?.profile_url).not.toBe(beforeProfileSrc);
 
     const artistName = updatePayload.data?.name || 'Artist';
 
@@ -270,31 +183,17 @@ test.describe('Admin artist image update', () => {
     const { coverImg, avatarImg } = await resolveDetailImageLocators(page, artistName);
 
     await expect
-      .poll(
-        async () => {
-          const payload = await fetchArtistDetailPayload(page, artistId);
-
-          return payload.cover_url || '';
-        },
-        {
-          timeout: 15000,
-          message: `Expected artist cover URL to persist for ${artistName}`,
-        }
-      )
+      .poll(async () => (await fetchArtistDetailPayload(page, artistId)).cover_url || '', {
+        timeout: 15000,
+        message: `Expected artist cover URL to persist for ${artistName}`,
+      })
       .toContain(updatePayload.data?.cover_url || '/storage/artists/covers/');
 
     await expect
-      .poll(
-        async () => {
-          const payload = await fetchArtistDetailPayload(page, artistId);
-
-          return payload.profile_url || '';
-        },
-        {
-          timeout: 15000,
-          message: `Expected artist profile URL to persist for ${artistName}`,
-        }
-      )
+      .poll(async () => (await fetchArtistDetailPayload(page, artistId)).profile_url || '', {
+        timeout: 15000,
+        message: `Expected artist profile URL to persist for ${artistName}`,
+      })
       .toContain(updatePayload.data?.profile_url || '/storage/artists/avatars/');
 
     const currentCoverUrl = await getOptionalLocatorImageSrc(page, coverImg);

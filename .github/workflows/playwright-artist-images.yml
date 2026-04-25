@@ -19,6 +19,7 @@ jobs:
       # touches the production database.
       NEXT_PUBLIC_API_URL: https://api.tesotunes.com/api
       API_URL: https://api.tesotunes.com/api
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Checkout

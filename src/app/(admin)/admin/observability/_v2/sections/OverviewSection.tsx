@@ -259,24 +259,3 @@ export function OverviewSection() {
     </div>
   );
 }
-sk</h3>
-        <RankedTable
-          rows={stakeholderQuery.data?.actors ?? []}
-          columns={stakeholderColumns}
-          getRowId={(row) => row.actor_type + ':' + row.actor_id}
-          isLoading={stakeholderQuery.isLoading}
-          isError={stakeholderQuery.isError}
-          onRowClick={(row) =>
-            openDetail({
-              kind: 'stakeholder',
-              id: row.actor_type + ':' + row.actor_id,
-              label: row.label || row.actor_id,
-              seed: row,
-            })
-          }
-          emptyMessage="No stakeholder signals in this window."
-        />
-      </div>
-    </div>
-  );
-}

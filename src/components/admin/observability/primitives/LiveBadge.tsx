@@ -38,6 +38,7 @@ export function LiveBadge({ lastUpdatedAt, isLive = true, className }: LiveBadge
         className,
       )}
       title={ts ? new Date(ts).toLocaleString() : undefined}
+      suppressHydrationWarning
     >
       <span className="relative flex h-2 w-2">
         {isLive ? (

@@ -45,38 +45,6 @@ export function useObservabilityOverview(
   });
 }
 
-/**
- * Posture — lean 4-KPI endpoint for the v2 Overview section. See rebuild plan §4 item 2.
- */
-export interface ObservabilityPosture {
-  summary: {
-    unresolved_incidents: number;
-    collector_stale_sources: number;
-    db_auth_failures: number;
-    critical_system_signals: number;
-  };
-  generated_at?: string;
-}
-
-export function usePosture(filters: ObservabilityFilters, enabled = true) {
-  return useQuery({
-    queryKey: [...observabilityKeys.overview(filters), 'posture'],
-    queryFn: () =>
-      apiGet<{ data: ObservabilityPosture }>('/admin/observability/posture', {
-        params: paramsFromFilters(filters),
-      }),
-    select: (response) => response.data,
-    placeholderData: (previous) => previous,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: false,
-    staleTime: 15_000,
-    enabled,
-  });
-}
-
-/**
- * Posture — lean 4-KPI endpoint for the v2 Overview section. See rebuild plan §4 item 2.
- */
 export interface ObservabilityPosture {
   summary: {
     unresolved_incidents: number;

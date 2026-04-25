@@ -2,13 +2,17 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Users, CheckCircle, Loader2, ChevronRight, Vote } from "lucide-react";
+import Image from "next/image";
+import { Users, CheckCircle, Loader2, ChevronRight, Vote, Music, Mic2, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePolls, useVotePoll, transformPoll, type Poll } from "@/hooks/usePolls";
+import { usePolls, useVotePoll, transformPoll, type Poll, type PollType } from "@/hooks/usePolls";
 import { useSession } from "next-auth/react";
 
-// Mock poll for fallback when no polls exist yet
-// (removed — component now shows empty state when no active polls)
+const TYPE_STYLE: Record<PollType, { icon: React.ElementType; label: string; className: string }> = {
+  general:        { icon: Vote,   label: "Poll",           className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
+  song_battle:    { icon: Music,  label: "Song Battle",    className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" },
+  artist_contest: { icon: Mic2,   label: "Artist Contest", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400" },
+};
 
 export function CommunityPoll() {
   const { data: session } = useSession();
@@ -16,8 +20,8 @@ export function CommunityPoll() {
   const voteMutation = useVotePoll();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [localVoted, setLocalVoted] = useState(false);
+  const [creditsEarned, setCreditsEarned] = useState<number | null>(null);
 
-  // Get the most recent active poll from API — no mock fallback
   const poll: Poll | null = useMemo(() => {
     if (pollsData && Array.isArray(pollsData) && pollsData.length > 0) {
       return transformPoll(pollsData[0] as unknown as Record<string, unknown>);
@@ -28,7 +32,6 @@ export function CommunityPoll() {
   const hasVoted = poll?.hasVoted || localVoted;
   const showResults = hasVoted || poll?.status === "closed";
 
-  // Optimistic local state for after voting
   const displayOptions = useMemo(() => {
     if (!poll) return [];
     if (!localVoted || !selectedOption) return poll.options;
@@ -50,7 +53,6 @@ export function CommunityPoll() {
     if (!poll || hasVoted || poll.status === "closed") return;
 
     if (!session) {
-      // Not logged in — just select visually
       setSelectedOption(optionId);
       return;
     }
@@ -59,7 +61,13 @@ export function CommunityPoll() {
     setLocalVoted(true);
     voteMutation.mutate(
       { pollId: String(poll.id), optionId },
-      { onError: () => setLocalVoted(false) }
+      {
+        onSuccess: (data) => {
+          const earned = (data as { credits_earned?: number })?.credits_earned ?? 0;
+          if (earned > 0) setCreditsEarned(earned);
+        },
+        onError: () => setLocalVoted(false),
+      }
     );
   };
 
@@ -81,43 +89,48 @@ export function CommunityPoll() {
     );
   }
 
+  const typeMeta = TYPE_STYLE[poll.poll_type] ?? TYPE_STYLE.general;
+  const TypeIcon = typeMeta.icon;
+  const maxPct = showResults ? Math.max(...displayOptions.map((o) => o.percentage)) : 0;
+
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">TT</span>
-            </div>
-            <span className="text-sm font-semibold">{poll.creator.name}</span>
-            {poll.creator.isVerified && (
-              <CheckCircle className="h-3.5 w-3.5 text-primary fill-primary" />
+            {/* Type badge */}
+            <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", typeMeta.className)}>
+              <TypeIcon className="h-3 w-3" />
+              {typeMeta.label}
+            </span>
+            {poll.category_label && poll.category_label !== typeMeta.label && (
+              <span className="text-[10px] text-muted-foreground">· {poll.category_label}</span>
             )}
           </div>
-          <span
-            className={cn(
-              "px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full",
-              poll.status === "active"
-                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-            )}
-          >
+          <span className={cn(
+            "px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full",
+            poll.status === "active"
+              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+          )}>
             {poll.status === "active" ? "Active" : "Closed"}
           </span>
         </div>
 
-        <h3 className="text-lg font-bold leading-snug">{poll.question}</h3>
+        <h3 className="text-base font-bold leading-snug">{poll.question}</h3>
         {poll.description && (
-          <p className="text-sm text-muted-foreground mt-1">{poll.description}</p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{poll.description}</p>
         )}
       </div>
 
       {/* Options */}
-      <div className="px-5 pb-4 space-y-2">
+      <div className="px-5 pb-3 space-y-1.5">
         {displayOptions.slice(0, 4).map((option) => {
           const isSelected = selectedOption === option.id || poll.votedOptionId === option.id;
-          const isWinner = showResults && option.percentage === Math.max(...displayOptions.map((o) => o.percentage));
+          const isWinner = showResults && option.percentage === maxPct && maxPct > 0;
+          const thumbnail = option.song?.artwork_url ?? option.artist?.avatar_url ?? null;
+          const isRound = poll.poll_type === "artist_contest";
 
           return (
             <button
@@ -125,39 +138,37 @@ export function CommunityPoll() {
               onClick={() => handleVote(option.id)}
               disabled={hasVoted || poll.status === "closed" || voteMutation.isPending}
               className={cn(
-                "relative w-full text-left rounded-lg overflow-hidden transition-all",
-                "border",
+                "relative w-full text-left rounded-lg overflow-hidden transition-all border",
                 !showResults && "hover:border-primary/50 cursor-pointer",
                 showResults && "cursor-default",
-                isSelected
-                  ? "border-primary/60 ring-1 ring-primary/30"
-                  : "border-border/60"
+                isSelected ? "border-primary/60 ring-1 ring-primary/30" : "border-border/60"
               )}
             >
-              {/* Progress bar background */}
               {showResults && (
                 <div
                   className={cn(
                     "absolute inset-0 transition-all duration-700 ease-out",
-                    isWinner
-                      ? "bg-primary/15 dark:bg-primary/20"
-                      : "bg-muted/50"
+                    isWinner ? "bg-primary/15 dark:bg-primary/20" : "bg-muted/50"
                   )}
                   style={{ width: `${option.percentage}%` }}
                 />
               )}
 
-              <div className="relative flex items-center justify-between px-4 py-2.5">
-                <span
-                  className={cn(
-                    "text-sm font-medium truncate pr-3",
-                    isSelected && "text-primary"
-                  )}
-                >
+              <div className="relative flex items-center gap-2 px-3 py-2">
+                {thumbnail && (
+                  <Image
+                    src={thumbnail}
+                    alt={option.text}
+                    width={28}
+                    height={28}
+                    className={cn("object-cover shrink-0", isRound ? "rounded-full" : "rounded")}
+                  />
+                )}
+                <span className={cn("text-sm font-medium truncate flex-1", isSelected && "text-primary")}>
                   {option.text}
                 </span>
                 {showResults && (
-                  <span className="text-sm font-semibold text-muted-foreground shrink-0">
+                  <span className="text-xs font-semibold text-muted-foreground shrink-0">
                     {option.percentage}%
                   </span>
                 )}
@@ -167,10 +178,7 @@ export function CommunityPoll() {
         })}
 
         {displayOptions.length > 4 && (
-          <Link
-            href={`/polls/${poll.id}`}
-            className="text-xs text-primary hover:underline"
-          >
+          <Link href={`/polls/${poll.id}`} className="text-xs text-primary hover:underline block pt-0.5">
             +{displayOptions.length - 4} more options
           </Link>
         )}
@@ -178,19 +186,30 @@ export function CommunityPoll() {
 
       {/* Footer */}
       <div className="px-5 pb-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <Users className="h-4 w-4" />
-          {totalVotes.toLocaleString()} votes
-        </span>
         <div className="flex items-center gap-3">
-          <Link
-            href="/polls"
-            className="text-primary hover:underline flex items-center gap-0.5 text-xs font-medium"
-          >
-            View All Polls
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
+          <span className="flex items-center gap-1">
+            <Users className="h-3.5 w-3.5" />
+            {totalVotes.toLocaleString()} votes
+          </span>
+          {creditsEarned && creditsEarned > 0 ? (
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-xs animate-in fade-in">
+              <Coins className="h-3.5 w-3.5" />
+              +{creditsEarned} earned!
+            </span>
+          ) : !hasVoted && poll.status === "active" ? (
+            <span className="flex items-center gap-1 text-xs">
+              <Coins className="h-3.5 w-3.5" />
+              +{poll.credits_reward} credits
+            </span>
+          ) : null}
         </div>
+        <Link
+          href="/polls"
+          className="text-primary hover:underline flex items-center gap-0.5 text-xs font-medium"
+        >
+          View All
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </div>
   );

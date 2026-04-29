@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: GenrePageProps): Promise<Meta
   return {
     title,
     description,
-    alternates: { canonical: `/genres/${slug}` },
+    alternates: { canonical: `https://tesotunes.com/genres/${slug}` },
     openGraph: {
       title,
       description,

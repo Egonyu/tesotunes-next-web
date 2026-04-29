@@ -27,6 +27,12 @@ export function SafeImage({ src, alt, fallback = null, unoptimized = true, ...pr
       src={resolvedSrc}
       unoptimized={unoptimized}
       onError={() => setFailed(true)}
+      onLoad={(e) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth < 2 || img.naturalHeight < 2) {
+          setFailed(true);
+        }
+      }}
     />
   );
 }

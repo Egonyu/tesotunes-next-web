@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import { JsonLd } from '@/components/seo/JsonLd'
 import EventDetailPageClient from './EventDetailPageClient'
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `/events/${id}` },
+    alternates: { canonical: `https://tesotunes.com/events/${id}` },
     openGraph: {
       title,
       description,
@@ -55,7 +56,9 @@ export default async function EventPage({ params }: Props) {
   const { id } = await params
   const event = await getEventForMeta(id)
 
-  const jsonLd = event ? {
+  if (!event) notFound()
+
+  const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: event.title,
@@ -72,7 +75,7 @@ export default async function EventPage({ params }: Props) {
       name: 'TesoTunes',
       url: 'https://tesotunes.com',
     },
-  } : null
+  }
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -80,13 +83,13 @@ export default async function EventPage({ params }: Props) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
       { '@type': 'ListItem', position: 2, name: 'Events', item: 'https://tesotunes.com/events' },
-      { '@type': 'ListItem', position: 3, name: event?.title ?? id, item: `https://tesotunes.com/events/${id}` },
+      { '@type': 'ListItem', position: 3, name: event.title, item: `https://tesotunes.com/events/${id}` },
     ],
   }
 
   return (
     <>
-      {jsonLd && <JsonLd data={jsonLd} />}
+      <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumb} />
       <EventDetailPageClient />
     </>

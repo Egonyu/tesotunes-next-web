@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'TesoTunes Terms of Service and usage agreement.',
+  alternates: { canonical: 'https://tesotunes.com/terms' },
 };
 
 export default function TermsPage() {

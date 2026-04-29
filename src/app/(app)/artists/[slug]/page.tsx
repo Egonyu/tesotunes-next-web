@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import type { Artist } from '@/types'
 import { JsonLd } from '@/components/seo/JsonLd'
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `/artists/${slug}` },
+    alternates: { canonical: `https://tesotunes.com/artists/${slug}` },
     openGraph: {
       type: 'profile',
       title,
@@ -56,7 +57,9 @@ export default async function ArtistPage({ params }: Props) {
   const { slug } = await params
   const artist = await getArtistForMeta(slug)
 
-  const jsonLd = artist ? {
+  if (!artist) notFound()
+
+  const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MusicGroup',
     name: artist.name,
@@ -67,7 +70,7 @@ export default async function ArtistPage({ params }: Props) {
     sameAs: artist.social_links
       ? Object.values(artist.social_links).filter(Boolean)
       : undefined,
-  } : null
+  }
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -75,13 +78,13 @@ export default async function ArtistPage({ params }: Props) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
       { '@type': 'ListItem', position: 2, name: 'Artists', item: 'https://tesotunes.com/artists' },
-      { '@type': 'ListItem', position: 3, name: artist?.name ?? slug, item: `https://tesotunes.com/artists/${slug}` },
+      { '@type': 'ListItem', position: 3, name: artist.name, item: `https://tesotunes.com/artists/${slug}` },
     ],
   }
 
   return (
     <>
-      {jsonLd && <JsonLd data={jsonLd} />}
+      <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumb} />
       <ArtistPageClient />
     </>

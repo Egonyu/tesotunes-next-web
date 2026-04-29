@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import { JsonLd } from '@/components/seo/JsonLd'
 import SongDetailPage from './SongPageClient'
@@ -30,6 +31,15 @@ const getSong = cache(async (slug: string): Promise<SongMeta | null> => {
   }
 })
 
+export async function generateStaticParams() {
+  try {
+    const res = await serverFetch<{ data: { slug: string }[] }>('/songs?limit=500&status=published')
+    return (res.data || []).map((s) => ({ slug: s.slug }))
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const song = await getSong(slug)
@@ -43,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `/songs/${slug}` },
+    alternates: { canonical: `https://tesotunes.com/songs/${slug}` },
     openGraph: {
       type: 'music.song',
       title,
@@ -58,7 +68,9 @@ export default async function SongPage({ params }: Props) {
   const { slug } = await params
   const song = await getSong(slug)
 
-  const jsonLd = song ? {
+  if (!song) notFound()
+
+  const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MusicRecording',
     name: song.title,
@@ -77,11 +89,11 @@ export default async function SongPage({ params }: Props) {
     genre: song.genre?.name,
     datePublished: song.release_date || undefined,
     description: song.description || undefined,
-  } : null
+  }
 
   return (
     <>
-      {jsonLd && <JsonLd data={jsonLd} />}
+      <JsonLd data={jsonLd} />
       <SongDetailPage />
     </>
   )

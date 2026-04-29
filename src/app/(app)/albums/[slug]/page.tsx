@@ -61,7 +61,7 @@ export async function generateMetadata({ params }: AlbumPageProps): Promise<Meta
   return {
     title,
     description,
-    alternates: { canonical: `/albums/${slug}` },
+    alternates: { canonical: `https://tesotunes.com/albums/${slug}` },
     openGraph: {
       type: 'music.album',
       title,

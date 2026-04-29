@@ -48,7 +48,7 @@ export default function NotFound() {
           </h2>
           <div className="flex flex-wrap justify-center gap-2">
             {[
-              { href: '/trending', label: 'Trending' },
+              { href: '/browse', label: 'Browse' },
               { href: '/new-releases', label: 'New Releases' },
               { href: '/genres', label: 'Genres' },
               { href: '/artists', label: 'Artists' },

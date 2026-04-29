@@ -60,6 +60,16 @@ export default function AppLayout({
             {children}
           </div>
         </main>
+
+        {/* Site footer — legal links required for Google OAuth verification */}
+        <footer className="mt-8 border-t px-4 py-4 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>© {new Date().getFullYear()} TesoTunes</span>
+            <a href="/privacy" className="hover:underline">Privacy Policy</a>
+            <a href="/terms" className="hover:underline">Terms of Service</a>
+            <a href="/legal" className="hover:underline">Legal</a>
+          </div>
+        </footer>
       </div>
 
       {/* Mobile Bottom Navigation */}

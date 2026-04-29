@@ -370,6 +370,15 @@ export function Sidebar() {
             )}
           </Link>
         )}
+
+        {/* Legal links — visible when sidebar is expanded */}
+        {!sidebarCollapsed && (
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t pt-3">
+            <Link href="/privacy" className="text-xs text-muted-foreground hover:underline">Privacy</Link>
+            <Link href="/terms" className="text-xs text-muted-foreground hover:underline">Terms</Link>
+            <Link href="/legal" className="text-xs text-muted-foreground hover:underline">Legal</Link>
+          </div>
+        )}
       </div>
     </aside>
   );

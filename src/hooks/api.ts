@@ -49,6 +49,7 @@ export function useRecordPlay() {
       duration_played: number;
       total_duration?: number;
       completed?: boolean;
+      seeked_forward?: boolean;
     }) => apiPost<{ credits_earned?: number; message?: string }>(`/player/record-play`, data),
     onSuccess: (res) => {
       if (res?.credits_earned && res.credits_earned > 0) {
@@ -58,6 +59,26 @@ export function useRecordPlay() {
         });
       }
     },
+  });
+}
+
+export function useSavePosition() {
+  return useMutation({
+    mutationFn: (data: { song_id: number; position_seconds: number }) =>
+      apiPost<{ message?: string }>(`/player/save-position`, data),
+  });
+}
+
+export function useResumePosition(songId: number | null) {
+  return useQuery({
+    queryKey: ["resume-position", songId],
+    queryFn: () =>
+      apiGet<{ data: { song_id: number; position_seconds: number } }>(
+        `/player/resume-position/${songId}`
+      ),
+    enabled: !!songId,
+    staleTime: 0,
+    gcTime: 60 * 1000,
   });
 }
 

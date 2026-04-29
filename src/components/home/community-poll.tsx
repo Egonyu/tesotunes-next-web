@@ -9,9 +9,10 @@ import { usePolls, useVotePoll, transformPoll, type Poll, type PollType } from "
 import { useSession } from "next-auth/react";
 
 const TYPE_STYLE: Record<PollType, { icon: React.ElementType; label: string; className: string }> = {
-  general:        { icon: Vote,   label: "Poll",           className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
-  song_battle:    { icon: Music,  label: "Song Battle",    className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" },
-  artist_contest: { icon: Mic2,   label: "Artist Contest", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400" },
+  general:         { icon: Vote,   label: "Poll",            className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
+  song_battle:     { icon: Music,  label: "Song Battle",     className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" },
+  artist_contest:  { icon: Mic2,   label: "Artist Contest",  className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400" },
+  research_survey: { icon: Users,  label: "Research Survey", className: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400" },
 };
 
 export function CommunityPoll() {
@@ -57,10 +58,11 @@ export function CommunityPoll() {
       return;
     }
 
+    if (!poll.questionId) return;
     setSelectedOption(optionId);
     setLocalVoted(true);
     voteMutation.mutate(
-      { pollId: String(poll.id), optionId },
+      { pollId: String(poll.id), questionId: poll.questionId, optionId },
       {
         onSuccess: (data) => {
           const earned = (data as { credits_earned?: number })?.credits_earned ?? 0;
@@ -104,7 +106,7 @@ export function CommunityPoll() {
               <TypeIcon className="h-3 w-3" />
               {typeMeta.label}
             </span>
-            {poll.category_label && poll.category_label !== typeMeta.label && (
+            {poll.category_label && poll.category !== poll.poll_type && (
               <span className="text-[10px] text-muted-foreground">· {poll.category_label}</span>
             )}
           </div>

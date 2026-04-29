@@ -21,17 +21,16 @@ import {
   Mic2,
   Vote,
   Coins,
+  LineChart,
+  Download,
+  ClipboardList,
+  MessageSquare,
+  Star,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { POLL_CATEGORIES, type PollType } from '@/hooks/usePolls';
-
-interface PollOption {
-  id: number;
-  text: string;
-  votes: number;
-  percentage: number;
-}
+import { POLL_CATEGORIES, useAdminPollAnalytics, type PollType, type PollAnalytics } from '@/hooks/usePolls';
 
 interface AdminPoll {
   id: number;
@@ -39,34 +38,41 @@ interface AdminPoll {
   description?: string;
   poll_type: PollType;
   category?: string;
+  audience: string;
   credits_reward: number;
-  options: PollOption[];
-  total_votes: number;
-  status: 'active' | 'draft' | 'closed';
+  questions_count: number;
+  responses_count: number;
+  total_responses: number;
+  status: 'active' | 'draft' | 'closed' | 'archived';
   user: {
     id: number;
     name: string;
     avatar?: string;
   };
   created_at: string;
-  starts_at: string;
-  ends_at: string;
+  starts_at: string | null;
+  ends_at: string | null;
 }
 
 interface PollStats {
   total_polls: number;
   active_polls: number;
   closed_polls: number;
-  total_votes: number;
+  draft_polls: number;
+  total_responses: number;
+  total_guest_responses: number;
   song_battles: number;
   artist_contests: number;
+  research_surveys: number;
   recent_polls_30d: number;
+  responses_last_7d: number;
 }
 
 const TYPE_BADGE: Record<PollType, { label: string; icon: React.ElementType; className: string }> = {
-  general:        { label: 'Poll',           icon: Vote,  className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  song_battle:    { label: 'Song Battle',    icon: Music, className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  artist_contest: { label: 'Artist Contest', icon: Mic2,  className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  general:         { label: 'Poll',            icon: Vote,     className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  song_battle:     { label: 'Song Battle',     icon: Music,    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
+  artist_contest:  { label: 'Artist Contest',  icon: Mic2,     className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  research_survey: { label: 'Research Survey', icon: BarChart3, className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' },
 };
 
 export default function AdminPollsPage() {
@@ -76,6 +82,7 @@ export default function AdminPollsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [page, setPage] = useState(1);
+  const [analyticsId, setAnalyticsId] = useState<number | null>(null);
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'polls', 'stats'],
@@ -121,12 +128,12 @@ export default function AdminPollsPage() {
   const meta = pollsData?.meta;
 
   const statCards = [
-    { label: 'Total Polls',      value: stats?.total_polls ?? 0,    icon: BarChart3, color: 'text-blue-500' },
-    { label: 'Active',           value: stats?.active_polls ?? 0,   icon: CheckCircle, color: 'text-green-500' },
-    { label: 'Song Battles',     value: stats?.song_battles ?? 0,   icon: Music,     color: 'text-orange-500' },
-    { label: 'Artist Contests',  value: stats?.artist_contests ?? 0,icon: Mic2,      color: 'text-purple-500' },
-    { label: 'Ended',            value: stats?.closed_polls ?? 0,   icon: Clock,     color: 'text-gray-500' },
-    { label: 'Total Votes',      value: stats?.total_votes ?? 0,    icon: Users,     color: 'text-indigo-500' },
+    { label: 'Total Polls',      value: stats?.total_polls ?? 0,       icon: BarChart3,  color: 'text-blue-500' },
+    { label: 'Active',           value: stats?.active_polls ?? 0,      icon: CheckCircle,color: 'text-green-500' },
+    { label: 'Song Battles',     value: stats?.song_battles ?? 0,      icon: Music,      color: 'text-orange-500' },
+    { label: 'Artist Contests',  value: stats?.artist_contests ?? 0,   icon: Mic2,       color: 'text-purple-500' },
+    { label: 'Ended',            value: stats?.closed_polls ?? 0,      icon: Clock,      color: 'text-gray-500' },
+    { label: 'Responses',        value: stats?.total_responses ?? 0,   icon: Users,      color: 'text-indigo-500' },
   ];
 
   return (
@@ -191,6 +198,7 @@ export default function AdminPollsPage() {
               <option value="general">General</option>
               <option value="song_battle">Song Battle</option>
               <option value="artist_contest">Artist Contest</option>
+              <option value="research_survey">Research Survey</option>
             </select>
             <select
               value={statusFilter}
@@ -199,7 +207,9 @@ export default function AdminPollsPage() {
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
+              <option value="draft">Draft</option>
               <option value="closed">Closed</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
 
@@ -210,8 +220,8 @@ export default function AdminPollsPage() {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-4 text-sm font-medium">Title</th>
                   <th className="text-left p-4 text-sm font-medium">Type</th>
-                  <th className="text-left p-4 text-sm font-medium">Options</th>
-                  <th className="text-left p-4 text-sm font-medium">Votes</th>
+                  <th className="text-left p-4 text-sm font-medium">Questions</th>
+                  <th className="text-left p-4 text-sm font-medium">Responses</th>
                   <th className="text-left p-4 text-sm font-medium">Credits</th>
                   <th className="text-left p-4 text-sm font-medium">Status</th>
                   <th className="text-left p-4 text-sm font-medium">Ends At</th>
@@ -241,8 +251,8 @@ export default function AdminPollsPage() {
                             {typeMeta.label}
                           </span>
                         </td>
-                        <td className="p-4 text-sm">{poll.options.length}</td>
-                        <td className="p-4 text-sm font-medium">{(poll.total_votes ?? 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm">{poll.questions_count ?? 0}</td>
+                        <td className="p-4 text-sm font-medium">{(poll.total_responses ?? 0).toLocaleString()}</td>
                         <td className="p-4">
                           <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                             <Coins className="h-3 w-3" />
@@ -262,10 +272,20 @@ export default function AdminPollsPage() {
                           </span>
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">
-                          {new Date(poll.ends_at).toLocaleDateString()}
+                          {poll.ends_at ? new Date(poll.ends_at).toLocaleDateString() : '—'}
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setAnalyticsId(analyticsId === poll.id ? null : poll.id)}
+                              className={cn(
+                                'p-2 rounded-lg hover:bg-muted transition-colors',
+                                analyticsId === poll.id && 'bg-primary/10 text-primary'
+                              )}
+                              title="View analytics"
+                            >
+                              <LineChart className="h-4 w-4" />
+                            </button>
                             {poll.status === 'active' && (
                               <button
                                 onClick={() => endPollMutation.mutate(poll.id)}
@@ -321,6 +341,14 @@ export default function AdminPollsPage() {
               </button>
             </div>
           )}
+
+          {/* Analytics panel */}
+          {analyticsId && (
+            <PollAnalyticsPanel
+              pollId={analyticsId}
+              onClose={() => setAnalyticsId(null)}
+            />
+          )}
         </>
       )}
     </div>
@@ -351,9 +379,19 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
         poll_type: data.poll_type,
         category: data.category || undefined,
         credits_reward: data.credits_reward,
-        options: data.options.filter((o) => o.trim()),
         ends_at: data.ends_at ? new Date(data.ends_at).toISOString() : undefined,
-        allow_multiple_votes: data.allow_multiple_votes,
+        status: 'active',
+        questions: [
+          {
+            question_text: data.title,
+            question_type: 'multiple_choice',
+            is_required: true,
+            allow_multiple: data.allow_multiple_votes,
+            options: data.options
+              .filter((o) => o.trim())
+              .map((o) => ({ option_text: o })),
+          },
+        ],
       }),
     onSuccess: () => {
       toast.success('Poll created');
@@ -393,7 +431,7 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
         <div>
           <label className="block text-sm font-medium mb-1.5">Poll Type</label>
           <div className="grid grid-cols-3 gap-2">
-            {(Object.entries(TYPE_BADGE) as [PollType, (typeof TYPE_BADGE)[PollType]][]).map(([type, meta]) => {
+            {(Object.entries(TYPE_BADGE).filter(([t]) => t !== 'research_survey') as [PollType, (typeof TYPE_BADGE)[PollType]][]).map(([type, meta]) => {
               const Icon = meta.icon;
               return (
                 <button
@@ -543,6 +581,236 @@ function CreatePollForm({ onCreated }: { onCreated: () => void }) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ============================================================================
+// Poll Analytics Panel
+// ============================================================================
+
+function PollAnalyticsPanel({ pollId, onClose }: { pollId: number; onClose: () => void }) {
+  const { data, isLoading, error } = useAdminPollAnalytics(pollId);
+
+  async function handleExportCsv() {
+    try {
+      const blob = await apiGet<Blob>(`/admin/polls/${pollId}/export`, { responseType: 'blob' } as never);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `poll-${pollId}-export.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — export is non-critical
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-2">
+          <LineChart className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold">Analytics</h3>
+          {data && (
+            <span className="text-xs text-muted-foreground">— {data.title}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {data && (
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </button>
+          )}
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {error && (
+        <div className="p-6 text-center text-sm text-muted-foreground">
+          Failed to load analytics.
+        </div>
+      )}
+
+      {data && (
+        <div className="p-5 space-y-6">
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard icon={Users} label="Total Responses" value={data.total_responses} color="text-blue-500" />
+            <StatCard icon={CheckCircle} label="Completed" value={data.completed_responses} color="text-green-500" />
+            <StatCard icon={TrendingUp} label="Completion Rate" value={`${data.completion_rate}%`} color="text-primary" />
+            <StatCard icon={Users} label="Guest Responses" value={data.guest_responses} color="text-muted-foreground" />
+          </div>
+
+          {/* Question breakdowns */}
+          {data.questions.map((q, index) => (
+            <QuestionAnalytics key={q.question_id} question={q} index={index} pollId={pollId} />
+          ))}
+
+          {data.questions.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No responses yet.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color }: {
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  color: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        <Icon className={cn('h-3.5 w-3.5', color)} />
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+      <p className="text-xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+    </div>
+  );
+}
+
+function QuestionAnalytics({ question, index, pollId }: {
+  question: PollAnalytics['questions'][number];
+  index: number;
+  pollId: number;
+}) {
+  const isChoice = Array.isArray(question.breakdown);
+  const isScale = !isChoice && question.breakdown !== null && 'average' in (question.breakdown as object);
+  const isFreeText = !isChoice && question.breakdown !== null && 'total_answers' in (question.breakdown as object);
+
+  const typeIcon = {
+    multiple_choice: <ClipboardList className="h-3.5 w-3.5" />,
+    ranking: <ClipboardList className="h-3.5 w-3.5" />,
+    rating: <Star className="h-3.5 w-3.5" />,
+    likert: <Star className="h-3.5 w-3.5" />,
+    free_text: <MessageSquare className="h-3.5 w-3.5" />,
+  }[question.question_type] ?? <ClipboardList className="h-3.5 w-3.5" />;
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 bg-muted/30 border-b flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          <span className="shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted text-xs font-bold text-muted-foreground mt-0.5">
+            {index + 1}
+          </span>
+          <div>
+            <p className="text-sm font-medium leading-snug">{question.question_text}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {typeIcon}
+              <span className="text-xs text-muted-foreground capitalize">{question.question_type.replace('_', ' ')}</span>
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">{question.answered_count} answered</span>
+              {question.skip_rate > 0 && (
+                <><span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground">{question.skip_rate}% skipped</span></>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {/* Multiple choice bar chart */}
+        {isChoice && Array.isArray(question.breakdown) && (
+          <div className="space-y-2">
+            {(question.breakdown as Array<{ option_id: number; option_text: string; response_count: number; percentage: number }>)
+              .sort((a, b) => b.response_count - a.response_count)
+              .map(opt => (
+                <div key={opt.option_id}>
+                  <div className="flex items-center justify-between mb-1 text-sm">
+                    <span className="truncate flex-1 pr-4">{opt.option_text}</span>
+                    <span className="shrink-0 font-semibold">{opt.percentage}%</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${opt.percentage}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{opt.response_count} responses</p>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* Rating / Likert */}
+        {isScale && question.breakdown && 'average' in question.breakdown && (() => {
+          const b = question.breakdown as { average: number; distribution: Record<string, number>; scale: { min: number; max: number; min_label?: string | null; max_label?: string | null } };
+          const maxCount = Math.max(...Object.values(b.distribution).map(Number), 1);
+          const range = Array.from({ length: b.scale.max - b.scale.min + 1 }, (_, i) => b.scale.min + i);
+          return (
+            <div>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-4xl font-bold">{b.average}</span>
+                <span className="text-sm text-muted-foreground">/ {b.scale.max} average</span>
+                {b.scale.min_label && b.scale.max_label && (
+                  <span className="text-xs text-muted-foreground ml-2">({b.scale.min_label} → {b.scale.max_label})</span>
+                )}
+              </div>
+              <div className="flex items-end gap-1.5 h-16">
+                {range.map(val => {
+                  const count = Number(b.distribution[String(val)] ?? 0);
+                  const heightPct = maxCount > 0 ? Math.max(4, (count / maxCount) * 100) : 4;
+                  return (
+                    <div key={val} className="flex-1 flex flex-col items-center gap-1">
+                      <div
+                        className="w-full rounded-t bg-primary/80 transition-all duration-700"
+                        style={{ height: `${heightPct}%` }}
+                        title={`${count} responses`}
+                      />
+                      <span className="text-[10px] text-muted-foreground">{val}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Free text */}
+        {isFreeText && question.breakdown && 'sample' in question.breakdown && (() => {
+          const b = question.breakdown as { total_answers: number; sample: string[] };
+          return (
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                {b.total_answers} text responses — showing up to 10 most recent
+              </p>
+              {b.sample.length === 0 ? (
+                <p className="text-sm italic text-muted-foreground">No text responses yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {b.sample.map((text, i) => (
+                    <div key={i} className="px-3 py-2 rounded-lg bg-muted/50 text-sm border-l-2 border-primary/40">
+                      {text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {question.breakdown === null && (
+          <p className="text-sm text-muted-foreground italic">No breakdown data available.</p>
+        )}
+      </div>
     </div>
   );
 }

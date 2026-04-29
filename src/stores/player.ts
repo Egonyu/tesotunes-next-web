@@ -15,7 +15,9 @@ interface PlayerState {
   duration: number;
   repeatMode: RepeatMode;
   isShuffled: boolean;
-  originalQueue: Song[]; // For unshuffling
+  originalQueue: Song[];
+  resumePosition: number | null;
+  showResumePrompt: boolean;
 
   // Actions
   play: (song: Song, queue?: Song[]) => void;
@@ -38,6 +40,8 @@ interface PlayerState {
   setIsLoading: (loading: boolean) => void;
   playbackRate: number;
   setPlaybackRate: (rate: number) => void;
+  setResumePosition: (pos: number | null) => void;
+  setShowResumePrompt: (show: boolean) => void;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -66,6 +70,8 @@ export const usePlayerStore = create<PlayerState>()(
       isShuffled: false,
       originalQueue: [],
       playbackRate: 1,
+      resumePosition: null,
+      showResumePrompt: false,
 
       // Actions
       play: (song, queue) => {
@@ -224,6 +230,10 @@ export const usePlayerStore = create<PlayerState>()(
       setIsLoading: (loading) => set({ isLoading: loading }),
 
       setPlaybackRate: (rate) => set({ playbackRate: rate }),
+
+      setResumePosition: (pos) => set({ resumePosition: pos }),
+
+      setShowResumePrompt: (show) => set({ showResumePrompt: show }),
     }),
     {
       name: "tesotunes-player",

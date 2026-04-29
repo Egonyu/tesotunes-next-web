@@ -17,9 +17,10 @@ import { cn } from '@/lib/utils';
 import { usePolls, transformPoll, POLL_CATEGORIES, type Poll, type PollType } from '@/hooks/usePolls';
 
 const TYPE_BADGE: Record<PollType, { label: string; icon: React.ElementType; className: string }> = {
-  general:        { label: 'Poll',           icon: BarChart3, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  song_battle:    { label: 'Song Battle',    icon: Music,     className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  artist_contest: { label: 'Artist Contest', icon: Mic2,      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  general:         { label: 'Poll',            icon: BarChart3, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  song_battle:     { label: 'Song Battle',     icon: Music,     className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
+  artist_contest:  { label: 'Artist Contest',  icon: Mic2,      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  research_survey: { label: 'Research Survey', icon: Users,     className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' },
 };
 
 export default function PollsPage() {
@@ -100,6 +101,7 @@ export default function PollsPage() {
           <option value="general">General</option>
           <option value="song_battle">Song Battle</option>
           <option value="artist_contest">Artist Contest</option>
+          <option value="research_survey">Research Survey</option>
         </select>
 
         <select
@@ -147,7 +149,7 @@ function PollCard({ poll, getRemainingTime }: { poll: Poll; getRemainingTime: (d
             <BadgeIcon className="h-3 w-3" />
             {badge.label}
           </span>
-          {poll.category_label && poll.category_label !== badge.label && (
+          {poll.category_label && poll.category !== poll.poll_type && (
             <span className="text-xs text-muted-foreground">· {poll.category_label}</span>
           )}
         </div>
@@ -199,7 +201,7 @@ function PollCard({ poll, getRemainingTime }: { poll: Poll; getRemainingTime: (d
       <div className="flex items-center gap-4 mt-4 pt-3 border-t text-sm text-muted-foreground">
         <span className="flex items-center gap-1">
           <Users className="h-3.5 w-3.5" />
-          {poll.totalVotes.toLocaleString()} votes
+          {poll.totalVotes.toLocaleString()} responses
         </span>
         <span className="flex items-center gap-1">
           <Coins className="h-3.5 w-3.5" />

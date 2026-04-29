@@ -214,11 +214,15 @@ export async function serverFetch<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
+  const buildToken = process.env.NEXT_BUILD_TOKEN;
+
   const response = await fetchApiWithFallback(endpoint, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(isBuild && buildToken ? { "X-Build-Token": buildToken } : {}),
       ...options?.headers,
     },
     next: { revalidate: 60 },

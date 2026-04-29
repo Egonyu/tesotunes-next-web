@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import {
   Search,
   Plus,
@@ -107,6 +107,15 @@ export default function ArtistsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
     },
     onError: () => toast.error('Failed to suspend artist'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (artistId: number) => apiDelete(`/admin/artists/${artistId}`),
+    onSuccess: () => {
+      toast.success('Artist deleted');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'artists'] });
+    },
+    onError: () => toast.error('Failed to delete artist'),
   });
 
   const artists = artistsData?.data || [];
@@ -336,6 +345,18 @@ export default function ArtistsPage() {
                     <UserCheck className="h-4 w-4" />
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    if (confirm(`Permanently delete ${artist.name}? This cannot be undone.`)) {
+                      deleteMutation.mutate(artist.id);
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-600 disabled:opacity-50"
+                  title="Delete Artist"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>

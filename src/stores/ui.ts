@@ -15,6 +15,9 @@ interface UIState {
   activeModal: string | null;
   modalData: Record<string, unknown> | null;
 
+  // Playlist picker
+  playlistPickerSong: { id: number; title: string } | null;
+
   // Player
   playerExpanded: boolean;
   playerMinimized: boolean;
@@ -41,6 +44,9 @@ interface UIState {
   openModal: (modal: string, data?: Record<string, unknown>) => void;
   closeModal: () => void;
 
+  openPlaylistPicker: (song: { id: number; title: string }) => void;
+  closePlaylistPicker: () => void;
+
   togglePlayerExpanded: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
   togglePlayerMinimized: () => void;
@@ -66,6 +72,7 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
   activeModal: null,
   modalData: null,
+  playlistPickerSong: null,
   playerExpanded: false,
   playerMinimized: false,
   queueVisible: false,
@@ -82,6 +89,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   openModal: (modal, data) => set({ activeModal: modal, modalData: data || null }),
   closeModal: () => set({ activeModal: null, modalData: null }),
+
+  openPlaylistPicker: (song) => set({ playlistPickerSong: song }),
+  closePlaylistPicker: () => set({ playlistPickerSong: null }),
 
   togglePlayerExpanded: () => set((state) => ({ playerExpanded: !state.playerExpanded })),
   setPlayerExpanded: (expanded) => set({ playerExpanded: expanded }),

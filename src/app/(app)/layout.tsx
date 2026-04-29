@@ -4,6 +4,7 @@ import { Sidebar, Header } from "@/components/layout";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from "@/components/player";
 import { AdBanner, AudioAdManager } from "@/components/ads";
+import { PlaylistPickerModal } from "@/components/playlists/PlaylistPickerModal";
 import { useUIStore, usePlayerStore } from "@/stores";
 import { useQueueSync } from "@/hooks/useQueueSync";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,9 @@ export default function AppLayout({
 
       {/* Full Screen Player */}
       <FullScreenPlayer />
+
+      {/* Global playlist picker — rendered outside any dropdown tree */}
+      <PlaylistPickerModal />
     </div>
   );
 }

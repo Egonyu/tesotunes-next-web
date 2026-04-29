@@ -288,6 +288,14 @@ export default function CreatePollPage() {
     const endsAt = new Date();
     endsAt.setDate(endsAt.getDate() + duration);
 
+    // Build options for the single question based on poll type
+    const questionOptions =
+      pollType === 'general'
+        ? textOptions.filter((o) => o.text.trim()).map((o) => ({ option_text: o.text }))
+        : pollType === 'song_battle'
+        ? songOptions.map((s) => ({ option_text: s.title ?? `Song ${s.song_id}`, song_id: s.song_id }))
+        : artistOptions.map((a) => ({ option_text: a.stage_name ?? `Artist ${a.artist_id}`, artist_id: a.artist_id }));
+
     const payload = {
       title,
       description: description || undefined,
@@ -295,10 +303,16 @@ export default function CreatePollPage() {
       category,
       credits_reward: creditsReward,
       ends_at: endsAt.toISOString(),
-      allow_multiple_votes: allowMultiple,
-      ...(pollType === 'general' && { options: textOptions.filter(o => o.text.trim()).map(o => o.text) }),
-      ...(pollType === 'song_battle' && { song_options: songOptions.map(s => ({ song_id: s.song_id })) }),
-      ...(pollType === 'artist_contest' && { artist_options: artistOptions.map(a => ({ artist_id: a.artist_id })) }),
+      allow_multiple: allowMultiple,
+      questions: [
+        {
+          question_text: title,
+          question_type: 'multiple_choice',
+          is_required: true,
+          allow_multiple: allowMultiple,
+          options: questionOptions,
+        },
+      ],
     };
 
     createPollMutation.mutate(payload, { onSuccess: () => router.push('/polls') });

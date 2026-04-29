@@ -2,10 +2,11 @@ import { test, expect, type Locator } from '@playwright/test';
 
 const ARTIST_ID = process.env.E2E_ARTIST_ID;
 
+// 50×50 solid-color PNGs — must be ≥50px to pass server-side dimension validation
 const RED_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8z8AARQABywGf3n6vWQAAAABJRU5ErkJggg==';
+  'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAAQ0lEQVR4nO3OMQ0AMAwDsPAnvRHonxyWDMB5yaD+QEtLS0tLa0N/oKWlpaWltaE/0NLS0tLS2tAfaGlpaWlpbegPTh97K7rEaOcNTQAAAABJRU5ErkJggg==';
 const GREEN_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAgMDAwB77gM8f8w8uQAAAABJRU5ErkJggg==';
+  'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAARElEQVR4nO3OMQ0AMAwDsPBHNlgj0D85LBmAk5dF/YGWlpaWltaG/kBLS0tLS2tDf6ClpaWlpbWhP9DS0tLS0trQH1w+rEehih7s10EAAAAASUVORK5CYII=';
 
 function extractRealImageUrl(rawSrc: string | null, currentPageUrl: string): string {
   if (!rawSrc) return '';

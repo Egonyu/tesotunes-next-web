@@ -148,18 +148,23 @@ test.describe('Admin artist image update', () => {
 
     await page.waitForTimeout(500);
 
+    // Register BEFORE click so we never race against the response.
+    // Status is intentionally excluded from the predicate — non-200 responses
+    // would previously cause a silent 15s timeout; now they surface as a clear
+    // assertion failure on the explicit status check below.
     const updateResponsePromise = page.waitForResponse((response) => {
       const req = response.request();
       const { pathname } = new URL(response.url());
       const matchesEndpoint =
         pathname.endsWith(`/api/admin/artists/${artistId}`) ||
         pathname.endsWith(`/api/backend/admin/artists/${artistId}`);
-      return ['POST', 'PUT', 'PATCH'].includes(req.method()) && matchesEndpoint && [200, 201].includes(response.status());
-    }, { timeout: 15000 });
+      return ['POST', 'PUT', 'PATCH'].includes(req.method()) && matchesEndpoint;
+    }, { timeout: 30000 });
 
     await page.getByRole('button', { name: 'Save Artist Profile' }).click();
 
     const updateResponse = await updateResponsePromise;
+    expect(updateResponse.status(), `Artist update returned unexpected status ${updateResponse.status()}`).toBe(200);
     expect(updateResponse.headers()['content-type'] || '').toContain('application/json');
 
     const updatePayload = (await updateResponse.json()) as {

@@ -865,7 +865,7 @@ export default function ArtistDashboardPage() {
         <KpiCard
           icon={PlayCircle}
           label={`Plays · last ${periodDays}d`}
-          value={formatNumber(totalPlaysFromSeries || analytics?.engagement.total_plays || 0)}
+          value={formatNumber(totalPlaysFromSeries || analytics?.engagement?.total_plays || 0)}
           delta={playsDelta}
           spark={playsSparkValues}
           accent="bg-primary/10 text-primary"
@@ -873,8 +873,8 @@ export default function ArtistDashboardPage() {
         <KpiCard
           icon={Headphones}
           label="Unique listeners"
-          value={formatNumber(analytics?.engagement.unique_listeners ?? 0)}
-          sub={analytics?.engagement.avg_listen_time ? `${Math.round(analytics.engagement.avg_listen_time)}s avg listen` : undefined}
+          value={formatNumber(analytics?.engagement?.unique_listeners ?? 0)}
+          sub={analytics?.engagement?.avg_listen_time ? `${Math.round(analytics.engagement.avg_listen_time)}s avg listen` : undefined}
           accent="bg-cyan-500/10 text-cyan-600"
         />
         <KpiCard
@@ -1001,9 +1001,9 @@ export default function ArtistDashboardPage() {
       {/* ── Audience + Live Activity ─────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
         <AudienceSnapshot
-          countries={analytics?.demographics.countries ?? []}
-          devices={analytics?.demographics.devices ?? []}
-          uniqueListeners={analytics?.engagement.unique_listeners ?? 0}
+          countries={analytics?.demographics?.countries ?? []}
+          devices={analytics?.demographics?.devices ?? []}
+          uniqueListeners={analytics?.engagement?.unique_listeners ?? 0}
         />
         <LiveActivityTicker
           notifications={notifData?.data ?? []}

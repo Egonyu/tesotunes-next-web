@@ -48,9 +48,17 @@ import { apiGet } from "@/lib/api";
 import { usePlayerStore, useUIStore } from "@/stores";
 import { STORE_ENABLED } from "@/lib/features";
 import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
-const mainTabs = [
+const defaultMainTabs = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/search", label: "Search", icon: Search },
+  { href: "/library", label: "Library", icon: Library },
+  { href: "#menu", label: "More", icon: Menu },
+];
+
+const artistMainTabs = [
+  { href: "/artist", label: "Studio", icon: Sparkles },
   { href: "/search", label: "Search", icon: Search },
   { href: "/library", label: "Library", icon: Library },
   { href: "#menu", label: "More", icon: Menu },
@@ -187,6 +195,7 @@ export function MobileBottomNav() {
   const { currentSong } = usePlayerStore();
   const { playerMinimized } = useUIStore();
   const { hasAlbums, hasRadioStations } = useNavigationAvailability();
+  const { data: platformSettings } = usePlatformSettings();
 
   const userRole = (session?.user as { role?: string } | undefined)?.role || "";
   const isArtist = userRole.toLowerCase().includes("artist");
@@ -203,9 +212,19 @@ export function MobileBottomNav() {
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtist || isArtistByStatus;
   const hasAnyPlayer = !!currentSong;
+  const mainTabs = hasArtistAccess ? artistMainTabs : defaultMainTabs;
+  const g = platformSettings?.general;
   const visibleModuleItems = moduleItems.filter((item) => {
-    if (item.href === "/store" && !STORE_ENABLED) return false;
     if (item.href === "/sacco") return false;
+    if (item.href === "/store" && !(g?.store_enabled ?? STORE_ENABLED)) return false;
+    if (item.href === "/podcasts" && !(g?.podcasts_enabled ?? false)) return false;
+    if (item.href === "/awards" && !(g?.awards_system_enabled ?? false)) return false;
+    if (item.href === "/campaigns" && !(g?.campaigns_enabled ?? false)) return false;
+    if (item.href === "/ojokotau" && !(g?.ojokotau_enabled ?? false)) return false;
+    if (item.href === "/edula" && !(g?.edula_enabled ?? false)) return false;
+    if (item.href === "/promotions" && !(g?.promotions_enabled ?? false)) return false;
+    if (item.href === "/forums" && !(g?.forums_enabled ?? false)) return false;
+    if (item.href === "/polls" && !(g?.polls_enabled ?? false)) return false;
     return true;
   });
   const visibleBrowseItems = browseItems.filter((item) => {
@@ -225,13 +244,15 @@ export function MobileBottomNav() {
   }, [pathname]);
 
   const artistMenuItems = [
-    { href: "/artist", label: "Artist Dashboard", icon: LayoutDashboard },
+    { href: "/artist", label: "Dashboard", icon: LayoutDashboard },
     { href: "/artist/songs", label: "My Songs", icon: Music },
     { href: "/artist/upload", label: "Upload Music", icon: Upload },
     { href: "/artist/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
-    { href: "/artist/wallet", label: "Wallet", icon: Wallet },
+    { href: "/artist/wallet", label: "Studio Wallet", icon: Wallet },
     { href: "/credits", label: "Credits", icon: Coins },
+    { href: "/profile", label: "Profile", icon: User },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   const fabActions = hasArtistAccess
@@ -356,8 +377,8 @@ export function MobileBottomNav() {
                         <MenuItem href="/history" label="History" icon={Clock} onClick={closeMenu} />
                         {!hasArtistAccess && <MenuItem href="/wallet" label="Wallet" icon={CreditCard} onClick={closeMenu} />}
                         {!hasArtistAccess && <MenuItem href="/credits" label="Credits" icon={Coins} onClick={closeMenu} />}
-                        <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />
-                        <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />
+                        {!hasArtistAccess && <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />}
+                        {!hasArtistAccess && <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />}
                       </div>
                     </>
                   ) : (

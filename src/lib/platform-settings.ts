@@ -25,6 +25,11 @@ export interface PlatformSettings {
     forums_enabled: boolean;
     polls_enabled: boolean;
     credits_enabled: boolean;
+    podcasts_enabled: boolean;
+    campaigns_enabled: boolean;
+    ojokotau_enabled: boolean;
+    edula_enabled: boolean;
+    promotions_enabled: boolean;
     email_verification_required: boolean;
     artist_approval_required: boolean;
     social_login_enabled: boolean;
@@ -232,6 +237,11 @@ export const defaultPlatformSettings: PlatformSettings = {
     forums_enabled: false,
     polls_enabled: false,
     credits_enabled: true,
+    podcasts_enabled: false,
+    campaigns_enabled: false,
+    ojokotau_enabled: false,
+    edula_enabled: false,
+    promotions_enabled: false,
     email_verification_required: true,
     artist_approval_required: false,
     social_login_enabled: false,

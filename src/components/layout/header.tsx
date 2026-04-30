@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins } from "lucide-react";
+import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins, Wallet } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { signOut, useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
@@ -176,22 +176,29 @@ export function Header() {
                   <span>History</span>
                 </DropdownMenuItem>
                 {!hasArtistAccess && (
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    onClick={() => router.push("/wallet")}
-                  >
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span>Wallet</span>
-                  </DropdownMenuItem>
-                )}
-                {!hasArtistAccess && (
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    onClick={() => router.push("/credits")}
-                  >
-                    <Coins className="h-4 w-4 text-muted-foreground" />
-                    <span>Credits</span>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/wallet")}
+                    >
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      <span>Wallet</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/credits")}
+                    >
+                      <Coins className="h-4 w-4 text-muted-foreground" />
+                      <span>Credits</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/profile")}
+                    >
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
@@ -207,13 +214,15 @@ export function Header() {
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  onClick={() => router.push("/claim-artist")}
-                >
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <span>Claim Artist Profile</span>
-                </DropdownMenuItem>
+                {!hasArtistAccess && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/claim-artist")}
+                  >
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <span>Claim Artist Profile</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuSeparator className="my-2" />
 

@@ -1,352 +1,527 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  PlayCircle,
-  Download,
-  Globe,
-  Calendar,
-  Clock,
-  Loader2,
-  AlertCircle,
-  FileDown,
-  FileSpreadsheet,
-  Map
+import { useState, useMemo } from 'react';
+import {
+  TrendingUp, TrendingDown, PlayCircle, Download,
+  Globe, Clock, Loader2, AlertCircle, FileSpreadsheet,
+  Music2, DollarSign, Activity, RefreshCw, Headphones,
 } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { useArtistAnalytics } from '@/hooks/useArtist';
-import { apiGet } from '@/lib/api';
+import { useArtistAnalytics, useArtistEarnings } from '@/hooks/useArtist';
 import { toast } from 'sonner';
+
+// ─── Area Chart ──────────────────────────────────────────────────────────────
+
+interface ChartPoint { x: number; y: number; date: string; plays: number }
+
+function AreaPlayChart({ data }: { data: Array<{ date: string; plays: number }> }) {
+  const [tip, setTip] = useState<ChartPoint | null>(null);
+
+  const W = 800, H = 220, PX = 52, PY = 12, PB = 26;
+
+  const points: ChartPoint[] = useMemo(() => {
+    if (data.length < 2) return [];
+    const max = Math.max(...data.map(d => d.plays), 1);
+    return data.map((d, i) => ({
+      x: PX + (i / (data.length - 1)) * (W - PX - 8),
+      y: PY + (1 - d.plays / max) * (H - PY - PB),
+      date: d.date,
+      plays: d.plays,
+    }));
+  }, [data]);
+
+  const maxVal = useMemo(() => Math.max(...data.map(d => d.plays), 1), [data]);
+
+  const formatNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+  const formatDate = (s: string) =>
+    new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  if (points.length < 2) {
+    return (
+      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+        Not enough data to display
+      </div>
+    );
+  }
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H - PB} L ${PX} ${H - PB} Z`;
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+    val: Math.round(pct * maxVal),
+    y: PY + (1 - pct) * (H - PY - PB),
+  }));
+
+  const stepEvery = Math.max(1, Math.floor(data.length / 6));
+  const xLabels = data
+    .map((d, i) => ({ i, d }))
+    .filter(({ i }) => i === 0 || i === data.length - 1 || i % stepEvery === 0);
+
+  const COLOR = '#8b5cf6';
+
+  return (
+    <div className="relative w-full h-full">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-full"
+        onMouseLeave={() => setTip(null)}
+      >
+        <defs>
+          <linearGradient id="playsGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={COLOR} stopOpacity="0.22" />
+            <stop offset="90%" stopColor={COLOR} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {yTicks.map((t, idx) => (
+          <g key={idx}>
+            <line
+              x1={PX} y1={t.y} x2={W - 8} y2={t.y}
+              stroke="currentColor" strokeOpacity="0.07" strokeWidth="1"
+              strokeDasharray={idx === 0 ? undefined : '4 3'}
+            />
+            <text x={PX - 6} y={t.y + 4} textAnchor="end" fontSize="11" fill="currentColor" opacity="0.45">
+              {formatNum(t.val)}
+            </text>
+          </g>
+        ))}
+
+        <path d={areaPath} fill="url(#playsGrad)" />
+        <path d={linePath} fill="none" stroke={COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+        {xLabels.map(({ i, d }) => (
+          <text key={i} x={points[i].x} y={H - 8} textAnchor="middle" fontSize="11" fill="currentColor" opacity="0.45">
+            {formatDate(d.date)}
+          </text>
+        ))}
+
+        {/* Invisible hover zones */}
+        {points.map((p, i) => {
+          const prev = points[i - 1];
+          const next = points[i + 1];
+          const left = prev ? (prev.x + p.x) / 2 : p.x - 10;
+          const right = next ? (p.x + next.x) / 2 : p.x + 10;
+          return (
+            <rect
+              key={i}
+              x={left} y={0}
+              width={right - left} height={H}
+              fill="transparent"
+              onMouseEnter={() => setTip(p)}
+            />
+          );
+        })}
+
+        {tip && (
+          <>
+            <line
+              x1={tip.x} y1={PY} x2={tip.x} y2={H - PB}
+              stroke={COLOR} strokeOpacity="0.25" strokeWidth="1" strokeDasharray="4 3"
+            />
+            <circle cx={tip.x} cy={tip.y} r="5" fill={COLOR} />
+            <circle cx={tip.x} cy={tip.y} r="2.5" fill="white" />
+          </>
+        )}
+      </svg>
+
+      {tip && (
+        <div
+          className="absolute pointer-events-none z-10 bg-popover border rounded-lg px-3 py-2 shadow-lg text-sm -translate-x-1/2 -translate-y-full -mt-2"
+          style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%` }}
+        >
+          <p className="font-semibold">{tip.plays.toLocaleString()} plays</p>
+          <p className="text-muted-foreground text-xs">
+            {new Date(tip.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Device Donut ─────────────────────────────────────────────────────────────
+
+const DONUT_COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#10b981'];
+
+function DeviceDonut({ devices }: { devices: Array<{ device_type: string; count: number }> }) {
+  const [hovered, setHovered] = useState<string | null>(null);
+  const total = useMemo(() => devices.reduce((s, d) => s + d.count, 0), [devices]);
+
+  if (total === 0) return <p className="text-sm text-muted-foreground">No device data available</p>;
+
+  const CX = 60, CY = 60, R = 50, IR = 32;
+  let angle = -Math.PI / 2;
+
+  const segments = devices.map((d, idx) => {
+    const frac = d.count / total;
+    const start = angle;
+    const end = angle + frac * 2 * Math.PI;
+    angle = end;
+    const GAP = 0.03;
+    const s = start + GAP, e = end - GAP;
+    const x1 = CX + R * Math.cos(s), y1 = CY + R * Math.sin(s);
+    const x2 = CX + R * Math.cos(e), y2 = CY + R * Math.sin(e);
+    const ix1 = CX + IR * Math.cos(e), iy1 = CY + IR * Math.sin(e);
+    const ix2 = CX + IR * Math.cos(s), iy2 = CY + IR * Math.sin(s);
+    const large = frac > 0.5 ? 1 : 0;
+    const path = `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L ${ix1.toFixed(2)} ${iy1.toFixed(2)} A ${IR} ${IR} 0 ${large} 0 ${ix2.toFixed(2)} ${iy2.toFixed(2)} Z`;
+    return { path, color: DONUT_COLORS[idx % DONUT_COLORS.length], ...d, pct: Math.round(frac * 100) };
+  });
+
+  const active = hovered ? segments.find(s => s.device_type === hovered) : null;
+
+  return (
+    <div className="flex items-center gap-5">
+      <svg viewBox="0 0 120 120" className="w-28 h-28 shrink-0">
+        {segments.map(s => (
+          <path
+            key={s.device_type}
+            d={s.path}
+            fill={s.color}
+            opacity={hovered && hovered !== s.device_type ? 0.35 : 1}
+            className="transition-opacity cursor-default"
+            onMouseEnter={() => setHovered(s.device_type)}
+            onMouseLeave={() => setHovered(null)}
+          />
+        ))}
+        <text x="60" y="55" textAnchor="middle" fontSize="15" fontWeight="700" fill="currentColor">
+          {active ? `${active.pct}%` : total >= 1000 ? `${(total / 1000).toFixed(1)}K` : total}
+        </text>
+        <text x="60" y="70" textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.5">
+          {active ? active.device_type : 'listeners'}
+        </text>
+      </svg>
+      <div className="space-y-2.5 flex-1">
+        {segments.map(s => (
+          <div
+            key={s.device_type}
+            className="flex items-center justify-between cursor-default"
+            onMouseEnter={() => setHovered(s.device_type)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+              <span className="text-sm capitalize">{s.device_type}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{s.count.toLocaleString()}</span>
+              <span className="text-sm font-medium w-9 text-right">{s.pct}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ArtistAnalyticsPage() {
   const [periodDays, setPeriodDays] = useState<7 | 30 | 90 | 365>(30);
-  const [showMap, setShowMap] = useState(false);
   const [exporting, setExporting] = useState(false);
-  
-  const { data: analyticsData, isLoading, error } = useArtistAnalytics(periodDays);
-  
-  const playsOverTime = analyticsData?.plays_over_time || [];
-  const topSongs = analyticsData?.top_songs || [];
-  const demographics = analyticsData?.demographics || { countries: [], devices: [] };
-  const engagement = analyticsData?.engagement || { 
-    total_plays: 0, 
-    unique_listeners: 0, 
-    avg_listen_time: 0 
+
+  const { data: analytics, isLoading, error, refetch } = useArtistAnalytics(periodDays);
+  const { data: earnings } = useArtistEarnings();
+
+  const playsOverTime = analytics?.plays_over_time ?? [];
+  const topSongs = analytics?.top_songs ?? [];
+  const countries = analytics?.demographics?.countries ?? [];
+  const devices = analytics?.demographics?.devices ?? [];
+  const engagement = analytics?.engagement ?? { total_plays: 0, unique_listeners: 0, avg_listen_time: 0 };
+
+  const totalDownloads = useMemo(
+    () => topSongs.reduce((s, t) => s + (t.download_count ?? 0), 0),
+    [topSongs]
+  );
+  const maxSongPlays = useMemo(
+    () => topSongs.length ? Math.max(...topSongs.map(s => s.play_count)) : 1,
+    [topSongs]
+  );
+
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
   };
-  
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
+
+  const fmtUGX = (n: number) => {
+    if (n >= 1_000_000) return `UGX ${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `UGX ${Math.round(n / 1_000)}K`;
+    return `UGX ${n.toLocaleString()}`;
   };
-  
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+
+  const fmtDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, '0')}`;
   };
 
   const exportCSV = () => {
-    if (!analyticsData) return;
+    if (!analytics) return;
     setExporting(true);
     try {
-      const rows = [['Date', 'Plays']];
-      playsOverTime.forEach(p => rows.push([p.date, String(p.plays)]));
-      rows.push([]);
-      rows.push(['Song', 'Plays']);
-      topSongs.forEach(s => rows.push([s.title, String(s.play_count)]));
-      rows.push([]);
-      rows.push(['Country', 'Listeners']);
-      demographics.countries.forEach(c => rows.push([c.country, String(c.count)]));
-
+      const rows: string[][] = [
+        ['=== Plays Over Time ==='],
+        ['Date', 'Plays'],
+        ...playsOverTime.map(p => [p.date, String(p.plays)]),
+        [],
+        ['=== Top Songs ==='],
+        ['Title', 'Plays', 'Downloads'],
+        ...topSongs.map(s => [s.title, String(s.play_count), String(s.download_count ?? 0)]),
+        [],
+        ['=== Listeners by Country ==='],
+        ['Country', 'Listeners'],
+        ...countries.map(c => [c.country, String(c.count)]),
+        [],
+        ['=== Device Breakdown ==='],
+        ['Device', 'Count'],
+        ...devices.map(d => [d.device_type, String(d.count)]),
+      ];
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `analytics-${periodDays}d-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `tesotunes-analytics-${periodDays}d-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('CSV exported');
-    } catch { toast.error('Export failed'); }
-    setExporting(false);
+      toast.success('Analytics exported');
+    } catch {
+      toast.error('Export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const exportPDF = async () => {
-    setExporting(true);
-    try {
-      const res = await apiGet<Blob>(`/artist/analytics/export?format=pdf&period=${periodDays}`, {
-        responseType: 'blob',
-      } as unknown as undefined);
-      const url = URL.createObjectURL(res as unknown as Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analytics-${periodDays}d-${new Date().toISOString().split('T')[0]}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF exported');
-    } catch {
-      // Fallback: use client-side CSV if PDF endpoint not available
-      exportCSV();
-    }
-    setExporting(false);
-  };
-  
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center justify-center min-h-[500px] gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading analytics…</p>
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive">Failed to load analytics data</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+        <p className="font-medium">Failed to load analytics</p>
+        <p className="text-sm text-muted-foreground">Check your connection and try again</p>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
         >
+          <RefreshCw className="h-4 w-4" />
           Retry
         </button>
       </div>
     );
   }
-  
-  const overviewStats = [
-    { label: 'Total Plays', value: formatNumber(engagement.total_plays), change: 0 },
-    { label: 'Unique Listeners', value: formatNumber(engagement.unique_listeners), change: 0 },
-    { label: 'Avg. Play Time', value: formatTime(engagement.avg_listen_time), change: 0 },
-    { label: 'Top Songs', value: topSongs.length.toString(), change: 0 },
+
+  const kpis = [
+    {
+      label: 'Total Plays',
+      value: fmt(engagement.total_plays),
+      icon: <PlayCircle className="h-4 w-4" />,
+      cls: 'text-violet-600 bg-violet-50 dark:bg-violet-950/30',
+    },
+    {
+      label: 'Unique Listeners',
+      value: fmt(engagement.unique_listeners),
+      icon: <Headphones className="h-4 w-4" />,
+      cls: 'text-blue-600 bg-blue-50 dark:bg-blue-950/30',
+    },
+    {
+      label: 'Total Downloads',
+      value: fmt(totalDownloads),
+      icon: <Download className="h-4 w-4" />,
+      cls: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30',
+    },
+    {
+      label: 'Avg. Listen Time',
+      value: fmtDuration(engagement.avg_listen_time),
+      icon: <Clock className="h-4 w-4" />,
+      cls: 'text-amber-600 bg-amber-50 dark:bg-amber-950/30',
+    },
+    {
+      label: 'This Month',
+      value: earnings?.stats?.this_month != null ? fmtUGX(earnings.stats.this_month) : '—',
+      subtext: earnings?.stats?.monthly_change != null
+        ? `${earnings.stats.monthly_change >= 0 ? '+' : ''}${earnings.stats.monthly_change.toFixed(1)}% vs last month`
+        : undefined,
+      trend: earnings?.stats?.monthly_change,
+      icon: <DollarSign className="h-4 w-4" />,
+      cls: 'text-pink-600 bg-pink-50 dark:bg-pink-950/30',
+    },
+    {
+      label: 'Charting Tracks',
+      value: String(topSongs.length),
+      icon: <Activity className="h-4 w-4" />,
+      cls: 'text-orange-600 bg-orange-50 dark:bg-orange-950/30',
+    },
   ];
-  
+
+  const countryTotal = countries.reduce((s, c) => s + c.count, 0);
+
   return (
     <div className="space-y-6">
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">Track your music performance</p>
+          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Performance overview · Last {periodDays === 365 ? '12 months' : `${periodDays} days`}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-0.5 p-1 bg-muted rounded-lg">
+            {([
+              { label: '7D', value: 7 },
+              { label: '30D', value: 30 },
+              { label: '90D', value: 90 },
+              { label: '1Y', value: 365 },
+            ] as const).map(r => (
+              <button
+                key={r.label}
+                onClick={() => setPeriodDays(r.value)}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-semibold rounded-md transition-all',
+                  periodDays === r.value
+                    ? 'bg-background shadow text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={exportCSV}
-            disabled={exporting || !analyticsData}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-muted disabled:opacity-50"
+            disabled={exporting || !analytics}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg hover:bg-muted disabled:opacity-50 transition-colors"
           >
-            <FileSpreadsheet className="h-4 w-4" />
-            CSV
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Export CSV
           </button>
-          <button
-            onClick={exportPDF}
-            disabled={exporting || !analyticsData}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-muted disabled:opacity-50"
-          >
-            <FileDown className="h-4 w-4" />
-            PDF
-          </button>
-          <div className="flex gap-1 p-1 bg-muted rounded-lg">
-          {([
-            { label: '7d', value: 7 },
-            { label: '30d', value: 30 },
-            { label: '90d', value: 90 },
-            { label: '1y', value: 365 },
-          ] as const).map((range) => (
-            <button
-              key={range.label}
-              onClick={() => setPeriodDays(range.value as 7 | 30 | 90 | 365)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium rounded-md transition-colors',
-                periodDays === range.value
-                  ? 'bg-background shadow'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {range.label}
-            </button>
-          ))}
-          </div>
         </div>
       </div>
-      
-      {/* Overview Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {overviewStats.map((stat) => {
-          return (
-            <div key={stat.label} className="p-4 rounded-xl border bg-card">
-              <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
-              <p className="text-2xl font-bold">{stat.value}</p>
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        {kpis.map(k => (
+          <div key={k.label} className="p-4 rounded-xl border bg-card hover:shadow-sm transition-shadow">
+            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center mb-3', k.cls)}>
+              {k.icon}
             </div>
-          );
-        })}
-      </div>
-      
-      {/* Main Chart */}
-      <div className="p-6 rounded-xl border bg-card">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-semibold">Plays Over Time</h2>
-          <div className="flex gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-primary" />
-              <span className="text-muted-foreground">Plays</span>
-            </div>
+            <p className="text-2xl font-bold tracking-tight leading-none">{k.value}</p>
+            <p className="text-xs text-muted-foreground mt-1.5">{k.label}</p>
+            {k.subtext && (
+              <p className={cn(
+                'text-xs mt-1 flex items-center gap-0.5',
+                (k.trend ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+              )}>
+                {(k.trend ?? 0) >= 0
+                  ? <TrendingUp className="h-3 w-3 shrink-0" />
+                  : <TrendingDown className="h-3 w-3 shrink-0" />}
+                {k.subtext}
+              </p>
+            )}
           </div>
-        </div>
-        <div className="h-72 flex items-end justify-between gap-1 px-2">
-          {playsOverTime.length > 0 ? (
-            playsOverTime.map((point, i) => {
-              const maxPlays = Math.max(...playsOverTime.map(p => p.plays));
-              const height = maxPlays > 0 ? (point.plays / maxPlays) * 100 : 0;
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                  <div 
-                    className="w-full bg-primary rounded-t transition-all hover:bg-primary/80"
-                    style={{ height: `${Math.max(5, height)}%` }}
-                    title={`${new Date(point.date).toLocaleDateString()}: ${formatNumber(point.plays)} plays`}
-                  />
-                </div>
-              );
-            })
-          ) : (
-            Array.from({ length: 30 }, (_, i) => (
-              <div key={i} className="flex-1">
-                <div className="w-full bg-muted rounded-t" style={{ height: '20%' }} />
-              </div>
-            ))
+        ))}
+      </div>
+
+      {/* Plays Over Time */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="font-semibold">Plays Over Time</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {playsOverTime.length > 0 ? `${playsOverTime.length} days of data · hover for details` : 'No data for this period'}
+            </p>
+          </div>
+          {playsOverTime.length > 0 && (
+            <div className="text-right">
+              <p className="text-lg font-bold">{fmt(engagement.total_plays)}</p>
+              <p className="text-xs text-muted-foreground">total plays</p>
+            </div>
           )}
         </div>
-        {playsOverTime.length > 0 && (
-          <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-            <span>{new Date(playsOverTime[0]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            <span>{new Date(playsOverTime[Math.floor(playsOverTime.length / 2)]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            <span>{new Date(playsOverTime[playsOverTime.length - 1]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-          </div>
-        )}
-      </div>
-      
-      {/* Bottom Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Songs */}
-        <div className="p-6 rounded-xl border bg-card">
-          <h2 className="font-semibold mb-4">Top Songs</h2>
-          <div className="space-y-4">
-            {topSongs.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No song data available</p>
-            ) : topSongs.map((song, index) => {
-              const rank = index + 1;
-              return (
-                <div key={song.id} className="flex items-center gap-4">
-                  <span className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold',
-                    rank === 1 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                    rank === 2 ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' :
-                    rank === 3 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
-                    'bg-muted text-muted-foreground'
-                  )}>
-                    {rank}
-                  </span>
-                  <div className="flex-1">
-                    <p className="font-medium">{song.title}</p>
-                    <p className="text-sm text-muted-foreground">{formatNumber(song.play_count)} plays</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="h-60 sm:h-72">
+          <AreaPlayChart data={playsOverTime} />
         </div>
-        
-        {/* Top Countries */}
-        <div className="p-6 rounded-xl border bg-card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-muted-foreground" />
-              <h2 className="font-semibold">Listeners by Country</h2>
-            </div>
-            <button
-              onClick={() => setShowMap(!showMap)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
-                showMap ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-              )}
-            >
-              <Map className="h-3.5 w-3.5" />
-              {showMap ? 'List' : 'Map'}
-            </button>
-          </div>
+      </div>
 
-          {showMap ? (
-            /* Geographic bubble map visualization */
-            <div className="relative w-full aspect-2/1 bg-muted/30 rounded-lg overflow-hidden border">
-              {/* Simple world outline placeholder */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg viewBox="0 0 800 400" className="w-full h-full opacity-20">
-                  <ellipse cx="400" cy="200" rx="380" ry="180" fill="none" stroke="currentColor" strokeWidth="1" />
-                  <line x1="20" y1="200" x2="780" y2="200" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
-                  <line x1="400" y1="20" x2="400" y2="380" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
-                </svg>
-              </div>
-              {/* Country bubbles positioned roughly */}
-              {demographics.countries.map((item, idx) => {
-                const totalCount = demographics.countries.reduce((sum, c) => sum + c.count, 0);
-                const percentage = totalCount > 0 ? (item.count / totalCount) * 100 : 0;
-                const size = Math.max(24, Math.min(80, percentage * 2));
-                // Rough geographic positions for common East African countries
-                const positions: Record<string, { x: number; y: number }> = {
-                  'Uganda': { x: 55, y: 52 }, 'Kenya': { x: 58, y: 55 },
-                  'Tanzania': { x: 57, y: 60 }, 'Rwanda': { x: 54, y: 55 },
-                  'Nigeria': { x: 42, y: 52 }, 'South Africa': { x: 52, y: 72 },
-                  'Ghana': { x: 40, y: 52 }, 'Ethiopia': { x: 58, y: 48 },
-                  'United States': { x: 22, y: 38 }, 'United Kingdom': { x: 43, y: 30 },
-                  'Canada': { x: 22, y: 28 }, 'Germany': { x: 47, y: 30 },
-                  'France': { x: 44, y: 33 }, 'India': { x: 68, y: 45 },
-                };
-                const pos = positions[item.country] || { x: 30 + idx * 8, y: 40 + idx * 5 };
-                return (
-                  <div
-                    key={item.country}
-                    className="absolute flex items-center justify-center rounded-full bg-primary/20 border border-primary/40 text-[10px] font-medium text-primary hover:bg-primary/30 transition-colors cursor-default"
-                    style={{
-                      width: size, height: size,
-                      left: `${pos.x}%`, top: `${pos.y}%`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                    title={`${item.country}: ${formatNumber(item.count)} listeners`}
-                  >
-                    {percentage >= 5 ? `${Math.round(percentage)}%` : ''}
-                  </div>
-                );
-              })}
-              {demographics.countries.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                  No geographic data available
-                </div>
-              )}
+      {/* Top Songs + Audience */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Top Songs */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Top Songs</h2>
+            <span className="text-xs text-muted-foreground">{topSongs.length} tracks</span>
+          </div>
+          {topSongs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <Music2 className="h-10 w-10 mb-2 opacity-25" />
+              <p className="text-sm">No plays yet this period</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {demographics.countries.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No country data available</p>
-              ) : demographics.countries.map((item) => {
-                const totalCount = demographics.countries.reduce((sum, c) => sum + c.count, 0);
-                const percentage = totalCount > 0 ? Math.round((item.count / totalCount) * 100) : 0;
+            <div className="space-y-3">
+              {topSongs.slice(0, 8).map((song, idx) => {
+                const pct = Math.round((song.play_count / maxSongPlays) * 100);
+                const rankCls = ['text-yellow-500', 'text-slate-400', 'text-orange-500'];
                 return (
-                  <div key={item.country}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{item.country}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatNumber(item.count)} • {percentage}%
+                  <div key={song.id}>
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        'w-5 text-center text-sm font-bold tabular-nums shrink-0',
+                        idx < 3 ? rankCls[idx] : 'text-muted-foreground'
+                      )}>
+                        {idx + 1}
                       </span>
+
+                      {song.artwork ? (
+                        <div className="relative w-9 h-9 rounded overflow-hidden shrink-0 bg-muted">
+                          <Image
+                            src={song.artwork}
+                            alt={song.title}
+                            fill
+                            className="object-cover"
+                            sizes="36px"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Music2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate leading-tight">{song.title}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <PlayCircle className="h-3 w-3" />
+                            {fmt(song.play_count)}
+                          </span>
+                          {(song.download_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Download className="h-3 w-3" />
+                              {fmt(song.download_count!)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">{pct}%</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${percentage}%` }}
+                    <div className="mt-1.5 ml-8 h-1 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${pct}%` }}
                       />
                     </div>
                   </div>
@@ -355,45 +530,102 @@ export default function ArtistAnalyticsPage() {
             </div>
           )}
         </div>
-      </div>
-      
-      {/* Peak Hours */}
-      <div className="p-6 rounded-xl border bg-card">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Listening Activity by Hour</h2>
-        </div>
-        <div className="flex items-end justify-between gap-1 h-32">
-          {Array.from({ length: 24 }, (_, hour) => {
-            const intensity = Math.sin((hour - 6) * Math.PI / 12) * 0.5 + 0.5;
-            const height = 20 + intensity * 80;
-            return (
-              <div key={hour} className="flex-1 flex flex-col items-center">
-                <div 
-                  className={cn(
-                    'w-full rounded-t transition-colors',
-                    intensity > 0.7 ? 'bg-primary' :
-                    intensity > 0.4 ? 'bg-primary/60' :
-                    'bg-primary/30'
-                  )}
-                  style={{ height: `${height}%` }}
-                  title={`${hour}:00`}
-                />
+
+        {/* Audience Panel */}
+        <div className="rounded-xl border bg-card p-6 space-y-6">
+          <div>
+            <h2 className="font-semibold mb-4">Device Breakdown</h2>
+            <DeviceDonut devices={devices} />
+          </div>
+
+          <div className="border-t pt-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-semibold">Top Regions</h2>
+              {countryTotal > 0 && (
+                <span className="ml-auto text-xs text-muted-foreground">{fmt(countryTotal)} listeners</span>
+              )}
+            </div>
+            {countries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No geographic data available</p>
+            ) : (
+              <div className="space-y-2.5">
+                {countries.slice(0, 6).map(c => {
+                  const pct = countryTotal > 0 ? Math.round((c.count / countryTotal) * 100) : 0;
+                  return (
+                    <div key={c.country}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="font-medium">{c.country}</span>
+                        <span className="text-muted-foreground tabular-nums text-xs">
+                          {fmt(c.count)} · {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary/70 rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
-        <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-          <span>00:00</span>
-          <span>06:00</span>
-          <span>12:00</span>
-          <span>18:00</span>
-          <span>23:00</span>
-        </div>
-        <p className="text-sm text-muted-foreground text-center mt-4">
-          Peak listening hours: 18:00 - 22:00 EAT
-        </p>
       </div>
+
+      {/* Revenue Overview */}
+      {earnings && (
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="font-semibold mb-4">Revenue Overview</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            {[
+              { label: 'Available Balance', value: fmtUGX(earnings.stats.balance), highlight: true },
+              { label: 'Pending Earnings', value: fmtUGX(earnings.stats.pending_earnings) },
+              { label: 'All-time Earned', value: fmtUGX(earnings.stats.total_earnings) },
+              { label: 'This Month', value: fmtUGX(earnings.stats.this_month) },
+            ].map(item => (
+              <div
+                key={item.label}
+                className={cn(
+                  'p-4 rounded-lg',
+                  item.highlight
+                    ? 'bg-primary/5 border border-primary/20'
+                    : 'bg-muted/50'
+                )}
+              >
+                <p className="text-xs text-muted-foreground mb-1.5">{item.label}</p>
+                <p className={cn('font-semibold text-sm', item.highlight && 'text-primary')}>
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {earnings.earnings_sources && earnings.earnings_sources.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                Revenue Sources
+              </p>
+              {earnings.earnings_sources.map(src => (
+                <div key={src.source} className="flex items-center gap-3">
+                  <span className="text-sm capitalize w-24 shrink-0">{src.source}</span>
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${src.percentage}%` }} />
+                  </div>
+                  <span className="text-sm font-medium text-right w-28 shrink-0 tabular-nums">
+                    {fmtUGX(src.amount)}
+                  </span>
+                  <span className="text-xs text-muted-foreground w-9 shrink-0 tabular-nums">
+                    {src.percentage}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

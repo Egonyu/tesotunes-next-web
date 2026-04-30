@@ -23,6 +23,9 @@ type SongDetail = {
   status?: 'draft' | 'pending' | 'published' | 'rejected' | string;
   is_featured?: boolean;
   is_explicit?: boolean;
+  is_free?: boolean;
+  is_downloadable?: boolean;
+  price?: number | null;
   artwork_url?: string | null;
   audio_file_url?: string | null;
   artist_id?: number | null;
@@ -49,6 +52,9 @@ type SongFormState = {
   status: 'draft' | 'pending' | 'published' | 'rejected';
   explicit: boolean;
   is_featured: boolean;
+  is_free: boolean;
+  is_downloadable: boolean;
+  price: string;
   release_date: string;
   track_number: string;
   disc_number: string;
@@ -87,6 +93,9 @@ const EMPTY_FORM: SongFormState = {
   status: 'draft',
   explicit: false,
   is_featured: false,
+  is_free: true,
+  is_downloadable: true,
+  price: '',
   release_date: '',
   track_number: '',
   disc_number: '',
@@ -191,6 +200,9 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
       status: (song.status as SongFormState['status']) || 'draft',
       explicit: !!song.is_explicit,
       is_featured: !!song.is_featured,
+      is_free: song.is_free !== false,
+      is_downloadable: song.is_downloadable !== false,
+      price: song.price ? String(song.price) : '',
       release_date: toDateInput(song.release_date),
       track_number: song.track_number ? String(song.track_number) : '',
       disc_number: song.disc_number ? String(song.disc_number) : '',
@@ -230,6 +242,9 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
         status: formData.status,
         explicit: formData.explicit,
         is_featured: formData.is_featured,
+        is_free: formData.is_free,
+        is_downloadable: formData.is_downloadable,
+        price: formData.is_free ? '' : formData.price,
         slug: formData.slug,
         album_id: formData.album_id,
         duration_seconds: formData.duration_seconds,
@@ -480,6 +495,44 @@ export default function EditSongPage({ params }: { params: Promise<{ id: string 
                   Featured song
                 </label>
               </div>
+            </FormSection>
+
+            <FormSection title="Pricing & Access">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_free}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, is_free: e.target.checked }))}
+                  />
+                  Free (no purchase required)
+                </label>
+
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_downloadable}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, is_downloadable: e.target.checked }))}
+                  />
+                  Allow downloads
+                </label>
+              </div>
+
+              {!formData.is_free && (
+                <div className="mt-4">
+                  <FormField label="Price (UGX)" error={errors.price}>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={formData.price}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+                      className="w-full rounded-lg border px-4 py-2 bg-background"
+                      placeholder="e.g. 2000"
+                    />
+                  </FormField>
+                </div>
+              )}
             </FormSection>
 
             <FormSection title="Catalog Metadata">

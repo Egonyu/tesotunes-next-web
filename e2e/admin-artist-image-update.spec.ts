@@ -174,8 +174,9 @@ test.describe('Admin artist image update', () => {
     };
 
     expect(updatePayload.success).toBeTruthy();
-    expect(updatePayload.data?.profile_url).toContain('/storage/artists/avatars/');
-    expect(updatePayload.data?.cover_url).toContain('/storage/artists/covers/');
+    // URLs may be local (/storage/artists/avatars/) or CDN (digitaloceanspaces.com/artists/avatars/)
+    expect(updatePayload.data?.profile_url).toContain('artists/avatars/');
+    expect(updatePayload.data?.cover_url).toContain('artists/covers/');
     expect(updatePayload.data?.profile_url).toContain('?v=');
     expect(updatePayload.data?.cover_url).toContain('?v=');
 

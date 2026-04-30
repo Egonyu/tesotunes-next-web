@@ -418,6 +418,7 @@ export default function SongDetailPage() {
                 songTitle={song.title}
                 isFree={song.is_free}
                 isDownloadable={song.is_downloadable ?? false}
+                isPurchased={isPurchased ?? false}
                 price={song.price}
               />
             </div>

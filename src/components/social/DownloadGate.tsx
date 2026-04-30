@@ -29,6 +29,7 @@ interface DownloadGateProps {
   songTitle: string;
   isFree: boolean;
   isDownloadable: boolean;
+  isPurchased?: boolean;
   price?: number;
 }
 
@@ -43,7 +44,7 @@ function classifyError(message: string): DownloadError {
   return "unknown";
 }
 
-export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price }: DownloadGateProps) {
+export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurchased, price }: DownloadGateProps) {
   const { data: session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showGate, setShowGate] = useState(false);
@@ -51,7 +52,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
   const [gateType, setGateType] = useState<DownloadError>("unknown");
 
   function handleInitiateDownload() {
-    if (!isDownloadable) {
+    if (!isDownloadable && !isPurchased) {
       setGateType("not_downloadable");
       setShowGate(true);
       return;
@@ -106,17 +107,17 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, price 
         onClick={handleInitiateDownload}
         disabled={isDownloading}
         className="flex flex-col items-center gap-1 p-3 rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
-        title={!isDownloadable ? "Not available for download" : isFree ? "Free download" : "Download"}
+        title={!isDownloadable && !isPurchased ? "Not available for download" : isFree ? "Free download" : "Download"}
       >
         {isDownloading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
-        ) : !isDownloadable ? (
+        ) : !isDownloadable && !isPurchased ? (
           <Lock className="h-5 w-5 text-muted-foreground" />
         ) : (
           <Download className="h-5 w-5" />
         )}
         <span className="text-xs">
-          {!isDownloadable ? "N/A" : "Download"}
+          {!isDownloadable && !isPurchased ? "N/A" : "Download"}
         </span>
       </button>
 

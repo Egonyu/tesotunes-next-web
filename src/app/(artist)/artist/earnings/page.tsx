@@ -220,12 +220,9 @@ export default function ArtistEarningsPage() {
               return monthlyChart.map((item, i) => {
                 const height = maxAmount > 0 ? Math.max((item.amount / maxAmount) * 100, 4) : 4;
                 return (
-                  <div key={item.month} className="flex-1 flex flex-col items-center gap-2" title={`UGX ${item.amount.toLocaleString()}`}>
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2" title={`UGX ${item.amount.toLocaleString()}`}>
                     <div
-                      className={cn(
-                        'w-full rounded-t transition-colors',
-                        i === monthlyChart.length - 1 ? 'bg-primary' : 'bg-primary/40 hover:bg-primary/60'
-                      )}
+                      className="w-full rounded-t bg-primary/40 hover:bg-primary/60 transition-colors"
                       style={{ height: `${height}%` }}
                     />
                     <span className="text-xs text-muted-foreground">{item.month}</span>

@@ -445,7 +445,7 @@ function DeviceMiniDonut({ devices }: { devices: Array<{ device_type: string; co
       </svg>
       <div className="space-y-1.5">
         {segments.map((s, i) => {
-          const Icon = DEVICE_ICONS[s.device.toLowerCase()] ?? Smartphone;
+          const Icon = DEVICE_ICONS[(s.device ?? '').toLowerCase()] ?? Smartphone;
           return (
             <div key={i} className="flex items-center gap-2 text-xs">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />

@@ -396,6 +396,36 @@ export default function CreditsPage() {
         </div>
       )}
 
+      {/* Top-Up Bonus Tiers */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="px-6 py-4 border-b">
+          <h2 className="font-bold text-lg">Top-Up Bonus Credits</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Top up your wallet and we automatically award bonus credits — the bigger the top-up, the bigger the bonus.
+          </p>
+        </div>
+        <div className="divide-y">
+          {[
+            { range: '5,000 – 9,999 UGX', bonus: '+10%', example: 'e.g. 500 free credits on a 5,000 UGX top-up' },
+            { range: '10,000 – 19,999 UGX', bonus: '+20%', example: 'e.g. 2,000 free credits on a 10,000 UGX top-up' },
+            { range: '20,000 – 49,999 UGX', bonus: '+30%', example: 'e.g. 6,000 free credits on a 20,000 UGX top-up' },
+            { range: '50,000+ UGX', bonus: '+40%', example: 'e.g. 20,000 free credits on a 50,000 UGX top-up' },
+          ].map((tier) => (
+            <div key={tier.range} className="flex items-center justify-between px-6 py-4">
+              <div>
+                <p className="font-medium text-sm">{tier.range}</p>
+                <p className="text-xs text-muted-foreground">{tier.example}</p>
+              </div>
+              <span className="text-green-600 font-bold text-lg">{tier.bonus}</span>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-3 bg-muted/30 text-xs text-muted-foreground">
+          Bonus credits are awarded instantly when your top-up is confirmed.{' '}
+          <Link href="/wallet/topup" className="text-primary hover:underline">Top up now →</Link>
+        </div>
+      </div>
+
       <div>
         <h2 className="text-xl font-bold mb-4">What Credits Are For</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

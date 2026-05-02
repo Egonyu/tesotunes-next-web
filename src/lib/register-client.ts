@@ -3,6 +3,7 @@ export interface RegisterFormData {
   email: string;
   password: string;
   password_confirmation: string;
+  recaptcha_token?: string;
 }
 
 export interface RegisterResult {

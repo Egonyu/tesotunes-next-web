@@ -347,6 +347,7 @@ export async function authorizeCredentials(
       email: credentials.email,
       password: credentials.password,
       remember_me: rememberMe,
+      recaptcha_token: credentials.recaptcha_token ?? undefined,
     };
 
     let response = await fetchAuthApi("/auth/login", {
@@ -605,6 +606,7 @@ export const authConfig: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         remember_me: { label: "Remember me", type: "checkbox" },
+        recaptcha_token: { label: "reCAPTCHA", type: "text" },
       },
       authorize: authorizeCredentials,
     }),

@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Check } from "lucide-react";
 import { getProviders, signIn } from "next-auth/react";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { registerUser } from "@/lib/register-client";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
 
 export default function RegisterPage() {
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const router = useRouter();
   const { data: platformSettings } = usePublicPlatformSettings();
 
@@ -67,7 +69,8 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const result = await registerUser(formData);
+      const recaptcha_token = await executeRecaptcha?.("register") ?? "";
+      const result = await registerUser({ ...formData, recaptcha_token });
 
       if (!result.ok) {
         if (result.status === 422 && result.errors) {

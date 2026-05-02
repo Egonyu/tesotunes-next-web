@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getProviders, signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { apiPost } from "@/lib/api";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
@@ -41,6 +42,7 @@ function requiresEmailVerification(errorMessage: string): boolean {
 }
 
 export default function LoginPage() {
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: platformSettings } = usePublicPlatformSettings();
@@ -104,10 +106,12 @@ export default function LoginPage() {
     setVerificationEmailSent(false);
 
     try {
+      const recaptchaToken = await executeRecaptcha?.("login") ?? "";
       const result = await signIn("credentials", {
         email,
         password,
         remember_me: rememberMe,
+        recaptcha_token: recaptchaToken,
         redirect: false,
         callbackUrl,
       });

@@ -470,7 +470,6 @@ export function useUpdateArtistAvatar() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("avatar", file);
-      formData.append("profile_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/avatar",
         formData
@@ -490,7 +489,6 @@ export function useUpdateArtistBanner() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("banner", file);
-      formData.append("cover_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/banner",
         formData

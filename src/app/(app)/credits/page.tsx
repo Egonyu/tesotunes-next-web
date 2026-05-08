@@ -324,6 +324,10 @@ export default function CreditsPage() {
           <PiggyBank className="h-4 w-4" />
           Save on SACCO
         </Link>
+        <Link href="/credits/transfer" className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 hover:bg-muted">
+          <ArrowLeftRight className="h-4 w-4" />
+          Send Credits
+        </Link>
       </div>
 
       {opportunities.length > 0 && (

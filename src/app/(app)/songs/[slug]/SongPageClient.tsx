@@ -162,7 +162,7 @@ function toPlayerSong(detail: SongDetail): Song {
           artwork_url: detail.album.artwork_url ?? undefined,
         }
       : undefined,
-    genres: detail.genres ?? (detail.genre ? [detail.genre] : []),
+    genre: detail.genre,
     created_at: "",
   } as Song;
 }

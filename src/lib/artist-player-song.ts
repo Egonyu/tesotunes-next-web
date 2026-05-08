@@ -55,7 +55,6 @@ export function mapArtistSongToPlayerSong(song: ArtistSongWithPlayback): Song {
     stream_url: song.stream_url ?? song.audio_url ?? null,
     preview_url: song.preview_url ?? null,
     artwork_url: song.artwork_url ?? undefined,
-    genres: [],
     artist: {
       id: song.artist?.id ?? 0,
       name: artistName,

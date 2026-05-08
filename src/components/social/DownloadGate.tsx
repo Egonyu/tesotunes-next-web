@@ -6,6 +6,7 @@ import { Download, Loader2, Lock, Crown, ShoppingCart, X, Music2, Gem } from "lu
 import { apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { useMySubscription } from "@/hooks/useSubscriptions";
 
 type AudioQuality = "128" | "192" | "320" | "flac";
 
@@ -46,10 +47,19 @@ function classifyError(message: string): DownloadError {
 
 export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurchased, price }: DownloadGateProps) {
   const { data: session } = useSession();
+  const { data: subscription } = useMySubscription();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showGate, setShowGate] = useState(false);
   const [showQualityPicker, setShowQualityPicker] = useState(false);
   const [gateType, setGateType] = useState<DownloadError>("unknown");
+
+  const maxQualityKbps = subscription?.limits?.audio_quality_kbps ?? 128;
+
+  function isQualityLocked(option: QualityOption): boolean {
+    if (option.value === "flac") return maxQualityKbps < 320;
+    const kbps = parseInt(option.value, 10);
+    return kbps > maxQualityKbps;
+  }
 
   function handleInitiateDownload() {
     if (!isDownloadable && !isPurchased) {
@@ -74,7 +84,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurc
         download_url?: string;
         expires_at?: string;
         message?: string;
-      }>(`/v1/songs/${songId}/download`, { quality });
+      }>(`/songs/${songId}/download`, { quality });
 
       if (res.download_url) {
         const ext = quality === "flac" ? "flac" : "mp3";
@@ -141,34 +151,52 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurc
               Choose audio quality for &ldquo;{songTitle}&rdquo;
             </p>
             <div className="space-y-2">
-              {qualityOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleDownload(option.value)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      option.premium ? 'bg-amber-500/10' : 'bg-primary/10'
-                    }`}>
-                      {option.premium ? (
-                        <Gem className="h-5 w-5 text-amber-500" />
-                      ) : (
-                        <Download className="h-5 w-5 text-primary" />
-                      )}
+              {qualityOptions.map((option) => {
+                const locked = isQualityLocked(option);
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => !locked && handleDownload(option.value)}
+                    disabled={locked}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors text-left ${
+                      locked
+                        ? 'opacity-50 cursor-not-allowed bg-muted/30'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        locked ? 'bg-muted' : option.premium ? 'bg-amber-500/10' : 'bg-primary/10'
+                      }`}>
+                        {locked ? (
+                          <Lock className="h-5 w-5 text-muted-foreground" />
+                        ) : option.premium ? (
+                          <Gem className="h-5 w-5 text-amber-500" />
+                        ) : (
+                          <Download className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{option.label}</p>
-                      <p className="text-xs text-muted-foreground">{option.description}</p>
-                    </div>
-                  </div>
-                  {option.premium && (
-                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">
-                      Premium
-                    </span>
-                  )}
-                </button>
-              ))}
+                    {locked ? (
+                      <Link
+                        href="/pricing"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 shrink-0"
+                      >
+                        Upgrade
+                      </Link>
+                    ) : option.premium ? (
+                      <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">
+                        Premium
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 ## Overview
 This document tracks gaps between the Laravel backend and Next.js frontend.
+Last audited: 2026-05-08
 
 ---
 
@@ -9,28 +10,41 @@ This document tracks gaps between the Laravel backend and Next.js frontend.
 
 ### 1. Credits System
 **Backend:** Fully implemented with CreditService, CreditRate, CreditTransaction
-**Frontend:** Basic page exists at /credits but missing:
-- [ ] useCredits.ts hook
-- [ ] Credit earning notifications
-- [ ] Activity-based credit awards
-- [ ] Daily limit tracking
-- [ ] Streak bonus UI
+**Frontend:**
+- [x] Credits dashboard page (`/credits`)
+- [x] Credit marketplace (`/credits/marketplace`)
+- [x] Credit balance hook (`useCreditBalance` in usePayments.ts)
+- [x] Daily limit tracking displayed on credits page
+- [x] Streak bonus UI on credits page
+- [x] `/credits/transfer` — P2P credit send page with live user search
+- [ ] `/credits/earn` — Earn guide / activity discovery page
 
 ### 2. Artist Earnings Flow
 **Backend:** ArtistRevenue model tracks all earnings
-**Frontend:** Basic wallet page but missing:
-- [ ] Revenue breakdown by type (streams, downloads, tips)
-- [ ] Pending vs confirmed earnings
-- [ ] Royalty split management
-- [ ] Payout history
+**Frontend:**
+- [x] Earnings dashboard with stats (`/artist/earnings`)
+- [x] Revenue breakdown by type (streams, downloads, tips)
+- [x] Pending vs confirmed earnings
+- [x] Royalty split management (`/artist/royalty-splits`)
+- [x] Payout history with pagination
+- [x] Per-song earnings breakdown
 
 ### 3. Subscription Features
 **Backend:** SubscriptionPlan with feature limits
-**Frontend:** Missing enforcement of:
-- [ ] Download limits per tier
-- [ ] Audio quality restrictions
-- [ ] Offline mode toggle
-- [ ] Ad display logic
+**Frontend:**
+- [x] Download limits per tier enforced (DownloadGate component)
+- [x] Audio quality restrictions (StreamingQualityPicker + subscription cap)
+- [ ] Offline mode toggle (backend field `offline_access` exists)
+- [ ] Ad display logic (backend field `has_ads` exists, no ad component)
+
+### 4. Artist Distribution
+**Backend:** Fully implemented — DistributionController, DistributionService
+- 9 platforms: Spotify, Apple Music, YouTube Music, Amazon Music, Deezer, Tidal, Pandora, SoundCloud, Bandcamp
+- Submit song/album, retry, remove, royalty reports, analytics dashboard
+**Frontend:**
+- [x] `/artist/distribution` page implemented (`src/app/(artist)/artist/distribution/page.tsx`)
+- [x] `useDistribution.ts` hook (`useDistributionAnalytics`, `useSongDistributions`, `useSubmitDistribution`, `useRetryDistribution`, `useRemoveDistribution`)
+- [x] Distribution nav item added to artist sidebar
 
 ---
 
@@ -39,13 +53,13 @@ This document tracks gaps between the Laravel backend and Next.js frontend.
 ### Song Model
 | Backend Field | Frontend Status | Notes |
 |--------------|-----------------|-------|
-| composer | ❌ Not in form | Add to upload form |
-| producer | ❌ Not in form | Add to upload form |
-| description | ❌ Not in form | Add to upload form |
-| release_date | ❌ Not in form | Add date picker |
-| price | ❌ Not in form | Add for paid songs |
-| is_downloadable | ❌ Not in form | Add toggle |
-| is_free | ❌ Not in form | Add toggle |
+| composer | ✅ In form | Advanced Options section |
+| producer | ✅ In form | Advanced Options section |
+| description | ✅ In form | Advanced Options section |
+| release_date | ✅ In form | Standalone date input |
+| price | ✅ In form | Pricing section |
+| is_downloadable | ✅ In form | Pricing section checkbox |
+| is_free | ✅ In form | Pricing section checkbox |
 | duration_seconds | ⚠️ Always 0 | Need audio processing |
 | lyrics | ✅ In form | Works |
 | is_explicit | ✅ In form | Works |
@@ -54,47 +68,46 @@ This document tracks gaps between the Laravel backend and Next.js frontend.
 ### Artist Model
 | Backend Field | Frontend Status | Notes |
 |--------------|-----------------|-------|
-| career_start_year | ❌ Not in settings | Add to artist profile |
-| record_label | ❌ Not in settings | Add to artist profile |
-| influences | ❌ Not in settings | Add to artist profile |
-| can_upload | ❌ Not displayed | Show in dashboard |
-| monthly_upload_limit | ❌ Not displayed | Show remaining uploads |
-| auto_publish | ❌ Not configurable | Add to settings |
+| career_start_year | ✅ In settings | Profile tab |
+| record_label | ✅ In settings | Profile tab |
+| influences | ✅ In settings | Profile tab, one per line |
+| can_upload | ✅ Displayed | Payout tab, read-only |
+| monthly_upload_limit | ✅ Displayed | Payout tab, read-only |
+| auto_publish | ✅ Configurable | Payout tab toggle |
 
 ### User Model
 | Backend Field | Frontend Status | Notes |
 |--------------|-----------------|-------|
 | credits | ✅ Displayed | In header/profile |
 | ugx_balance | ✅ Displayed | In wallet |
-| referral_code | ⚠️ Basic | Needs better UI |
-| referred_count | ❌ Not shown | Add to referrals page |
+| referral_code | ✅ Working | Referrals pages (4 routes) |
+| referred_count | ⚠️ Basic | Add to referrals page |
 
 ---
 
 ## API ENDPOINTS NOT USED
 
-### Credits API (exists but not integrated)
+### Distribution API (backend complete, frontend 0%)
 ```
-GET  /api/credits/balance
-GET  /api/credits/packages
-POST /api/credits/purchase
-GET  /api/credits/history
-POST /api/credits/transfer
-```
-
-### Artist Analytics (exists but basic)
-```
-GET  /api/artist/analytics
-GET  /api/artist/analytics/streams
-GET  /api/artist/analytics/demographics
-GET  /api/artist/analytics/geography
+POST /api/songs/{song}/distribute        ← submit for distribution
+GET  /api/songs/{song}/distributions     ← list song distributions
+POST /api/albums/{album}/distribute      ← distribute full album
+GET  /api/artist/distribution-analytics  ← dashboard analytics
+POST /api/distributions/{id}/retry       ← retry failed
+POST /api/distributions/{id}/remove      ← request removal
+GET  /api/distributions/{id}/royalty-report
 ```
 
-### Revenue API (exists but not integrated)
+### Credits Transfer (backend exists)
 ```
-GET  /api/artist/earnings/sources
-GET  /api/artist/earnings/by-song
-POST /api/artist/royalty-splits
+POST /api/credits/transfer               ← send credits to user
+```
+
+### Artist Analytics (partially integrated)
+```
+GET  /api/artist/analytics/streams       ← detailed stream data
+GET  /api/artist/analytics/demographics  ← audience demographics
+GET  /api/artist/analytics/geography     ← geographic breakdown
 ```
 
 ---
@@ -102,46 +115,39 @@ POST /api/artist/royalty-splits
 ## UI/UX GAPS
 
 ### Missing Pages
-- [ ] /artist/royalty-splits - Manage collaborator splits
-- [ ] /artist/distribution - External platform distribution
-- [ ] /credits/transfer - Send credits to users
-- [ ] /credits/earn - How to earn credits guide
+- [ ] `/artist/distribution` — Distribute to Spotify, Apple Music, etc. (**PRIORITY 1**)
+- [x] `/credits/transfer` — Implemented with live user search
+- [ ] `/credits/earn` — Earning opportunities guide (low priority)
 
 ### Missing Components
-- [ ] CreditDisplay - Show credit balance consistently
-- [ ] SubscriptionBadge - Show user tier
-- [ ] DownloadButton - Respect tier limits
-- [ ] AudioQualitySelector - Based on subscription
+- [ ] `OfflineModeToggle` — Honor subscription offline_access field
+- [ ] `AdBanner` — Conditional ads for free tier (has_ads field)
 
-### Missing Notifications
-- [ ] Credit earned notifications
-- [ ] Withdrawal status updates
-- [ ] Upload limit warnings
-- [ ] Song approval notifications
+### Existing but could be improved
+- `SubscriptionBadge` — Inline tier badge for profile/header (no component, inlined in multiple places)
+- `CreditDisplay` — No shared component; each page queries balance independently
 
 ---
 
 ## Priority Fix Order
 
-### Phase 1: Data Integrity (CRITICAL)
-1. Fix all relative URLs in backend
-2. Add default status values
-3. Align field names in types
+### Phase 1: Critical Missing Pages ✅ DONE
+1. **`/artist/distribution`** — Implemented with analytics, per-song status, submit/retry/remove
+2. **`/credits/transfer`** — Implemented with live user search (debounced, GET /api/users/search)
 
-### Phase 2: Core Features
-1. Complete upload form fields
-2. Implement credit earning
-3. Add subscription enforcement
+### Phase 2: Subscription Enforcement
+1. Offline mode toggle in settings (uses existing `offline_access` from subscription API)
+2. Ad display logic for free-tier users
 
-### Phase 3: Artist Features
-1. Royalty split management
-2. Advanced analytics
-3. Distribution tools
+### Phase 3: Polish & Components
+1. Shared `SubscriptionBadge` component
+2. Shared `CreditDisplay` component
+3. `referred_count` on referrals page
 
-### Phase 4: User Features
-1. Credit transfer
-2. Gift system
-3. Referral improvements
+### Phase 4: Analytics Depth
+1. Stream demographics view
+2. Geographic breakdown
+3. Per-platform revenue (already in distribution analytics)
 
 ---
 

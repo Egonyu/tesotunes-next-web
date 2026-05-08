@@ -187,7 +187,11 @@ export interface ArtistProfile {
   verification_status: string;
   payout_phone_number: string | null;
   can_upload: boolean;
+  monthly_upload_limit: number | null;
   auto_publish: boolean;
+  career_start_year: number | null;
+  record_label: string | null;
+  influences: string[];
 }
 
 // ============================================================================
@@ -271,6 +275,25 @@ export function useArtistEarnings() {
     queryFn: () => apiGet<{ data: EarningsData }>("/artist/earnings")
       .then(res => res.data),
     staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+export interface TransactionsResponse {
+  data: Transaction[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export function useArtistTransactions(params?: { page?: number; per_page?: number; type?: string }) {
+  return useQuery({
+    queryKey: ['artist', 'transactions', params],
+    queryFn: () =>
+      apiGet<TransactionsResponse>('/artist/earnings/history', { params }),
+    staleTime: 60 * 1000,
   });
 }
 

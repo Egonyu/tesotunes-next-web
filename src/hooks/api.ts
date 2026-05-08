@@ -641,7 +641,7 @@ export function useCheckPurchase(songId: number) {
   return useQuery({
     queryKey: ["song", "purchase", songId],
     queryFn: () =>
-      apiGet<{ data: { purchased: boolean } }>(`/v1/songs/${songId}/purchase-status`).then(
+      apiGet<{ data: { purchased: boolean } }>(`/songs/${songId}/purchase-status`).then(
         (res) => res.data.purchased
       ),
     enabled: songId > 0,
@@ -654,7 +654,7 @@ export function usePurchaseSong() {
 
   return useMutation({
     mutationFn: ({ songId, payload }: { songId: number; payload?: PurchaseSongPayload }) =>
-      apiPost<PurchaseResponse>(`/v1/songs/${songId}/purchase`, payload),
+      apiPost<PurchaseResponse>(`/songs/${songId}/purchase`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["song", "purchase", variables.songId] });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
@@ -667,7 +667,7 @@ export function usePurchaseSong() {
 export function useSongPurchasePaymentStatus(songId: number, reference: string | null, options?: { enabled?: boolean; refetchInterval?: number }) {
   return useQuery({
     queryKey: ['song', 'purchase', 'payment-status', songId, reference],
-    queryFn: () => apiGet<SongPurchasePaymentStatusResponse>(`/v1/songs/${songId}/purchase/payment-status/${reference}`),
+    queryFn: () => apiGet<SongPurchasePaymentStatusResponse>(`/songs/${songId}/purchase/payment-status/${reference}`),
     enabled: songId > 0 && !!reference && (options?.enabled !== false),
     refetchInterval: options?.refetchInterval ?? 3000,
     refetchIntervalInBackground: false,

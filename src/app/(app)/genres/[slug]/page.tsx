@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: GenrePageProps): Promise<Meta
     openGraph: {
       title,
       description,
-      images: genre.image_url ? [{ url: genre.image_url }] : undefined,
+      images: genre.artwork_url ? [{ url: genre.artwork_url }] : undefined,
     },
     twitter: { title, description },
   };
@@ -106,9 +106,9 @@ export default async function GenrePage({ params }: GenrePageProps) {
       <div className="relative h-64 md:h-80">
         {/* Background */}
         <div className="absolute inset-0 bg-linear-to-br from-primary via-primary/80 to-primary/60">
-          {genre.image_url && (
+          {genre.artwork_url && (
             <Image
-              src={genre.image_url}
+              src={genre.artwork_url}
               alt={genre.name}
               fill
               className="object-cover opacity-30"

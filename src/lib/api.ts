@@ -2,6 +2,33 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { API_URL } from "./api-config";
 import { buildLocalApiBaseUrls, fetchApiWithFallback } from "./api-fallback";
 
+// ─── DUAL CODE-PATH ARCHITECTURE ─────────────────────────────────────────────
+//
+// This module exposes two distinct API transport paths that differ in important
+// ways. Both are intentional — don't try to unify them.
+//
+// PATH A — apiGet / apiPost / apiPut / apiPatch / apiDelete / apiPostForm
+//   Used by: client components, React Query hooks
+//   Routing:  browser → /api/backend proxy → Laravel (keeps token server-side)
+//             SSR/build → API_URL directly (same Axios instance, no proxy)
+//   Auth:     cookies forwarded automatically by the proxy (NextAuth session)
+//   Errors:   throws AxiosError; structured data in .response.data.message
+//   Timeout:  30 s (Axios default set below)
+//   Caching:  none
+//
+// PATH B — serverFetch
+//   Used by: React Server Components (RSC), generateStaticParams, OG images
+//   Routing:  always direct to API_URL (bypasses proxy)
+//   Auth:     none — only call public / unauthenticated endpoints
+//   Errors:   throws Error("API Error: {status}") — no structured payload
+//   Timeout:  AbortSignal.timeout(SSR_FETCH_TIMEOUT_MS)
+//   Caching:  next: { revalidate: 60 } — ISR, not real-time
+//   Media:    returns raw API URLs; proxy URL normalization does NOT apply
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SSR_FETCH_TIMEOUT_MS = 15_000;
+
 // Browser requests go through the Next.js backend proxy so the Laravel access
 // token stays server-side inside the NextAuth JWT. Server-side code can still
 // call Laravel directly when needed.
@@ -211,6 +238,7 @@ export async function serverFetch<T>(
 
   const response = await fetchApiWithFallback(endpoint, {
     ...options,
+    signal: options?.signal ?? AbortSignal.timeout(SSR_FETCH_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",

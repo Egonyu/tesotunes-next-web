@@ -35,7 +35,7 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
   const isPublic =
     playlist.visibility === "public" || playlist.is_public === true;
   const owner = playlist.owner ?? playlist.user;
-  const songCount = playlist.song_count ?? playlist.track_count ?? 0;
+  const songCount = playlist.song_count ?? 0;
 
   return (
     <Link
@@ -98,7 +98,7 @@ function PodiumPlaylistCard({
   rank: number;
   featured?: boolean;
 }) {
-  const songCount = playlist.song_count ?? playlist.track_count ?? 0;
+  const songCount = playlist.song_count ?? 0;
 
   return (
     <Link

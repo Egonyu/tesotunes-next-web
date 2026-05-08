@@ -559,11 +559,6 @@ export const authConfig: NextAuthOptions = {
             console.warn("[Auth] Clearing expired access token");
             token.accessToken = undefined;
           }
-        } else if (freshData && 'role' in freshData) {
-          token.role = freshData.role;
-          token.isArtist = freshData.isArtist;
-          token.isEventOrganizer = freshData.isEventOrganizer;
-          token.permissions = freshData.permissions;
         }
 
         if (freshData && 'role' in freshData) {

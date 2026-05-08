@@ -50,8 +50,10 @@ export interface CurrentSubscription {
   offline_access?: boolean;
   limits: {
     downloads_per_day: number;
+    downloads_today: number;
     audio_quality_kbps: number;
     uploads_per_month: number;
+    uploads_this_month: number;
   };
 }
 

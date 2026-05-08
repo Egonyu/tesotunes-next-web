@@ -38,6 +38,9 @@ export default function ArtistSettingsPage() {
     tiktok: '',
     payout_phone_number: '',
     auto_publish: false,
+    career_start_year: '',
+    record_label: '',
+    influences_text: '',
   });
 
   // Populate form when profile loads
@@ -59,6 +62,9 @@ export default function ArtistSettingsPage() {
         tiktok: socialLinks.tiktok || '',
         payout_phone_number: profile.payout_phone_number || '',
         auto_publish: profile.auto_publish || false,
+        career_start_year: profile.career_start_year ? String(profile.career_start_year) : '',
+        record_label: profile.record_label || '',
+        influences_text: (profile.influences ?? []).join('\n'),
       });
     }
   }, [profile]);
@@ -82,6 +88,12 @@ export default function ArtistSettingsPage() {
         },
         payout_phone_number: formData.payout_phone_number,
         auto_publish: formData.auto_publish,
+        career_start_year: formData.career_start_year ? Number(formData.career_start_year) : null,
+        record_label: formData.record_label || null,
+        influences: formData.influences_text
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
       });
       toast.success('Settings saved successfully');
     } catch {
@@ -229,6 +241,43 @@ export default function ArtistSettingsPage() {
                   <p className="px-4 py-2 text-muted-foreground">{formData.city || '—'}</p>
                   <p className="text-xs text-muted-foreground">Managed via account settings</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Career Start Year</label>
+                  <input
+                    type="number"
+                    min={1900}
+                    max={new Date().getFullYear()}
+                    value={formData.career_start_year}
+                    onChange={(e) => setFormData({ ...formData, career_start_year: e.target.value })}
+                    placeholder="e.g. 2015"
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Record Label</label>
+                  <input
+                    type="text"
+                    value={formData.record_label}
+                    onChange={(e) => setFormData({ ...formData, record_label: e.target.value })}
+                    placeholder="Independent / Label name"
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Influences</label>
+                <textarea
+                  rows={3}
+                  value={formData.influences_text}
+                  onChange={(e) => setFormData({ ...formData, influences_text: e.target.value })}
+                  placeholder="One artist per line, e.g. Fela Kuti"
+                  className="w-full px-4 py-2 border rounded-lg bg-background resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-1">One name per line</p>
               </div>
 
               {/* Social Links */}
@@ -379,6 +428,25 @@ export default function ArtistSettingsPage() {
                     formData.auto_publish ? "right-0.5" : "left-0.5"
                   )} />
                 </button>
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Upload permissions (admin-managed)</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Can upload music</p>
+                  <span className={cn(
+                    'text-xs font-semibold px-2.5 py-1 rounded-full',
+                    profile?.can_upload ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
+                  )}>
+                    {profile?.can_upload ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                {profile?.monthly_upload_limit != null && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Monthly upload limit</p>
+                    <span className="text-sm text-muted-foreground">{profile.monthly_upload_limit} songs / month</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

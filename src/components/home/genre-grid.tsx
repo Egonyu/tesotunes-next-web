@@ -63,9 +63,9 @@ export function GenreGrid() {
           } group`}
         >
           {/* Genre Image (if available) */}
-          {genre.image_url && (
+          {genre.artwork_url && (
             <Image
-              src={genre.image_url}
+              src={genre.artwork_url}
               alt={genre.name}
               fill
               className="object-cover opacity-60 group-hover:opacity-70 transition-opacity"

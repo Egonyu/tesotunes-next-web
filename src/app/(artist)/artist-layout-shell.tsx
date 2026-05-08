@@ -24,6 +24,7 @@ import {
   Crown,
   ShoppingBag,
   PiggyBank,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
@@ -40,6 +41,7 @@ const navItems = [
   { href: '/artist/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/artist/earnings', label: 'Earnings', icon: Wallet },
   { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users },
+  { href: '/artist/distribution', label: 'Distribution', icon: Globe },
   { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
   { href: '/artist/fan-club', label: 'Fan Club', icon: Crown },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },

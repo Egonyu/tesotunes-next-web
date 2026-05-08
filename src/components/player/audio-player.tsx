@@ -3,22 +3,10 @@
 import { useRef, useEffect, useCallback, useMemo } from "react";
 import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
-import { useMySubscription } from "@/hooks/useSubscriptions";
 import { useRecordPlay, useSavePosition, useResumePosition } from "@/hooks/api";
 import { useSession } from "next-auth/react";
 import { resolvePlayableAudioUrl } from "@/lib/media";
-
-/**
- * Maps subscription audio_quality_kbps to the quality param accepted by
- * the backend stream endpoint.  Free-tier (128 kbps) gets "normal",
- * Premium (320 kbps) gets "very_high", etc.
- */
-function qualityParamFromKbps(kbps: number): string {
-  if (kbps >= 320) return "very_high";
-  if (kbps >= 256) return "high";
-  if (kbps >= 192) return "normal";
-  return "normal"; // free-tier default
-}
+import { useEffectiveQuality, qualityParamFromSlug } from "@/components/player/StreamingQualityPicker";
 
 /** Append or replace the `quality` query-string param on an audio URL. */
 function applyQualityToUrl(url: string, quality: string): string {
@@ -80,11 +68,13 @@ export function AudioPlayer() {
   const { mutate: savePositionMutate } = useSavePosition();
   const { status: authStatus } = useSession();
 
-  // Subscription-based audio quality enforcement
-  const { data: subscription } = useMySubscription();
+  // Quality = user preference clamped to subscription cap (reads from both settings + subscription).
+  // undefined while loading — audio URLs are not recomputed until both queries settle,
+  // preventing a mid-playback src flip for premium users on first load.
+  const effectiveQualitySlug = useEffectiveQuality();
   const qualityParam = useMemo(
-    () => qualityParamFromKbps(subscription?.limits?.audio_quality_kbps ?? 128),
-    [subscription?.limits?.audio_quality_kbps]
+    () => effectiveQualitySlug ? qualityParamFromSlug(effectiveQualitySlug) : null,
+    [effectiveQualitySlug]
   );
 
   // Fetch saved resume position for the current song (auto-refetches on song change)
@@ -111,6 +101,8 @@ export function AudioPlayer() {
     (song: { audio_url?: string | null; stream_url?: string | null; file_url?: string | null; preview_url?: string | null } | null): string => {
       const raw = resolvePlayableAudioUrl(song);
       if (!raw) return "";
+      // Skip quality param until both settings + subscription have loaded
+      if (!qualityParam) return raw;
       return applyQualityToUrl(raw, qualityParam);
     },
     [qualityParam]

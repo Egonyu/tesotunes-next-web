@@ -301,7 +301,7 @@ export default function UploadPage() {
       {currentSub && (
         <FeatureGate
           feature="uploads"
-          used={0}
+          used={currentSub.limits.uploads_this_month ?? 0}
           limit={currentSub.limits.uploads_per_month}
           planName={currentSub.plan_name ?? currentSub.plan}
         />

@@ -179,12 +179,12 @@ export default function ArtistPage() {
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Music className="h-4 w-4" />
-                {artist.total_songs || artist.song_count || songs.length} songs
+                {artist.total_songs || songs.length} songs
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Disc3 className="h-4 w-4" />
-                {artist.total_albums || artist.album_count || albums.length} albums
+                {artist.total_albums || albums.length} albums
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -475,7 +475,7 @@ export default function ArtistPage() {
                   <p className="text-sm text-muted-foreground">
                     {album.release_date
                       ? new Date(album.release_date).getFullYear()
-                      : "Album"} • {album.track_count || 0} tracks
+                      : "Album"} • {album.total_tracks || 0} tracks
                   </p>
                 </Link>
               );

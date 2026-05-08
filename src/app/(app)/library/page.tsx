@@ -99,7 +99,7 @@ export default function LibraryPage() {
       {currentSub && currentSub.limits.downloads_per_day !== null && (
         <FeatureGate
           feature="downloads"
-          used={0}
+          used={currentSub.limits.downloads_today ?? 0}
           limit={currentSub.limits.downloads_per_day}
           planName={currentSub.plan_name ?? currentSub.plan}
           className="mb-6"

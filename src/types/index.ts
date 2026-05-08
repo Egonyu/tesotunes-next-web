@@ -1,5 +1,7 @@
-import type { UserRole, EntityType, SongStatus, ArtistStatus } from '@tesotunes/sdk/types/domain';
-export type { UserRole, EntityType, SongStatus, ArtistStatus };
+export type UserRole = 'user' | 'artist' | 'label' | 'moderator' | 'admin' | 'super_admin';
+export type EntityType = 'individual' | 'artist' | 'label' | 'organization' | 'band';
+export type SongStatus = 'draft' | 'pending' | 'approved' | 'published' | 'rejected';
+export type ArtistStatus = 'pending' | 'active' | 'verified' | 'suspended';
 
 // User types
 export interface User {

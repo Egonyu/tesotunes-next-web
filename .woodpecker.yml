@@ -1,6 +1,8 @@
 when:
   - event: push
-    branch: staging
+    branch: main
+  - event: manual
+    branch: main
 
 steps:
   build-and-deploy:

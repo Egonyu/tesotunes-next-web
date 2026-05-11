@@ -1,0 +1,20 @@
+when:
+  - event: push
+    branch: main
+  - event: manual
+    branch: main
+
+steps:
+  build-and-deploy:
+    image: node:22-alpine
+    secrets:
+      - vercel_token
+      - vercel_org_id
+      - vercel_project_id
+    commands:
+      - npm ci --prefer-offline
+      - npm run build
+      - npm install -g vercel
+      - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - vercel build --prod --token=$VERCEL_TOKEN
+      - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

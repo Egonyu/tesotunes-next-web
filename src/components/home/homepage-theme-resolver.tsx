@@ -1,5 +1,5 @@
 import { ClassicHomePage } from "@/components/home/classic-home-page";
 
 export function HomepageThemeResolver() {
-  return <ClassicHomePage />;
+  return <ClassicHomePage user={null} />;
 }

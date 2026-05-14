@@ -7,10 +7,13 @@ when:
 steps:
   build-and-deploy:
     image: node:22-alpine
-    secrets:
-      - vercel_token
-      - vercel_org_id
-      - vercel_project_id
+    environment:
+      VERCEL_TOKEN:
+        from_secret: vercel_token
+      VERCEL_ORG_ID:
+        from_secret: vercel_org_id
+      VERCEL_PROJECT_ID:
+        from_secret: vercel_project_id
     commands:
       - npm ci --prefer-offline
       - npm run build

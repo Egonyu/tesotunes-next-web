@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { getServerSession } from 'next-auth'
+import { authConfig } from '@/lib/auth'
 import { ClassicHomePage } from "@/components/home/classic-home-page";
 import { JsonLd } from "@/components/seo/JsonLd";
 
@@ -41,12 +43,17 @@ const organizationSchema = {
   ],
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getServerSession(authConfig)
+  const user = session?.user
+    ? { name: session.user.name, role: session.user.role, isArtist: session.user.isArtist }
+    : null
+
   return (
     <>
       <JsonLd data={websiteSchema} />
       <JsonLd data={organizationSchema} />
-      <ClassicHomePage />
+      <ClassicHomePage user={user} />
     </>
   )
 }

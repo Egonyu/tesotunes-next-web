@@ -76,7 +76,7 @@ function ArtistCard({ artist }: { artist: Artist }) {
         )}
       </div>
       <div className="flex items-center justify-center gap-1">
-        <h3 className="font-medium truncate group-hover:text-primary transition-colors">
+        <h3 className="font-medium line-clamp-2 group-hover:text-primary transition-colors">
           {artist.name}
         </h3>
         {artist.is_verified && (

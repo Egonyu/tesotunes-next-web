@@ -127,7 +127,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurc
           <Download className="h-5 w-5" />
         )}
         <span className="text-xs">
-          {!isDownloadable && !isPurchased ? "N/A" : "Download"}
+          {!isDownloadable && !isPurchased ? "Locked" : "Download"}
         </span>
       </button>
 

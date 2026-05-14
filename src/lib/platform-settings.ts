@@ -30,6 +30,7 @@ export interface PlatformSettings {
     ojokotau_enabled: boolean;
     edula_enabled: boolean;
     promotions_enabled: boolean;
+    sacco_enabled: boolean;
     email_verification_required: boolean;
     artist_approval_required: boolean;
     social_login_enabled: boolean;
@@ -242,6 +243,7 @@ export const defaultPlatformSettings: PlatformSettings = {
     ojokotau_enabled: false,
     edula_enabled: false,
     promotions_enabled: false,
+    sacco_enabled: false,
     email_verification_required: true,
     artist_approval_required: false,
     social_login_enabled: false,

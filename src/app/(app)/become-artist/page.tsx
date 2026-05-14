@@ -66,18 +66,26 @@ export default function BecomeArtistPage() {
   const userName = session?.user?.name || "";
 
   // Form state - simplified and pre-filled
-  const [formData, setFormData] = useState<Partial<ArtistApplicationData>>({
-    stage_name: userName, // Pre-fill with user's name
-    bio: "",
-    primary_genre: "",
-    secondary_genres: [],
-    full_name: userName, // Pre-fill with user's name
-    phone: "",
-    payout_method: "zengapay",
-    country: "UG",
-    terms_accepted: false,
-    artist_agreement_accepted: false,
-    social_links: {},
+  const STORAGE_KEY = "become-artist-draft";
+
+  const [formData, setFormData] = useState<Partial<ArtistApplicationData>>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+      if (saved) return JSON.parse(saved) as Partial<ArtistApplicationData>;
+    } catch {}
+    return {
+      stage_name: userName,
+      bio: "",
+      primary_genre: "",
+      secondary_genres: [],
+      full_name: userName,
+      phone: "",
+      payout_method: "zengapay",
+      country: "UG",
+      terms_accepted: false,
+      artist_agreement_accepted: false,
+      social_links: {},
+    };
   });
 
   // File state
@@ -130,17 +138,28 @@ export default function BecomeArtistPage() {
   }
 
   const updateForm = (updates: Partial<ArtistApplicationData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+    setFormData((prev) => {
+      const next = { ...prev, ...updates };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setAvatarPreview(reader.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, or WebP)');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Profile photo must be less than 5MB');
+      return;
+    }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = (
@@ -232,6 +251,7 @@ export default function BecomeArtistPage() {
       };
 
       await submitApplication.mutateAsync(submitData);
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
       toast.success("Application submitted! We'll review it within 24-48 hours.");
       router.push("/become-artist/status");
     } catch (error: unknown) {
@@ -469,9 +489,8 @@ function StepWelcome() {
           {[
             "Your stage name / artist name",
             "A short bio about your music",
-            "Phone number for verification",
-            "Mobile Money or bank details for payouts",
-            "National ID (optional, for verified badge)",
+            "Phone number for payouts",
+            "Mobile Money or bank details",
             "A profile photo (optional)",
           ].map((item) => (
             <li key={item} className="flex items-start gap-2">

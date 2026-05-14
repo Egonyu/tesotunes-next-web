@@ -764,30 +764,40 @@ export function PromotionEditor({
                     {multiSelectHintLabel(formData.audience_niches ?? [])}
                   </span>
                 </div>
-                <select
-                  multiple
-                  value={formData.audience_niches ?? []}
-                  onChange={(event) =>
-                    updateField(
-                      "audience_niches",
-                      Array.from(event.target.selectedOptions).map(
-                        (option) => option.value as PromotionAudienceNiche
-                      )
-                    )
-                  }
-                  className={`${inputClassName()} min-h-36`}
-                >
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   {Object.entries(PROMOTION_AUDIENCE_NICHE_LABELS).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    )
+                    ([value, label]) => {
+                      const checked = (formData.audience_niches ?? []).includes(
+                        value as PromotionAudienceNiche
+                      );
+                      return (
+                        <label
+                          key={value}
+                          className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors ${checked ? "border-primary/40 bg-primary/10 text-primary" : "border-border/60 bg-background/70 hover:bg-muted/50"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => {
+                              const current = formData.audience_niches ?? [];
+                              updateField(
+                                "audience_niches",
+                                checked
+                                  ? current.filter((v) => v !== value)
+                                  : [...current, value as PromotionAudienceNiche]
+                              );
+                            }}
+                          />
+                          <span
+                            className={`h-3.5 w-3.5 shrink-0 rounded border transition-colors ${checked ? "border-primary bg-primary" : "border-border"}`}
+                          />
+                          {label}
+                        </label>
+                      );
+                    }
                   )}
-                </select>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Hold Ctrl or Cmd to select multiple audience lanes.
-                </p>
+                </div>
               </div>
               <div>
                 <div className="flex items-center justify-between">
@@ -796,30 +806,40 @@ export function PromotionEditor({
                     {multiSelectHintLabel(formData.content_formats ?? [])}
                   </span>
                 </div>
-                <select
-                  multiple
-                  value={formData.content_formats ?? []}
-                  onChange={(event) =>
-                    updateField(
-                      "content_formats",
-                      Array.from(event.target.selectedOptions).map(
-                        (option) => option.value as PromotionContentFormat
-                      )
-                    )
-                  }
-                  className={`${inputClassName()} min-h-36`}
-                >
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   {Object.entries(PROMOTION_CONTENT_FORMAT_LABELS).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    )
+                    ([value, label]) => {
+                      const checked = (formData.content_formats ?? []).includes(
+                        value as PromotionContentFormat
+                      );
+                      return (
+                        <label
+                          key={value}
+                          className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors ${checked ? "border-primary/40 bg-primary/10 text-primary" : "border-border/60 bg-background/70 hover:bg-muted/50"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => {
+                              const current = formData.content_formats ?? [];
+                              updateField(
+                                "content_formats",
+                                checked
+                                  ? current.filter((v) => v !== value)
+                                  : [...current, value as PromotionContentFormat]
+                              );
+                            }}
+                          />
+                          <span
+                            className={`h-3.5 w-3.5 shrink-0 rounded border transition-colors ${checked ? "border-primary bg-primary" : "border-border"}`}
+                          />
+                          {label}
+                        </label>
+                      );
+                    }
                   )}
-                </select>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Choose the formats the artist should expect from this service.
-                </p>
+                </div>
               </div>
             </div>
 

@@ -332,6 +332,42 @@ async function authorizeSocialProvider(provider: string, tokens: { accessToken?:
 export async function authorizeCredentials(
   credentials: Record<string, string | boolean | undefined> | undefined
 ) {
+  // 2FA challenge completion path — triggered when the login page re-submits
+  // with the pending two_fa_token + user-entered TOTP/recovery code.
+  if (credentials?.two_fa_token && credentials?.two_fa_code) {
+    try {
+      const response = await fetchAuthApi("/auth/2fa/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          two_fa_token: credentials.two_fa_token,
+          code: credentials.two_fa_code,
+        }),
+      });
+
+      const data = await safeJsonParse(response);
+
+      if (!data) {
+        throw new Error("The sign-in service returned an invalid response. Please try again.");
+      }
+
+      if (!response.ok) {
+        throw new Error((data.message as string) || "Invalid authentication code.");
+      }
+
+      const authorizedUser = extractAuthorizedUser(data);
+      if (authorizedUser) return authorizedUser;
+
+      throw new Error("The sign-in service returned an incomplete response. Please try again.");
+    } catch (error) {
+      if (error instanceof Error && /fetch failed|failed to fetch|econnrefused|network/i.test(error.message)) {
+        throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
+      }
+      if (error instanceof Error) throw error;
+      throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
+    }
+  }
+
   if (!credentials?.email || !credentials?.password) {
     return null;
   }
@@ -364,6 +400,12 @@ export async function authorizeCredentials(
     if (!data) {
       console.error("[Auth] Empty or non-JSON response from API");
       throw new Error("The sign-in service returned an invalid response. Please try again.");
+    }
+
+    // 2FA required — signal the login page to show the TOTP challenge input.
+    // Encode the pending token in the error message so the page can extract it.
+    if (response.ok && data.requires_2fa && data.two_fa_token) {
+      throw new Error(`TWO_FA_REQUIRED:${data.two_fa_token as string}`);
     }
 
     if (!response.ok) {
@@ -602,6 +644,8 @@ export const authConfig: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         remember_me: { label: "Remember me", type: "checkbox" },
         recaptcha_token: { label: "reCAPTCHA", type: "text" },
+        two_fa_token: { label: "2FA Token", type: "text" },
+        two_fa_code: { label: "2FA Code", type: "text" },
       },
       authorize: authorizeCredentials,
     }),

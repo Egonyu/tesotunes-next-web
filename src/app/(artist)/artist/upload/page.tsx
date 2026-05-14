@@ -51,7 +51,7 @@ export default function UploadPage() {
   const [description, setDescription] = useState('');
   const [composer, setComposer] = useState('');
   const [producer, setProducer] = useState('');
-  const [isDownloadable, setIsDownloadable] = useState(true);
+  const [isDownloadable, setIsDownloadable] = useState(false);
   const [isFree, setIsFree] = useState(true);
 
   // UI state
@@ -68,9 +68,6 @@ export default function UploadPage() {
   const albums = albumsData?.data || [];
   const { data: currentSub } = useMySubscription();
 
-  // Log any hook errors for debugging
-  if (genresError) console.error('Genres fetch error:', genresError);
-  if (albumsError) console.error('Albums fetch error:', albumsError);
 
   const uploadMutation = useUploadSong((progress) => {
     setUploadProgress(progress.percent);
@@ -311,7 +308,7 @@ export default function UploadPage() {
       {error && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <div className="flex gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
             <div className="flex-1">
               <p className="font-medium text-red-800 dark:text-red-200">Error</p>
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
@@ -392,7 +389,7 @@ export default function UploadPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Cover Art */}
           <div>
-            <label className="block text-sm font-medium mb-2">Cover Art</label>
+            <label className="block text-sm font-medium mb-2">Cover Art <span className="text-muted-foreground font-normal">(optional)</span></label>
             <div
               className="aspect-square rounded-xl border-2 border-dashed bg-card flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
               onClick={() => coverInputRef.current?.click()}
@@ -645,7 +642,7 @@ export default function UploadPage() {
         {/* Review Note */}
         <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
           <div className="flex gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
               Your song will be reviewed before publishing. This usually takes 24-48 hours.
             </p>

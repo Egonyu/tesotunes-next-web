@@ -134,7 +134,7 @@ interface SurfaceLink {
 }
 
 const sections: SectionItem[] = [
-  { id: 'general', label: 'General Settings', subtitle: 'Basic configuration', icon: Settings, colorClasses: 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300', tabs: [{ id: 'platform', label: 'Platform Info', mode: 'settings' }, { id: 'features', label: 'Features', mode: 'links' }, { id: 'localization', label: 'Localization', mode: 'settings' }, { id: 'maintenance', label: 'Maintenance', mode: 'settings' }] },
+  { id: 'general', label: 'General Settings', subtitle: 'Basic configuration', icon: Settings, colorClasses: 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300', tabs: [{ id: 'platform', label: 'Platform Info', mode: 'settings' }, { id: 'feature_flags', label: 'Feature Toggles', mode: 'settings' }, { id: 'features', label: 'Feature Links', mode: 'links' }, { id: 'localization', label: 'Localization', mode: 'settings' }, { id: 'maintenance', label: 'Maintenance', mode: 'settings' }] },
   { id: 'frontend', label: 'Frontend Design', subtitle: 'Mobile & desktop layout', icon: Palette, colorClasses: 'bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300', tabs: [{ id: 'branding', label: 'Branding', mode: 'settings' }, { id: 'login', label: 'Login Experience', mode: 'settings' }, { id: 'admin', label: 'Admin Identity', mode: 'settings' }, { id: 'sacco', label: 'SACCO Branding', mode: 'settings' }] },
   { id: 'users', label: 'User Management', subtitle: 'User roles & permissions', icon: Users, colorClasses: 'bg-green-100 text-green-600 dark:bg-green-950/40 dark:text-green-300', tabs: [{ id: 'registration', label: 'Registration', mode: 'settings' }, { id: 'permissions', label: 'Permissions', mode: 'settings' }, { id: 'restrictions', label: 'Restrictions', mode: 'settings' }, { id: 'moderation', label: 'Moderation', mode: 'settings' }] },
   { id: 'credits', label: 'Credit System', subtitle: 'Rates & transactions', icon: BadgeDollarSign, colorClasses: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300', tabs: [{ id: 'revenue', label: 'Revenue Split', mode: 'settings' }, { id: 'packages', label: 'Credit Packages', mode: 'settings' }, { id: 'subscriptions', label: 'Subscriptions', mode: 'links' }, { id: 'sacco', label: 'SACCO Finance', mode: 'settings' }] },
@@ -533,7 +533,7 @@ export default function AdminSettingsPage() {
   const { data: session } = useSession();
   const isSuperAdmin = ['super admin', 'super_admin'].includes(normalizeRole(session?.user?.role));
 
-  const [activeSection, setActiveSection] = useState<SectionId>('security');
+  const [activeSection, setActiveSection] = useState<SectionId>('general');
   const [activeTabs, setActiveTabs] = useState<Record<SectionId, string>>(defaultActiveTabs);
   const [search, setSearch] = useState('');
   const [settings, setSettings] = useState<PlatformSettings>(normalizePlatformSettings());
@@ -785,6 +785,88 @@ export default function AdminSettingsPage() {
                   <Input type="email" value={settings.general.admin_contact} onChange={(e) => updateField('general', 'admin_contact', e.target.value)} />
                 </TextField>
               </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (currentTab.id === 'feature_flags') {
+      return (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+            When a feature is <strong>enabled</strong> it is visible to all users. When <strong>disabled</strong>, it remains accessible to admin users only and is hidden from the public.
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Micro-Services &amp; Modules</h4>
+            <div className="grid gap-3 md:grid-cols-2">
+              <SettingPanel
+                title="SACCO"
+                description="Artist savings and credit cooperative. Members can save, take loans, and grow together."
+                tone={settings.general.sacco_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.sacco_enabled} onChange={(value) => updateField('general', 'sacco_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Podcasts"
+                description="Spoken-word and audio show publishing for artists and creators."
+                tone={settings.general.podcasts_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.podcasts_enabled} onChange={(value) => updateField('general', 'podcasts_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Awards System"
+                description="Annual award programs, nomination campaigns, and public voting."
+                tone={settings.general.awards_system_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.awards_system_enabled} onChange={(value) => updateField('general', 'awards_system_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Promotions"
+                description="Paid promotional placements and growth campaigns for artists and labels."
+                tone={settings.general.promotions_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.promotions_enabled} onChange={(value) => updateField('general', 'promotions_enabled', value)} />}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Core Platform Features</h4>
+            <div className="grid gap-3 md:grid-cols-2">
+              <SettingPanel
+                title="Music Streaming"
+                description="Live audio streaming for all catalog content."
+                tone={settings.general.music_streaming_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.music_streaming_enabled} onChange={(value) => updateField('general', 'music_streaming_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Music Downloads"
+                description="Allow users to download songs based on their subscription tier."
+                tone={settings.general.music_downloads_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.music_downloads_enabled} onChange={(value) => updateField('general', 'music_downloads_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Events &amp; Tickets"
+                description="Event listings, ticketing, and artist show management."
+                tone={settings.general.events_tickets_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.events_tickets_enabled} onChange={(value) => updateField('general', 'events_tickets_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Store"
+                description="Merch store and product commerce surfaces."
+                tone={settings.general.store_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.store_enabled} onChange={(value) => updateField('general', 'store_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Community Forums"
+                description="Fan and artist discussion boards."
+                tone={settings.general.forums_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.forums_enabled} onChange={(value) => updateField('general', 'forums_enabled', value)} />}
+              />
+              <SettingPanel
+                title="Polls"
+                description="Audience engagement polls across the platform."
+                tone={settings.general.polls_enabled ? 'green' : 'slate'}
+                action={<ToggleSwitch checked={settings.general.polls_enabled} onChange={(value) => updateField('general', 'polls_enabled', value)} />}
+              />
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   User,
   Bell,
@@ -13,7 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistProfile, useUpdateArtistProfile } from '@/hooks/useArtist';
+import { useArtistProfile, useUpdateArtistProfile, useUpdateArtistAvatar } from '@/hooks/useArtist';
 import { toast } from 'sonner';
 import { pickMediaUrl } from '@/lib/media';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
@@ -22,6 +22,25 @@ export default function ArtistSettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const { data: profile, isLoading, error } = useArtistProfile();
   const updateProfile = useUpdateArtistProfile();
+  const updateAvatar = useUpdateArtistAvatar();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Photo must be less than 5MB');
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
 
   const [formData, setFormData] = useState({
     stage_name: '',
@@ -71,8 +90,10 @@ export default function ArtistSettingsPage() {
 
   const handleSave = async () => {
     try {
-      // Note: country/city are NOT in backend validation or Artist $fillable.
-      // Only send fields the backend accepts.
+      if (avatarFile) {
+        await updateAvatar.mutateAsync(avatarFile);
+        setAvatarFile(null);
+      }
       await updateProfile.mutateAsync({
         stage_name: formData.stage_name,
         bio: formData.bio,
@@ -173,8 +194,18 @@ export default function ArtistSettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-6">
                 <div className="relative">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                    {pickMediaUrl(profile?.avatar) ? (
+                    {avatarPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : pickMediaUrl(profile?.avatar) ? (
                       <SafeImage
                         src={pickMediaUrl(profile?.avatar)}
                         alt="Avatar"
@@ -187,13 +218,20 @@ export default function ArtistSettingsPage() {
                       <InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />
                     )}
                   </div>
-                  <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
+                  >
                     <Camera className="h-4 w-4" />
                   </button>
                 </div>
                 <div>
                   <p className="font-medium">Profile Photo</p>
-                  <p className="text-sm text-muted-foreground">JPG, PNG. Max 2MB</p>
+                  <p className="text-sm text-muted-foreground">JPG, PNG or WebP · Max 5MB</p>
+                  {avatarFile && (
+                    <p className="text-xs text-primary mt-1">New photo selected — save to apply</p>
+                  )}
                 </div>
               </div>
 
@@ -530,7 +568,7 @@ export default function ArtistSettingsPage() {
           <div className="flex justify-end mt-8 pt-6 border-t">
             <button
               onClick={handleSave}
-              disabled={updateProfile.isPending}
+              disabled={updateProfile.isPending || updateAvatar.isPending}
               className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               {updateProfile.isPending ? (

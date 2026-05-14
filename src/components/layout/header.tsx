@@ -71,12 +71,6 @@ export function Header() {
           <span className="hidden md:inline">Search songs, artists, albums...</span>
         </Link>
 
-        <Link
-          href="/claim-artist"
-          className="hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
-        >
-          Claim Artist
-        </Link>
       </div>
 
       {/* Right Section */}

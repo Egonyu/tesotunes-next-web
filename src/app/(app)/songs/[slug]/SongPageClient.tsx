@@ -432,7 +432,7 @@ export default function SongDetailPage() {
                 }
                 setTipModalOpen(true);
               }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-pink-500/30 text-pink-500 rounded-full font-semibold hover:bg-pink-500/10 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold hover:from-pink-600 hover:to-rose-600 transition-all shadow-sm"
             >
               <Heart className="h-4 w-4" />
               Tip Artist

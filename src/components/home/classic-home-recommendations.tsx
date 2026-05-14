@@ -175,9 +175,7 @@ function RecommendationCard({ item, queue }: { item: HomepageItem; queue: Homepa
             </p>
           ) : null}
           <h3 className="mt-1 line-clamp-1 font-semibold">{item.title}</h3>
-          {item.subtitle ? (
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.subtitle}</p>
-          ) : null}
+
           {item.reason ? (
             <p className="mt-3 line-clamp-2 text-xs text-muted-foreground/90">{item.reason}</p>
           ) : null}

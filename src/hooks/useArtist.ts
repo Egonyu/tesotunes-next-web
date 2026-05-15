@@ -131,6 +131,13 @@ export interface MonthlyEarning {
   amount: number;
 }
 
+export interface PayoutLimits {
+  min_amount: number;
+  max_single: number;
+  max_daily: number;
+  fee_rates: { mobile_money: number; bank_transfer: number; paypal: number };
+}
+
 export interface EarningsData {
   stats: EarningsStats;
   earnings_sources: EarningsSource[];
@@ -138,6 +145,7 @@ export interface EarningsData {
   monthly_chart?: MonthlyEarning[];
   monthly_trends?: MonthlyEarning[];
   per_song_earnings?: PerSongEarnings[];
+  payout_limits?: PayoutLimits;
 }
 
 export interface PerSongEarnings {
@@ -309,6 +317,34 @@ export function useRequestWithdrawal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "earnings"] });
     },
+  });
+}
+
+export interface ArtistPayout {
+  id: number;
+  transaction_id: string;
+  amount: number;
+  fee_amount: number;
+  net_amount: number;
+  currency: string;
+  status: 'pending' | 'approved' | 'processing' | 'completed' | 'failed' | 'rejected' | 'cancelled';
+  payout_method: string;
+  failure_reason: string | null;
+  notes: string | null;
+  approved_at: string | null;
+  processing_started_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
+  created_at: string;
+}
+
+export function usePayoutHistory(params?: { status?: string; start_date?: string; end_date?: string }) {
+  return useQuery({
+    queryKey: ['artist', 'payouts', params],
+    queryFn: () =>
+      apiGet<{ success: boolean; data: ArtistPayout[] }>('/artist/earnings/payouts', { params })
+        .then(res => res.data),
+    staleTime: 30 * 1000,
   });
 }
 

@@ -20,7 +20,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistEarnings, useArtistTransactions, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, type SongEarning } from '@/hooks/useArtist';
+import { useArtistEarnings, useArtistTransactions, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, usePayoutHistory, type SongEarning } from '@/hooks/useArtist';
 import { usePaymentMethods } from '@/hooks/usePayments';
 
 export default function ArtistEarningsPage() {
@@ -32,6 +32,7 @@ export default function ArtistEarningsPage() {
   const TX_PER_PAGE = 10;
 
   const { data: earningsData, isLoading, error } = useArtistEarnings();
+  const { data: payoutData, isLoading: payoutsLoading } = usePayoutHistory();
   const { data: txData, isLoading: txLoading } = useArtistTransactions({ page: txPage, per_page: TX_PER_PAGE });
   const withdrawMutation = useRequestWithdrawal();
   const { data: methodsData } = usePaymentMethods();
@@ -75,6 +76,8 @@ export default function ArtistEarningsPage() {
     monthly_change: 0
   };
 
+  const MIN_PAYOUT = earningsData?.payout_limits?.min_amount ?? 50000;
+
   const earningsSources = earningsData?.earnings_sources || [];
 
   // Build monthly chart from API data
@@ -94,7 +97,7 @@ export default function ArtistEarningsPage() {
 
   const handleWithdraw = () => {
     const amount = parseInt(withdrawAmount);
-    if (amount >= 50000 && amount <= stats.balance) {
+    if (amount >= MIN_PAYOUT && amount <= stats.balance) {
       withdrawMutation.mutate({
         amount,
         payment_method: withdrawMethod as 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay',
@@ -517,6 +520,78 @@ export default function ArtistEarningsPage() {
         )}
       </div>
 
+      {/* Payout / Withdrawal History */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <Download className="h-4 w-4 text-muted-foreground" />
+          Withdrawal Requests
+        </h2>
+        {payoutsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !payoutData?.length ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Download className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No withdrawal requests yet.</p>
+            <p className="text-xs mt-1">Once you request a withdrawal it will appear here.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 font-medium text-muted-foreground">Reference</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Method</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Amount</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Net</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {payoutData.map((p) => {
+                  const statusStyles: Record<string, string> = {
+                    pending:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                    approved:   'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+                    processing: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+                    completed:  'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                    failed:     'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                    rejected:   'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                    cancelled:  'bg-muted text-muted-foreground',
+                  };
+                  const methodLabel: Record<string, string> = {
+                    mobile_money:  'Mobile Money',
+                    zengapay:      'ZengaPay',
+                    bank_transfer: 'Bank Transfer',
+                    paypal:        'PayPal',
+                  };
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="py-3 font-mono text-xs">{p.transaction_id}</td>
+                      <td className="py-3">{methodLabel[p.payout_method] ?? p.payout_method}</td>
+                      <td className="py-3 text-right">UGX {p.amount.toLocaleString()}</td>
+                      <td className="py-3 text-right font-semibold">UGX {p.net_amount.toLocaleString()}</td>
+                      <td className="py-3 text-center">
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusStyles[p.status] ?? 'bg-muted text-muted-foreground')}>
+                          {p.status}
+                        </span>
+                        {p.failure_reason && (
+                          <p className="text-xs text-red-600 mt-0.5 max-w-[160px] truncate">{p.failure_reason}</p>
+                        )}
+                      </td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Withdrawal Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -535,8 +610,8 @@ export default function ArtistEarningsPage() {
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Enter amount (min 50,000)"
-                  min="50000"
+                  placeholder={`Enter amount (min ${MIN_PAYOUT.toLocaleString()})`}
+                  min={MIN_PAYOUT}
                   max={stats.balance}
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
@@ -585,7 +660,7 @@ export default function ArtistEarningsPage() {
 
               <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
                 <p className="text-yellow-700 dark:text-yellow-300">
-                  Minimum withdrawal: UGX 50,000 • Processing: 1-3 business days
+                  Minimum withdrawal: UGX {MIN_PAYOUT.toLocaleString()} • Processing: 24-48 hours via ZengaPay
                 </p>
               </div>
 
@@ -608,7 +683,7 @@ export default function ArtistEarningsPage() {
               </button>
               <button
                 onClick={handleWithdraw}
-                disabled={withdrawMutation.isPending || parseInt(withdrawAmount) < 50000 || parseInt(withdrawAmount) > stats.balance}
+                disabled={withdrawMutation.isPending || parseInt(withdrawAmount) < MIN_PAYOUT || parseInt(withdrawAmount) > stats.balance}
                 className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
               >
                 {withdrawMutation.isPending ? (

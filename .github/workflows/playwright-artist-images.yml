@@ -80,7 +80,8 @@ jobs:
         run: |
           npx playwright test e2e/admin-artist-image-update.spec.ts \
             --project=chromium \
-            --workers=1
+            --workers=1 \
+            --no-deps
 
       - name: Upload Playwright report
         if: always()

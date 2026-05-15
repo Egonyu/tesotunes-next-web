@@ -32,6 +32,7 @@ export function Providers({ children, session }: ProvidersProps) {
   return (
     <GoogleReCaptchaProvider
       reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? ""}
+      useEnterprise
       scriptProps={{ async: true, defer: true }}
     >
       <SessionProvider

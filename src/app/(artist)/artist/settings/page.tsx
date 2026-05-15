@@ -17,6 +17,9 @@ import { useArtistProfile, useUpdateArtistProfile, useUpdateArtistAvatar } from 
 import { toast } from 'sonner';
 import { pickMediaUrl } from '@/lib/media';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import TwoFactorManager from '@/components/security/TwoFactorManager';
+import { useMutation } from '@tanstack/react-query';
+import { apiPost } from '@/lib/api';
 
 export default function ArtistSettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -494,43 +497,9 @@ export default function ArtistSettingsPage() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Security Settings</h2>
 
-              <div>
-                <h3 className="font-medium mb-4">Change Password</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Current Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">New Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
-                    Update Password
-                  </button>
-                </div>
-              </div>
+              <ArtistPasswordChangeForm />
 
-              <div className="flex items-center justify-between py-4 border-b">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                </div>
-                <button className="px-4 py-2 border rounded-lg hover:bg-muted">Enable</button>
-              </div>
+              <TwoFactorManager />
             </div>
           )}
 
@@ -581,6 +550,72 @@ export default function ArtistSettingsPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ArtistPasswordChangeForm() {
+  const [current, setCurrent] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirm, setConfirm] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (data: { current_password: string; password: string; password_confirmation: string }) =>
+      apiPost('/settings/password', data),
+    onSuccess: () => {
+      toast.success('Password updated successfully');
+      setCurrent('');
+      setNewPass('');
+      setConfirm('');
+    },
+    onError: () => toast.error('Failed to update password. Check your current password.'),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPass !== confirm) { toast.error('Passwords do not match'); return; }
+    if (newPass.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    mutation.mutate({ current_password: current, password: newPass, password_confirmation: confirm });
+  };
+
+  return (
+    <div className="rounded-xl border bg-card p-6">
+      <h3 className="font-medium mb-4">Change Password</h3>
+      <form onSubmit={handleSubmit} className="space-y-3 max-w-sm">
+        <input
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Current password"
+          required
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <input
+          type="password"
+          value={newPass}
+          onChange={(e) => setNewPass(e.target.value)}
+          placeholder="New password"
+          required
+          minLength={8}
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <input
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Confirm new password"
+          required
+          minLength={8}
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          type="submit"
+          disabled={mutation.isPending || !current || !newPass || !confirm}
+          className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
+        </button>
+      </form>
     </div>
   );
 }

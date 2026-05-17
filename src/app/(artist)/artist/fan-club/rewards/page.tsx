@@ -72,6 +72,7 @@ export default function FanClubRewardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<RewardFormData>(emptyForm);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const rewardsList: LoyaltyReward[] = rewards || [];
 
@@ -144,11 +145,16 @@ export default function FanClubRewardsPage() {
     }
   };
 
-  const handleDelete = (reward: LoyaltyReward) => {
-    if (!confirm(`Delete "${reward.title}"? This cannot be undone.`)) return;
-    deleteMutation.mutate(reward.id, {
-      onSuccess: () => toast.success('Reward deleted'),
-      onError: (err: Error) => toast.error(err.message || 'Failed to delete reward'),
+  const handleDeleteConfirmed = (rewardId: number) => {
+    deleteMutation.mutate(rewardId, {
+      onSuccess: () => {
+        toast.success('Reward deleted');
+        setConfirmDeleteId(null);
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || 'Failed to delete reward');
+        setConfirmDeleteId(null);
+      },
     });
   };
 
@@ -362,22 +368,42 @@ export default function FanClubRewardsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => openEditForm(reward)}
-                        className="p-1.5 rounded hover:bg-muted"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(reward)}
-                        disabled={deleteMutation.isPending}
-                        className="p-1.5 rounded hover:bg-muted"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                      </button>
+                    <div className="flex gap-1 items-center">
+                      {confirmDeleteId === reward.id ? (
+                        <>
+                          <span className="text-xs text-muted-foreground mr-1">Delete?</span>
+                          <button
+                            onClick={() => handleDeleteConfirmed(reward.id)}
+                            disabled={deleteMutation.isPending}
+                            className="px-2 py-1 text-xs rounded bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50"
+                          >
+                            {deleteMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Yes'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-2 py-1 text-xs rounded border hover:bg-muted"
+                          >
+                            No
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => openEditForm(reward)}
+                            className="p-1.5 rounded hover:bg-muted"
+                            title="Edit"
+                          >
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(reward.id)}
+                            className="p-1.5 rounded hover:bg-muted"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 

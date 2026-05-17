@@ -72,3 +72,5 @@ cookies*.txt
 # Claude Code temp files
 cUsersegony*
 nul
+
+.vercel

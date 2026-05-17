@@ -1361,7 +1361,7 @@ export function useGeneratePromoMaterial() {
 
 export function useTrackArtistShare() {
   return useMutation({
-    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr') =>
+    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'telegram' | 'sms' | 'email' | 'copy' | 'qr') =>
       apiPost("/artist/referrals/share", { platform }),
   });
 }

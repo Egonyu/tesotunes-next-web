@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import {
   useArtistLoyaltyClub,
   useArtistLoyaltyMembers,
+  useArtistClubAnalytics,
 } from '@/hooks/useLoyalty';
 
 export default function FanClubMembersPage() {
@@ -29,6 +30,7 @@ export default function FanClubMembersPage() {
     clubId,
     { page, search: search || undefined }
   );
+  const { data: analytics } = useArtistClubAnalytics(clubId);
 
   const members = membersData?.data || [];
   const pagination = membersData?.pagination;
@@ -60,12 +62,16 @@ export default function FanClubMembersPage() {
           <p className="text-2xl font-bold">{club.member_count.toLocaleString()}</p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
-          <p className="text-sm text-muted-foreground">Active This Month</p>
-          <p className="text-2xl font-bold">—</p>
+          <p className="text-sm text-muted-foreground">New This Month</p>
+          <p className="text-2xl font-bold">
+            {analytics != null ? analytics.new_members_this_month.toLocaleString() : '—'}
+          </p>
         </div>
         <div className="p-4 rounded-xl border bg-card">
-          <p className="text-sm text-muted-foreground">New This Week</p>
-          <p className="text-2xl font-bold">—</p>
+          <p className="text-sm text-muted-foreground">Points Distributed</p>
+          <p className="text-2xl font-bold">
+            {analytics != null ? analytics.total_points_distributed.toLocaleString() : '—'}
+          </p>
         </div>
       </div>
 
@@ -81,7 +87,29 @@ export default function FanClubMembersPage() {
             className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 border rounded-lg hover:bg-muted text-sm">
+        <button
+          onClick={() => {
+            const rows = [
+              ['Name', 'Tier', 'Points', 'Joined'],
+              ...members.map(m => [
+                m.user.name,
+                m.tier,
+                m.points_balance.toString(),
+                new Date(m.joined_at).toLocaleDateString(),
+              ]),
+            ];
+            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fan-club-members-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          disabled={members.length === 0}
+          className="flex items-center gap-2 px-4 py-2.5 border rounded-lg hover:bg-muted text-sm disabled:opacity-40"
+        >
           <Download className="h-4 w-4" />
           <span className="hidden sm:inline">Export</span>
         </button>

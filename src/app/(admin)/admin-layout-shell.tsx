@@ -33,6 +33,7 @@ import {
   Star,
   FolderUp,
   BadgeCheck,
+  Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasAnyPermission } from '@/lib/permissions';
@@ -61,6 +62,8 @@ const navItems = [
   { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions', label: 'Promotions', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/promoters', label: 'Promoter Profiles', icon: BadgeCheck, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/opportunities', label: 'Opportunities', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/disputes', label: 'Promotion Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/analytics', label: 'Promotion Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
   { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },

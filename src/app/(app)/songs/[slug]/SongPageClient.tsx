@@ -23,6 +23,7 @@ import {
   Coins,
   ShoppingCart,
   CheckCircle2,
+  Megaphone,
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatDuration, formatNumber, formatDate, resolveDurationSeconds } from "@/lib/utils";
@@ -38,6 +39,7 @@ import { useCheckPurchase } from "@/hooks/api";
 import { usePlayerStore } from "@/stores/player";
 import { useSession } from "next-auth/react";
 import type { Song } from "@/types";
+import { PostOpportunityModal } from "@/components/promotions/PostOpportunityModal";
 
 interface SongDetail {
   id: number;
@@ -68,6 +70,7 @@ interface SongDetail {
   }[];
   artist: {
     id: number;
+    user_id?: number;
     name: string;
     slug: string;
     avatar_url: string | null;
@@ -175,6 +178,7 @@ export default function SongDetailPage() {
   const [shareLoading, setShareLoading] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [tipModalOpen, setTipModalOpen] = useState(false);
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const { data: session } = useSession();
 
   const { currentSong, isPlaying, play, pause, resume, addToQueue } = usePlayerStore();
@@ -190,6 +194,10 @@ export default function SongDetailPage() {
   const isCurrentSong = song && currentSong?.id === song.id;
   const { data: isPurchased } = useCheckPurchase(song?.id ?? 0);
   const isAuthenticated = !!session?.user;
+  const isOwner =
+    isAuthenticated &&
+    song?.artist?.user_id != null &&
+    session?.user?.id === String(song.artist.user_id);
 
   function handlePlay() {
     if (!song) return;
@@ -437,6 +445,17 @@ export default function SongDetailPage() {
               <Heart className="h-4 w-4" />
               Tip Artist
             </button>
+
+            {/* Promote Button — owner only */}
+            {isOwner && (
+              <button
+                onClick={() => setPromoteModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-full font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-sm"
+              >
+                <Megaphone className="h-4 w-4" />
+                Promote this Track
+              </button>
+            )}
           </div>
 
           {/* Stats Grid */}
@@ -838,6 +857,18 @@ export default function SongDetailPage() {
           recipientId={song.artist.id}
           recipientType="artist"
           recipientName={song.artist.name}
+        />
+      )}
+
+      {/* Post Opportunity Modal — owner only */}
+      {song && isOwner && (
+        <PostOpportunityModal
+          open={promoteModalOpen}
+          onClose={() => setPromoteModalOpen(false)}
+          promotableType="song"
+          promotableId={song.id}
+          title={song.title}
+          artworkUrl={song.artwork_url}
         />
       )}
     </div>

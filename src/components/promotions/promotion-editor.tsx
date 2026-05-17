@@ -24,6 +24,7 @@ import {
   Ticket,
   Users,
 } from "lucide-react";
+import { ImageUploadInput } from "@/components/ui/image-upload-input";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import type {
   CreatePromotionRequest,
@@ -330,7 +331,7 @@ export function PromotionEditor({
       formData.title.trim(),
       formData.short_description.trim(),
       formData.description.trim(),
-      formData.featured_image?.trim(),
+      formData.featured_image,
       formData.estimated_reach > 0,
       normaliseStringList(formData.audience_niches).length > 0,
       normaliseStringList(formData.content_formats).length > 0,
@@ -479,7 +480,7 @@ export function PromotionEditor({
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:w-[28rem]">
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-md">
             <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
               <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                 Offer completion
@@ -558,18 +559,13 @@ export function PromotionEditor({
                 />
               </div>
 
-              <div>
-                <label className={labelClassName()}>Featured image URL</label>
-                <input
-                  type="url"
-                  value={formData.featured_image ?? ""}
-                  onChange={(event) =>
-                    updateField("featured_image", event.target.value)
-                  }
-                  placeholder="https://images.example.com/offer-cover.jpg"
-                  className={inputClassName()}
-                />
-              </div>
+              <ImageUploadInput
+                label="Featured Image"
+                value={formData.featured_image}
+                onChange={(url) => updateField("featured_image", url ?? "")}
+                uploadType="cover"
+                aspectRatio="video"
+              />
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -1137,7 +1133,7 @@ export function PromotionEditor({
         <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
           <section className="overflow-hidden rounded-[28px] border border-border/60 bg-card/90">
             <div className="relative h-40 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.18),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(17,24,39,0.88))]">
-              {formData.featured_image?.trim() ? (
+              {formData.featured_image ? (
                 <div
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url(${formData.featured_image})` }}
@@ -1150,7 +1146,7 @@ export function PromotionEditor({
                 </p>
                 <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/85">
                   <ImageIcon className="h-3.5 w-3.5" />
-                  {formData.featured_image?.trim() ? "Cover set" : "No cover"}
+                  {formData.featured_image ? "Cover set" : "No cover"}
                 </span>
               </div>
             </div>

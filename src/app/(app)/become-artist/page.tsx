@@ -54,8 +54,6 @@ export default function BecomeArtistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
-  const hasApiAccess = session?.user?.apiAuthorized ?? false;
-
   // Check application status
   const { data: appStatus, isLoading: statusLoading } = useArtistApplicationStatus();
   const { data: genresData, isLoading: genresLoading, error: genresError } = useAvailableGenres();
@@ -115,7 +113,7 @@ export default function BecomeArtistPage() {
   const shouldRedirectToLogin =
     status !== "loading" &&
     !statusLoading &&
-    (!session?.user || !hasApiAccess);
+    !session?.user;
   const shouldRedirectToStatus = appStatus?.data?.status === "pending";
   const shouldRedirectToArtist = appStatus?.data?.status === "approved" || appStatus?.data?.is_artist;
 

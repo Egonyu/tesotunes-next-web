@@ -197,10 +197,10 @@ export default function PromotionAnalyticsPage() {
               <div className="rounded-xl bg-card shadow-sm p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 min-w-0">
-                    {analytics.top_performing_promotion.featured_image && (
+                    {analytics.top_performing_promotion.featured_image_url && (
                       <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <img
-                          src={analytics.top_performing_promotion.featured_image}
+                          src={analytics.top_performing_promotion.featured_image_url}
                           alt={analytics.top_performing_promotion.title}
                           className="h-full w-full object-cover"
                         />

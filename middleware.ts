@@ -160,6 +160,13 @@ function redirectToAccessRequired(request: NextRequest, reason: 'auth' | 'forbid
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const hostname = request.nextUrl.hostname.toLowerCase();
+
+  if (hostname === "tesotunes.com") {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.hostname = "www.tesotunes.com";
+    return NextResponse.redirect(redirectUrl, 308);
+  }
 
   if (!isAuthProtectedPath(pathname)) {
     return NextResponse.next();
@@ -217,20 +224,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/artist/:path*',
-    '/artist-dashboard/:path*',
-    '/credits/:path*',
-    '/history/:path*',
-    '/library/:path*',
-    '/messages/:path*',
-    '/notifications/:path*',
-    '/profile/:path*',
-    '/referrals/:path*',
-    '/sacco/:path*',
-    '/settings/:path*',
-    '/tickets/:path*',
-    '/transactions/:path*',
-    '/wallet/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.[^/]+$).*)',
   ],
 };

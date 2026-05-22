@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { serverFetch } from '@/lib/api'
+import { SITE_URL } from "@/lib/site";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://tesotunes.com').replace(/\/$/, '')
+const BASE_URL = SITE_URL
 
 async function fetchList<T>(endpoint: string): Promise<T[]> {
   try {

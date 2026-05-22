@@ -16,6 +16,7 @@ import { serverFetch } from "@/lib/api";
 import type { Album, Song } from "@/types";
 import { formatDuration, formatNumber, resolveDurationSeconds } from "@/lib/utils";
 import { SocialActions } from "@/components/social/SocialActions";
+import { SITE_URL, absoluteUrl } from "@/lib/site";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;
@@ -61,7 +62,7 @@ export async function generateMetadata({ params }: AlbumPageProps): Promise<Meta
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/albums/${slug}` },
+    alternates: { canonical: absoluteUrl(`/albums/${slug}`) },
     openGraph: {
       type: 'music.album',
       title,
@@ -93,13 +94,13 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
     '@context': 'https://schema.org',
     '@type': 'MusicAlbum',
     name: album.title,
-    url: `https://tesotunes.com/albums/${slug}`,
+    url: absoluteUrl(`/albums/${slug}`),
     image: album.artwork_url || undefined,
     datePublished: album.release_date || undefined,
     byArtist: album.artist ? {
       '@type': 'MusicGroup',
       name: album.artist.name,
-      url: `https://tesotunes.com/artists/${album.artist.slug || album.artist.id}`,
+      url: absoluteUrl(`/artists/${album.artist.slug || album.artist.id}`),
     } : undefined,
     numTracks: tracks.length,
     track: tracks.slice(0, 20).map((t, i) => ({
@@ -113,9 +114,9 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
-      { '@type': 'ListItem', position: 2, name: 'Albums', item: 'https://tesotunes.com/albums' },
-      { '@type': 'ListItem', position: 3, name: album.title, item: `https://tesotunes.com/albums/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Albums', item: absoluteUrl('/albums') },
+      { '@type': 'ListItem', position: 3, name: album.title, item: absoluteUrl(`/albums/${slug}`) },
     ],
   }
 

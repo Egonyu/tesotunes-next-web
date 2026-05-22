@@ -1,5 +1,6 @@
 import { serverFetch } from '@/lib/api';
 import { headers } from 'next/headers';
+import { SITE_URL } from '@/lib/site';
 
 interface HeadProps {
   params: Promise<{ slug: string }>;
@@ -24,7 +25,7 @@ export default async function Head({ params }: HeadProps) {
   const forwardedProto = requestHeaders.get('x-forwarded-proto');
   const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host');
   const safeProto = forwardedProto === 'http' || forwardedProto === 'https' ? forwardedProto : 'https';
-  const configuredOrigin = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
+  const configuredOrigin = SITE_URL;
 
   let origin = configuredOrigin;
   if (!origin) {

@@ -216,7 +216,7 @@ export function normalizeHomepageTheme(value?: string | null): HomepageTheme {
 export const defaultPlatformSettings: PlatformSettings = {
   general: {
     platform_name: "TesoTunes",
-    platform_url: "https://tesotunes.com",
+    platform_url: "https://www.tesotunes.com",
     platform_description: "Your music streaming platform",
     tagline: "Empowering Artists, Connecting Fans",
     support_email: "support@tesotunes.com",

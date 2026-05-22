@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import { JsonLd } from '@/components/seo/JsonLd'
 import SongDetailPage from './SongPageClient'
+import { absoluteUrl } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -53,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/songs/${slug}` },
+    alternates: { canonical: absoluteUrl(`/songs/${slug}`) },
     openGraph: {
       type: 'music.song',
       title,
@@ -74,17 +75,17 @@ export default async function SongPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'MusicRecording',
     name: song.title,
-    url: `https://tesotunes.com/songs/${slug}`,
+    url: absoluteUrl(`/songs/${slug}`),
     image: song.artwork_url || song.album?.artwork_url || undefined,
     byArtist: {
       '@type': 'MusicGroup',
       name: song.artist.name,
-      url: `https://tesotunes.com/artists/${song.artist.slug}`,
+      url: absoluteUrl(`/artists/${song.artist.slug}`),
     },
     inAlbum: song.album ? {
       '@type': 'MusicAlbum',
       name: song.album.title,
-      url: `https://tesotunes.com/albums/${song.album.slug}`,
+      url: absoluteUrl(`/albums/${song.album.slug}`),
     } : undefined,
     genre: song.genre?.name,
     datePublished: song.release_date || undefined,

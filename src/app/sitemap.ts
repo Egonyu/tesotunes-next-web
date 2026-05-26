@@ -17,7 +17,9 @@ async function fetchList<T>(endpoint: string): Promise<T[]> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [artists, albums, genres, songs, events] = await Promise.all([
-    fetchList<{ slug: string; updated_at?: string }>('/artists?limit=500&status=active'),
+    // status=approved is the canonical AXIS-2 value post-KYC-canonicalize migration.
+    // Pre-migration this was 'active'; we now ask for 'approved' explicitly.
+    fetchList<{ slug: string; updated_at?: string }>('/artists?limit=500&status=approved'),
     fetchList<{ slug: string; updated_at?: string }>('/albums?limit=500&status=published'),
     fetchList<{ slug: string; updated_at?: string }>('/genres?limit=100'),
     fetchList<{ slug: string; updated_at?: string }>('/songs?limit=500&status=published'),

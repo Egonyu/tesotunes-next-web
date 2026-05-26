@@ -41,7 +41,7 @@ type Artist = {
   claim_status?: string | null;
   claimed_user_id?: number | null;
   catalog_manager_user_id?: number | null;
-  verification_status?: string;
+  kyc_status?: 'none' | 'partial' | 'pending_review' | 'verified' | 'rejected' | 'expired';
   rejection_reason?: string | null;
   is_featured: boolean;
   profile_url: string | null;

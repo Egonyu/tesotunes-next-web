@@ -23,84 +23,91 @@ async function loginAsAdmin(page: Parameters<typeof test>[0]['page']) {
   await expect(adminNav).toBeVisible({ timeout: 20000 });
 }
 
-test.describe('Admin security dashboard', () => {
+test.describe('Admin Security Console', () => {
   test.skip(
     !ADMIN_EMAIL || !ADMIN_PASSWORD,
     'Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run admin security E2E tests.'
   );
 
-  test('renders observability controls and supports filter interactions', async ({ page }) => {
-    await page.route('**/api/backend/admin/audit-logs*', async (route) => {
+  test('renders the console shell and supports tab navigation', async ({ page }) => {
+    await page.route('**/api/backend/admin/observability/console/posture*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            window: { from: '2026-03-22T00:00:00Z', to: '2026-03-22T12:00:00Z' },
+            kpis: {
+              open_incidents: 1,
+              critical_incidents: 0,
+              events: 12,
+              high_risk_events: 2,
+              failed_logins: 4,
+              webhook_failures: 0,
+              blocked_api: 1,
+            },
+            by_domain: { auth: 6, payments: 3, api: 3 },
+            by_severity: { low: 8, medium: 3, high: 1 },
+            top_risk_entities: [],
+          },
+        }),
+      });
+    });
+
+    await page.route('**/api/backend/admin/observability/console/incidents*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           data: [
             {
-              id: 9101,
-              action: 'login_failed',
-              resource_type: 'auth',
-              description: 'Unauthorized login failed from proxy',
-              ip_address: '10.1.1.1',
-              created_at: '2026-03-22T10:00:00Z',
-              user: { name: 'Ops', email: 'ops@tesotunes.com' },
-            },
-            {
-              id: 9102,
-              action: 'policy_check',
-              resource_type: 'security',
-              description: 'Routine policy scan complete',
-              ip_address: '10.1.1.2',
-              created_at: '2026-03-22T09:00:00Z',
-              user: null,
+              id: 5001,
+              incident_key: 'inc-5001',
+              title: 'Repeated failed logins from a single IP',
+              status: 'open',
+              severity: 'high',
+              summary: 'Brute-force pattern detected against the auth domain.',
+              event_count: 9,
+              owner: null,
+              detected_at: '2026-03-22T10:00:00Z',
+              resolved_at: null,
+              metadata: {},
             },
           ],
         }),
       });
     });
 
+    await page.route('**/api/backend/admin/observability/console/feed*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [],
+          meta: { current_page: 1, last_page: 1, per_page: 30, total: 0 },
+        }),
+      });
+    });
+
     await loginAsAdmin(page);
-    await page.goto('/admin/security');
+    await page.goto('/admin/observability');
 
-    await expect(page.getByRole('heading', { name: /Security Monitoring Center/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Filter$/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Reset$/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Security Console' })).toBeVisible();
 
-    const searchInput = page.getByLabel('Search events');
-    const severitySelect = page.getByLabel('Filter by severity');
-    const statusSelect = page.getByLabel('Filter by status');
-    const typeSelect = page.getByLabel('Filter by event type');
-    const monitoringSection = page
-      .locator('section')
-      .filter({ has: page.getByRole('heading', { name: /Security Monitoring Center/i }) })
-      .first();
-    const filterSection = page.locator('section').filter({ has: searchInput }).first();
+    const overviewTab = page.getByRole('button', { name: /^Overview$/i });
+    const feedTab = page.getByRole('button', { name: /^Event feed$/i });
+    const incidentsTab = page.getByRole('button', { name: /^Incidents$/i });
 
-    await expect(searchInput).toBeVisible();
-    await expect(severitySelect).toBeVisible();
-    await expect(statusSelect).toBeVisible();
-    await expect(typeSelect).toBeVisible();
+    await expect(overviewTab).toBeVisible();
+    await expect(feedTab).toBeVisible();
+    await expect(incidentsTab).toBeVisible();
 
-    await monitoringSection.getByRole('button', { name: 'Analyze IP' }).click();
-    await expect(searchInput).toBeFocused();
+    await expect(page.getByText('Repeated failed logins from a single IP')).toBeVisible();
 
-    await monitoringSection.getByRole('button', { name: 'Blocked IPs' }).click();
-    await expect(typeSelect).toHaveValue('network');
+    await incidentsTab.click();
+    await expect(page.getByText('Repeated failed logins from a single IP')).toBeVisible();
 
-    await expect(page.getByText('Unauthorized login failed from proxy')).toBeVisible();
-    await expect(page.getByText('Routine policy scan complete')).toBeVisible();
-
-    await searchInput.fill('unauthorized');
-    await filterSection.getByRole('button', { name: /^Filter$/i }).click();
-
-    await expect(page.getByText('Unauthorized login failed from proxy')).toBeVisible();
-    await expect(page.getByText('Routine policy scan complete')).not.toBeVisible();
-
-    await filterSection.getByRole('button', { name: /^Reset$/i }).click();
-    await expect(searchInput).toHaveValue('');
-    await expect(severitySelect).toHaveValue('all');
-    await expect(statusSelect).toHaveValue('all');
-    await expect(typeSelect).toHaveValue('all');
-    await expect(page.getByText('Routine policy scan complete')).toBeVisible();
+    await feedTab.click();
+    await expect(overviewTab).toBeVisible();
   });
 });

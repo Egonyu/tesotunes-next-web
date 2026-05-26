@@ -115,6 +115,7 @@ describe("login auth integration", () => {
       name: "Lyrical Jersy",
       role: "Artist",
       isArtist: false,
+      isEventOrganizer: false,
       permissions: [],
       accessToken: "21|abc123token",
     });
@@ -185,6 +186,7 @@ describe("login auth integration", () => {
       name: "Admin User",
       role: "admin",
       isArtist: false,
+      isEventOrganizer: false,
       permissions: [],
       accessToken: "99|local-admin-token",
     });

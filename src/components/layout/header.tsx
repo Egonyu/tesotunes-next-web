@@ -12,6 +12,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
 function formatRoleLabel(role: string | undefined): string {
   if (!role) return "Listener";
@@ -43,6 +45,10 @@ export function Header() {
   const isArtistByRole = userRole.toLowerCase().includes("artist");
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtistByRole || isArtistByStatus;
+
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.total ?? 0;
+
   const sessionImage = pickMediaUrl(
     session?.user?.image,
     (session?.user as { avatar_url?: string } | undefined)?.avatar_url
@@ -81,10 +87,7 @@ export function Header() {
         {session?.user ? (
           <>
             {/* Notifications */}
-            <Link href="/notifications" className="relative rounded-full p-2 hover:bg-muted">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-            </Link>
+            <NotificationBell />
 
             {/* User Menu */}
             <DropdownMenu
@@ -151,9 +154,11 @@ export function Header() {
                 >
                   <Bell className="h-4 w-4 text-muted-foreground" />
                   <span className="flex-1 text-left">Notifications</span>
-                  <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-                    1
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"

@@ -21,7 +21,7 @@ import { usePlayerStore } from '@/stores/player';
  */
 export function AudioAdManager() {
   const shouldShow = useShouldShowAds();
-  const { data: adData } = useAd('audio_preroll');
+  const { data: adData } = useAd('web_between_songs');
   const { trackImpression, trackClick } = useAdTracking();
   const { incrementAndCheck } = useAudioAdCounter();
 
@@ -60,7 +60,11 @@ export function AudioAdManager() {
     setIsPlayingAd(true);
     trackImpression(adData);
 
-    audioRef.current.src = adData.media_url;
+    if (!adData.audio_url) {
+      finishAd();
+      return;
+    }
+    audioRef.current.src = adData.audio_url;
     audioRef.current.volume = usePlayerStore.getState().volume;
     audioRef.current.play().catch(() => {
       // Autoplay blocked — skip the ad
@@ -125,10 +129,10 @@ export function AudioAdManager() {
                 <Volume2 className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-medium">{adData.title}</p>
-                <p className="text-xs opacity-80">
-                  Ad by {adData.advertiser}
+                <p className="text-sm font-medium">
+                  {adData.cta_text ?? 'Advertisement'}
                 </p>
+                <p className="text-xs opacity-80">Sponsored</p>
               </div>
             </div>
 
@@ -142,7 +146,7 @@ export function AudioAdManager() {
               </button>
 
               {/* Skip after 5 seconds */}
-              {adTimeRemaining <= (adData.duration_seconds ?? 15) - 5 ? (
+              {adTimeRemaining <= (adData.audio_duration_seconds ?? 15) - 5 ? (
                 <button
                   onClick={handleSkipAd}
                   className="flex items-center gap-1 px-3 py-1.5 bg-white/30 rounded-lg text-xs hover:bg-white/40 transition-colors"
@@ -152,7 +156,7 @@ export function AudioAdManager() {
                 </button>
               ) : (
                 <span className="text-xs opacity-80">
-                  Skip in {adTimeRemaining - ((adData.duration_seconds ?? 15) - 5)}s
+                  Skip in {adTimeRemaining - ((adData.audio_duration_seconds ?? 15) - 5)}s
                 </span>
               )}
 

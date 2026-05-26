@@ -222,11 +222,13 @@ type ArtistResourceWireFormat = {
   cover_image: string | null;   // alias for banner_url
   country: string | null;
   city: string | null;
-  is_verified: boolean;
+  // 3-axis verification model:
+  is_verified: boolean;                                              // axis 3: featured badge
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';        // axis 2: artist application
+  kyc_status: 'none' | 'partial' | 'pending_review' | 'verified' | 'rejected' | 'expired'; // axis 1: identity
   is_placeholder: boolean;
   claim_status: string | null;
   verification_badge: string | null;
-  verification_status: string;
   total_plays: number;
   total_songs: number;
   total_albums: number;
@@ -255,10 +257,11 @@ const artistFixture: ArtistResourceWireFormat = {
   country: 'UG',
   city: 'Soroti',
   is_verified: true,
+  status: 'approved',
+  kyc_status: 'verified',
   is_placeholder: false,
   claim_status: null,
   verification_badge: 'verified',
-  verification_status: 'verified',
   total_plays: 1_250_000,
   total_songs: 34,
   total_albums: 3,

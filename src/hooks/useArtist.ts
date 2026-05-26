@@ -191,8 +191,10 @@ export interface ArtistProfile {
   city: string | null;
   website_url: string | null;
   social_links: Record<string, string> | null;
-  is_verified: boolean;
-  verification_status: string;
+  // 3-axis verification model — see tesotunes-api/docs/architecture/kyc-3-axis-model.md
+  is_verified: boolean;                                          // axis 3: featured/blue-check badge
+  status?: 'pending' | 'approved' | 'rejected' | 'suspended';    // axis 2: artist application
+  kyc_status?: 'none' | 'partial' | 'pending_review' | 'verified' | 'rejected' | 'expired'; // axis 1: identity
   payout_phone_number: string | null;
   can_upload: boolean;
   monthly_upload_limit: number | null;

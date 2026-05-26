@@ -39,6 +39,7 @@ import { STORE_ENABLED } from "@/lib/features";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
+import { AdBanner } from "@/components/ads";
 
 const mainNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -302,6 +303,11 @@ export function Sidebar() {
           >
             {sidebarCollapsed ? <User className="h-5 w-5" /> : "Sign In"}
           </Link>
+        )}
+
+        {/* Sidebar ad — only shown when expanded */}
+        {!sidebarCollapsed && (
+          <AdBanner placement="web_sidebar_top" className="mt-3 w-full" width={300} height={250} />
         )}
 
         {/* Legal links */}

@@ -1,18 +1,16 @@
 'use client';
 
-import { ObservabilityShell } from './_v2/ObservabilityShell';
+import { SecurityConsole } from './_console/SecurityConsole';
 
 /**
- * Admin Observability — v2.
+ * Admin Security Console.
  *
- * The previous 782-line flat-tab implementation was replaced with a SOC-style shell:
- * left rail (5 consolidated sections) + header (filters / time range / live refresh) +
- * centre work surface + right-side slide-over for drill-in. All data access happens
- * through hooks in `src/lib/observability`, and presentation lives under
- * `src/components/admin/observability/primitives` + `./_v2/sections/*`.
- *
- * See `OBSERVABILITY_REBUILD_PLAN.md` at the repo root for the full rationale.
+ * Rebuilt from the ground up on a push-based pipeline: the Laravel
+ * SecurityEventRecorder emits typed events at every security touchpoint, the
+ * detection engine correlates them into incidents, and this page polls the
+ * `/admin/observability/console/*` read API. The legacy `_v2` sync-on-read
+ * shell has been retired.
  */
 export default function ObservabilityPage() {
-  return <ObservabilityShell />;
+  return <SecurityConsole />;
 }

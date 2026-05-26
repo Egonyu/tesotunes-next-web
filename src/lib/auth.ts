@@ -107,7 +107,7 @@ async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null
   }
 
   try {
-    const response = await fetchAuthApi("/platform-settings", {
+    const response = await fetchAuthApi("/settings/public", {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -123,7 +123,24 @@ async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null
     }
 
     const data = await safeJsonParse(response);
-    const settings = (data?.data as PlatformSocialSettings | undefined) ?? null;
+    const rows = (data?.data as Array<{ key: string; value: unknown }> | undefined) ?? [];
+    const users: Record<string, unknown> = {};
+    const security: Record<string, unknown> = {};
+    for (const row of rows) {
+      if (row.key === "users_social_login_enabled") {
+        users.social_login_enabled = row.value;
+      } else if (
+        row.key === "auth_google_login_enabled" ||
+        row.key === "auth_facebook_login_enabled" ||
+        row.key === "auth_apple_login_enabled"
+      ) {
+        security[row.key.slice("auth_".length)] = row.value;
+      }
+    }
+    const settings = {
+      users: users as PlatformSocialSettings["users"],
+      security: security as PlatformSocialSettings["security"],
+    };
 
     runtimeSocialSettingsCache = {
       value: settings,

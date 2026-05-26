@@ -24,6 +24,8 @@ import {
   Heart,
   Headphones,
   AlertCircle,
+  ShieldCheck,
+  IdCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeCountryCode } from "@/lib/country";
@@ -43,7 +45,8 @@ const STEPS = [
   { id: 0, title: "Welcome", icon: Sparkles, description: "Why become an artist?" },
   { id: 1, title: "Your Music", icon: Music, description: "Tell us about your artistry" },
   { id: 2, title: "Get Paid", icon: Wallet, description: "Set up payouts" },
-  { id: 3, title: "Review", icon: FileText, description: "Review & submit" },
+  { id: 3, title: "Verify Identity", icon: ShieldCheck, description: "One-time KYC — required for withdrawals" },
+  { id: 4, title: "Review", icon: FileText, description: "Review & submit" },
 ] as const;
 
 // ============================================================================
@@ -187,7 +190,9 @@ export default function BecomeArtistPage() {
           return !!formData.phone;
         }
         return !!(formData.phone && formData.mobile_money_number);
-      case 3: // Review (terms)
+      case 3: // Verify Identity (KYC docs)
+        return !!(idFrontFile && idBackFile && selfieFile && formData.nin_number);
+      case 4: // Review (terms)
         return !!(formData.terms_accepted && formData.artist_agreement_accepted);
       default:
         return true;
@@ -325,6 +330,18 @@ export default function BecomeArtistPage() {
           <StepPayout formData={formData} updateForm={updateForm} />
         )}
         {currentStep === 3 && (
+          <StepKyc
+            formData={formData}
+            updateForm={updateForm}
+            idFrontFile={idFrontFile}
+            idBackFile={idBackFile}
+            selfieFile={selfieFile}
+            onIdFrontChange={(e) => handleFileChange(e, setIdFrontFile)}
+            onIdBackChange={(e) => handleFileChange(e, setIdBackFile)}
+            onSelfieChange={(e) => handleFileChange(e, setSelfieFile)}
+          />
+        )}
+        {currentStep === 4 && (
           <StepReview
             formData={formData}
             updateForm={updateForm}
@@ -910,7 +927,143 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
 }
 
 // ============================================================================
-// Step 3: Verification
+// Step 4: Verify Identity (KYC)
+// ============================================================================
+
+interface StepKycProps {
+  formData: Partial<ArtistApplicationData>;
+  updateForm: (data: Partial<ArtistApplicationData>) => void;
+  idFrontFile: File | null;
+  idBackFile: File | null;
+  selfieFile: File | null;
+  onIdFrontChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onIdBackChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelfieChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+function StepKyc({
+  formData,
+  updateForm,
+  idFrontFile,
+  idBackFile,
+  selfieFile,
+  onIdFrontChange,
+  onIdBackChange,
+  onSelfieChange,
+}: StepKycProps) {
+  const uploadSlot = (
+    label: string,
+    sublabel: string,
+    file: File | null,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    accept = "image/jpeg,image/png,image/webp,application/pdf",
+  ) => (
+    <label className="block cursor-pointer">
+      <div
+        className={cn(
+          "rounded-xl border-2 border-dashed p-5 transition-colors",
+          file
+            ? "border-emerald-500/40 bg-emerald-500/5"
+            : "border-border hover:border-primary/40 hover:bg-accent/30",
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+              file ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+            )}
+          >
+            {file ? <Check className="h-5 w-5" /> : <IdCard className="h-5 w-5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">{label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>
+            {file && (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 truncate">
+                {file.name} · {(file.size / 1024).toFixed(0)} KB
+              </p>
+            )}
+            {!file && (
+              <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP or PDF · max 5MB</p>
+            )}
+          </div>
+        </div>
+        <input type="file" accept={accept} onChange={onChange} className="hidden" />
+      </div>
+    </label>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">Verify your identity</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Required once. Approved within 24 hours. You can keep using the app while we review.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/10 p-4">
+        <div className="flex gap-3">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-900 dark:text-amber-200">
+              Why we need this
+            </p>
+            <p className="text-amber-800/80 dark:text-amber-200/80 mt-1">
+              Identity verification is required before you can withdraw earnings or claim
+              music on the platform. Your documents are encrypted and reviewed by our
+              compliance team only.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          National ID number (NIN) <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.nin_number ?? ""}
+          onChange={(e) => updateForm({ nin_number: e.target.value })}
+          placeholder="CM12345678901234"
+          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Found on your Ugandan National ID card.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {uploadSlot(
+          "National ID — front",
+          "Clear photo of the front of your ID, all four corners visible.",
+          idFrontFile,
+          onIdFrontChange,
+        )}
+        {uploadSlot(
+          "National ID — back",
+          "Clear photo of the back of your ID.",
+          idBackFile,
+          onIdBackChange,
+        )}
+        {uploadSlot(
+          "Selfie with ID",
+          "A photo of you holding your ID next to your face. Both must be clearly visible.",
+          selfieFile,
+          onSelfieChange,
+          "image/jpeg,image/png,image/webp",
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center">
+        By uploading you confirm these documents belong to you and are valid.
+      </p>
+    </div>
+  );
+}
+
 // ============================================================================
 // Step 5: Review & Submit
 // ============================================================================

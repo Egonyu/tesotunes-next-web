@@ -66,13 +66,9 @@ export function getAdminEntryPath(
     }
   }
 
-  const effectivePermissions = getEffectiveAdminPermissions(role, permissions);
-
-  for (const candidate of MODERATOR_ENTRY_CANDIDATES) {
-    if (hasAnyPermission(effectivePermissions, candidate.permissions)) {
-      return candidate.href;
-    }
-  }
-
-  return null;
+  // Moderators without an explicitly-granted workspace permission fall back to
+  // the reports/moderation queue — the safe default moderation workspace.
+  // (Role defaults always include reporting permissions, so this route is
+  // always reachable; see MODERATOR_DEFAULT_ADMIN_PERMISSIONS.)
+  return '/admin/reports';
 }

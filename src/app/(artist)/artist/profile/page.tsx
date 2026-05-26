@@ -266,7 +266,7 @@ export default function ArtistProfilePage() {
                 {profile.city ? `${profile.city}, ` : ''}{profile.country}
               </span>
             )}
-            <span className="capitalize">{profile?.verification_status || 'pending'}</span>
+            <span className="capitalize">{(profile?.kyc_status || 'none').replace(/_/g, ' ')}</span>
             {profile?.can_upload && (
               <span className="text-green-600">Upload enabled</span>
             )}

@@ -4,39 +4,55 @@ import { SITE_URL } from "@/lib/site";
 
 const BASE_URL = SITE_URL
 
-async function fetchList<T>(endpoint: string): Promise<T[]> {
+async function fetchList<T>(endpoint: string, label: string): Promise<T[]> {
   try {
     const res = await serverFetch<{ data: T[] }>(endpoint, {
       next: { revalidate: 3600 },
     } as RequestInit)
-    return res.data || []
-  } catch {
+    const results = res.data || []
+    if (results.length === 0) {
+      console.warn(`[sitemap] ${label} returned 0 results from ${endpoint}`)
+    }
+    return results
+  } catch (err) {
+    console.error(`[sitemap] Failed to fetch ${label} (${endpoint}):`, err)
     return []
   }
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Backend caps per_page at 100 for songs/artists/albums.
+  // Revalidate every hour; Next.js de-dupes concurrent calls within the same
+  // revalidation window so these only hit the API once per hour.
   const [artists, albums, genres, songs, events] = await Promise.all([
-    // status=approved is the canonical AXIS-2 value post-KYC-canonicalize migration.
-    // Pre-migration this was 'active'; we now ask for 'approved' explicitly.
-    fetchList<{ slug: string; updated_at?: string }>('/artists?limit=500&status=approved'),
-    fetchList<{ slug: string; updated_at?: string }>('/albums?limit=500&status=published'),
-    fetchList<{ slug: string; updated_at?: string }>('/genres?limit=100'),
-    fetchList<{ slug: string; updated_at?: string }>('/songs?limit=500&status=published'),
-    fetchList<{ id: number; updated_at?: string }>('/events?limit=200&status=published'),
+    fetchList<{ slug: string; updated_at?: string }>('/artists?per_page=100', 'artists'),
+    fetchList<{ slug: string; updated_at?: string }>('/albums?per_page=100', 'albums'),
+    fetchList<{ slug: string; updated_at?: string }>('/genres', 'genres'),
+    fetchList<{ slug: string; updated_at?: string }>('/songs?per_page=100', 'songs'),
+    fetchList<{ id: number; updated_at?: string }>('/events?limit=100&status=published', 'events'),
   ])
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${BASE_URL}/artists`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${BASE_URL}/albums`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE_URL}/songs`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${BASE_URL}/genres`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE_URL}/events`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/charts`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/new-releases`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE_URL}/browse`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE_URL}/podcasts`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
+    { url: `${BASE_URL}/search`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
+    { url: `${BASE_URL}/podcasts`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
+    { url: `${BASE_URL}/playlists`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
+    { url: `${BASE_URL}/moods`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${BASE_URL}/radio`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
     { url: `${BASE_URL}/awards`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
     { url: `${BASE_URL}/store`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
-    { url: `${BASE_URL}/fan-clubs`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${BASE_URL}/fan-clubs`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
+    { url: `${BASE_URL}/promoters`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${BASE_URL}/pricing`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE_URL}/become-artist`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
   ]
@@ -46,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((a) => ({
       url: `${BASE_URL}/artists/${a.slug}`,
       lastModified: a.updated_at ? new Date(a.updated_at) : new Date(),
-      changeFrequency: 'weekly',
+      changeFrequency: 'weekly' as const,
       priority: 0.8,
     }))
 
@@ -55,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((a) => ({
       url: `${BASE_URL}/albums/${a.slug}`,
       lastModified: a.updated_at ? new Date(a.updated_at) : new Date(),
-      changeFrequency: 'monthly',
+      changeFrequency: 'monthly' as const,
       priority: 0.7,
     }))
 
@@ -64,7 +80,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((g) => ({
       url: `${BASE_URL}/genres/${g.slug}`,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
+      changeFrequency: 'weekly' as const,
       priority: 0.7,
     }))
 
@@ -73,14 +89,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((s) => ({
       url: `${BASE_URL}/songs/${s.slug}`,
       lastModified: s.updated_at ? new Date(s.updated_at) : new Date(),
-      changeFrequency: 'monthly',
+      changeFrequency: 'monthly' as const,
       priority: 0.6,
     }))
 
   const eventRoutes: MetadataRoute.Sitemap = events.map((e) => ({
     url: `${BASE_URL}/events/${e.id}`,
     lastModified: e.updated_at ? new Date(e.updated_at) : new Date(),
-    changeFrequency: 'daily',
+    changeFrequency: 'daily' as const,
     priority: 0.7,
   }))
 

@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: [
           '/admin/',
-          '/artist/',
           '/artist-dashboard/',
           '/access-required',
           '/profile',
@@ -26,8 +25,8 @@ export default function robots(): MetadataRoute.Robots {
           '/transactions',
           '/wallet',
           '/loyalty',
-          '/ojokotau',
-          '/edula',
+          '/dashboard',
+          '/become-artist/status',
           '/api/',
         ],
       },

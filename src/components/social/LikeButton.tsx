@@ -51,7 +51,7 @@ export function LikeButton({
 }: LikeButtonProps) {
   const { data: session } = useSession();
   const { data: status, isLoading } = useLikeStatus(likeableType, likeableId, {
-    enabled: !skipFetch,
+    enabled: !skipFetch && !!session?.user,
   });
   const toggleLike = useToggleLike(likeableType, likeableId);
 

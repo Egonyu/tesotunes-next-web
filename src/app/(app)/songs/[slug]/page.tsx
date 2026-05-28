@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: { index: true, follow: true },
     alternates: { canonical: absoluteUrl(`/songs/${slug}`) },
     openGraph: {
       type: 'music.song',

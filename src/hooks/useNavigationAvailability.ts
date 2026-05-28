@@ -3,10 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import type { Album, PaginatedResponse } from "@/types";
 
-type RadioAvailabilityResponse = {
-  data: Array<unknown>;
-};
-
 function getAlbumTotal(response?: PaginatedResponse<Album> | null) {
   if (!response) {
     return 0;
@@ -27,21 +23,13 @@ export function useNavigationAvailability() {
     retry: false,
   });
 
-  const radioQuery = useQuery({
-    queryKey: ["navigation", "availability", "radio"],
-    queryFn: () => apiGet<RadioAvailabilityResponse>("/radio/stations", { params: { limit: 1 } }),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
-
   return useMemo(() => {
     const albumCount = getAlbumTotal(albumsQuery.data);
-    const radioCount = Array.isArray(radioQuery.data?.data) ? radioQuery.data.data.length : 0;
 
     return {
       hasAlbums: albumCount > 0,
-      hasRadioStations: radioCount > 0,
-      isLoading: albumsQuery.isLoading || radioQuery.isLoading,
+      hasRadioStations: false, // radio/stations endpoint not yet implemented
+      isLoading: albumsQuery.isLoading,
     };
-  }, [albumsQuery.data, albumsQuery.isLoading, radioQuery.data, radioQuery.isLoading]);
+  }, [albumsQuery.data, albumsQuery.isLoading]);
 }

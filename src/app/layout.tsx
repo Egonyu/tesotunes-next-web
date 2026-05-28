@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   metadataBase: getSiteOrigin(
     process.env.NODE_ENV === "production" ? SITE_URL : "http://localhost:3000"
   ),
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

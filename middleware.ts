@@ -162,9 +162,22 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname.toLowerCase();
 
-  if (hostname === "tesotunes.com") {
+  // Redirect bare domain and old domain to canonical www domain
+  if (hostname === "tesotunes.com" || hostname === "engine.tesotunes.com") {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.hostname = "www.tesotunes.com";
+    // Map old engine.tesotunes.com paths to best equivalent
+    if (hostname === "engine.tesotunes.com") {
+      const legacyMap: Record<string, string> = {
+        '/discover': '/',
+        '/cart': '/store',
+        '/settings/subscription': '/settings',
+        '/page/cookies-and-personal-data': '/legal',
+      };
+      const mapped = legacyMap[redirectUrl.pathname];
+      if (mapped) redirectUrl.pathname = mapped;
+      redirectUrl.search = '';
+    }
     return NextResponse.redirect(redirectUrl, 308);
   }
 

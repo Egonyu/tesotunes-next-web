@@ -22,7 +22,7 @@ const getArtistForMeta = cache(async (slug: string): Promise<Artist | null> => {
 
 export async function generateStaticParams() {
   try {
-    const res = await serverFetch<{ data: { slug: string }[] }>('/artists?limit=200&status=active')
+    const res = await serverFetch<{ data: { slug: string }[] }>('/artists?limit=200&status=approved')
     return (res.data || []).map((a) => ({ slug: a.slug }))
   } catch {
     return []

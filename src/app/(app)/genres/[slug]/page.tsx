@@ -72,6 +72,7 @@ export async function generateMetadata({ params }: GenrePageProps): Promise<Meta
   return {
     title,
     description,
+    robots: { index: true, follow: true },
     alternates: { canonical: absoluteUrl(`/genres/${slug}`) },
     openGraph: {
       title,

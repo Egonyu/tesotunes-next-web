@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/site";
 import Image from "next/image";
 import Link from "next/link";
 import { Play, ListMusic, Globe, Lock, User } from "lucide-react";
@@ -47,7 +48,8 @@ export async function generateMetadata({ params }: PlaylistPageProps): Promise<M
   return {
     title,
     description,
-    alternates: { canonical: `/playlists/${slug}` },
+    robots: { index: true, follow: true },
+    alternates: { canonical: absoluteUrl(`/playlists/${slug}`) },
     openGraph: {
       title,
       description,

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import AwardDetailPageClient from './AwardDetailPageClient'
 
@@ -15,14 +17,14 @@ interface AwardMeta {
   status?: string
 }
 
-async function getAwardForMeta(slug: string): Promise<AwardMeta | null> {
+const getAwardForMeta = cache(async function getAwardForMeta(slug: string): Promise<AwardMeta | null> {
   try {
     const res = await serverFetch<{ data: AwardMeta }>(`/awards/${slug}`)
     return res.data
   } catch {
     return null
   }
-}
+})
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
@@ -47,6 +49,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function AwardPage() {
+export default async function AwardPage({ params }: Props) {
+  const { slug } = await params
+  const award = await getAwardForMeta(slug)
+
+  if (!award) notFound()
+
   return <AwardDetailPageClient />
 }

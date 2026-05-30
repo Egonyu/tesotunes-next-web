@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPostForm } from '@/lib/api';
 import { normalizeCountryCode } from '@/lib/country';
 import { Upload, X, User, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
@@ -93,9 +93,11 @@ export default function CreateUserPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiPost('/admin/users', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Use apiPostForm so Axios sets the Content-Type boundary automatically.
+      // Manually setting 'Content-Type: multipart/form-data' strips the boundary
+      // when routed through the Next.js proxy, causing the Laravel backend to
+      // receive an empty body and reject all required fields with a 422.
+      return apiPostForm('/admin/users', data);
     },
     onSuccess: () => {
       router.push('/admin/users');

@@ -95,6 +95,7 @@ export default function RegisterPage() {
     { label: "Contains uppercase", met: /[A-Z]/.test(formData.password) },
     { label: "Contains lowercase", met: /[a-z]/.test(formData.password) },
     { label: "Contains number", met: /[0-9]/.test(formData.password) },
+    { label: "Contains special character (!@#$%…)", met: /[^a-zA-Z0-9]/.test(formData.password) },
   ];
 
   return (

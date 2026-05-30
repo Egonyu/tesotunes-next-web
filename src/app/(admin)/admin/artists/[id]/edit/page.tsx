@@ -114,7 +114,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     slug: '',
     bio: '',
     website: '',
-    status: 'active',
+    status: 'approved',
     is_verified: false,
     genre_id: '',
     spotify_url: '',

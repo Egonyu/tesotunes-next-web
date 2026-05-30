@@ -15,7 +15,7 @@ type Artist = {
   slug: string;
   bio: string | null;
   website: string | null;
-  status: 'approved' | 'pending' | 'suspended' | 'rejected';
+  status: 'active' | 'approved' | 'pending' | 'suspended' | 'rejected';
   is_verified: boolean;
   profile_url: string | null;
   avatar_url: string | null;

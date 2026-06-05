@@ -23,7 +23,7 @@ import {
 import { useArtist, useArtistSongs, usePublicArtistAlbums } from "@/hooks/api";
 import { usePlayerStore } from "@/stores";
 import { formatNumber, cn, formatDuration, resolveDurationSeconds } from "@/lib/utils";
-import type { Song } from "@/types";
+import type { Song, Artist } from "@/types";
 import { FollowButton } from "@/components/social/FollowButton";
 import { LikeButton } from "@/components/social/LikeButton";
 import { CommentSection } from "@/components/social/CommentSection";
@@ -34,15 +34,21 @@ import { toast } from "sonner";
 import { pickMediaUrl, resolvePlayableAudioUrl } from "@/lib/media";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 
-export default function ArtistPage() {
+export default function ArtistPage({
+  initialArtist,
+  slug: slugProp,
+}: {
+  initialArtist?: Artist;
+  slug?: string;
+} = {}) {
   const params = useParams();
   const pathname = usePathname();
-  const slug = params?.slug as string;
+  const slug = slugProp ?? (params?.slug as string);
   const [tipModalOpen, setTipModalOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { data: session } = useSession();
 
-  const { data: artist, isLoading: artistLoading, error: artistError } = useArtist(slug);
+  const { data: artist, isLoading: artistLoading, error: artistError } = useArtist(slug, { initialData: initialArtist });
   const { data: songsData, isLoading: songsLoading } = useArtistSongs(artist?.id || 0, { enabled: !!artist?.id });
   const { data: albumsData, isLoading: albumsLoading } = usePublicArtistAlbums(artist?.id || 0, { enabled: !!artist?.id });
 

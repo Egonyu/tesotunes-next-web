@@ -138,7 +138,7 @@ export function useMyCatalogClaims() {
   });
 }
 
-export function useArtist(idOrSlug: string | number) {
+export function useArtist(idOrSlug: string | number, options?: { initialData?: Artist }) {
   return useQuery({
     queryKey: ["artist", idOrSlug],
     queryFn: async () => {
@@ -146,6 +146,9 @@ export function useArtist(idOrSlug: string | number) {
       return res.data;
     },
     enabled: !!idOrSlug,
+    // Seed with server-fetched data so the artist page renders real content
+    // during SSR (fixes Google "soft 404" on client-only rendering).
+    initialData: options?.initialData,
   });
 }
 

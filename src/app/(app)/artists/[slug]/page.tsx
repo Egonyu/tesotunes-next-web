@@ -87,7 +87,7 @@ export default async function ArtistPage({ params }: Props) {
     <>
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumb} />
-      <ArtistPageClient />
+      <ArtistPageClient initialArtist={artist} slug={slug} />
     </>
   )
 }

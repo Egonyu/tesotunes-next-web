@@ -41,7 +41,7 @@ import { useSession } from "next-auth/react";
 import type { Song } from "@/types";
 import { PostOpportunityModal } from "@/components/promotions/PostOpportunityModal";
 
-interface SongDetail {
+export interface SongDetail {
   id: number;
   title: string;
   slug: string;
@@ -170,9 +170,15 @@ function toPlayerSong(detail: SongDetail): Song {
   } as Song;
 }
 
-export default function SongDetailPage() {
+export default function SongDetailPage({
+  initialSong,
+  slug: slugProp,
+}: {
+  initialSong?: SongDetail;
+  slug?: string;
+} = {}) {
   const rawParams = useParams();
-  const slug = rawParams?.slug as string;
+  const slug = slugProp ?? (rawParams?.slug as string);
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -189,6 +195,9 @@ export default function SongDetailPage() {
       const res = await apiGet<{ data: SongDetail }>(`/songs/${slug}`);
       return res.data;
     },
+    // Seed with server-fetched data so the page renders real content during
+    // SSR (fixes Google "soft 404" on client-only rendering).
+    initialData: initialSong,
   });
 
   const isCurrentSong = song && currentSong?.id === song.id;

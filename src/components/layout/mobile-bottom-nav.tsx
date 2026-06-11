@@ -264,7 +264,7 @@ export function MobileBottomNav() {
     : session
       ? [
           { href: "/events", label: "Shows", icon: Calendar },
-          { href: "/forums/new", label: "Topic", icon: MessageSquare },
+          ...(g?.forums_enabled ? [{ href: "/forums/new", label: "Topic", icon: MessageSquare }] : []),
           { href: "/polls/create", label: "Poll", icon: BadgePlus },
         ]
       : [

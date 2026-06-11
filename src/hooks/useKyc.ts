@@ -65,7 +65,7 @@ export interface PendingKycUser extends KycStatus {
 export function useKycStatus(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['kyc', 'status'],
-    queryFn: () => apiGet<{ data: KycStatus }>('/api/kyc/status').then((r) => r.data),
+    queryFn: () => apiGet<{ data: KycStatus }>('/kyc/status').then((r) => r.data),
     staleTime: 30_000,
     enabled: options?.enabled !== false,
   });
@@ -75,7 +75,7 @@ export function useKycRequirements(action: string, options?: { enabled?: boolean
   return useQuery({
     queryKey: ['kyc', 'requirements', action],
     queryFn: () =>
-      apiGet<{ data: KycRequirements }>(`/api/kyc/requirements/${encodeURIComponent(action)}`).then((r) => r.data),
+      apiGet<{ data: KycRequirements }>(`/kyc/requirements/${encodeURIComponent(action)}`).then((r) => r.data),
     staleTime: 10_000,
     enabled: options?.enabled !== false,
   });
@@ -97,7 +97,7 @@ export function useUploadKycDocument() {
         formData.append('document_number', input.document_number);
       }
       return apiPost<{ data: { document_id: number; document_type: string; status: string; kyc_status: KycStatusValue } }>(
-        '/api/kyc/documents',
+        '/kyc/documents',
         formData,
       );
     },
@@ -122,7 +122,7 @@ export function usePendingKyc(perPage = 20) {
       apiGet<{
         data: PendingKycUser[];
         meta: { current_page: number; last_page: number; per_page: number; total: number };
-      }>(`/api/admin/kyc/pending?per_page=${perPage}`),
+      }>(`/admin/kyc/pending?per_page=${perPage}`),
     staleTime: 15_000,
   });
 }
@@ -137,7 +137,7 @@ export function useReviewKyc() {
       reason?: string;
       notes?: string;
     }) =>
-      apiPost(`/api/admin/kyc/users/${input.userId}/review`, {
+      apiPost(`/admin/kyc/users/${input.userId}/review`, {
         decision: input.decision,
         reason: input.reason,
         notes: input.notes,

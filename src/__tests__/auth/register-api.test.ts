@@ -84,6 +84,37 @@ describe("register api route", () => {
     );
   });
 
+  it("forwards the recaptcha token to the backend", async () => {
+    const mockFetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: "Registration successful.",
+          data: { id: 1, email: "test@example.com" },
+          requires_email_verification: true,
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+
+    global.fetch = mockFetch as typeof fetch;
+
+    await POST(
+      buildRequest({
+        name: "Test User",
+        email: "test@example.com",
+        password: "Password123!",
+        password_confirmation: "Password123!",
+        recaptcha_token: "recaptcha-token-value",
+      })
+    );
+
+    const upstreamBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
+    expect(upstreamBody.recaptcha_token).toBe("recaptcha-token-value");
+  });
+
   it("passes Laravel validation errors through unchanged", async () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response(

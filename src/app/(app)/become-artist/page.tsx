@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeCountryCode } from "@/lib/country";
+import { CameraCapture } from "@/components/ui/camera-capture";
 import { toast } from "sonner";
 import {
   useSubmitArtistApplication,
@@ -163,12 +164,24 @@ export default function BecomeArtistPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: (f: File | null) => void
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) setter(file);
+  // Backend accepts jpg/jpeg/png (+pdf for ID documents, never for the
+  // selfie) at up to 10MB — reject anything else before the upload starts.
+  const KYC_MAX_BYTES = 10 * 1024 * 1024;
+
+  const selectKycFile = (file: File, allowPdf: boolean, setter: (f: File | null) => void) => {
+    const allowedTypes = ["image/jpeg", "image/png", ...(allowPdf ? ["application/pdf"] : [])];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(allowPdf ? "Use a JPG or PNG photo, or a PDF." : "Use a JPG or PNG photo.");
+      return;
+    }
+
+    if (file.size > KYC_MAX_BYTES) {
+      toast.error("The file must be smaller than 10MB.");
+      return;
+    }
+
+    setter(file);
   };
 
   const canProceed = (): boolean => {
@@ -336,9 +349,9 @@ export default function BecomeArtistPage() {
             idFrontFile={idFrontFile}
             idBackFile={idBackFile}
             selfieFile={selfieFile}
-            onIdFrontChange={(e) => handleFileChange(e, setIdFrontFile)}
-            onIdBackChange={(e) => handleFileChange(e, setIdBackFile)}
-            onSelfieChange={(e) => handleFileChange(e, setSelfieFile)}
+            onIdFrontSelected={(file) => selectKycFile(file, true, setIdFrontFile)}
+            onIdBackSelected={(file) => selectKycFile(file, true, setIdBackFile)}
+            onSelfieSelected={(file) => selectKycFile(file, false, setSelfieFile)}
           />
         )}
         {currentStep === 4 && (
@@ -936,10 +949,12 @@ interface StepKycProps {
   idFrontFile: File | null;
   idBackFile: File | null;
   selfieFile: File | null;
-  onIdFrontChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onIdBackChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSelfieChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onIdFrontSelected: (file: File) => void;
+  onIdBackSelected: (file: File) => void;
+  onSelfieSelected: (file: File) => void;
 }
+
+type KycCameraSlot = "id_front" | "id_back" | "selfie" | null;
 
 function StepKyc({
   formData,
@@ -947,51 +962,96 @@ function StepKyc({
   idFrontFile,
   idBackFile,
   selfieFile,
-  onIdFrontChange,
-  onIdBackChange,
-  onSelfieChange,
+  onIdFrontSelected,
+  onIdBackSelected,
+  onSelfieSelected,
 }: StepKycProps) {
+  const [cameraSlot, setCameraSlot] = useState<KycCameraSlot>(null);
+
+  const slotConfig = {
+    id_front: {
+      onSelected: onIdFrontSelected,
+      facing: "environment" as const,
+      instruction: "Lay your ID flat — all four corners in the frame",
+      filename: "national-id-front",
+    },
+    id_back: {
+      onSelected: onIdBackSelected,
+      facing: "environment" as const,
+      instruction: "Now the back of your ID",
+      filename: "national-id-back",
+    },
+    selfie: {
+      onSelected: onSelfieSelected,
+      facing: "user" as const,
+      instruction: "Hold your ID next to your face — both clearly visible",
+      filename: "selfie-with-id",
+    },
+  };
+
   const uploadSlot = (
+    slot: Exclude<KycCameraSlot, null>,
     label: string,
     sublabel: string,
     file: File | null,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-    accept = "image/jpeg,image/png,image/webp,application/pdf",
+    onSelected: (file: File) => void,
+    allowPdf: boolean,
   ) => (
-    <label className="block cursor-pointer">
-      <div
-        className={cn(
-          "rounded-xl border-2 border-dashed p-5 transition-colors",
-          file
-            ? "border-emerald-500/40 bg-emerald-500/5"
-            : "border-border hover:border-primary/40 hover:bg-accent/30",
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-              file ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
-            )}
-          >
-            {file ? <Check className="h-5 w-5" /> : <IdCard className="h-5 w-5" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium">{label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>
-            {file && (
-              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 truncate">
-                {file.name} · {(file.size / 1024).toFixed(0)} KB
-              </p>
-            )}
-            {!file && (
-              <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP or PDF · max 5MB</p>
-            )}
-          </div>
+    <div
+      className={cn(
+        "rounded-xl border-2 border-dashed p-5 transition-colors",
+        file ? "border-emerald-500/40 bg-emerald-500/5" : "border-border",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            file ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {file ? <Check className="h-5 w-5" /> : <IdCard className="h-5 w-5" />}
         </div>
-        <input type="file" accept={accept} onChange={onChange} className="hidden" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>
+          {file ? (
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 truncate">
+              {file.name} · {(file.size / 1024).toFixed(0)} KB
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">
+              {allowPdf ? "JPG, PNG or PDF · max 10MB" : "JPG or PNG · max 10MB"}
+            </p>
+          )}
+        </div>
       </div>
-    </label>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setCameraSlot(slot)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Camera className="h-4 w-4" />
+          {file ? "Retake photo" : "Take photo"}
+        </button>
+        <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium hover:bg-accent">
+          Choose file
+          <input
+            type="file"
+            accept={allowPdf ? "image/jpeg,image/png,application/pdf" : "image/jpeg,image/png"}
+            capture={slotConfig[slot].facing}
+            onChange={(e) => {
+              const selected = e.target.files?.[0];
+              if (selected) onSelected(selected);
+              e.target.value = "";
+            }}
+            className="hidden"
+          />
+        </label>
+      </div>
+    </div>
   );
 
   return (
@@ -1037,29 +1097,44 @@ function StepKyc({
 
       <div className="space-y-3">
         {uploadSlot(
+          "id_front",
           "National ID — front",
           "Clear photo of the front of your ID, all four corners visible.",
           idFrontFile,
-          onIdFrontChange,
+          onIdFrontSelected,
+          true,
         )}
         {uploadSlot(
+          "id_back",
           "National ID — back",
           "Clear photo of the back of your ID.",
           idBackFile,
-          onIdBackChange,
+          onIdBackSelected,
+          true,
         )}
         {uploadSlot(
+          "selfie",
           "Selfie with ID",
           "A photo of you holding your ID next to your face. Both must be clearly visible.",
           selfieFile,
-          onSelfieChange,
-          "image/jpeg,image/png,image/webp",
+          onSelfieSelected,
+          false,
         )}
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
         By uploading you confirm these documents belong to you and are valid.
       </p>
+
+      {cameraSlot && (
+        <CameraCapture
+          facing={slotConfig[cameraSlot].facing}
+          instruction={slotConfig[cameraSlot].instruction}
+          filename={slotConfig[cameraSlot].filename}
+          onCapture={(file) => slotConfig[cameraSlot].onSelected(file)}
+          onClose={() => setCameraSlot(null)}
+        />
+      )}
     </div>
   );
 }

@@ -86,7 +86,7 @@ export default function PromotionDetailPage() {
   });
 
   const backHref = selectedEvent
-    ? `/promotions?target_type=event&event_id=${selectedEvent.id}&event_name=${encodeURIComponent(selectedEvent.title)}`
+    ? `/promotions/browse?target_type=event&event_id=${selectedEvent.id}&event_name=${encodeURIComponent(selectedEvent.title)}`
     : "/promotions";
 
   const { data: genericReviewsResponse } = useReviews("product", promotion?.id ?? 0);

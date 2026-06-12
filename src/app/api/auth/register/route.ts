@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         phone: data.phone,
         country: data.country,
         date_of_birth: data.date_of_birth,
-        genres: data.genres, // optional genre selection from registration flow
+        recaptcha_token: data.recaptcha_token,
       }),
     });
 

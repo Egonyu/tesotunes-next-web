@@ -2103,8 +2103,8 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
               <p className="mt-1 font-semibold">{event.payout_center?.method_label || 'Not configured'}</p>
             </div>
             <div className={mutedPanelClass}>
-              <p className="text-muted-foreground">Verification status</p>
-              <p className="mt-1 font-semibold capitalize">{event.payout_center?.verification_status || 'pending'}</p>
+              <p className="text-muted-foreground">Identity verification</p>
+              <p className="mt-1 font-semibold capitalize">{(event.payout_center?.kyc_status || 'none').replace(/_/g, ' ')}</p>
             </div>
             <div className={mutedPanelClass}>
               <p className="text-muted-foreground">Ready balance</p>

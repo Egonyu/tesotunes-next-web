@@ -368,6 +368,61 @@ export function useExchangeCredits() {
 }
 
 // ============================================================================
+// User Search (for credit transfer recipient lookup)
+// ============================================================================
+
+export interface UserSearchResult {
+  id: number;
+  name: string;
+  username: string;
+  avatar_url: string;
+}
+
+export function useUserSearch(query: string) {
+  return useQuery({
+    queryKey: ['users', 'search', query],
+    queryFn: () =>
+      apiGet<{ data: UserSearchResult[] }>(`/users/search?q=${encodeURIComponent(query)}`).then(
+        (res) => res.data
+      ),
+    enabled: query.trim().length >= 2,
+    staleTime: 30 * 1000,
+  });
+}
+
+// ============================================================================
+// Transfer Credits
+// ============================================================================
+
+export interface TransferCreditsPayload {
+  recipient_id: number;
+  amount: number;
+  message?: string;
+}
+
+export interface TransferCreditsResult {
+  success: boolean;
+  message: string;
+  transaction: {
+    amount: string;
+    recipient: string;
+    new_balance: string;
+  };
+}
+
+export function useTransferCredits() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: TransferCreditsPayload) =>
+      apiPost<TransferCreditsResult>('/credits/transfer', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    },
+  });
+}
+
+// ============================================================================
 // Helper: Detect provider from phone number (client-side)
 // ============================================================================
 

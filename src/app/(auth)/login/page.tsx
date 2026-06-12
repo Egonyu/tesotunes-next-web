@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getProviders, signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { apiPost } from "@/lib/api";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
@@ -41,6 +42,7 @@ function requiresEmailVerification(errorMessage: string): boolean {
 }
 
 export default function LoginPage() {
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: platformSettings } = usePublicPlatformSettings();
@@ -58,6 +60,9 @@ export default function LoginPage() {
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
   const [socialProviders, setSocialProviders] = useState<Record<string, { id: string; name: string }> | null>(null);
   const [socialLoadingProvider, setSocialLoadingProvider] = useState<string | null>(null);
+  const [loginStep, setLoginStep] = useState<"credentials" | "two_fa">("credentials");
+  const [twoFaToken, setTwoFaToken] = useState("");
+  const [twoFaCode, setTwoFaCode] = useState("");
   const authTitle = platformSettings?.appearance.auth_form_title || "Welcome back";
   const authSubtitle =
     platformSettings?.appearance.auth_form_subtitle ||
@@ -104,15 +109,27 @@ export default function LoginPage() {
     setVerificationEmailSent(false);
 
     try {
+      const recaptchaToken = await executeRecaptcha?.("login") ?? "";
       const result = await signIn("credentials", {
         email,
         password,
         remember_me: rememberMe,
+        recaptcha_token: recaptchaToken,
         redirect: false,
         callbackUrl,
       });
 
       if (result?.error) {
+        // 2FA required — switch to the TOTP challenge step
+        if (result.error.startsWith("TWO_FA_REQUIRED:")) {
+          const token = result.error.slice("TWO_FA_REQUIRED:".length);
+          setTwoFaToken(token);
+          setTwoFaCode("");
+          setError("");
+          setLoginStep("two_fa");
+          return;
+        }
+
         const message =
           result.error === "CredentialsSignin"
             ? "Invalid email or password"
@@ -171,9 +188,103 @@ export default function LoginPage() {
     }
   };
 
+  const handleTwoFaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading || !twoFaCode.trim()) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const result = await signIn("credentials", {
+        two_fa_token: twoFaToken,
+        two_fa_code: twoFaCode.trim(),
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (result?.error) {
+        setError(result.error === "CredentialsSignin" ? "Invalid authentication code." : result.error);
+        return;
+      }
+
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const enabledSocialProviders = Object.values(socialProviders ?? {}).filter(
     (provider) => provider.id !== "credentials" && enabledProviders.has(provider.id as "google" | "facebook" | "twitter" | "apple")
   );
+
+  if (loginStep === "two_fa") {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Two-Factor Authentication</h2>
+        <p className="text-muted-foreground mb-8">
+          Enter the 6-digit code from your authenticator app, or use one of your recovery codes.
+        </p>
+
+        {error && (
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleTwoFaSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="two_fa_code" className="block text-sm font-medium mb-2">
+              Authentication Code
+            </label>
+            <input
+              id="two_fa_code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={twoFaCode}
+              onChange={(e) => setTwoFaCode(e.target.value)}
+              placeholder="000000"
+              required
+              autoFocus
+              disabled={isLoading}
+              maxLength={10}
+              className="w-full px-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-center tracking-widest text-lg font-mono"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Recovery codes are longer — enter them here too.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || !twoFaCode.trim()}
+            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              "Verify"
+            )}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => { setLoginStep("credentials"); setError(""); setTwoFaCode(""); }}
+          className="mt-4 w-full py-2.5 rounded-lg border font-medium hover:bg-muted text-sm"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>

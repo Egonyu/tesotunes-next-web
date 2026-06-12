@@ -6,6 +6,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { authConfig } from "@/lib/auth";
 import { Analytics } from "@vercel/analytics/next";
+import { SITE_URL, getSiteOrigin } from "@/lib/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,10 +30,12 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "TesoTunes" }],
   creator: "TesoTunes",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.NODE_ENV === 'production' ? 'https://tesotunes.com' : 'http://localhost:3000')
+  metadataBase: getSiteOrigin(
+    process.env.NODE_ENV === "production" ? SITE_URL : "http://localhost:3000"
   ),
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

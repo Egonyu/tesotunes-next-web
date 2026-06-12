@@ -14,7 +14,9 @@ import {
   Loader2,
   Music,
   PiggyBank,
+  Radio,
   Share2,
+  Sparkles,
   Target,
   Trophy,
   Wallet,
@@ -322,6 +324,10 @@ export default function CreditsPage() {
           <PiggyBank className="h-4 w-4" />
           Save on SACCO
         </Link>
+        <Link href="/credits/transfer" className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 hover:bg-muted">
+          <ArrowLeftRight className="h-4 w-4" />
+          Send Credits
+        </Link>
       </div>
 
       {opportunities.length > 0 && (
@@ -395,6 +401,87 @@ export default function CreditsPage() {
           </div>
         </div>
       )}
+
+      {/* Listen & Earn */}
+      <div className="rounded-2xl border bg-linear-to-br from-violet-500/10 via-purple-500/5 to-pink-500/10 border-violet-300/20 overflow-hidden">
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
+            <Radio className="h-6 w-6 text-violet-600" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="font-bold text-lg">Listen &amp; Earn</h2>
+              <span className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-700 text-xs font-semibold">Daily Pool</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Every day, TesoTunes distributes a pool of <span className="font-semibold text-foreground">1,000 credits</span> to active listeners.
+              Your share is proportional to how many songs you finish — the more you listen, the more you earn.
+            </p>
+          </div>
+        </div>
+        <div className="border-t divide-y">
+          {[
+            {
+              icon: Headphones,
+              title: 'Listen to full songs',
+              desc: 'Songs played to at least 90% completion count toward your daily share.',
+            },
+            {
+              icon: Sparkles,
+              title: 'Credits land at 2 AM',
+              desc: 'Yesterday\'s listening is tallied overnight and credited to your wallet automatically.',
+            },
+            {
+              icon: Coins,
+              title: 'No cap on songs — just daily limits',
+              desc: 'Listen to as many songs as you like. Your slice of the pool grows with every completed track.',
+            },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex items-start gap-4 px-6 py-4">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Icon className="h-4 w-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">{title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-3 bg-muted/30 text-xs text-muted-foreground">
+          Your first completed listen also earns a one-time <span className="font-semibold text-foreground">+50 first-listen bonus</span> on top of your pool share.
+        </div>
+      </div>
+
+      {/* Top-Up Bonus Tiers */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="px-6 py-4 border-b">
+          <h2 className="font-bold text-lg">Top-Up Bonus Credits</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Top up your wallet and we automatically award bonus credits — the bigger the top-up, the bigger the bonus.
+          </p>
+        </div>
+        <div className="divide-y">
+          {[
+            { range: '5,000 – 9,999 UGX', bonus: '+10%', example: 'e.g. 500 free credits on a 5,000 UGX top-up' },
+            { range: '10,000 – 19,999 UGX', bonus: '+20%', example: 'e.g. 2,000 free credits on a 10,000 UGX top-up' },
+            { range: '20,000 – 49,999 UGX', bonus: '+30%', example: 'e.g. 6,000 free credits on a 20,000 UGX top-up' },
+            { range: '50,000+ UGX', bonus: '+40%', example: 'e.g. 20,000 free credits on a 50,000 UGX top-up' },
+          ].map((tier) => (
+            <div key={tier.range} className="flex items-center justify-between px-6 py-4">
+              <div>
+                <p className="font-medium text-sm">{tier.range}</p>
+                <p className="text-xs text-muted-foreground">{tier.example}</p>
+              </div>
+              <span className="text-green-600 font-bold text-lg">{tier.bonus}</span>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-3 bg-muted/30 text-xs text-muted-foreground">
+          Bonus credits are awarded instantly when your top-up is confirmed.{' '}
+          <Link href="/wallet/topup" className="text-primary hover:underline">Top up now →</Link>
+        </div>
+      </div>
 
       <div>
         <h2 className="text-xl font-bold mb-4">What Credits Are For</h2>

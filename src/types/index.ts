@@ -1,3 +1,8 @@
+export type UserRole = 'user' | 'artist' | 'label' | 'moderator' | 'admin' | 'super_admin';
+export type EntityType = 'individual' | 'artist' | 'label' | 'organization' | 'band';
+export type SongStatus = 'draft' | 'pending' | 'approved' | 'published' | 'rejected';
+export type ArtistStatus = 'pending' | 'active' | 'verified' | 'suspended';
+
 // User types
 export interface User {
   id: number;
@@ -5,19 +10,15 @@ export interface User {
   email: string;
   username?: string;
   avatar?: string;
-  avatar_url?: string;
   profile_image_url?: string;
   role: UserRole;
   entity_type?: EntityType;
-  credits_balance: number;
+  credits?: number;
   subscription_tier?: string;
   is_verified: boolean;
   created_at: string;
   updated_at: string;
 }
-
-export type UserRole = "user" | "artist" | "label" | "moderator" | "admin" | "super_admin";
-export type EntityType = "individual" | "artist" | "label" | "organization" | "band";
 
 // Music types
 export interface Song {
@@ -38,11 +39,12 @@ export interface Song {
   status: SongStatus;
   audio_url?: string | null;
   stream_url?: string | null;
+  hls_master_url?: string | null;
   file_url?: string;
   preview_url?: string | null;
   artwork_url?: string | null;
   waveform_data?: number[];
-  genres: Genre[];
+  genre?: Genre;
   artist: Artist;
   album?: Album;
   lyrics?: string;
@@ -62,7 +64,6 @@ export interface Song {
   released_at?: string;
 }
 
-export type SongStatus = "draft" | "pending" | "approved" | "published" | "rejected";
 
 export interface Artist {
   id: number;
@@ -75,11 +76,9 @@ export interface Artist {
   cover_image_url?: string;
   profile_image_url?: string;
   follower_count: number;
-  song_count?: number;
   total_songs?: number;
-  album_count?: number;
   total_albums?: number;
-  monthly_listeners: number;
+  monthly_listeners?: number;
   total_plays?: number;
   is_verified: boolean;
   is_placeholder?: boolean;
@@ -102,7 +101,6 @@ export interface CatalogClaimRequest {
   artist?: Artist | null;
 }
 
-export type ArtistStatus = "pending" | "active" | "verified" | "suspended";
 
 export interface Album {
   id: number;
@@ -111,7 +109,7 @@ export interface Album {
   artist_id: number;
   artwork_url?: string;
   release_date?: string;
-  track_count: number;
+  total_tracks: number;
   total_duration_seconds?: number;
   status: string;
   artist: Artist;
@@ -128,7 +126,7 @@ export interface Genre {
   name: string;
   slug: string;
   color?: string;
-  image_url?: string;
+  artwork_url?: string;
   description?: string;
   song_count?: number;
 }
@@ -144,7 +142,6 @@ export interface Playlist {
   is_public?: boolean;
   is_collaborative: boolean;
   collaboration_requires_approval?: boolean;
-  track_count?: number;
   song_count?: number;
   total_duration_seconds?: number;
   follower_count: number;

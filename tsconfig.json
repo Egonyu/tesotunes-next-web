@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@tesotunes/sdk": [
+        "../packages/tesotunes-sdk/src"
+      ],
+      "@tesotunes/sdk/*": [
+        "../packages/tesotunes-sdk/src/*"
       ]
     }
   },

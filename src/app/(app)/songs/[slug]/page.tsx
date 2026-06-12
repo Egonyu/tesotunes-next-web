@@ -3,28 +3,16 @@ import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import { JsonLd } from '@/components/seo/JsonLd'
-import SongDetailPage from './SongPageClient'
+import SongDetailPage, { type SongDetail } from './SongPageClient'
+import { absoluteUrl } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
-interface SongMeta {
-  title: string
-  slug: string
-  artwork_url: string | null
-  duration_seconds?: number
-  lyrics?: string
-  description?: string
-  release_date?: string | null
-  artist: { name: string; slug: string }
-  album?: { title: string; slug: string; artwork_url: string | null }
-  genre?: { name: string }
-}
-
-const getSong = cache(async (slug: string): Promise<SongMeta | null> => {
+const getSong = cache(async (slug: string): Promise<SongDetail | null> => {
   try {
-    const res = await serverFetch<{ data: SongMeta }>(`/songs/${slug}`)
+    const res = await serverFetch<{ data: SongDetail }>(`/songs/${slug}`)
     return res.data
   } catch {
     return null
@@ -53,7 +41,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/songs/${slug}` },
+    robots: { index: true, follow: true },
+    alternates: { canonical: absoluteUrl(`/songs/${slug}`) },
     openGraph: {
       type: 'music.song',
       title,
@@ -74,17 +63,17 @@ export default async function SongPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'MusicRecording',
     name: song.title,
-    url: `https://tesotunes.com/songs/${slug}`,
+    url: absoluteUrl(`/songs/${slug}`),
     image: song.artwork_url || song.album?.artwork_url || undefined,
     byArtist: {
       '@type': 'MusicGroup',
       name: song.artist.name,
-      url: `https://tesotunes.com/artists/${song.artist.slug}`,
+      url: absoluteUrl(`/artists/${song.artist.slug}`),
     },
     inAlbum: song.album ? {
       '@type': 'MusicAlbum',
       name: song.album.title,
-      url: `https://tesotunes.com/albums/${song.album.slug}`,
+      url: absoluteUrl(`/albums/${song.album.slug}`),
     } : undefined,
     genre: song.genre?.name,
     datePublished: song.release_date || undefined,
@@ -94,7 +83,7 @@ export default async function SongPage({ params }: Props) {
   return (
     <>
       <JsonLd data={jsonLd} />
-      <SongDetailPage />
+      <SongDetailPage initialSong={song} slug={slug} />
     </>
   )
 }

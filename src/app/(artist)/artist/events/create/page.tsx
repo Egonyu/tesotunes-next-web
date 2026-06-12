@@ -37,10 +37,10 @@ const TICKETING_MODE_OPTIONS = [
 ] as const;
 
 const steps = [
-  { id: 'basics', label: 'Basics', description: 'What, when, and where.' },
-  { id: 'ticketing', label: 'Ticketing', description: 'Tiers, limits, and sales.' },
-  { id: 'operations', label: 'Operations', description: 'Support, policies, and tax notes.' },
-  { id: 'media', label: 'Media & Review', description: 'Images and final check.' },
+  { id: 'basics', label: 'Your event', description: 'What, when, and where.' },
+  { id: 'ticketing', label: 'Tickets', description: 'Prices and how many.' },
+  { id: 'operations', label: 'Extras', description: 'All optional — skip if unsure.' },
+  { id: 'media', label: 'Photos & publish', description: 'Add images and publish.' },
 ] as const;
 
 function sanitizeIntegerInput(value: string): string {
@@ -313,9 +313,9 @@ export default function CreateEventPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Create New Event</h1>
+        <h1 className="text-2xl font-bold">Create an event</h1>
         <p className="text-muted-foreground">
-          Build the event in steps, sanity-check the ticketing rules, then publish when it feels right.
+          Four short steps. Only the first two need filling in — everything else has sensible defaults.
         </p>
       </div>
 
@@ -606,94 +606,115 @@ export default function CreateEventPage() {
           {currentStep === 2 && (
             <section className="space-y-6">
               <div className="rounded-lg border bg-card p-6">
-                <h2 className="flex items-center gap-2 text-lg font-semibold">
-                  <ShieldCheck className="h-5 w-5" />
-                  Operations, Support & Policies
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Capture the practical stuff now so support and invoicing are not improvising later.
-                </p>
-
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium">Registration Deadline</label>
-                    <input type="datetime-local" value={registrationDeadline} onChange={(e) => setRegistrationDeadline(e.target.value)} className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Event Website</label>
-                    <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Support Email</label>
-                    <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="tickets@yourevent.com" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Support Phone</label>
-                    <input type="text" value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} placeholder="+256..." className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Invoice Issuer Name</label>
-                    <input type="text" value={invoiceIssuerName} onChange={(e) => setInvoiceIssuerName(e.target.value)} placeholder="Your event company name" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Invoice Support Email</label>
-                    <input type="email" value={invoiceSupportEmail} onChange={(e) => setInvoiceSupportEmail(e.target.value)} placeholder="billing@yourevent.com" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Tax Registration Number</label>
-                    <input type="text" value={taxRegistrationNumber} onChange={(e) => setTaxRegistrationNumber(e.target.value)} placeholder="TIN / VAT number" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Tax Rate Percent</label>
-                    <input type="text" inputMode="decimal" value={taxRatePercent} onChange={(e) => setTaxRatePercent(sanitizeDecimalInput(e.target.value))} placeholder="18" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div className="md:col-span-2 rounded-lg border bg-muted/20 px-4 py-4">
-                    <label className="flex items-center gap-3 text-sm font-medium">
-                      <input type="checkbox" checked={taxIsInclusive} onChange={(e) => setTaxIsInclusive(e.target.checked)} className="h-4 w-4 rounded border" />
-                      Ticket price already includes tax
-                    </label>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Right now this affects how the event is described and invoiced. It does not add a surprise extra amount on the create form.
+                    <h2 className="flex items-center gap-2 text-lg font-semibold">
+                      <ShieldCheck className="h-5 w-5" />
+                      Extras
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Everything here is optional. You can publish without touching any of it
+                      and add details later from the event page.
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted/40"
+                  >
+                    Skip this step
+                  </button>
+                </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Age Restriction</label>
-                    <input type="text" value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)} placeholder="18+ only" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
+                <div className="mt-6 space-y-3">
+                  <details className="rounded-lg border">
+                    <summary className="cursor-pointer px-4 py-3 font-medium hover:bg-muted/30">
+                      How people reach you
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">phone, email, website</span>
+                    </summary>
+                    <div className="grid gap-4 border-t p-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Support phone</label>
+                        <input type="text" value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} placeholder="+256..." className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Support email</label>
+                        <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="tickets@yourevent.com" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Event website</label>
+                        <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Last day to register</label>
+                        <input type="datetime-local" value={registrationDeadline} onChange={(e) => setRegistrationDeadline(e.target.value)} className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                    </div>
+                  </details>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Tax / VAT Notes</label>
-                    <input type="text" value={taxVatNotes} onChange={(e) => setTaxVatNotes(e.target.value)} placeholder="VAT included in ticket price" className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
+                  <details className="rounded-lg border">
+                    <summary className="cursor-pointer px-4 py-3 font-medium hover:bg-muted/30">
+                      Rules for attendees
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">age limit, refunds, entry rules</span>
+                    </summary>
+                    <div className="space-y-4 border-t p-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Age limit</label>
+                        <input type="text" value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)} placeholder="e.g. 18+ only" className="w-full rounded-lg border bg-background px-4 py-3 md:max-w-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Refunds</label>
+                        <textarea value={refundPolicy} onChange={(e) => setRefundPolicy(e.target.value)} rows={2} placeholder="e.g. Full refund up to 48 hours before the show." className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">If the event is cancelled or moved</label>
+                        <textarea value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={2} placeholder="e.g. Tickets stay valid for the new date, or money back." className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Entry rules &amp; door notes</label>
+                        <textarea value={doorNotes} onChange={(e) => setDoorNotes(e.target.value)} rows={2} placeholder="Gate times, bag policy, security notes." className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">What attendees should bring</label>
+                        <textarea value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} rows={3} placeholder={'One per line\nBring ID\nNo outside food'} className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                    </div>
+                  </details>
 
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium">Refund Policy</label>
-                    <textarea value={refundPolicy} onChange={(e) => setRefundPolicy(e.target.value)} rows={3} placeholder="Spell out refund terms clearly." className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium">Cancellation Policy</label>
-                    <textarea value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={3} placeholder="Explain what happens if the event is postponed or cancelled." className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium">Door Notes</label>
-                    <textarea value={doorNotes} onChange={(e) => setDoorNotes(e.target.value)} rows={3} placeholder="Entry rules, gate times, bag policy, security notes." className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium">Attendee Requirements</label>
-                    <textarea value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} rows={4} placeholder={'One requirement per line\nBring ID\nNo outside food'} className="w-full rounded-lg border bg-background px-4 py-3" />
-                  </div>
+                  <details className="rounded-lg border">
+                    <summary className="cursor-pointer px-4 py-3 font-medium hover:bg-muted/30">
+                      Tax &amp; invoicing
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">only for registered businesses</span>
+                    </summary>
+                    <div className="grid gap-4 border-t p-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Business name on invoices</label>
+                        <input type="text" value={invoiceIssuerName} onChange={(e) => setInvoiceIssuerName(e.target.value)} placeholder="Your event company name" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Billing email</label>
+                        <input type="email" value={invoiceSupportEmail} onChange={(e) => setInvoiceSupportEmail(e.target.value)} placeholder="billing@yourevent.com" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Tax registration number</label>
+                        <input type="text" value={taxRegistrationNumber} onChange={(e) => setTaxRegistrationNumber(e.target.value)} placeholder="TIN / VAT number" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">Tax rate (%)</label>
+                        <input type="text" inputMode="decimal" value={taxRatePercent} onChange={(e) => setTaxRatePercent(sanitizeDecimalInput(e.target.value))} placeholder="18" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                      <div className="md:col-span-2 rounded-lg border bg-muted/20 px-4 py-4">
+                        <label className="flex items-center gap-3 text-sm font-medium">
+                          <input type="checkbox" checked={taxIsInclusive} onChange={(e) => setTaxIsInclusive(e.target.checked)} className="h-4 w-4 rounded border" />
+                          Ticket price already includes tax
+                        </label>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-sm font-medium">Tax / VAT notes</label>
+                        <input type="text" value={taxVatNotes} onChange={(e) => setTaxVatNotes(e.target.value)} placeholder="VAT included in ticket price" className="w-full rounded-lg border bg-background px-4 py-3" />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
             </section>

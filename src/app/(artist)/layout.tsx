@@ -2,6 +2,9 @@ import { getServerSession } from 'next-auth';
 import AccessNotice from '@/components/auth/AccessNotice';
 import { authConfig } from '@/lib/auth';
 import { canAccessArtistStudio } from '@/lib/roles';
+// hasApiAccess is intentionally NOT used as a layout gate — a stale Sanctum
+// token should not lock out an authenticated artist. Individual API calls will
+// surface 401 errors via React Query where appropriate.
 import ArtistLayoutShell from './artist-layout-shell';
 
 export default async function ArtistLayout({ children }: { children: React.ReactNode }) {
@@ -9,24 +12,13 @@ export default async function ArtistLayout({ children }: { children: React.React
   const userRole = session?.user?.role ?? null;
   const isArtist = Boolean(session?.user?.isArtist);
   const isEventOrganizer = Boolean(session?.user?.isEventOrganizer);
-  const hasApiAccess = session?.user?.apiAuthorized ?? false;
-  const hasArtistAccess = hasApiAccess && canAccessArtistStudio(userRole, isArtist, isEventOrganizer);
+  const hasArtistAccess = canAccessArtistStudio(userRole, isArtist, isEventOrganizer);
 
   if (!session?.user) {
     return (
       <AccessNotice
         title="Sign In Required"
         description="Artist Studio requires an authenticated artist or admin account."
-        callbackUrl="/artist"
-      />
-    );
-  }
-
-  if (!hasApiAccess) {
-    return (
-      <AccessNotice
-        title="Session Expired"
-        description="Your sign-in session no longer has API access. Please sign in again to continue using Artist Studio."
         callbackUrl="/artist"
       />
     );

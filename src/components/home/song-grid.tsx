@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Pause, Heart, MoreHorizontal, Music, Download, Headphones, Share2 } from "lucide-react";
+import { Play, Pause, Heart, MoreHorizontal, Music, Download, Headphones, Megaphone, Share2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "@/lib/api";
 import { usePlayerStore } from "@/stores";
 import { formatNumber } from "@/lib/utils";
@@ -49,6 +50,8 @@ interface SongGridProps {
 
 export function SongGrid({ type, limit = 10 }: SongGridProps) {
   const { play, currentSong, isPlaying, pause, resume } = usePlayerStore();
+  const { data: session } = useSession();
+  const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
@@ -232,6 +235,20 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
                       songId={song.id}
                       songTitle={song.title}
                     />
+                    {session?.user && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(
+                            `/artist/promotions/opportunities/create?promotable_type=song&promotable_id=${song.id}&promotable_title=${encodeURIComponent(song.title)}`
+                          );
+                        }}
+                        className="gap-2"
+                      >
+                        <Megaphone className="h-4 w-4" />
+                        Promote this song
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();

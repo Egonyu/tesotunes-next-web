@@ -107,7 +107,7 @@ async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null
   }
 
   try {
-    const response = await fetchAuthApi("/platform-settings", {
+    const response = await fetchAuthApi("/settings/public", {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -123,7 +123,24 @@ async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null
     }
 
     const data = await safeJsonParse(response);
-    const settings = (data?.data as PlatformSocialSettings | undefined) ?? null;
+    const rows = (data?.data as Array<{ key: string; value: unknown }> | undefined) ?? [];
+    const users: Record<string, unknown> = {};
+    const security: Record<string, unknown> = {};
+    for (const row of rows) {
+      if (row.key === "users_social_login_enabled") {
+        users.social_login_enabled = row.value;
+      } else if (
+        row.key === "auth_google_login_enabled" ||
+        row.key === "auth_facebook_login_enabled" ||
+        row.key === "auth_apple_login_enabled"
+      ) {
+        security[row.key.slice("auth_".length)] = row.value;
+      }
+    }
+    const settings = {
+      users: users as PlatformSocialSettings["users"],
+      security: security as PlatformSocialSettings["security"],
+    };
 
     runtimeSocialSettingsCache = {
       value: settings,
@@ -332,6 +349,42 @@ async function authorizeSocialProvider(provider: string, tokens: { accessToken?:
 export async function authorizeCredentials(
   credentials: Record<string, string | boolean | undefined> | undefined
 ) {
+  // 2FA challenge completion path — triggered when the login page re-submits
+  // with the pending two_fa_token + user-entered TOTP/recovery code.
+  if (credentials?.two_fa_token && credentials?.two_fa_code) {
+    try {
+      const response = await fetchAuthApi("/auth/2fa/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          two_fa_token: credentials.two_fa_token,
+          code: credentials.two_fa_code,
+        }),
+      });
+
+      const data = await safeJsonParse(response);
+
+      if (!data) {
+        throw new Error("The sign-in service returned an invalid response. Please try again.");
+      }
+
+      if (!response.ok) {
+        throw new Error((data.message as string) || "Invalid authentication code.");
+      }
+
+      const authorizedUser = extractAuthorizedUser(data);
+      if (authorizedUser) return authorizedUser;
+
+      throw new Error("The sign-in service returned an incomplete response. Please try again.");
+    } catch (error) {
+      if (error instanceof Error && /fetch failed|failed to fetch|econnrefused|network/i.test(error.message)) {
+        throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
+      }
+      if (error instanceof Error) throw error;
+      throw new Error(AUTH_SERVICE_UNAVAILABLE_MESSAGE);
+    }
+  }
+
   if (!credentials?.email || !credentials?.password) {
     return null;
   }
@@ -347,6 +400,7 @@ export async function authorizeCredentials(
       email: credentials.email,
       password: credentials.password,
       remember_me: rememberMe,
+      recaptcha_token: credentials.recaptcha_token ?? undefined,
     };
 
     let response = await fetchAuthApi("/auth/login", {
@@ -363,6 +417,12 @@ export async function authorizeCredentials(
     if (!data) {
       console.error("[Auth] Empty or non-JSON response from API");
       throw new Error("The sign-in service returned an invalid response. Please try again.");
+    }
+
+    // 2FA required — signal the login page to show the TOTP challenge input.
+    // Encode the pending token in the error message so the page can extract it.
+    if (response.ok && data.requires_2fa && data.two_fa_token) {
+      throw new Error(`TWO_FA_REQUIRED:${data.two_fa_token as string}`);
     }
 
     if (!response.ok) {
@@ -558,11 +618,6 @@ export const authConfig: NextAuthOptions = {
             console.warn("[Auth] Clearing expired access token");
             token.accessToken = undefined;
           }
-        } else if (freshData && 'role' in freshData) {
-          token.role = freshData.role;
-          token.isArtist = freshData.isArtist;
-          token.isEventOrganizer = freshData.isEventOrganizer;
-          token.permissions = freshData.permissions;
         }
 
         if (freshData && 'role' in freshData) {
@@ -605,6 +660,9 @@ export const authConfig: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         remember_me: { label: "Remember me", type: "checkbox" },
+        recaptcha_token: { label: "reCAPTCHA", type: "text" },
+        two_fa_token: { label: "2FA Token", type: "text" },
+        two_fa_code: { label: "2FA Code", type: "text" },
       },
       authorize: authorizeCredentials,
     }),

@@ -14,6 +14,8 @@ const config: Config = {
       ],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
+        '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
         '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/test/__mocks__/fileMock.js',
       },
@@ -24,7 +26,11 @@ const config: Config = {
             module: 'esnext',
             moduleResolution: 'bundler',
             esModuleInterop: true,
-            paths: { '@/*': ['./src/*'] },
+            paths: {
+              '@/*': ['./src/*'],
+              '@tesotunes/sdk': ['../../packages/tesotunes-sdk/src'],
+              '@tesotunes/sdk/*': ['../../packages/tesotunes-sdk/src/*'],
+            },
           },
         }],
       },
@@ -41,6 +47,8 @@ const config: Config = {
       ],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
+        '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
       },
       transform: {
         '^.+\\.ts$': ['ts-jest', {
@@ -48,7 +56,11 @@ const config: Config = {
             module: 'esnext',
             moduleResolution: 'bundler',
             esModuleInterop: true,
-            paths: { '@/*': ['./src/*'] },
+            paths: {
+              '@/*': ['./src/*'],
+              '@tesotunes/sdk': ['../../packages/tesotunes-sdk/src'],
+              '@tesotunes/sdk/*': ['../../packages/tesotunes-sdk/src/*'],
+            },
           },
         }],
       },
@@ -56,6 +68,8 @@ const config: Config = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
+    '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/test/__mocks__/fileMock.js',
   },

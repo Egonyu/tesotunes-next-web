@@ -298,198 +298,209 @@ export default function AdminPromotionsPage() {
                   {visiblePromotions.map((promo) => (
                     <article
                       key={promo.id}
-                      className="rounded-[24px] border bg-background/70 p-5"
+                      className="overflow-hidden rounded-[24px] border bg-background/70"
                     >
-                      <div className="mb-5 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-                        <div className="overflow-hidden rounded-[22px] border bg-card">
+                      {/* ── ZONE 1: image left · content centre · actions right ── */}
+                      <div className="flex gap-0">
+
+                        {/* Cover image */}
+                        <div className="hidden shrink-0 lg:block">
                           {promo.featured_image_url ? (
                             <div
-                              className="h-40 w-full bg-cover bg-center"
+                              className="h-full w-44 bg-cover bg-center"
                               style={{ backgroundImage: `url(${promo.featured_image_url})` }}
                             />
                           ) : (
-                            <div className="flex h-40 items-center justify-center bg-muted/50 text-muted-foreground">
-                              <div className="flex flex-col items-center gap-2 text-center">
-                                <ImageIcon className="h-8 w-8" />
-                                <p className="text-xs">No listing cover uploaded</p>
-                              </div>
+                            <div className="flex h-full w-44 items-center justify-center bg-muted/40">
+                              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                             </div>
                           )}
-                          <div className="border-t bg-card p-4">
-                            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                              Moderation readiness
-                            </p>
-                            <div className="mt-2 flex items-end justify-between gap-3">
-                              <p className="text-2xl font-semibold">
-                                {moderationReadiness(promo)}%
-                              </p>
-                              <span className="text-xs text-muted-foreground">
-                                seller-provided context
-                              </span>
-                            </div>
-                            <div className="mt-3 h-2 rounded-full bg-muted">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all"
-                                style={{ width: `${moderationReadiness(promo)}%` }}
-                              />
-                            </div>
-                          </div>
                         </div>
 
-                        <div className="flex flex-col gap-5">
-                      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <PromotionStatusBadge status={promo.status} />
-                            <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
-                              {getTypeLabel(promo.type)}
-                            </span>
-                            <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
-                              {getPlatformLabel(promo.platform)}
-                            </span>
-                            {promo.promoter.is_verified && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-                                <BadgeCheck className="h-3.5 w-3.5" />
-                                Verified promoter
-                              </span>
+                        {/* Content + actions */}
+                        <div className="flex min-w-0 flex-1 flex-col">
+
+                          {/* Content row */}
+                          <div className="flex items-start gap-4 p-5">
+                            {/* Mobile thumbnail */}
+                            {promo.featured_image_url && (
+                              <div
+                                className="h-14 w-14 shrink-0 rounded-xl bg-cover bg-center lg:hidden"
+                                style={{ backgroundImage: `url(${promo.featured_image_url})` }}
+                              />
                             )}
-                          </div>
 
-                          <div className="mt-4">
-                            <h3 className="text-xl font-semibold">{promo.title}</h3>
-                            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                              {promo.short_description}
-                            </p>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {paymentModes(promo).map((mode) => (
-                              <span
-                                key={mode}
-                                className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-foreground/80"
-                              >
-                                {mode}
-                              </span>
-                            ))}
-                            {(promo.audience_niches ?? []).slice(0, 3).map((niche) => (
-                              <span
-                                key={niche}
-                                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                              >
-                                {niche.replace(/_/g, " ")}
-                              </span>
-                            ))}
-                            {(promo.content_formats ?? []).slice(0, 2).map((format) => (
-                              <span
-                                key={format}
-                                className="rounded-full border border-border/60 px-3 py-1 text-xs font-medium text-muted-foreground"
-                              >
-                                {format.replace(/_/g, " ")}
-                              </span>
-                            ))}
-                          </div>
-
-                          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-2xl border bg-card px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Promoter</p>
-                              <p className="mt-2 font-semibold">{promo.promoter.name}</p>
-                              <p className="text-xs text-muted-foreground">@{promo.promoter.username}</p>
-                            </div>
-                            <div className="rounded-2xl border bg-card px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Commercials</p>
-                              <p className="mt-2 font-semibold">{formatNumber(promo.price_credits)} cr</p>
-                              <p className="text-xs text-muted-foreground">{formatCurrency(promo.price_ugx)}</p>
-                            </div>
-                            <div className="rounded-2xl border bg-card px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Orders</p>
-                              <p className="mt-2 font-semibold">{promo.completed_orders}/{promo.total_orders}</p>
-                              <p className="text-xs text-muted-foreground">Completed vs total</p>
-                            </div>
-                            <div className="rounded-2xl border bg-card px-4 py-3">
-                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Submitted</p>
-                              <p className="mt-2 font-semibold">{formatDate(promo.created_at)}</p>
-                              <p className="text-xs text-muted-foreground">Marketplace intake time</p>
-                            </div>
-                          </div>
-
-                          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                            <div className="rounded-2xl border bg-card p-4">
-                              <div className="flex items-center gap-2">
-                                <Radio className="h-4 w-4 text-primary" />
-                                <p className="text-sm font-medium">Channel review note</p>
-                              </div>
-                              <p className="mt-2 text-sm text-muted-foreground">
-                                {PLATFORM_REVIEW_NOTES[promo.platform] ??
-                                  "Confirm the listing promise is measurable, commercially clear, and appropriate for the channel."}
-                              </p>
-                            </div>
-                            <div className="rounded-2xl border bg-card p-4">
-                              <p className="text-sm font-medium">Review flags</p>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {reviewFlags(promo).length ? (
-                                  reviewFlags(promo).map((flag) => (
-                                    <span
-                                      key={flag}
-                                      className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
-                                    >
-                                      {flag}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                    Strong listing metadata
+                            <div className="min-w-0 flex-1">
+                              {/* Badges */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <PromotionStatusBadge status={promo.status} />
+                                <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">
+                                  {getTypeLabel(promo.type)}
+                                </span>
+                                <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">
+                                  {getPlatformLabel(promo.platform)}
+                                </span>
+                                {promo.promoter.is_verified && (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                    <BadgeCheck className="h-3 w-3" />
+                                    Verified
                                   </span>
                                 )}
                               </div>
+
+                              {/* Title + desc */}
+                              <h3 className="mt-2.5 text-lg font-semibold leading-snug">{promo.title}</h3>
+                              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                                {promo.short_description}
+                              </p>
+
+                              {/* Tags */}
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {paymentModes(promo).map((mode) => (
+                                  <span key={mode} className="rounded-full border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground/80">
+                                    {mode}
+                                  </span>
+                                ))}
+                                {(promo.audience_niches ?? []).slice(0, 3).map((niche) => (
+                                  <span key={niche} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                    {niche.replace(/_/g, " ")}
+                                  </span>
+                                ))}
+                                {(promo.content_formats ?? []).slice(0, 2).map((format) => (
+                                  <span key={format} className="rounded-full border border-border/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                    {format.replace(/_/g, " ")}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex w-40 shrink-0 flex-col gap-2">
+                              <Link
+                                href={`/promotions/${promo.slug}`}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium hover:bg-muted"
+                              >
+                                <Eye className="h-4 w-4" />
+                                View listing
+                              </Link>
+                              {promo.status === "pending" ? (
+                                <>
+                                  <button
+                                    onClick={() => approve.mutate(promo.id)}
+                                    disabled={approve.isPending}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => { setRejectingId(promo.id); setRejectReason(""); }}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-destructive/30 px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <Link
+                                  href="/admin/promotions/disputes"
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium hover:bg-muted"
+                                >
+                                  Open disputes
+                                  <ArrowRight className="h-4 w-4" />
+                                </Link>
+                              )}
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex w-full flex-col gap-2 xl:w-56">
-                          <Link
-                            href={`/promotions/${promo.slug}`}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium hover:bg-muted"
-                          >
-                            <Eye className="h-4 w-4" />
-                            View listing
-                          </Link>
-                          {promo.status === "pending" ? (
-                            <>
-                              <button
-                                onClick={() => approve.mutate(promo.id)}
-                                disabled={approve.isPending}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setRejectingId(promo.id);
-                                  setRejectReason("");
-                                }}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-destructive/30 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10"
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Reject
-                              </button>
-                            </>
-                          ) : (
-                            <Link
-                              href="/admin/promotions/disputes"
-                              className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium hover:bg-muted"
-                            >
-                              Open disputes
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
-                          )}
+                          {/* ── ZONE 2: meta strip ── */}
+                          <div className="border-t bg-muted/20 px-5 py-4">
+                            <div className="flex flex-wrap gap-3">
+
+                              {/* Readiness */}
+                              <div className="flex min-w-[140px] flex-1 flex-col justify-between rounded-2xl border bg-card px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Readiness</p>
+                                <div className="mt-2 flex items-center gap-3">
+                                  <span className="text-xl font-bold">{moderationReadiness(promo)}%</span>
+                                  <div className="flex-1">
+                                    <div className="h-1.5 rounded-full bg-muted">
+                                      <div
+                                        className="h-full rounded-full bg-primary transition-all"
+                                        style={{ width: `${moderationReadiness(promo)}%` }}
+                                      />
+                                    </div>
+                                    <p className="mt-1 text-[10px] text-muted-foreground">seller context</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Promoter */}
+                              <div className="min-w-[120px] flex-1 rounded-2xl border bg-card px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Promoter</p>
+                                <p className="mt-1.5 text-sm font-semibold leading-tight">{promo.promoter.name}</p>
+                                <p className="text-xs text-muted-foreground">@{promo.promoter.username}</p>
+                              </div>
+
+                              {/* Commercials */}
+                              <div className="min-w-[110px] flex-1 rounded-2xl border bg-card px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Commercials</p>
+                                <p className="mt-1.5 text-sm font-semibold leading-tight">{formatNumber(promo.price_credits)} cr</p>
+                                <p className="text-xs text-muted-foreground">{formatCurrency(promo.price_ugx)}</p>
+                              </div>
+
+                              {/* Orders */}
+                              <div className="min-w-[100px] flex-1 rounded-2xl border bg-card px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Orders</p>
+                                <p className="mt-1.5 text-sm font-semibold leading-tight">{promo.completed_orders}/{promo.total_orders}</p>
+                                <p className="text-xs text-muted-foreground">Completed</p>
+                              </div>
+
+                              {/* Submitted */}
+                              <div className="min-w-[110px] flex-1 rounded-2xl border bg-card px-4 py-3">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Submitted</p>
+                                <p className="mt-1.5 text-sm font-semibold leading-tight">{formatDate(promo.created_at)}</p>
+                                <p className="text-xs text-muted-foreground">Intake time</p>
+                              </div>
+
+                              {/* Channel review note */}
+                              <div className="min-w-[200px] flex-[2] rounded-2xl border bg-card p-4">
+                                <div className="flex items-center gap-2">
+                                  <Radio className="h-3.5 w-3.5 text-primary" />
+                                  <p className="text-xs font-semibold">Channel review note</p>
+                                </div>
+                                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                                  {PLATFORM_REVIEW_NOTES[promo.platform] ??
+                                    "Confirm the listing promise is measurable, commercially clear, and appropriate for the channel."}
+                                </p>
+                              </div>
+
+                              {/* Review flags */}
+                              <div className="min-w-[140px] flex-1 rounded-2xl border bg-card p-4">
+                                <p className="text-xs font-semibold">Review flags</p>
+                                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                  {reviewFlags(promo).length ? (
+                                    reviewFlags(promo).map((flag) => (
+                                      <span key={flag} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                                        {flag}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                                      Strong listing metadata
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+
                         </div>
                       </div>
-                        </div>
-                      </div>
 
+                      {/* Rejection form */}
                       {rejectingId === promo.id && (
-                        <div className="mt-5 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+                        <div className="border-t border-destructive/20 bg-destructive/5 p-5">
                           <p className="text-sm font-medium">Rejection reason</p>
                           <textarea
                             value={rejectReason}

@@ -18,3 +18,4 @@ export * from "./useSubscriptions";
 export * from "./usePodcasts";
 export * from "./useAwards";
 export * from "./useQueueSync";
+export * from "./usePromotionsV2";

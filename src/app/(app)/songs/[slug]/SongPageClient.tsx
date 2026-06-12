@@ -23,6 +23,7 @@ import {
   Coins,
   ShoppingCart,
   CheckCircle2,
+  Megaphone,
 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatDuration, formatNumber, formatDate, resolveDurationSeconds } from "@/lib/utils";
@@ -38,8 +39,9 @@ import { useCheckPurchase } from "@/hooks/api";
 import { usePlayerStore } from "@/stores/player";
 import { useSession } from "next-auth/react";
 import type { Song } from "@/types";
+import { PostOpportunityModal } from "@/components/promotions/PostOpportunityModal";
 
-interface SongDetail {
+export interface SongDetail {
   id: number;
   title: string;
   slug: string;
@@ -68,6 +70,7 @@ interface SongDetail {
   }[];
   artist: {
     id: number;
+    user_id?: number;
     name: string;
     slug: string;
     avatar_url: string | null;
@@ -162,19 +165,26 @@ function toPlayerSong(detail: SongDetail): Song {
           artwork_url: detail.album.artwork_url ?? undefined,
         }
       : undefined,
-    genres: detail.genres ?? (detail.genre ? [detail.genre] : []),
+    genre: detail.genre,
     created_at: "",
   } as Song;
 }
 
-export default function SongDetailPage() {
+export default function SongDetailPage({
+  initialSong,
+  slug: slugProp,
+}: {
+  initialSong?: SongDetail;
+  slug?: string;
+} = {}) {
   const rawParams = useParams();
-  const slug = rawParams?.slug as string;
+  const slug = slugProp ?? (rawParams?.slug as string);
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState<SharePayload | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [tipModalOpen, setTipModalOpen] = useState(false);
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const { data: session } = useSession();
 
   const { currentSong, isPlaying, play, pause, resume, addToQueue } = usePlayerStore();
@@ -185,11 +195,18 @@ export default function SongDetailPage() {
       const res = await apiGet<{ data: SongDetail }>(`/songs/${slug}`);
       return res.data;
     },
+    // Seed with server-fetched data so the page renders real content during
+    // SSR (fixes Google "soft 404" on client-only rendering).
+    initialData: initialSong,
   });
 
   const isCurrentSong = song && currentSong?.id === song.id;
   const { data: isPurchased } = useCheckPurchase(song?.id ?? 0);
   const isAuthenticated = !!session?.user;
+  const isOwner =
+    isAuthenticated &&
+    song?.artist?.user_id != null &&
+    session?.user?.id === String(song.artist.user_id);
 
   function handlePlay() {
     if (!song) return;
@@ -418,6 +435,7 @@ export default function SongDetailPage() {
                 songTitle={song.title}
                 isFree={song.is_free}
                 isDownloadable={song.is_downloadable ?? false}
+                isPurchased={isPurchased ?? false}
                 price={song.price}
               />
             </div>
@@ -431,11 +449,22 @@ export default function SongDetailPage() {
                 }
                 setTipModalOpen(true);
               }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-pink-500/30 text-pink-500 rounded-full font-semibold hover:bg-pink-500/10 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold hover:from-pink-600 hover:to-rose-600 transition-all shadow-sm"
             >
               <Heart className="h-4 w-4" />
               Tip Artist
             </button>
+
+            {/* Promote Button — owner only */}
+            {isOwner && (
+              <button
+                onClick={() => setPromoteModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-full font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-sm"
+              >
+                <Megaphone className="h-4 w-4" />
+                Promote this Track
+              </button>
+            )}
           </div>
 
           {/* Stats Grid */}
@@ -837,6 +866,18 @@ export default function SongDetailPage() {
           recipientId={song.artist.id}
           recipientType="artist"
           recipientName={song.artist.name}
+        />
+      )}
+
+      {/* Post Opportunity Modal — owner only */}
+      {song && isOwner && (
+        <PostOpportunityModal
+          open={promoteModalOpen}
+          onClose={() => setPromoteModalOpen(false)}
+          promotableType="song"
+          promotableId={song.id}
+          title={song.title}
+          artworkUrl={song.artwork_url}
         />
       )}
     </div>

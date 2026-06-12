@@ -234,7 +234,7 @@ export default function ClaimArtistPage() {
                         ) : null}
                       </div>
                       <div className="shrink-0 text-right text-xs text-muted-foreground">
-                        <div>{artist.total_songs || artist.song_count || 0} songs</div>
+                        <div>{artist.total_songs || 0} songs</div>
                         <div className="mt-1 capitalize">{artist.claim_status || 'unclaimed'}</div>
                       </div>
                     </div>

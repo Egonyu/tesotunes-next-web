@@ -47,7 +47,7 @@ function buildArtistResponse(status = 'pending_review') {
       bio: 'Artist bio',
       status,
       is_verified: false,
-      verification_status: status,
+      kyc_status: status,
       rejection_reason: null,
       is_featured: false,
       profile_url: null,

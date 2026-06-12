@@ -33,6 +33,8 @@ import {
   Star,
   FolderUp,
   BadgeCheck,
+  Target,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasAnyPermission } from '@/lib/permissions';
@@ -41,6 +43,7 @@ import { isAdminRole, isModeratorRole } from '@/lib/roles';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { api } from '@/lib/api';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
 import { usePlayerStore, useUIStore } from '@/stores';
@@ -59,8 +62,12 @@ const navItems = [
   { href: '/admin/store', label: 'Store', icon: ShoppingBag, requiredPermissions: ['manage-store', 'admin.settings'] },
   { href: '/admin/events', label: 'Events', icon: Calendar, requiredPermissions: ['admin.dashboard', 'admin.music'] },
   { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
+  { href: '/admin/ads', label: 'Ads Library', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/ad-placements', label: 'Ad Zones', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions', label: 'Promotions', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/promoters', label: 'Promoter Profiles', icon: BadgeCheck, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/promotions/opportunities', label: 'Opportunities', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/disputes', label: 'Promotion Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/analytics', label: 'Promotion Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
   { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
@@ -71,6 +78,8 @@ const navItems = [
   { href: '/admin/polls', label: 'Polls', icon: BarChart3, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports', 'manage-reports', 'moderate-content', 'report.handle'] },
   { href: '/admin/analytics', label: 'Analytics', icon: PieChart, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell, requiredPermissions: ['admin.dashboard'] },
+  { href: '/admin/observability', label: 'Security', icon: ShieldAlert, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/settings', label: 'Settings', icon: Settings, requiredPermissions: ['admin.settings', 'manage-settings'] },
 ];
 
@@ -134,9 +143,7 @@ export default function AdminLayoutShell({
           <Menu className="h-5 w-5" />
         </button>
         <span className="font-bold">{adminPanelName}</span>
-        <button className="p-2 hover:bg-muted rounded-lg">
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationBell />
       </header>
 
       {mobileOpen && (
@@ -254,10 +261,7 @@ export default function AdminLayoutShell({
                 API {apiVersion}
               </span>
             )}
-            <button className="relative p-2 hover:bg-muted rounded-lg">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary/10" />
               <div className="text-sm">

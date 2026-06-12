@@ -14,6 +14,34 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({}),
 }));
 
+// next-auth's getProviders runs on mount — mock it so it does not consume the
+// queued global.fetch mocks meant for the registration request. Defaults to no
+// providers; individual tests opt in via mockResolvedValueOnce.
+const mockGetProviders = jest.fn().mockResolvedValue(null);
+jest.mock('next-auth/react', () => ({
+  getProviders: () => mockGetProviders(),
+  signIn: jest.fn(),
+}));
+
+jest.mock('react-google-recaptcha-v3', () => ({
+  useGoogleReCaptcha: () => ({
+    executeRecaptcha: jest.fn().mockResolvedValue('test-recaptcha-token'),
+  }),
+}));
+
+// usePublicPlatformSettings uses react-query; mock it so the page can render
+// without a QueryClientProvider wrapper.
+jest.mock('@/hooks/usePublicPlatformSettings', () => ({
+  usePublicPlatformSettings: () => ({ data: undefined }),
+}));
+
+// Treat google + facebook as enabled so the social-login section renders when
+// next-auth reports those providers.
+jest.mock('@/lib/social-auth', () => ({
+  getEnabledSocialAuthProvidersForPlatformSettings: () =>
+    new Set(['google', 'facebook']),
+}));
+
 describe('RegisterPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -90,6 +118,7 @@ describe('RegisterPage', () => {
           email: 'test@test.com',
           password: 'Password123!',
           password_confirmation: 'Password123!',
+          recaptcha_token: 'test-recaptcha-token',
         }),
       }));
     });
@@ -155,9 +184,16 @@ describe('RegisterPage', () => {
     expect(loginLink).toHaveAttribute('href', '/login');
   });
 
-  it('has social login buttons', () => {
+  it('has social login buttons', async () => {
+    mockGetProviders.mockResolvedValueOnce({
+      credentials: { id: 'credentials', name: 'Credentials' },
+      google: { id: 'google', name: 'Google' },
+      facebook: { id: 'facebook', name: 'Facebook' },
+    });
+
     render(<RegisterPage />);
-    expect(screen.getByRole('button', { name: /google/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /facebook/i })).toBeInTheDocument();
+
+    expect(await screen.findByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /continue with facebook/i })).toBeInTheDocument();
   });
 });

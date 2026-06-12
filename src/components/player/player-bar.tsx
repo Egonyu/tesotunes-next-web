@@ -22,6 +22,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { formatDuration, cn } from "@/lib/utils";
+import { StreamingQualityPicker } from "@/components/player/StreamingQualityPicker";
 
 export function PlayerBar() {
   const {
@@ -406,6 +407,7 @@ export function PlayerBar() {
 
           {/* Volume & Additional Controls */}
           <div className="hidden lg:flex w-[30%] items-center justify-end gap-3">
+            <StreamingQualityPicker />
             <button className="text-muted-foreground hover:text-foreground">
               <ListMusic className="h-5 w-5" />
             </button>

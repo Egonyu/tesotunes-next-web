@@ -1,0 +1,35 @@
+steps:
+  # ── Staging: build-only CI (no deploy) ──────────────────────────────────
+  build-check:
+    image: node:22-alpine
+    when:
+      - event: push
+        branch: staging
+      - event: manual
+        branch: staging
+    commands:
+      - npm ci --prefer-offline
+      - npm run build
+
+  # ── Main: build + deploy to Vercel production ────────────────────────────
+  build-and-deploy:
+    image: node:22-alpine
+    environment:
+      VERCEL_TOKEN:
+        from_secret: vercel_token
+      VERCEL_ORG_ID:
+        from_secret: vercel_org_id
+      VERCEL_PROJECT_ID:
+        from_secret: vercel_project_id
+    when:
+      - event: push
+        branch: main
+      - event: manual
+        branch: main
+    commands:
+      - npm ci --prefer-offline
+      - npm run build
+      - npm install -g vercel
+      - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - vercel build --prod --token=$VERCEL_TOKEN
+      - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

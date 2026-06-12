@@ -8,6 +8,14 @@ import { GenreGrid } from "@/components/home/genre-grid";
 import { DiscoverSections } from "@/components/home/discover-sections";
 import { ClassicHomeRecommendations } from "@/components/home/classic-home-recommendations";
 import { PlaylistGrid } from "@/components/home/playlist-grid";
+import { HomeHero } from "@/components/home/home-hero";
+import { UserWelcomeBanner } from "@/components/home/user-welcome-banner";
+
+type HomeUser = {
+  name?: string | null
+  role?: string
+  isArtist?: boolean
+}
 
 function SectionHeader({
   title,
@@ -56,12 +64,16 @@ function LoadingSkeleton() {
   );
 }
 
-export function ClassicHomePage() {
+export function ClassicHomePage({ user }: { user: HomeUser | null }) {
   return (
     <div className="space-y-10 p-6">
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
-        <FeaturedSection />
-      </Suspense>
+      {user ? <UserWelcomeBanner user={user} /> : <HomeHero />}
+
+      {!user && (
+        <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
+          <FeaturedSection />
+        </Suspense>
+      )}
 
       <ClassicHomeRecommendations />
 

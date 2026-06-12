@@ -43,7 +43,7 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
             {playlist.name}
           </h3>
           <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-            <span>{playlist.song_count ?? 0} songs</span>
+            <span>{playlist.song_count ?? 0} {(playlist.song_count ?? 0) === 1 ? "song" : "songs"}</span>
             {playlist.follower_count > 0 && (
               <span className="flex items-center gap-1">
                 <Users className="h-3 w-3" />

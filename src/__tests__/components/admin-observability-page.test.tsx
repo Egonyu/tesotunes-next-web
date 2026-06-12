@@ -1,7 +1,7 @@
 import { render, screen } from '@/test/test-utils';
 
 jest.mock('@/lib/api', () => ({
-  apiGet: jest.fn(() => new Promise(() => {})), // never resolve → keep components in loading state
+  apiGet: jest.fn(() => new Promise(() => {})), // never resolve → keep panels in loading state
   apiPost: jest.fn(),
   apiPatch: jest.fn(),
 }));
@@ -15,26 +15,18 @@ jest.mock('next/navigation', () => ({
 import ObservabilityPage from '@/app/(admin)/admin/observability/page';
 
 /**
- * The previous 12-tab implementation had ~1300 lines of UI-coupled tests that were
- * deleted when the page was rebuilt around `ObservabilityShell`. This smoke test
- * verifies the shell mounts and the Overview section is the default landing.
- *
- * Per-section tests (empty/loading/error render contracts) live alongside each
- * section component — see `src/__tests__/components/admin-observability/*`.
- *
- * Rebuild details: OBSERVABILITY_REBUILD_PLAN.md.
+ * Smoke test for the rebuilt Security Console. Verifies the shell mounts with
+ * its header and tab navigation. Panel-level data rendering is exercised by the
+ * backend feature tests against the `/console/*` API.
  */
-describe('Admin ObservabilityPage (v2 shell)', () => {
-  it('renders the shell with the Overview section as default', async () => {
+describe('Admin Security Console', () => {
+  it('renders the console header and tab navigation', () => {
     render(<ObservabilityPage />);
 
-    // Header from SectionHeader in OverviewSection
-    expect(await screen.findByText(/Overview/i)).toBeInTheDocument();
-
-    // LeftRail exposes all five top-level sections
-    expect(screen.getByText(/Threats/i)).toBeInTheDocument();
-    expect(screen.getByText(/Identity/i)).toBeInTheDocument();
-    expect(screen.getByText(/Infrastructure/i)).toBeInTheDocument();
-    expect(screen.getByText(/Investigations/i)).toBeInTheDocument();
+    expect(screen.getByText('Security Console')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Overview/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Event feed/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Incidents/i })).toBeInTheDocument();
   });
+
 });

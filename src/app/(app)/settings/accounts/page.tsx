@@ -21,6 +21,7 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { getEnabledSocialAuthProvidersForPlatformSettings } from '@/lib/social-auth';
+import { CapabilitySwitcher } from '@/components/account/capability-switcher';
 import { usePublicPlatformSettings } from '@/hooks/usePublicPlatformSettings';
 
 interface ConnectedAccount {
@@ -130,10 +131,16 @@ export default function ConnectedAccountsPage() {
     <div className="max-w-2xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Connected Accounts</h1>
+        <h1 className="text-2xl font-bold">Account</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your login methods and social media links
+          What your account can do, plus login methods and social links
         </p>
+      </div>
+
+      {/* Account modes — one account, many hats */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Account modes</h2>
+        <CapabilitySwitcher />
       </div>
 
       {/* Login Methods */}

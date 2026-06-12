@@ -50,7 +50,7 @@ export default function AppLayout({
         {/* Top banner ad for free-tier users */}
         <div className="pt-16 px-4 md:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <AdBanner placement="top_banner" className="mb-4" />
+            <AdBanner placement="web_top_banner" className="mb-4" />
           </div>
         </div>
 

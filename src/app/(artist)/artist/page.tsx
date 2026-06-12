@@ -445,7 +445,7 @@ function DeviceMiniDonut({ devices }: { devices: Array<{ device_type: string; co
       </svg>
       <div className="space-y-1.5">
         {segments.map((s, i) => {
-          const Icon = DEVICE_ICONS[s.device.toLowerCase()] ?? Smartphone;
+          const Icon = DEVICE_ICONS[(s.device ?? '').toLowerCase()] ?? Smartphone;
           return (
             <div key={i} className="flex items-center gap-2 text-xs">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -728,6 +728,119 @@ function ProfileCompletenessRing({ pct, missing }: { pct: number; missing: strin
   );
 }
 
+// ─── Onboarding Checklist ─────────────────────────────────────────────────────
+
+interface ChecklistStep {
+  id: string;
+  label: string;
+  description: string;
+  done: boolean;
+  href: string;
+  icon: React.ElementType;
+}
+
+function OnboardingChecklist({
+  statusCounts,
+  completeness,
+}: {
+  statusCounts: PipelineCounts | undefined;
+  completeness: { pct: number; missing: string[] };
+}) {
+  const totalSongs = statusCounts
+    ? Object.values(statusCounts).reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0)
+    : 0;
+
+  const steps: ChecklistStep[] = [
+    {
+      id: 'song',
+      label: 'Upload your first song',
+      description: 'Share your music with East Africa',
+      done: totalSongs > 0,
+      href: '/artist/upload',
+      icon: Music,
+    },
+    {
+      id: 'profile',
+      label: 'Complete your profile',
+      description: 'Add bio, avatar & country',
+      done: completeness.pct >= 80,
+      href: '/artist/profile',
+      icon: UserPlus,
+    },
+    {
+      id: 'payout',
+      label: 'Set up payout details',
+      description: 'Connect Mobile Money to get paid',
+      done: !completeness.missing.includes('Payout phone'),
+      href: '/artist/earnings',
+      icon: Banknote,
+    },
+    {
+      id: 'social',
+      label: 'Add a social link',
+      description: 'Let fans find you on Instagram or X',
+      done: !completeness.missing.includes('Social links'),
+      href: '/artist/profile',
+      icon: Megaphone,
+    },
+  ];
+
+  const doneCount = steps.filter(s => s.done).length;
+  if (doneCount === steps.length) return null;
+
+  return (
+    <div className="rounded-[24px] border border-primary/20 bg-primary/5 p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold">Get started on TesoTunes</h2>
+          <p className="text-xs text-muted-foreground">{doneCount} of {steps.length} steps done</p>
+        </div>
+        <div className="flex gap-1.5">
+          {steps.map(s => (
+            <div
+              key={s.id}
+              className={cn('h-1.5 w-8 rounded-full transition-colors', s.done ? 'bg-primary' : 'bg-border')}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {steps.map(step => {
+          const Icon = step.icon;
+          return (
+            <Link
+              key={step.id}
+              href={step.done ? '#' : step.href}
+              className={cn(
+                'group flex items-center gap-3 rounded-xl border p-3 transition',
+                step.done
+                  ? 'cursor-default border-emerald-500/20 bg-emerald-500/5'
+                  : 'border-border/60 bg-background/60 hover:border-primary/40 hover:bg-background'
+              )}
+            >
+              <div className={cn(
+                'shrink-0 rounded-lg p-2',
+                step.done ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-primary/10 text-primary'
+              )}>
+                {step.done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={cn('text-sm font-medium', step.done && 'text-muted-foreground line-through')}>
+                  {step.label}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{step.description}</p>
+              </div>
+              {!step.done && (
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Quick Actions ────────────────────────────────────────────────────────────
 
 const quickActions = [
@@ -860,12 +973,15 @@ export default function ArtistDashboardPage() {
         </div>
       </section>
 
+      {/* ── Onboarding checklist — hidden once all steps done ───────────── */}
+      <OnboardingChecklist statusCounts={statusCounts} completeness={completeness} />
+
       {/* ── KPI strip ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
           icon={PlayCircle}
           label={`Plays · last ${periodDays}d`}
-          value={formatNumber(totalPlaysFromSeries || analytics?.engagement.total_plays || 0)}
+          value={formatNumber(totalPlaysFromSeries || analytics?.engagement?.total_plays || 0)}
           delta={playsDelta}
           spark={playsSparkValues}
           accent="bg-primary/10 text-primary"
@@ -873,8 +989,8 @@ export default function ArtistDashboardPage() {
         <KpiCard
           icon={Headphones}
           label="Unique listeners"
-          value={formatNumber(analytics?.engagement.unique_listeners ?? 0)}
-          sub={analytics?.engagement.avg_listen_time ? `${Math.round(analytics.engagement.avg_listen_time)}s avg listen` : undefined}
+          value={formatNumber(analytics?.engagement?.unique_listeners ?? 0)}
+          sub={analytics?.engagement?.avg_listen_time ? `${Math.round(analytics.engagement.avg_listen_time)}s avg listen` : undefined}
           accent="bg-cyan-500/10 text-cyan-600"
         />
         <KpiCard
@@ -1001,9 +1117,9 @@ export default function ArtistDashboardPage() {
       {/* ── Audience + Live Activity ─────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
         <AudienceSnapshot
-          countries={analytics?.demographics.countries ?? []}
-          devices={analytics?.demographics.devices ?? []}
-          uniqueListeners={analytics?.engagement.unique_listeners ?? 0}
+          countries={analytics?.demographics?.countries ?? []}
+          devices={analytics?.demographics?.devices ?? []}
+          uniqueListeners={analytics?.engagement?.unique_listeners ?? 0}
         />
         <LiveActivityTicker
           notifications={notifData?.data ?? []}

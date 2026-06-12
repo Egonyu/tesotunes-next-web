@@ -24,6 +24,7 @@ import {
   Crown,
   ShoppingBag,
   PiggyBank,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
@@ -40,6 +41,7 @@ const navItems = [
   { href: '/artist/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/artist/earnings', label: 'Earnings', icon: Wallet },
   { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users },
+  { href: '/artist/distribution', label: 'Distribution', icon: Globe },
   { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
   { href: '/artist/fan-club', label: 'Fan Club', icon: Crown },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },
@@ -182,7 +184,7 @@ export default function ArtistLayoutShell({
           className={cn(
             'absolute left-0 right-0 p-4 border-t bg-card transition-all',
             hasActivePlayer
-              ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-[72px]'
+              ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-18'
               : 'bottom-0'
           )}
         >
@@ -211,10 +213,11 @@ export default function ArtistLayoutShell({
           <div className="flex items-center gap-4">
             <Link
               href="/artist/upload"
-              className="hidden sm:flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+              className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-primary-foreground hover:bg-primary/90 text-sm font-medium"
             >
-              <Upload className="h-4 w-4" />
-              Upload Music
+              <Upload className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Upload Music</span>
+              <span className="sm:hidden">Upload</span>
             </Link>
 
             <button className="relative p-2 hover:bg-muted rounded-lg">
@@ -281,7 +284,7 @@ export default function ArtistLayoutShell({
               : 'pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8'
           )}
         >
-          <div className="mx-auto w-full max-w-[1500px]">
+          <div className="mx-auto w-full max-w-375">
             {children}
           </div>
         </main>

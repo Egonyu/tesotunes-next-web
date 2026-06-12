@@ -16,18 +16,42 @@ import {
   AlertCircle,
   Users,
   Music,
+  Smartphone,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistEarnings, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, type SongEarning } from '@/hooks/useArtist';
+import { useArtistEarnings, useArtistTransactions, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, usePayoutHistory, type SongEarning } from '@/hooks/useArtist';
+import { usePaymentMethods } from '@/hooks/usePayments';
 
 export default function ArtistEarningsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState<'zengapay'>('zengapay');
+  const [withdrawMethod, setWithdrawMethod] = useState('zengapay');
   const [withdrawPhone, setWithdrawPhone] = useState('');
+  const [txPage, setTxPage] = useState(1);
+  const TX_PER_PAGE = 10;
 
   const { data: earningsData, isLoading, error } = useArtistEarnings();
+  const { data: payoutData, isLoading: payoutsLoading } = usePayoutHistory();
+  const { data: txData, isLoading: txLoading } = useArtistTransactions({ page: txPage, per_page: TX_PER_PAGE });
   const withdrawMutation = useRequestWithdrawal();
+  const { data: methodsData } = usePaymentMethods();
+
+  const availableMethods = [
+    ...(methodsData?.mobile_money ?? []),
+    ...(methodsData?.other ?? []),
+  ].filter((m) => m.enabled !== false);
+
+  const mobileMoneyIds = new Set(
+    (methodsData?.mobile_money ?? [{ id: 'zengapay' }]).map((m) => m.id)
+  );
+  const selectedNeedsPhone = mobileMoneyIds.has(withdrawMethod);
+
+  function getMethodIcon(id: string): React.ElementType {
+    if (id === 'bank_transfer') return Building2;
+    if (id === 'mtn_momo' || id === 'airtel_money' || id === 'zengapay') return Smartphone;
+    return CreditCard;
+  }
   const { data: royaltySplits, isLoading: splitsLoading } = useRoyaltySplits();
   const { data: songEarningsData, isLoading: songEarningsLoading } = usePerSongEarnings({ per_page: 10, sort: 'total_revenue' });
   // Use per_song_earnings from main earnings response as fallback
@@ -52,10 +76,11 @@ export default function ArtistEarningsPage() {
     monthly_change: 0
   };
 
-  const earningsSources = earningsData?.earnings_sources || [];
-  const transactions = earningsData?.transactions || [];
+  const MIN_PAYOUT = earningsData?.payout_limits?.min_amount ?? 50000;
 
-  // Build monthly chart from API data or derive from transactions
+  const earningsSources = earningsData?.earnings_sources || [];
+
+  // Build monthly chart from API data
   const monthlyChart = useMemo(() => {
     if (earningsData?.monthly_trends && earningsData.monthly_trends.length > 0) {
       return earningsData.monthly_trends;
@@ -63,32 +88,19 @@ export default function ArtistEarningsPage() {
     if (earningsData?.monthly_chart && earningsData.monthly_chart.length > 0) {
       return earningsData.monthly_chart;
     }
-    // Derive from transactions if monthly_chart not available
-    const monthMap = new Map<string, number>();
     const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toLocaleString('en-US', { month: 'short' });
-      monthMap.set(key, 0);
-    }
-    for (const tx of transactions) {
-      if (tx.type === 'earning' && tx.status === 'completed') {
-        const txDate = new Date(tx.date);
-        const key = txDate.toLocaleString('en-US', { month: 'short' });
-        if (monthMap.has(key)) {
-          monthMap.set(key, (monthMap.get(key) || 0) + tx.amount);
-        }
-      }
-    }
-    return Array.from(monthMap.entries()).map(([month, amount]) => ({ month, amount }));
-  }, [earningsData?.monthly_chart, transactions]);
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return { month: d.toLocaleString('en-US', { month: 'short' }), amount: 0 };
+    });
+  }, [earningsData?.monthly_chart, earningsData?.monthly_trends]);
 
   const handleWithdraw = () => {
     const amount = parseInt(withdrawAmount);
-    if (amount >= 50000 && amount <= stats.balance) {
+    if (amount >= MIN_PAYOUT && amount <= stats.balance) {
       withdrawMutation.mutate({
         amount,
-        payment_method: withdrawMethod,
+        payment_method: withdrawMethod as 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay',
         phone_number: withdrawPhone || undefined,
       }, {
         onSuccess: () => {
@@ -419,79 +431,165 @@ export default function ArtistEarningsPage() {
       <div className="p-6 rounded-xl border bg-card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Transaction History</h2>
-          <select className="text-sm px-3 py-1 border rounded-lg bg-background">
-            <option>All transactions</option>
-            <option>Earnings only</option>
-            <option>Withdrawals only</option>
-          </select>
         </div>
 
-        <div className="space-y-3">
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  'p-2 rounded-lg',
-                  tx.type === 'earning'
-                    ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
-                    : 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                )}>
-                  {tx.type === 'earning' ? (
-                    <ArrowDownRight className="h-4 w-4" />
-                  ) : (
-                    <ArrowUpRight className="h-4 w-4" />
-                  )}
+        {txLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(txData?.data ?? []).length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">No transactions yet</p>
+            ) : (txData?.data ?? []).map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    'p-2 rounded-lg',
+                    tx.type === 'earning'
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
+                      : 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
+                  )}>
+                    {tx.type === 'earning' ? (
+                      <ArrowDownRight className="h-4 w-4" />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{tx.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(tx.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">{tx.description}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+                <div className="text-right">
+                  <p className={cn(
+                    'font-semibold',
+                    tx.amount >= 0 ? 'text-green-600' : ''
+                  )}>
+                    {tx.amount >= 0 ? '+' : ''} UGX {Math.abs(tx.amount).toLocaleString()}
                   </p>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded-full',
+                    tx.status === 'completed'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : tx.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                  )}>
+                    {tx.status}
+                  </span>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={cn(
-                  'font-semibold',
-                  tx.amount >= 0 ? 'text-green-600' : ''
-                )}>
-                  {tx.amount >= 0 ? '+' : ''} UGX {Math.abs(tx.amount).toLocaleString()}
-                </p>
-                <span className={cn(
-                  'text-xs px-2 py-0.5 rounded-full',
-                  tx.status === 'completed'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : tx.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                )}>
-                  {tx.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
-          <p className="text-sm text-muted-foreground">
-            Showing 1-{transactions.length} of {transactions.length} transactions
-          </p>
-          <div className="flex items-center gap-2">
-            <button className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50" disabled>
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50" disabled>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+        {txData?.meta && txData.meta.last_page > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing {((txPage - 1) * TX_PER_PAGE) + 1}–{Math.min(txPage * TX_PER_PAGE, txData.meta.total)} of {txData.meta.total} transactions
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                disabled={txPage === 1}
+                className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm px-2">{txPage} / {txData.meta.last_page}</span>
+              <button
+                onClick={() => setTxPage((p) => Math.min(txData.meta.last_page, p + 1))}
+                disabled={txPage === txData.meta.last_page}
+                className="p-2 border rounded-lg hover:bg-muted disabled:opacity-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Payout / Withdrawal History */}
+      <div className="p-6 rounded-xl border bg-card">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <Download className="h-4 w-4 text-muted-foreground" />
+          Withdrawal Requests
+        </h2>
+        {payoutsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !payoutData?.length ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Download className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No withdrawal requests yet.</p>
+            <p className="text-xs mt-1">Once you request a withdrawal it will appear here.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 font-medium text-muted-foreground">Reference</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Method</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Amount</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Net</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {payoutData.map((p) => {
+                  const statusStyles: Record<string, string> = {
+                    pending:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                    approved:   'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+                    processing: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+                    completed:  'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                    failed:     'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                    rejected:   'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                    cancelled:  'bg-muted text-muted-foreground',
+                  };
+                  const methodLabel: Record<string, string> = {
+                    mobile_money:  'Mobile Money',
+                    zengapay:      'ZengaPay',
+                    bank_transfer: 'Bank Transfer',
+                    paypal:        'PayPal',
+                  };
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="py-3 font-mono text-xs">{p.transaction_id}</td>
+                      <td className="py-3">{methodLabel[p.payout_method] ?? p.payout_method}</td>
+                      <td className="py-3 text-right">UGX {p.amount.toLocaleString()}</td>
+                      <td className="py-3 text-right font-semibold">UGX {p.net_amount.toLocaleString()}</td>
+                      <td className="py-3 text-center">
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusStyles[p.status] ?? 'bg-muted text-muted-foreground')}>
+                          {p.status}
+                        </span>
+                        {p.failure_reason && (
+                          <p className="text-xs text-red-600 mt-0.5 max-w-[160px] truncate">{p.failure_reason}</p>
+                        )}
+                      </td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Withdrawal Modal */}
@@ -512,8 +610,8 @@ export default function ArtistEarningsPage() {
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Enter amount (min 50,000)"
-                  min="50000"
+                  placeholder={`Enter amount (min ${MIN_PAYOUT.toLocaleString()})`}
+                  min={MIN_PAYOUT}
                   max={stats.balance}
                   className="w-full px-4 py-2 border rounded-lg bg-background"
                 />
@@ -521,29 +619,48 @@ export default function ArtistEarningsPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
-                <div className="w-full px-4 py-2 border rounded-lg bg-background flex items-center gap-2">
-                  <span className="font-medium">ZengaPay Mobile Money</span>
-                  <span className="text-xs text-muted-foreground ml-auto">Primary rail</span>
+                <div className="space-y-2">
+                  {(availableMethods.length > 0 ? availableMethods : [{ id: 'zengapay', name: 'ZengaPay Mobile Money' }]).map((method) => {
+                    const Icon = getMethodIcon(method.id);
+                    const isSelected = withdrawMethod === method.id;
+                    return (
+                      <button
+                        key={method.id}
+                        type="button"
+                        onClick={() => setWithdrawMethod(method.id)}
+                        className={cn(
+                          'flex items-center gap-3 p-3 border rounded-lg w-full text-left',
+                          isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                        )}
+                      >
+                        <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium">{method.name}</span>
+                        {isSelected && <CheckCircle className="h-4 w-4 text-primary ml-auto shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  value={withdrawPhone}
-                  onChange={(e) => setWithdrawPhone(e.target.value)}
-                  placeholder="0700 000 000"
-                  className="w-full px-4 py-2 border rounded-lg bg-background"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter the phone number where ZengaPay should send the withdrawal prompt.
-                </p>
-              </div>
+              {selectedNeedsPhone && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={withdrawPhone}
+                    onChange={(e) => setWithdrawPhone(e.target.value)}
+                    placeholder="0700 000 000"
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter the mobile money number to receive the withdrawal.
+                  </p>
+                </div>
+              )}
 
               <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
                 <p className="text-yellow-700 dark:text-yellow-300">
-                  Minimum withdrawal: UGX 50,000 • Processing: 1-3 business days
+                  Minimum withdrawal: UGX {MIN_PAYOUT.toLocaleString()} • Processing: 24-48 hours via ZengaPay
                 </p>
               </div>
 
@@ -566,7 +683,7 @@ export default function ArtistEarningsPage() {
               </button>
               <button
                 onClick={handleWithdraw}
-                disabled={withdrawMutation.isPending || parseInt(withdrawAmount) < 50000 || parseInt(withdrawAmount) > stats.balance}
+                disabled={withdrawMutation.isPending || parseInt(withdrawAmount) < MIN_PAYOUT || parseInt(withdrawAmount) > stats.balance}
                 className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
               >
                 {withdrawMutation.isPending ? (

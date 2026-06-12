@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'TesoTunes Terms of Service and usage agreement.',
-  alternates: { canonical: 'https://tesotunes.com/terms' },
+  alternates: { canonical: absoluteUrl('/terms') },
 };
 
 export default function TermsPage() {

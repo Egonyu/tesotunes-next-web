@@ -21,12 +21,11 @@ import {
   TrendingUp,
   DollarSign,
   Download,
-  Image,
+  ImageIcon,
   ExternalLink,
   Search,
   ArrowUpRight,
   ArrowDownRight,
-  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,6 +36,7 @@ import {
   useArtistFanSignups,
   useArtistEarningsShare,
   useArtistPromoMaterials,
+  useGeneratePromoMaterial,
   useTrackArtistShare,
   type FanSignup,
   type PromoMaterial
@@ -49,7 +49,7 @@ const statusColors: Record<string, string> = {
 };
 
 const platformIcons: Record<string, React.ElementType> = {
-  instagram: Image,
+  instagram: ImageIcon,
   twitter: Twitter,
   facebook: Facebook,
   whatsapp: MessageCircle,
@@ -71,21 +71,26 @@ export default function ArtistReferralsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const shareToSocial = (platform: 'whatsapp' | 'twitter' | 'facebook') => {
+  const shareToSocial = (platform: 'whatsapp' | 'twitter' | 'facebook' | 'telegram' | 'sms') => {
     if (!dashboard?.link?.branded_link) return;
 
-    const message = encodeURIComponent(
-      `Join my fanbase on TesoTunes! Stream my music, get exclusive rewards & earn credits. Sign up here: ${dashboard.link.branded_link}`
-    );
+    const text = `Join my fanbase on TesoTunes! Stream my music, get exclusive rewards & earn credits. Sign up here: ${dashboard.link.branded_link}`;
+    const message = encodeURIComponent(text);
 
     const urls: Record<string, string> = {
       twitter: `https://twitter.com/intent/tweet?text=${message}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(dashboard.link.branded_link)}`,
       whatsapp: `https://wa.me/?text=${message}`,
+      telegram: `https://t.me/share/url?url=${encodeURIComponent(dashboard.link.branded_link)}&text=${message}`,
+      sms: `sms:?body=${message}`,
     };
 
     trackShare.mutate(platform);
-    window.open(urls[platform], '_blank', 'width=600,height=400');
+    if (platform === 'sms') {
+      window.location.href = urls.sms;
+    } else {
+      window.open(urls[platform], '_blank', 'width=600,height=400');
+    }
   };
 
   if (isLoading) {
@@ -195,7 +200,7 @@ export default function ArtistReferralsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total_commission.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Total Commission</p>
+                <p className="text-xs text-muted-foreground">Total Commission (credits)</p>
               </div>
             </div>
           </CardContent>
@@ -209,7 +214,7 @@ export default function ArtistReferralsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.pending_commission.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Pending Payout</p>
+                <p className="text-xs text-muted-foreground">Pending Payout (credits)</p>
               </div>
             </div>
           </CardContent>
@@ -293,8 +298,15 @@ export default function ArtistReferralsPage() {
                       WhatsApp
                     </Button>
                     <Button
-                      onClick={() => shareToSocial('twitter')}
+                      onClick={() => shareToSocial('telegram')}
                       className="bg-sky-500 hover:bg-sky-600"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Telegram
+                    </Button>
+                    <Button
+                      onClick={() => shareToSocial('twitter')}
+                      className="bg-slate-800 hover:bg-slate-900"
                     >
                       <Twitter className="w-4 h-4 mr-2" />
                       Twitter
@@ -306,8 +318,8 @@ export default function ArtistReferralsPage() {
                       <Facebook className="w-4 h-4 mr-2" />
                       Facebook
                     </Button>
-                    <Button variant="outline" onClick={() => trackShare.mutate('sms')}>
-                      <Send className="w-4 h-4 mr-2" />
+                    <Button variant="outline" onClick={() => shareToSocial('sms')}>
+                      <MessageCircle className="w-4 h-4 mr-2" />
                       SMS
                     </Button>
                     <Button variant="outline" onClick={() => trackShare.mutate('qr')}>
@@ -424,7 +436,7 @@ export default function ArtistReferralsPage() {
                           <span className="text-sm font-medium">{fan.fan.name}</span>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-green-400">+{fan.commission_earned}</p>
+                          <p className="text-sm font-semibold text-green-400">+{fan.commission_earned} cr</p>
                           <p className="text-xs text-muted-foreground">{fan.streams} streams</p>
                         </div>
                       </div>
@@ -701,7 +713,8 @@ function FanTrackingTab() {
 // ============================================================================
 
 function EarningsTab() {
-  const { data: earnings, isLoading } = useArtistEarningsShare();
+  const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const { data: earnings, isLoading } = useArtistEarningsShare(period);
 
   if (isLoading) {
     return (
@@ -749,11 +762,26 @@ function EarningsTab() {
 
       {/* Transaction History */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="w-5 h-5" />
             Commission History
           </CardTitle>
+          <div className="flex gap-1 bg-muted p-1 rounded-lg">
+            {(['7d', '30d', '90d', 'all'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  period === p
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {p === 'all' ? 'All' : p === '7d' ? '7 days' : p === '30d' ? '30 days' : '90 days'}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           {earnings.transactions.length === 0 ? (
@@ -810,6 +838,15 @@ function EarningsTab() {
 // ============================================================================
 
 function PromoMaterialsTab({ materials }: { materials: PromoMaterial[] }) {
+  const [generating, setGenerating] = useState(false);
+  const [genType, setGenType] = useState<'banner' | 'story' | 'post' | 'flyer'>('banner');
+  const [genPlatform, setGenPlatform] = useState('instagram');
+  const generateMutation = useGeneratePromoMaterial();
+
+  const handleGenerate = () => {
+    setGenerating(false);
+    generateMutation.mutate({ type: genType, platform: genPlatform });
+  };
   const platformLabels: Record<string, string> = {
     instagram: 'Instagram',
     twitter: 'Twitter/X',
@@ -827,14 +864,61 @@ function PromoMaterialsTab({ materials }: { materials: PromoMaterial[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Info */}
+      {/* Info + Generate */}
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="p-4">
-          <p className="font-semibold mb-1">Promotional Materials</p>
-          <p className="text-sm text-muted-foreground">
-            Download branded graphics to promote your referral link across social media and at events.
-            Each graphic includes your unique referral link and QR code.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold mb-1">Promotional Materials</p>
+              <p className="text-sm text-muted-foreground">
+                Download branded graphics to promote your referral link. Each graphic embeds your link and QR code.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setGenerating(v => !v)} variant="outline" className="shrink-0">
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Generate New
+            </Button>
+          </div>
+
+          {generating && (
+            <div className="mt-4 pt-4 border-t flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Type</label>
+                <select
+                  value={genType}
+                  onChange={e => setGenType(e.target.value as typeof genType)}
+                  className="px-3 py-2 rounded-lg border bg-background text-sm"
+                >
+                  <option value="banner">Banner</option>
+                  <option value="story">Story</option>
+                  <option value="post">Post</option>
+                  <option value="flyer">Flyer</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Platform</label>
+                <select
+                  value={genPlatform}
+                  onChange={e => setGenPlatform(e.target.value)}
+                  className="px-3 py-2 rounded-lg border bg-background text-sm"
+                >
+                  <option value="instagram">Instagram</option>
+                  <option value="twitter">Twitter/X</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="universal">Universal</option>
+                </select>
+              </div>
+              <Button
+                onClick={handleGenerate}
+                disabled={generateMutation.isPending}
+                size="sm"
+              >
+                {generateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                {generateMutation.isPending ? 'Generating…' : 'Generate'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -842,7 +926,7 @@ function PromoMaterialsTab({ materials }: { materials: PromoMaterial[] }) {
       {materials.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            <Image className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-medium mb-1">No promotional materials yet</p>
             <p className="text-sm">Promotional materials will be available soon.</p>
           </CardContent>

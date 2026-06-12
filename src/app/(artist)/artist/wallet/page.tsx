@@ -22,24 +22,38 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistEarnings, useRequestWithdrawal, useArtistProfile } from '@/hooks/useArtist';
+import { usePaymentMethods } from '@/hooks/usePayments';
 import { toast } from 'sonner';
 
-type PaymentMethod = 'zengapay';
-
-const paymentMethods: { id: PaymentMethod; label: string; icon: React.ElementType; description: string }[] = [
-  { id: 'zengapay', label: 'ZengaPay Mobile Money', icon: Smartphone, description: 'Withdraw through the ZengaPay gateway' },
-];
+type WithdrawMethodId = 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay';
 
 export default function ArtistWalletPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState<PaymentMethod>('zengapay');
+  const [withdrawMethod, setWithdrawMethod] = useState<WithdrawMethodId>('zengapay');
   const [withdrawPhone, setWithdrawPhone] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'methods'>('overview');
 
   const { data: earningsData, isLoading, error } = useArtistEarnings();
   const { data: profile } = useArtistProfile();
+  const { data: methodsData } = usePaymentMethods();
   const withdrawMutation = useRequestWithdrawal();
+
+  const availableMethods = [
+    ...(methodsData?.mobile_money ?? []),
+    ...(methodsData?.other ?? []),
+  ].filter((m) => m.enabled !== false);
+
+  const mobileMoneyIds = new Set(
+    (methodsData?.mobile_money ?? [{ id: 'zengapay' }]).map((m) => m.id)
+  );
+  const selectedNeedsPhone = mobileMoneyIds.has(withdrawMethod);
+
+  function getMethodIcon(id: string): React.ElementType {
+    if (id === 'bank_transfer') return Building2;
+    if (id === 'mtn_momo' || id === 'airtel_money' || id === 'zengapay') return Smartphone;
+    return CreditCard;
+  }
 
   const stats = earningsData?.stats || {
     balance: 0,
@@ -62,7 +76,7 @@ export default function ArtistWalletPage() {
       toast.error('Insufficient balance');
       return;
     }
-    if (withdrawMethod === 'zengapay' && !withdrawPhone) {
+    if (selectedNeedsPhone && !withdrawPhone && !profile?.payout_phone_number) {
       toast.error('Please enter a phone number');
       return;
     }
@@ -397,25 +411,34 @@ export default function ArtistWalletPage() {
               Choose how you want to receive your earnings. You can update your payout method in Settings.
             </p>
             <div className="space-y-3">
-              {paymentMethods.map((method) => (
-                <div
-                  key={method.id}
-                  className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                >
-                  <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                    <method.icon className="h-5 w-5" />
+              {availableMethods.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No payment methods available</p>
+              ) : availableMethods.map((method) => {
+                const MethodIcon = getMethodIcon(method.id);
+                const isActive = profile?.payout_phone_number && mobileMoneyIds.has(method.id);
+                return (
+                  <div
+                    key={method.id}
+                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                      <MethodIcon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{method.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Min: UGX {method.min_amount.toLocaleString()}
+                        {method.max_amount > 0 ? ` · Max: UGX ${method.max_amount.toLocaleString()}` : ''}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full">
+                        Active
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{method.label}</p>
-                    <p className="text-sm text-muted-foreground">{method.description}</p>
-                  </div>
-                  {profile?.payout_phone_number && method.id === 'zengapay' && (
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full">
-                      Active
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -492,31 +515,34 @@ export default function ArtistWalletPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
                 <div className="space-y-2">
-                  {paymentMethods.map((method) => (
-                    <button
-                      key={method.id}
-                      onClick={() => setWithdrawMethod(method.id)}
-                      className={cn(
-                        'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
-                        withdrawMethod === method.id
-                          ? 'border-primary bg-primary/5'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      <method.icon className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{method.label}</p>
-                      </div>
-                      {withdrawMethod === method.id && (
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                      )}
-                    </button>
-                  ))}
+                  {availableMethods.map((method) => {
+                    const MethodIcon = getMethodIcon(method.id);
+                    return (
+                      <button
+                        key={method.id}
+                        onClick={() => setWithdrawMethod(method.id as WithdrawMethodId)}
+                        className={cn(
+                          'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
+                          withdrawMethod === method.id
+                            ? 'border-primary bg-primary/5'
+                            : 'hover:bg-muted'
+                        )}
+                      >
+                        <MethodIcon className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{method.name}</p>
+                        </div>
+                        {withdrawMethod === method.id && (
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Phone Number */}
-              {withdrawMethod === 'zengapay' && (
+              {selectedNeedsPhone && (
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone Number</label>
                   <input

@@ -250,16 +250,14 @@ export function FullScreenPlayer() {
                 {currentSong.artist.name}
               </Link>
             )}
-            {currentSong.genres && currentSong.genres.length > 0 && (
+            {currentSong.genre && (
               <div className="mt-2 flex flex-wrap justify-center gap-2">
-                {currentSong.genres.slice(0, 3).map((genre: { id: number; name: string }) => (
-                  <span
-                    key={genre.id}
-                    className="rounded-full bg-white/10 px-3 py-0.5 text-xs text-zinc-300"
-                  >
-                    {genre.name}
-                  </span>
-                ))}
+                <span
+                  key={currentSong.genre.id}
+                  className="rounded-full bg-white/10 px-3 py-0.5 text-xs text-zinc-300"
+                >
+                  {currentSong.genre.name}
+                </span>
               </div>
             )}
           </div>

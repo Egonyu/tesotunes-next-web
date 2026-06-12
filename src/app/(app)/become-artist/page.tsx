@@ -24,9 +24,12 @@ import {
   Heart,
   Headphones,
   AlertCircle,
+  ShieldCheck,
+  IdCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeCountryCode } from "@/lib/country";
+import { CameraCapture } from "@/components/ui/camera-capture";
 import { toast } from "sonner";
 import {
   useSubmitArtistApplication,
@@ -43,7 +46,8 @@ const STEPS = [
   { id: 0, title: "Welcome", icon: Sparkles, description: "Why become an artist?" },
   { id: 1, title: "Your Music", icon: Music, description: "Tell us about your artistry" },
   { id: 2, title: "Get Paid", icon: Wallet, description: "Set up payouts" },
-  { id: 3, title: "Review", icon: FileText, description: "Review & submit" },
+  { id: 3, title: "Verify Identity", icon: ShieldCheck, description: "One-time KYC — required for withdrawals" },
+  { id: 4, title: "Review", icon: FileText, description: "Review & submit" },
 ] as const;
 
 // ============================================================================
@@ -54,8 +58,6 @@ export default function BecomeArtistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
-  const hasApiAccess = session?.user?.apiAuthorized ?? false;
-
   // Check application status
   const { data: appStatus, isLoading: statusLoading } = useArtistApplicationStatus();
   const { data: genresData, isLoading: genresLoading, error: genresError } = useAvailableGenres();
@@ -66,18 +68,26 @@ export default function BecomeArtistPage() {
   const userName = session?.user?.name || "";
 
   // Form state - simplified and pre-filled
-  const [formData, setFormData] = useState<Partial<ArtistApplicationData>>({
-    stage_name: userName, // Pre-fill with user's name
-    bio: "",
-    primary_genre: "",
-    secondary_genres: [],
-    full_name: userName, // Pre-fill with user's name
-    phone: "",
-    payout_method: "zengapay",
-    country: "UG",
-    terms_accepted: false,
-    artist_agreement_accepted: false,
-    social_links: {},
+  const STORAGE_KEY = "become-artist-draft";
+
+  const [formData, setFormData] = useState<Partial<ArtistApplicationData>>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+      if (saved) return JSON.parse(saved) as Partial<ArtistApplicationData>;
+    } catch {}
+    return {
+      stage_name: userName,
+      bio: "",
+      primary_genre: "",
+      secondary_genres: [],
+      full_name: userName,
+      phone: "",
+      payout_method: "zengapay",
+      country: "UG",
+      terms_accepted: false,
+      artist_agreement_accepted: false,
+      social_links: {},
+    };
   });
 
   // File state
@@ -107,7 +117,7 @@ export default function BecomeArtistPage() {
   const shouldRedirectToLogin =
     status !== "loading" &&
     !statusLoading &&
-    (!session?.user || !hasApiAccess);
+    !session?.user;
   const shouldRedirectToStatus = appStatus?.data?.status === "pending";
   const shouldRedirectToArtist = appStatus?.data?.status === "approved" || appStatus?.data?.is_artist;
 
@@ -130,25 +140,48 @@ export default function BecomeArtistPage() {
   }
 
   const updateForm = (updates: Partial<ArtistApplicationData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+    setFormData((prev) => {
+      const next = { ...prev, ...updates };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setAvatarPreview(reader.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, or WebP)');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Profile photo must be less than 5MB');
+      return;
+    }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: (f: File | null) => void
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) setter(file);
+  // Backend accepts jpg/jpeg/png (+pdf for ID documents, never for the
+  // selfie) at up to 10MB — reject anything else before the upload starts.
+  const KYC_MAX_BYTES = 10 * 1024 * 1024;
+
+  const selectKycFile = (file: File, allowPdf: boolean, setter: (f: File | null) => void) => {
+    const allowedTypes = ["image/jpeg", "image/png", ...(allowPdf ? ["application/pdf"] : [])];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(allowPdf ? "Use a JPG or PNG photo, or a PDF." : "Use a JPG or PNG photo.");
+      return;
+    }
+
+    if (file.size > KYC_MAX_BYTES) {
+      toast.error("The file must be smaller than 10MB.");
+      return;
+    }
+
+    setter(file);
   };
 
   const canProceed = (): boolean => {
@@ -170,7 +203,9 @@ export default function BecomeArtistPage() {
           return !!formData.phone;
         }
         return !!(formData.phone && formData.mobile_money_number);
-      case 3: // Review (terms)
+      case 3: // Verify Identity (KYC docs)
+        return !!(idFrontFile && idBackFile && selfieFile && formData.nin_number);
+      case 4: // Review (terms)
         return !!(formData.terms_accepted && formData.artist_agreement_accepted);
       default:
         return true;
@@ -232,6 +267,7 @@ export default function BecomeArtistPage() {
       };
 
       await submitApplication.mutateAsync(submitData);
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
       toast.success("Application submitted! We'll review it within 24-48 hours.");
       router.push("/become-artist/status");
     } catch (error: unknown) {
@@ -307,6 +343,18 @@ export default function BecomeArtistPage() {
           <StepPayout formData={formData} updateForm={updateForm} />
         )}
         {currentStep === 3 && (
+          <StepKyc
+            formData={formData}
+            updateForm={updateForm}
+            idFrontFile={idFrontFile}
+            idBackFile={idBackFile}
+            selfieFile={selfieFile}
+            onIdFrontSelected={(file) => selectKycFile(file, true, setIdFrontFile)}
+            onIdBackSelected={(file) => selectKycFile(file, true, setIdBackFile)}
+            onSelfieSelected={(file) => selectKycFile(file, false, setSelfieFile)}
+          />
+        )}
+        {currentStep === 4 && (
           <StepReview
             formData={formData}
             updateForm={updateForm}
@@ -469,9 +517,8 @@ function StepWelcome() {
           {[
             "Your stage name / artist name",
             "A short bio about your music",
-            "Phone number for verification",
-            "Mobile Money or bank details for payouts",
-            "National ID (optional, for verified badge)",
+            "Phone number for payouts",
+            "Mobile Money or bank details",
             "A profile photo (optional)",
           ].map((item) => (
             <li key={item} className="flex items-start gap-2">
@@ -893,7 +940,205 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
 }
 
 // ============================================================================
-// Step 3: Verification
+// Step 4: Verify Identity (KYC)
+// ============================================================================
+
+interface StepKycProps {
+  formData: Partial<ArtistApplicationData>;
+  updateForm: (data: Partial<ArtistApplicationData>) => void;
+  idFrontFile: File | null;
+  idBackFile: File | null;
+  selfieFile: File | null;
+  onIdFrontSelected: (file: File) => void;
+  onIdBackSelected: (file: File) => void;
+  onSelfieSelected: (file: File) => void;
+}
+
+type KycCameraSlot = "id_front" | "id_back" | "selfie" | null;
+
+function StepKyc({
+  formData,
+  updateForm,
+  idFrontFile,
+  idBackFile,
+  selfieFile,
+  onIdFrontSelected,
+  onIdBackSelected,
+  onSelfieSelected,
+}: StepKycProps) {
+  const [cameraSlot, setCameraSlot] = useState<KycCameraSlot>(null);
+
+  const slotConfig = {
+    id_front: {
+      onSelected: onIdFrontSelected,
+      facing: "environment" as const,
+      instruction: "Lay your ID flat — all four corners in the frame",
+      filename: "national-id-front",
+    },
+    id_back: {
+      onSelected: onIdBackSelected,
+      facing: "environment" as const,
+      instruction: "Now the back of your ID",
+      filename: "national-id-back",
+    },
+    selfie: {
+      onSelected: onSelfieSelected,
+      facing: "user" as const,
+      instruction: "Hold your ID next to your face — both clearly visible",
+      filename: "selfie-with-id",
+    },
+  };
+
+  const uploadSlot = (
+    slot: Exclude<KycCameraSlot, null>,
+    label: string,
+    sublabel: string,
+    file: File | null,
+    onSelected: (file: File) => void,
+    allowPdf: boolean,
+  ) => (
+    <div
+      className={cn(
+        "rounded-xl border-2 border-dashed p-5 transition-colors",
+        file ? "border-emerald-500/40 bg-emerald-500/5" : "border-border",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            file ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {file ? <Check className="h-5 w-5" /> : <IdCard className="h-5 w-5" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>
+          {file ? (
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 truncate">
+              {file.name} · {(file.size / 1024).toFixed(0)} KB
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">
+              {allowPdf ? "JPG, PNG or PDF · max 10MB" : "JPG or PNG · max 10MB"}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setCameraSlot(slot)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Camera className="h-4 w-4" />
+          {file ? "Retake photo" : "Take photo"}
+        </button>
+        <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium hover:bg-accent">
+          Choose file
+          <input
+            type="file"
+            accept={allowPdf ? "image/jpeg,image/png,application/pdf" : "image/jpeg,image/png"}
+            capture={slotConfig[slot].facing}
+            onChange={(e) => {
+              const selected = e.target.files?.[0];
+              if (selected) onSelected(selected);
+              e.target.value = "";
+            }}
+            className="hidden"
+          />
+        </label>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">Verify your identity</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Required once. Approved within 24 hours. You can keep using the app while we review.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/10 p-4">
+        <div className="flex gap-3">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-900 dark:text-amber-200">
+              Why we need this
+            </p>
+            <p className="text-amber-800/80 dark:text-amber-200/80 mt-1">
+              Identity verification is required before you can withdraw earnings or claim
+              music on the platform. Your documents are encrypted and reviewed by our
+              compliance team only.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          National ID number (NIN) <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.nin_number ?? ""}
+          onChange={(e) => updateForm({ nin_number: e.target.value })}
+          placeholder="CM12345678901234"
+          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Found on your Ugandan National ID card.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {uploadSlot(
+          "id_front",
+          "National ID — front",
+          "Clear photo of the front of your ID, all four corners visible.",
+          idFrontFile,
+          onIdFrontSelected,
+          true,
+        )}
+        {uploadSlot(
+          "id_back",
+          "National ID — back",
+          "Clear photo of the back of your ID.",
+          idBackFile,
+          onIdBackSelected,
+          true,
+        )}
+        {uploadSlot(
+          "selfie",
+          "Selfie with ID",
+          "A photo of you holding your ID next to your face. Both must be clearly visible.",
+          selfieFile,
+          onSelfieSelected,
+          false,
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center">
+        By uploading you confirm these documents belong to you and are valid.
+      </p>
+
+      {cameraSlot && (
+        <CameraCapture
+          facing={slotConfig[cameraSlot].facing}
+          instruction={slotConfig[cameraSlot].instruction}
+          filename={slotConfig[cameraSlot].filename}
+          onCapture={(file) => slotConfig[cameraSlot].onSelected(file)}
+          onClose={() => setCameraSlot(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ============================================================================
 // Step 5: Review & Submit
 // ============================================================================

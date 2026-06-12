@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import { SITE_URL, absoluteUrl, getSiteOrigin } from "@/lib/site";
 
 // Base metadata for the application
 export const siteConfig = {
   name: 'TesoTunes',
   description: "East Africa's premier music streaming platform - Discover, stream, and download the best African music",
-  url: 'https://tesotunes.com',
-  ogImage: 'https://tesotunes.com/og-image.jpg',
+  url: SITE_URL,
+  ogImage: absoluteUrl('/og-image.jpg'),
   creator: '@tesotunes',
   keywords: [
     'African music',
@@ -25,7 +26,7 @@ export const siteConfig = {
 
 // Default metadata for all pages
 export const defaultMetadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
+  metadataBase: getSiteOrigin(siteConfig.url),
   title: {
     default: siteConfig.name,
     template: `%s | ${siteConfig.name}`,

@@ -5,6 +5,7 @@ import { serverFetch } from '@/lib/api'
 import type { Artist } from '@/types'
 import { JsonLd } from '@/components/seo/JsonLd'
 import ArtistPageClient from './ArtistPageClient'
+import { SITE_URL, absoluteUrl } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -21,7 +22,7 @@ const getArtistForMeta = cache(async (slug: string): Promise<Artist | null> => {
 
 export async function generateStaticParams() {
   try {
-    const res = await serverFetch<{ data: { slug: string }[] }>('/artists?limit=200&status=active')
+    const res = await serverFetch<{ data: { slug: string }[] }>('/artists?limit=200&status=approved')
     return (res.data || []).map((a) => ({ slug: a.slug }))
   } catch {
     return []
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/artists/${slug}` },
+    alternates: { canonical: absoluteUrl(`/artists/${slug}`) },
     openGraph: {
       type: 'profile',
       title,
@@ -63,7 +64,7 @@ export default async function ArtistPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'MusicGroup',
     name: artist.name,
-    url: `https://tesotunes.com/artists/${slug}`,
+    url: absoluteUrl(`/artists/${slug}`),
     image: artist.avatar_url || undefined,
     description: artist.bio || undefined,
     genre: artist.genre?.name,
@@ -76,9 +77,9 @@ export default async function ArtistPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
-      { '@type': 'ListItem', position: 2, name: 'Artists', item: 'https://tesotunes.com/artists' },
-      { '@type': 'ListItem', position: 3, name: artist.name, item: `https://tesotunes.com/artists/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Artists', item: absoluteUrl('/artists') },
+      { '@type': 'ListItem', position: 3, name: artist.name, item: absoluteUrl(`/artists/${slug}`) },
     ],
   }
 
@@ -86,7 +87,7 @@ export default async function ArtistPage({ params }: Props) {
     <>
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumb} />
-      <ArtistPageClient />
+      <ArtistPageClient initialArtist={artist} slug={slug} />
     </>
   )
 }

@@ -370,7 +370,7 @@ export interface Event {
     setup_complete: boolean;
     money_payout_enabled: boolean;
     minimum_payout: number;
-    verification_status: string;
+    kyc_status: 'none' | 'partial' | 'pending_review' | 'verified' | 'rejected' | 'expired';
     method?: string | null;
     method_label?: string | null;
     mobile_money_provider?: string | null;

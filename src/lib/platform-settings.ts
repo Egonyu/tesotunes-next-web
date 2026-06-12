@@ -25,6 +25,12 @@ export interface PlatformSettings {
     forums_enabled: boolean;
     polls_enabled: boolean;
     credits_enabled: boolean;
+    podcasts_enabled: boolean;
+    campaigns_enabled: boolean;
+    ojokotau_enabled: boolean;
+    edula_enabled: boolean;
+    promotions_enabled: boolean;
+    sacco_enabled: boolean;
     email_verification_required: boolean;
     artist_approval_required: boolean;
     social_login_enabled: boolean;
@@ -210,7 +216,7 @@ export function normalizeHomepageTheme(value?: string | null): HomepageTheme {
 export const defaultPlatformSettings: PlatformSettings = {
   general: {
     platform_name: "TesoTunes",
-    platform_url: "https://tesotunes.com",
+    platform_url: "https://www.tesotunes.com",
     platform_description: "Your music streaming platform",
     tagline: "Empowering Artists, Connecting Fans",
     support_email: "support@tesotunes.com",
@@ -232,6 +238,12 @@ export const defaultPlatformSettings: PlatformSettings = {
     forums_enabled: false,
     polls_enabled: false,
     credits_enabled: true,
+    podcasts_enabled: false,
+    campaigns_enabled: false,
+    ojokotau_enabled: false,
+    edula_enabled: false,
+    promotions_enabled: false,
+    sacco_enabled: false,
     email_verification_required: true,
     artist_approval_required: false,
     social_login_enabled: false,

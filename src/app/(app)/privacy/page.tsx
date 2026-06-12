@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'TesoTunes Privacy Policy - how we collect, use, and protect your data.',
-  alternates: { canonical: 'https://tesotunes.com/privacy' },
+  alternates: { canonical: absoluteUrl('/privacy') },
 };
 
 export default function PrivacyPolicyPage() {

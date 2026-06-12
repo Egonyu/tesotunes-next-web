@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { serverFetch } from '@/lib/api'
 import { JsonLd } from '@/components/seo/JsonLd'
 import EventDetailPageClient from './EventDetailPageClient'
+import { SITE_URL, absoluteUrl } from "@/lib/site";
 
 interface Props {
   params: Promise<{ id: string }>
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/events/${id}` },
+    alternates: { canonical: absoluteUrl(`/events/${id}`) },
     openGraph: {
       title,
       description,
@@ -63,7 +64,7 @@ export default async function EventPage({ params }: Props) {
     '@type': 'Event',
     name: event.title,
     description: event.description || undefined,
-    url: `https://tesotunes.com/events/${id}`,
+    url: absoluteUrl(`/events/${id}`),
     image: event.cover_image || event.banner_url || undefined,
     startDate: event.starts_at || event.start_date || undefined,
     location: {
@@ -73,7 +74,7 @@ export default async function EventPage({ params }: Props) {
     organizer: {
       '@type': 'Organization',
       name: 'TesoTunes',
-      url: 'https://tesotunes.com',
+      url: SITE_URL,
     },
   }
 
@@ -81,9 +82,9 @@ export default async function EventPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tesotunes.com' },
-      { '@type': 'ListItem', position: 2, name: 'Events', item: 'https://tesotunes.com/events' },
-      { '@type': 'ListItem', position: 3, name: event.title, item: `https://tesotunes.com/events/${id}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Events', item: absoluteUrl('/events') },
+      { '@type': 'ListItem', position: 3, name: event.title, item: absoluteUrl(`/events/${id}`) },
     ],
   }
 

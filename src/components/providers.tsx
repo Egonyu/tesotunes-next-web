@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import { Toaster } from "sonner";
 import { useState, type ReactNode } from "react";
 
@@ -29,18 +30,24 @@ export function Providers({ children, session }: ProvidersProps) {
   );
 
   return (
-    <SessionProvider
-      session={session}
-      refetchInterval={5 * 60}
-      refetchOnWindowFocus={false}
+    <GoogleReCaptchaProvider
+      reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? ""}
+      useEnterprise
+      scriptProps={{ async: true, defer: true }}
     >
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <Toaster richColors position="bottom-right" />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </QueryClientProvider>
-      </ThemeProvider>
-    </SessionProvider>
+      <SessionProvider
+        session={session}
+        refetchInterval={5 * 60}
+        refetchOnWindowFocus={false}
+      >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <QueryClientProvider client={queryClient}>
+            {children}
+            <Toaster richColors position="bottom-right" />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </QueryClientProvider>
+        </ThemeProvider>
+      </SessionProvider>
+    </GoogleReCaptchaProvider>
   );
 }

@@ -113,7 +113,8 @@ interface RealtimeNotificationEvent {
 export function useNotifications(options?: { filter?: 'all' | 'unread'; page?: number }) {
   const filter = options?.filter || 'all';
   const page = options?.page || 1;
-  
+  const { data: session } = useSession();
+
   return useQuery({
     queryKey: ['notifications', { filter, page }],
     queryFn: async () => {
@@ -131,11 +132,14 @@ export function useNotifications(options?: { filter?: 'all' | 'unread'; page?: n
         })),
       };
     },
+    enabled: !!session?.user,
     staleTime: 30 * 1000, // 30 seconds
   });
 }
 
 export function useUnreadCount() {
+  const { data: session } = useSession();
+
   return useQuery({
     queryKey: ['notifications-unread'],
     queryFn: async (): Promise<UnreadCountsResponse> => {
@@ -146,6 +150,7 @@ export function useUnreadCount() {
 
       return response as UnreadCountsResponse;
     },
+    enabled: !!session?.user,
     staleTime: 30 * 1000,
     refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 1 minute
     refetchOnWindowFocus: false,
@@ -153,9 +158,12 @@ export function useUnreadCount() {
 }
 
 export function useNotificationPreferences() {
+  const { data: session } = useSession();
+
   return useQuery({
     queryKey: ['notification-preferences'],
     queryFn: () => apiGet<NotificationPreferencesResponse>('/notifications/settings'),
+    enabled: !!session?.user,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

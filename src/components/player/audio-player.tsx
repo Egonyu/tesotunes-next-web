@@ -3,22 +3,11 @@
 import { useRef, useEffect, useCallback, useMemo } from "react";
 import { usePlayerStore } from "@/stores";
 import { useSettings } from "@/hooks/useSettings";
-import { useMySubscription } from "@/hooks/useSubscriptions";
 import { useRecordPlay, useSavePosition, useResumePosition } from "@/hooks/api";
 import { useSession } from "next-auth/react";
 import { resolvePlayableAudioUrl } from "@/lib/media";
-
-/**
- * Maps subscription audio_quality_kbps to the quality param accepted by
- * the backend stream endpoint.  Free-tier (128 kbps) gets "normal",
- * Premium (320 kbps) gets "very_high", etc.
- */
-function qualityParamFromKbps(kbps: number): string {
-  if (kbps >= 320) return "very_high";
-  if (kbps >= 256) return "high";
-  if (kbps >= 192) return "normal";
-  return "normal"; // free-tier default
-}
+import { attachAudioSource, type AttachedSource } from "@/lib/hls-playback";
+import { useEffectiveQuality, qualityParamFromSlug } from "@/components/player/StreamingQualityPicker";
 
 /** Append or replace the `quality` query-string param on an audio URL. */
 function applyQualityToUrl(url: string, quality: string): string {
@@ -40,6 +29,16 @@ export function AudioPlayer() {
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const crossfadeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCrossfadingRef = useRef(false);
+  // hls.js attachment for the current song (null when playing progressively)
+  const hlsAttachmentRef = useRef<AttachedSource | null>(null);
+
+  // Tear down any hls.js instance when the player unmounts
+  useEffect(() => {
+    return () => {
+      hlsAttachmentRef.current?.destroy();
+      hlsAttachmentRef.current = null;
+    };
+  }, []);
 
   // Play tracking refs — persist across renders without causing re-renders
   const playTrackedRef = useRef(false);
@@ -80,11 +79,13 @@ export function AudioPlayer() {
   const { mutate: savePositionMutate } = useSavePosition();
   const { status: authStatus } = useSession();
 
-  // Subscription-based audio quality enforcement
-  const { data: subscription } = useMySubscription();
+  // Quality = user preference clamped to subscription cap (reads from both settings + subscription).
+  // undefined while loading — audio URLs are not recomputed until both queries settle,
+  // preventing a mid-playback src flip for premium users on first load.
+  const effectiveQualitySlug = useEffectiveQuality();
   const qualityParam = useMemo(
-    () => qualityParamFromKbps(subscription?.limits?.audio_quality_kbps ?? 128),
-    [subscription?.limits?.audio_quality_kbps]
+    () => effectiveQualitySlug ? qualityParamFromSlug(effectiveQualitySlug) : null,
+    [effectiveQualitySlug]
   );
 
   // Fetch saved resume position for the current song (auto-refetches on song change)
@@ -111,6 +112,8 @@ export function AudioPlayer() {
     (song: { audio_url?: string | null; stream_url?: string | null; file_url?: string | null; preview_url?: string | null } | null): string => {
       const raw = resolvePlayableAudioUrl(song);
       if (!raw) return "";
+      // Skip quality param until both settings + subscription have loaded
+      if (!qualityParam) return raw;
       return applyQualityToUrl(raw, qualityParam);
     },
     [qualityParam]
@@ -295,21 +298,29 @@ export function AudioPlayer() {
     }
 
     const resolvedUrl = resolveAudioUrl(currentSong);
-    if (!resolvedUrl) {
+    const hlsUrl = (currentSong as { hls_master_url?: string | null }).hls_master_url ?? null;
+    if (!resolvedUrl && !hlsUrl) {
       setIsLoading(false);
       pause();
       return;
     }
 
-    audioRef.current.src = resolvedUrl;
-    audioRef.current.volume = effectiveVolume;
-    audioRef.current.load();
+    // Adaptive HLS preferred (starts from the first segment, adapts bitrate);
+    // progressive stream_url remains the fallback and the crossfade source.
+    hlsAttachmentRef.current?.destroy();
+    hlsAttachmentRef.current = null;
 
-    if (isPlaying) {
-      audioRef.current.play().catch(() => {
-        pause();
-      });
-    }
+    const audio = audioRef.current;
+    audio.volume = effectiveVolume;
+
+    void attachAudioSource(audio, currentSong, resolvedUrl).then((attachment) => {
+      hlsAttachmentRef.current = attachment;
+      if (isPlaying) {
+        audio.play().catch(() => {
+          pause();
+        });
+      }
+    });
   }, [currentSong?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle seeking

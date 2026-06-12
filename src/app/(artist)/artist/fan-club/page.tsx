@@ -22,6 +22,7 @@ import {
   useCreateArtistLoyaltyClub,
   useArtistLoyaltyMembers,
   useArtistLoyaltyRewards,
+  useArtistClubAnalytics,
   type LoyaltyClub,
 } from '@/hooks/useLoyalty';
 
@@ -31,10 +32,11 @@ export default function ArtistFanClubPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newClub, setNewClub] = useState({ name: '', description: '' });
 
-  // Only fetch members/rewards if club exists
+  // Only fetch members/rewards/analytics if club exists (hooks already guard with enabled: !!clubId)
   const clubId = fanClub?.id || 0;
   const { data: membersData } = useArtistLoyaltyMembers(clubId, { page: 1 });
   const { data: rewardsData } = useArtistLoyaltyRewards(clubId);
+  const { data: analytics } = useArtistClubAnalytics(clubId);
 
   const members = membersData?.data || [];
   const rewards = rewardsData || [];
@@ -84,7 +86,7 @@ export default function ArtistFanClubPage() {
   if (!fanClub && !showCreate) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12 space-y-6">
-        <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+        <div className="h-20 w-20 mx-auto rounded-2xl bg-linear-to-br from-primary to-purple-600 flex items-center justify-center">
           <Crown className="h-10 w-10 text-white" />
         </div>
         <div>
@@ -186,7 +188,7 @@ export default function ArtistFanClubPage() {
                 className="h-20 w-20 rounded-xl object-cover"
               />
             ) : (
-              <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+              <div className="h-20 w-20 rounded-xl bg-linear-to-br from-primary to-purple-600 flex items-center justify-center">
                 <Crown className="h-10 w-10 text-white" />
               </div>
             )}
@@ -249,14 +251,18 @@ export default function ArtistFanClubPage() {
             <Star className="h-5 w-5 text-amber-500" />
             <span className="text-sm text-muted-foreground">Points Distributed</span>
           </div>
-          <p className="text-3xl font-bold">—</p>
+          <p className="text-3xl font-bold">
+            {analytics ? analytics.total_points_distributed.toLocaleString() : '—'}
+          </p>
         </div>
         <div className="p-5 rounded-xl border bg-card">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="h-5 w-5 text-green-500" />
             <span className="text-sm text-muted-foreground">Growth</span>
           </div>
-          <p className="text-3xl font-bold">—</p>
+          <p className="text-3xl font-bold">
+            {analytics != null ? `${analytics.growth_rate > 0 ? '+' : ''}${analytics.growth_rate}%` : '—'}
+          </p>
         </div>
       </div>
 

@@ -65,6 +65,7 @@ export function FeedItemCard({
   const cardSize = getFeedCardSize(item);
   const moduleStyle = MODULE_STYLES[item.module] ?? MODULE_STYLES.platform;
   const ModuleIcon = MODULE_ICONS[item.module] ?? Megaphone;
+  const isSponsored = item.feed_type === 'sponsored' || Boolean(item.is_sponsored);
 
   return (
     <article
@@ -75,6 +76,15 @@ export function FeedItemCard({
         cardSize !== 'compact' && 'p-4'
       )}
     >
+      {/* Sponsored disclosure — always visible, never disguised */}
+      {isSponsored && (
+        <div className="mb-3 -mx-4 -mt-4 px-4 py-1.5 bg-muted/60 border-b">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Sponsored
+          </span>
+        </div>
+      )}
+
       {/* Celebration banner (hero cards) */}
       {item.has_celebration && (
         <div className="mb-3 -mx-4 -mt-4 px-4 py-2 bg-linear-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border-b flex items-center gap-2">

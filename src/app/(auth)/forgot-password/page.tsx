@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Mail, CheckCircle } from 'lucide-react';
-import { apiPost } from '@/lib/api';
+import { apiPost, isApiError } from '@/lib/api';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 export default function ForgotPasswordPage() {
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -17,10 +19,15 @@ export default function ForgotPasswordPage() {
     setError('');
 
     try {
-      await apiPost('/auth/forgot-password', { email });
+      const recaptcha_token = await executeRecaptcha?.("forgot_password") ?? "";
+      await apiPost('/auth/forgot-password', { email, recaptcha_token });
       setIsSent(true);
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (error) {
+      if (isApiError(error) && error.response?.data?.message) {
+        setError(error.response.data.message as string);
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

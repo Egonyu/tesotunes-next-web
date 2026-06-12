@@ -2,7 +2,14 @@ const mockSignIn = jest.fn();
 
 jest.mock("next-auth/react", () => ({
   signIn: mockSignIn,
+  getProviders: jest.fn().mockResolvedValue(null),
   SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock("react-google-recaptcha-v3", () => ({
+  useGoogleReCaptcha: () => ({
+    executeRecaptcha: jest.fn().mockResolvedValue("test-recaptcha-token"),
+  }),
 }));
 
 const mockPush = jest.fn();
@@ -69,6 +76,7 @@ describe("LoginPage", () => {
         email: "benson@gmail.com",
         password: "Ben./12!",
         remember_me: true,
+        recaptcha_token: "test-recaptcha-token",
         redirect: false,
         callbackUrl: "/",
       });

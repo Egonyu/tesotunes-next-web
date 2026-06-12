@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins } from "lucide-react";
+import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins, Wallet } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { signOut, useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +12,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
 function formatRoleLabel(role: string | undefined): string {
   if (!role) return "Listener";
@@ -43,6 +45,10 @@ export function Header() {
   const isArtistByRole = userRole.toLowerCase().includes("artist");
   const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
   const hasArtistAccess = isArtistByRole || isArtistByStatus;
+
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.total ?? 0;
+
   const sessionImage = pickMediaUrl(
     session?.user?.image,
     (session?.user as { avatar_url?: string } | undefined)?.avatar_url
@@ -71,12 +77,6 @@ export function Header() {
           <span className="hidden md:inline">Search songs, artists, albums...</span>
         </Link>
 
-        <Link
-          href="/claim-artist"
-          className="hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
-        >
-          Claim Artist
-        </Link>
       </div>
 
       {/* Right Section */}
@@ -87,10 +87,7 @@ export function Header() {
         {session?.user ? (
           <>
             {/* Notifications */}
-            <Link href="/notifications" className="relative rounded-full p-2 hover:bg-muted">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-            </Link>
+            <NotificationBell />
 
             {/* User Menu */}
             <DropdownMenu
@@ -157,9 +154,11 @@ export function Header() {
                 >
                   <Bell className="h-4 w-4 text-muted-foreground" />
                   <span className="flex-1 text-left">Notifications</span>
-                  <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-                    1
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
@@ -176,22 +175,29 @@ export function Header() {
                   <span>History</span>
                 </DropdownMenuItem>
                 {!hasArtistAccess && (
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    onClick={() => router.push("/wallet")}
-                  >
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span>Wallet</span>
-                  </DropdownMenuItem>
-                )}
-                {!hasArtistAccess && (
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    onClick={() => router.push("/credits")}
-                  >
-                    <Coins className="h-4 w-4 text-muted-foreground" />
-                    <span>Credits</span>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/wallet")}
+                    >
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      <span>Wallet</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/credits")}
+                    >
+                      <Coins className="h-4 w-4 text-muted-foreground" />
+                      <span>Credits</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      onClick={() => router.push("/profile")}
+                    >
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
@@ -207,13 +213,15 @@ export function Header() {
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  onClick={() => router.push("/claim-artist")}
-                >
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <span>Claim Artist Profile</span>
-                </DropdownMenuItem>
+                {!hasArtistAccess && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/claim-artist")}
+                  >
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <span>Claim Artist Profile</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuSeparator className="my-2" />
 

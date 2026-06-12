@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   User,
   Bell,
@@ -13,15 +13,37 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useArtistProfile, useUpdateArtistProfile } from '@/hooks/useArtist';
+import { useArtistProfile, useUpdateArtistProfile, useUpdateArtistAvatar } from '@/hooks/useArtist';
 import { toast } from 'sonner';
 import { pickMediaUrl } from '@/lib/media';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
+import TwoFactorManager from '@/components/security/TwoFactorManager';
+import { useMutation } from '@tanstack/react-query';
+import { apiPost } from '@/lib/api';
 
 export default function ArtistSettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const { data: profile, isLoading, error } = useArtistProfile();
   const updateProfile = useUpdateArtistProfile();
+  const updateAvatar = useUpdateArtistAvatar();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Photo must be less than 5MB');
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
 
   const [formData, setFormData] = useState({
     stage_name: '',
@@ -38,6 +60,9 @@ export default function ArtistSettingsPage() {
     tiktok: '',
     payout_phone_number: '',
     auto_publish: false,
+    career_start_year: '',
+    record_label: '',
+    influences_text: '',
   });
 
   // Populate form when profile loads
@@ -59,14 +84,19 @@ export default function ArtistSettingsPage() {
         tiktok: socialLinks.tiktok || '',
         payout_phone_number: profile.payout_phone_number || '',
         auto_publish: profile.auto_publish || false,
+        career_start_year: profile.career_start_year ? String(profile.career_start_year) : '',
+        record_label: profile.record_label || '',
+        influences_text: (profile.influences ?? []).join('\n'),
       });
     }
   }, [profile]);
 
   const handleSave = async () => {
     try {
-      // Note: country/city are NOT in backend validation or Artist $fillable.
-      // Only send fields the backend accepts.
+      if (avatarFile) {
+        await updateAvatar.mutateAsync(avatarFile);
+        setAvatarFile(null);
+      }
       await updateProfile.mutateAsync({
         stage_name: formData.stage_name,
         bio: formData.bio,
@@ -82,6 +112,12 @@ export default function ArtistSettingsPage() {
         },
         payout_phone_number: formData.payout_phone_number,
         auto_publish: formData.auto_publish,
+        career_start_year: formData.career_start_year ? Number(formData.career_start_year) : null,
+        record_label: formData.record_label || null,
+        influences: formData.influences_text
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
       });
       toast.success('Settings saved successfully');
     } catch {
@@ -161,8 +197,18 @@ export default function ArtistSettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-6">
                 <div className="relative">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                    {pickMediaUrl(profile?.avatar) ? (
+                    {avatarPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : pickMediaUrl(profile?.avatar) ? (
                       <SafeImage
                         src={pickMediaUrl(profile?.avatar)}
                         alt="Avatar"
@@ -175,13 +221,20 @@ export default function ArtistSettingsPage() {
                       <InitialsAvatar name={profile?.stage_name || 'Artist'} textClassName="text-2xl" />
                     )}
                   </div>
-                  <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
+                  >
                     <Camera className="h-4 w-4" />
                   </button>
                 </div>
                 <div>
                   <p className="font-medium">Profile Photo</p>
-                  <p className="text-sm text-muted-foreground">JPG, PNG. Max 2MB</p>
+                  <p className="text-sm text-muted-foreground">JPG, PNG or WebP · Max 5MB</p>
+                  {avatarFile && (
+                    <p className="text-xs text-primary mt-1">New photo selected — save to apply</p>
+                  )}
                 </div>
               </div>
 
@@ -229,6 +282,43 @@ export default function ArtistSettingsPage() {
                   <p className="px-4 py-2 text-muted-foreground">{formData.city || '—'}</p>
                   <p className="text-xs text-muted-foreground">Managed via account settings</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Career Start Year</label>
+                  <input
+                    type="number"
+                    min={1900}
+                    max={new Date().getFullYear()}
+                    value={formData.career_start_year}
+                    onChange={(e) => setFormData({ ...formData, career_start_year: e.target.value })}
+                    placeholder="e.g. 2015"
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Record Label</label>
+                  <input
+                    type="text"
+                    value={formData.record_label}
+                    onChange={(e) => setFormData({ ...formData, record_label: e.target.value })}
+                    placeholder="Independent / Label name"
+                    className="w-full px-4 py-2 border rounded-lg bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Influences</label>
+                <textarea
+                  rows={3}
+                  value={formData.influences_text}
+                  onChange={(e) => setFormData({ ...formData, influences_text: e.target.value })}
+                  placeholder="One artist per line, e.g. Fela Kuti"
+                  className="w-full px-4 py-2 border rounded-lg bg-background resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-1">One name per line</p>
               </div>
 
               {/* Social Links */}
@@ -380,6 +470,25 @@ export default function ArtistSettingsPage() {
                   )} />
                 </button>
               </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Upload permissions (admin-managed)</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Can upload music</p>
+                  <span className={cn(
+                    'text-xs font-semibold px-2.5 py-1 rounded-full',
+                    profile?.can_upload ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
+                  )}>
+                    {profile?.can_upload ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                {profile?.monthly_upload_limit != null && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Monthly upload limit</p>
+                    <span className="text-sm text-muted-foreground">{profile.monthly_upload_limit} songs / month</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -388,43 +497,9 @@ export default function ArtistSettingsPage() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Security Settings</h2>
 
-              <div>
-                <h3 className="font-medium mb-4">Change Password</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Current Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">New Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border rounded-lg bg-background"
-                    />
-                  </div>
-                  <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
-                    Update Password
-                  </button>
-                </div>
-              </div>
+              <ArtistPasswordChangeForm />
 
-              <div className="flex items-center justify-between py-4 border-b">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                </div>
-                <button className="px-4 py-2 border rounded-lg hover:bg-muted">Enable</button>
-              </div>
+              <TwoFactorManager />
             </div>
           )}
 
@@ -462,7 +537,7 @@ export default function ArtistSettingsPage() {
           <div className="flex justify-end mt-8 pt-6 border-t">
             <button
               onClick={handleSave}
-              disabled={updateProfile.isPending}
+              disabled={updateProfile.isPending || updateAvatar.isPending}
               className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               {updateProfile.isPending ? (
@@ -475,6 +550,72 @@ export default function ArtistSettingsPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ArtistPasswordChangeForm() {
+  const [current, setCurrent] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirm, setConfirm] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (data: { current_password: string; password: string; password_confirmation: string }) =>
+      apiPost('/settings/password', data),
+    onSuccess: () => {
+      toast.success('Password updated successfully');
+      setCurrent('');
+      setNewPass('');
+      setConfirm('');
+    },
+    onError: () => toast.error('Failed to update password. Check your current password.'),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPass !== confirm) { toast.error('Passwords do not match'); return; }
+    if (newPass.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    mutation.mutate({ current_password: current, password: newPass, password_confirmation: confirm });
+  };
+
+  return (
+    <div className="rounded-xl border bg-card p-6">
+      <h3 className="font-medium mb-4">Change Password</h3>
+      <form onSubmit={handleSubmit} className="space-y-3 max-w-sm">
+        <input
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Current password"
+          required
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <input
+          type="password"
+          value={newPass}
+          onChange={(e) => setNewPass(e.target.value)}
+          placeholder="New password"
+          required
+          minLength={8}
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <input
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Confirm new password"
+          required
+          minLength={8}
+          className="w-full px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          type="submit"
+          disabled={mutation.isPending || !current || !newPass || !confirm}
+          className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
+        </button>
+      </form>
     </div>
   );
 }

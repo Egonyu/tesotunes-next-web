@@ -131,6 +131,13 @@ export interface MonthlyEarning {
   amount: number;
 }
 
+export interface PayoutLimits {
+  min_amount: number;
+  max_single: number;
+  max_daily: number;
+  fee_rates: { mobile_money: number; bank_transfer: number; paypal: number };
+}
+
 export interface EarningsData {
   stats: EarningsStats;
   earnings_sources: EarningsSource[];
@@ -138,6 +145,7 @@ export interface EarningsData {
   monthly_chart?: MonthlyEarning[];
   monthly_trends?: MonthlyEarning[];
   per_song_earnings?: PerSongEarnings[];
+  payout_limits?: PayoutLimits;
 }
 
 export interface PerSongEarnings {
@@ -183,11 +191,17 @@ export interface ArtistProfile {
   city: string | null;
   website_url: string | null;
   social_links: Record<string, string> | null;
-  is_verified: boolean;
-  verification_status: string;
+  // 3-axis verification model — see tesotunes-api/docs/architecture/kyc-3-axis-model.md
+  is_verified: boolean;                                          // axis 3: featured/blue-check badge
+  status?: 'pending' | 'approved' | 'rejected' | 'suspended';    // axis 2: artist application
+  kyc_status?: 'none' | 'partial' | 'pending_review' | 'verified' | 'rejected' | 'expired'; // axis 1: identity
   payout_phone_number: string | null;
   can_upload: boolean;
+  monthly_upload_limit: number | null;
   auto_publish: boolean;
+  career_start_year: number | null;
+  record_label: string | null;
+  influences: string[];
 }
 
 // ============================================================================
@@ -274,6 +288,25 @@ export function useArtistEarnings() {
   });
 }
 
+export interface TransactionsResponse {
+  data: Transaction[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export function useArtistTransactions(params?: { page?: number; per_page?: number; type?: string }) {
+  return useQuery({
+    queryKey: ['artist', 'transactions', params],
+    queryFn: () =>
+      apiGet<TransactionsResponse>('/artist/earnings/history', { params }),
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useRequestWithdrawal() {
   const queryClient = useQueryClient();
 
@@ -286,6 +319,34 @@ export function useRequestWithdrawal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist", "earnings"] });
     },
+  });
+}
+
+export interface ArtistPayout {
+  id: number;
+  transaction_id: string;
+  amount: number;
+  fee_amount: number;
+  net_amount: number;
+  currency: string;
+  status: 'pending' | 'approved' | 'processing' | 'completed' | 'failed' | 'rejected' | 'cancelled';
+  payout_method: string;
+  failure_reason: string | null;
+  notes: string | null;
+  approved_at: string | null;
+  processing_started_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
+  created_at: string;
+}
+
+export function usePayoutHistory(params?: { status?: string; start_date?: string; end_date?: string }) {
+  return useQuery({
+    queryKey: ['artist', 'payouts', params],
+    queryFn: () =>
+      apiGet<{ success: boolean; data: ArtistPayout[] }>('/artist/earnings/payouts', { params })
+        .then(res => res.data),
+    staleTime: 30 * 1000,
   });
 }
 
@@ -470,7 +531,6 @@ export function useUpdateArtistAvatar() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("avatar", file);
-      formData.append("profile_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/avatar",
         formData
@@ -490,7 +550,6 @@ export function useUpdateArtistBanner() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("banner", file);
-      formData.append("cover_image", file);
       return apiPostForm<{ success: boolean; message: string; data?: { url: string } }>(
         "/artist/profile/banner",
         formData
@@ -1304,7 +1363,7 @@ export function useGeneratePromoMaterial() {
 
 export function useTrackArtistShare() {
   return useMutation({
-    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr') =>
+    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'telegram' | 'sms' | 'email' | 'copy' | 'qr') =>
       apiPost("/artist/referrals/share", { platform }),
   });
 }

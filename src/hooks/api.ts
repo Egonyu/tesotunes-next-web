@@ -138,7 +138,7 @@ export function useMyCatalogClaims() {
   });
 }
 
-export function useArtist(idOrSlug: string | number) {
+export function useArtist(idOrSlug: string | number, options?: { initialData?: Artist }) {
   return useQuery({
     queryKey: ["artist", idOrSlug],
     queryFn: async () => {
@@ -146,6 +146,9 @@ export function useArtist(idOrSlug: string | number) {
       return res.data;
     },
     enabled: !!idOrSlug,
+    // Seed with server-fetched data so the artist page renders real content
+    // during SSR (fixes Google "soft 404" on client-only rendering).
+    initialData: options?.initialData,
   });
 }
 
@@ -478,7 +481,15 @@ export function useSearch(query: string, type?: "songs" | "artists" | "albums" |
 export function useLikedSongs(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: ["library", "liked", params],
-    queryFn: () => apiGet<PaginatedResponse<Song>>("/library/songs", { params }),
+    queryFn: async () => {
+      const res = await apiGet<{ data: { liked_songs: Song[] } }>("/user/library");
+      const songs = res.data?.liked_songs ?? [];
+      const limit = params?.limit ?? songs.length;
+      return {
+        data: songs.slice(0, limit),
+        meta: { total: songs.length, current_page: 1, last_page: 1 },
+      } as PaginatedResponse<Song>;
+    },
   });
 }
 
@@ -518,61 +529,38 @@ export function useFollowedArtists() {
   return useQuery({
     queryKey: ["library", "artists"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Artist[] }>("/library/artists");
-      return res.data;
+      const res = await apiGet<{ data: { followed_artists: Artist[] } }>("/user/library");
+      return res.data?.followed_artists ?? [];
     },
   });
 }
 
 // Combined library hook for all user data
 export function useLibrary() {
-  const playlistsQuery = useQuery({
-    queryKey: ["library", "playlists"],
+  const libraryQuery = useQuery({
+    queryKey: ["user-library"],
     queryFn: async () => {
-      const res = await apiGet<{ data: Playlist[] }>("/playlists/mine");
+      const res = await apiGet<{
+        data: {
+          liked_songs: Song[];
+          playlists: Playlist[];
+          followed_artists: Artist[];
+          downloads: Song[];
+        };
+      }>("/user/library");
       return res.data;
     },
   });
 
-  const likedSongsQuery = useQuery({
-    queryKey: ["library", "liked-songs"],
-    queryFn: async () => {
-      const res = await apiGet<{ data: Song[] }>("/library/songs");
-      return res.data;
-    },
-  });
-
-  const savedAlbumsQuery = useQuery({
-    queryKey: ["library", "saved-albums"],
-    queryFn: async () => {
-      const res = await apiGet<{ data: Album[] }>("/library/albums");
-      return res.data;
-    },
-  });
-
-  const followedArtistsQuery = useQuery({
-    queryKey: ["library", "followed-artists"],
-    queryFn: async () => {
-      const res = await apiGet<{ data: Artist[] }>("/library/artists");
-      return res.data;
-    },
-  });
+  const data = libraryQuery.data;
 
   return {
-    playlists: playlistsQuery.data || [],
-    likedSongs: likedSongsQuery.data || [],
-    savedAlbums: savedAlbumsQuery.data || [],
-    followedArtists: followedArtistsQuery.data || [],
-    isLoading:
-      playlistsQuery.isLoading ||
-      likedSongsQuery.isLoading ||
-      savedAlbumsQuery.isLoading ||
-      followedArtistsQuery.isLoading,
-    error:
-      playlistsQuery.error ||
-      likedSongsQuery.error ||
-      savedAlbumsQuery.error ||
-      followedArtistsQuery.error,
+    playlists: data?.playlists ?? [],
+    likedSongs: data?.liked_songs ?? [],
+    savedAlbums: [] as Album[], // not yet supported by backend
+    followedArtists: data?.followed_artists ?? [],
+    isLoading: libraryQuery.isLoading,
+    error: libraryQuery.error,
   };
 }
 
@@ -641,7 +629,7 @@ export function useCheckPurchase(songId: number) {
   return useQuery({
     queryKey: ["song", "purchase", songId],
     queryFn: () =>
-      apiGet<{ data: { purchased: boolean } }>(`/v1/songs/${songId}/purchase-status`).then(
+      apiGet<{ data: { purchased: boolean } }>(`/songs/${songId}/purchase-status`).then(
         (res) => res.data.purchased
       ),
     enabled: songId > 0,
@@ -654,7 +642,7 @@ export function usePurchaseSong() {
 
   return useMutation({
     mutationFn: ({ songId, payload }: { songId: number; payload?: PurchaseSongPayload }) =>
-      apiPost<PurchaseResponse>(`/v1/songs/${songId}/purchase`, payload),
+      apiPost<PurchaseResponse>(`/songs/${songId}/purchase`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["song", "purchase", variables.songId] });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
@@ -667,7 +655,7 @@ export function usePurchaseSong() {
 export function useSongPurchasePaymentStatus(songId: number, reference: string | null, options?: { enabled?: boolean; refetchInterval?: number }) {
   return useQuery({
     queryKey: ['song', 'purchase', 'payment-status', songId, reference],
-    queryFn: () => apiGet<SongPurchasePaymentStatusResponse>(`/v1/songs/${songId}/purchase/payment-status/${reference}`),
+    queryFn: () => apiGet<SongPurchasePaymentStatusResponse>(`/songs/${songId}/purchase/payment-status/${reference}`),
     enabled: songId > 0 && !!reference && (options?.enabled !== false),
     refetchInterval: options?.refetchInterval ?? 3000,
     refetchIntervalInBackground: false,

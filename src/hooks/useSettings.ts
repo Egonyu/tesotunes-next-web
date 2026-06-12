@@ -119,6 +119,58 @@ export function useUpdateAllSettings() {
 }
 
 // ============================================================================
+// Update Audio Quality — optimistic so the player reacts immediately
+// ============================================================================
+
+export function useUpdateAudioQuality() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (quality: AudioSettings['quality_wifi']) =>
+      apiPut<{ message: string }>("/settings", { audio: { quality_wifi: quality, quality_mobile: quality } }),
+    onMutate: async (quality) => {
+      await queryClient.cancelQueries({ queryKey: ['settings'] });
+      const prev = queryClient.getQueryData<AllSettings>(['settings']);
+      if (prev) {
+        queryClient.setQueryData<AllSettings>(['settings'], {
+          ...prev,
+          audio: { ...prev.audio, quality_wifi: quality, quality_mobile: quality },
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _quality, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['settings'], ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+}
+
+// ============================================================================
+// Quality utility: map quality slug to kbps and back
+// ============================================================================
+
+export const QUALITY_LEVELS: { slug: AudioSettings['quality_wifi']; label: string; kbps: number }[] = [
+  { slug: 'low',       label: 'Low',       kbps: 64  },
+  { slug: 'normal',    label: 'Normal',    kbps: 128 },
+  { slug: 'high',      label: 'High',      kbps: 256 },
+  { slug: 'very_high', label: 'Very High', kbps: 320 },
+];
+
+export function qualitySlugToKbps(slug: AudioSettings['quality_wifi']): number {
+  return QUALITY_LEVELS.find((q) => q.slug === slug)?.kbps ?? 128;
+}
+
+export function kbpsToQualitySlug(kbps: number): AudioSettings['quality_wifi'] {
+  if (kbps >= 320) return 'very_high';
+  if (kbps >= 256) return 'high';
+  if (kbps >= 128) return 'normal';
+  return 'low';
+}
+
+// ============================================================================
 // Individual Section Update Hooks
 // ============================================================================
 

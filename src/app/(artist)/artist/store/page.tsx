@@ -572,7 +572,6 @@ export default function ArtistStorePage() {
                 <option value="digital">Digital</option>
                 <option value="service">Service</option>
                 <option value="experience">Experience</option>
-                <option value="promotion">Promotion</option>
               </select>
             </label>
             <label className="block text-sm">

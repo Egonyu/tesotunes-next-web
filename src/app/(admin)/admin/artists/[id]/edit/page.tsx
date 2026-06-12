@@ -15,7 +15,7 @@ type Artist = {
   slug: string;
   bio: string | null;
   website: string | null;
-  status: 'active' | 'pending' | 'suspended' | 'rejected';
+  status: 'active' | 'approved' | 'pending' | 'suspended' | 'rejected';
   is_verified: boolean;
   profile_url: string | null;
   avatar_url: string | null;
@@ -44,7 +44,7 @@ type ArtistFormData = {
   slug: string;
   bio: string;
   website: string;
-  status: Artist['status'];
+  status: 'approved' | 'pending' | 'suspended' | 'rejected';
   is_verified: boolean;
   genre_id: string;
   spotify_url: string;
@@ -114,7 +114,7 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
     slug: '',
     bio: '',
     website: '',
-    status: 'active',
+    status: 'approved',
     is_verified: false,
     genre_id: '',
     spotify_url: '',
@@ -150,7 +150,9 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
       slug: artist.slug || '',
       bio: artist.bio || '',
       website: artist.website || '',
-      status: artist.status || 'active',
+      // Normalise legacy 'active' value returned by older API records to the
+      // canonical 'approved' used by ArtistStatus enum and the edit form.
+      status: (artist.status === 'active' ? 'approved' : artist.status) || 'approved',
       is_verified: !!artist.is_verified,
       genre_id: artist.genres?.[0]?.id || '',
       spotify_url: artist.spotify_url || '',
@@ -464,10 +466,10 @@ export default function EditArtistPage({ params }: { params: Promise<{ id: strin
                 <FormField label="Status" error={errors.status}>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as Artist['status'] }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as ArtistFormData['status'] }))}
                     className="w-full rounded-lg border px-4 py-2 bg-background"
                   >
-                    <option value="active">Active</option>
+                    <option value="approved">Active (Approved)</option>
                     <option value="pending">Pending</option>
                     <option value="suspended">Suspended</option>
                     <option value="rejected">Rejected</option>

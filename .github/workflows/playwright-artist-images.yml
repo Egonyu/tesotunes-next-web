@@ -19,6 +19,10 @@ jobs:
       # touches the production database.
       NEXT_PUBLIC_API_URL: https://api.tesotunes.com/api
       API_URL: https://api.tesotunes.com/api
+      # Public site key — safe to inline (already in .env.example).
+      # Required so the reCAPTCHA widget loads in Playwright; without it
+      # executeRecaptcha returns "" and the production API rejects login.
+      NEXT_PUBLIC_RECAPTCHA_SITE_KEY: 6LcmpOssAAAAAIWXAIy5tkDUQHalpMPbsT1XQt2z
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
@@ -50,11 +54,20 @@ jobs:
       # Runs auth.setup.ts once and saves the session to .playwright/auth/admin.json.
       # All subsequent Playwright projects reuse that saved session, so the login
       # endpoint is only called ONE time per CI run — no more rate-limit 429s.
+      #
+      # If the admin account has 2FA enabled, set the E2E_TOTP_SECRET secret to
+      # the base32 TOTP secret from the authenticator app (the "manual key" shown
+      # during 2FA setup).  auth.setup.ts will generate the TOTP code inline so CI
+      # can complete the challenge without a human.
+      - name: Create auth state directory
+        run: mkdir -p .playwright/auth
+
       - name: Authenticate (setup project)
         env:
           BASE_URL: http://127.0.0.1:3000
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_TOTP_SECRET: ${{ secrets.E2E_TOTP_SECRET }}
         run: |
           npx playwright test --project=setup --workers=1
         # If credentials are not set the setup project will throw a clear error.
@@ -71,7 +84,8 @@ jobs:
         run: |
           npx playwright test e2e/admin-artist-image-update.spec.ts \
             --project=chromium \
-            --workers=1
+            --workers=1 \
+            --no-deps
 
       - name: Upload Playwright report
         if: always()

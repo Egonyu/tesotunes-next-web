@@ -7,10 +7,18 @@ import { Play, Music, Shuffle, ChevronRight } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Genre, Song, Artist, Album, PaginatedResponse } from "@/types";
 import { formatDuration, formatNumber, formatResolvedDuration } from "@/lib/utils";
+import { absoluteUrl } from "@/lib/site";
 
 interface GenrePageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const revalidate = 300;
+
+type GenreWithImage = Genre & {
+  artwork_url?: string;
+  image_url?: string;
+};
 
 async function getGenre(slug: string): Promise<Genre | null> {
   try {
@@ -51,32 +59,25 @@ async function getGenreAlbums(genreId: number, limit = 10) {
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const res = await serverFetch<{ data: { slug: string }[] }>('/genres?limit=100')
-    return (res.data || []).map((g) => ({ slug: g.slug }))
-  } catch {
-    return []
-  }
-}
-
 export async function generateMetadata({ params }: GenrePageProps): Promise<Metadata> {
   const { slug } = await params;
   const genre = await getGenre(slug);
 
   if (!genre) return { title: 'Genre Not Found' };
 
+  const genreImage = (genre as GenreWithImage).artwork_url || (genre as GenreWithImage).image_url;
   const title = `${genre.name} Music`;
   const description = `Explore ${genre.name} music on TesoTunes — stream top songs, artists, and albums.`;
 
   return {
     title,
     description,
-    alternates: { canonical: `https://tesotunes.com/genres/${slug}` },
+    robots: { index: true, follow: true },
+    alternates: { canonical: absoluteUrl(`/genres/${slug}`) },
     openGraph: {
       title,
       description,
-      images: genre.image_url ? [{ url: genre.image_url }] : undefined,
+      images: genreImage ? [{ url: genreImage }] : undefined,
     },
     twitter: { title, description },
   };
@@ -95,6 +96,7 @@ export default async function GenrePage({ params }: GenrePageProps) {
     getGenreArtists(genre.id),
     getGenreAlbums(genre.id),
   ]);
+  const genreImage = (genre as GenreWithImage).artwork_url || (genre as GenreWithImage).image_url;
 
   const songs = songsData.data || [];
   const artists = artistsData.data || [];
@@ -106,9 +108,9 @@ export default async function GenrePage({ params }: GenrePageProps) {
       <div className="relative h-64 md:h-80">
         {/* Background */}
         <div className="absolute inset-0 bg-linear-to-br from-primary via-primary/80 to-primary/60">
-          {genre.image_url && (
+          {genreImage && (
             <Image
-              src={genre.image_url}
+              src={genreImage}
               alt={genre.name}
               fill
               className="object-cover opacity-30"

@@ -67,7 +67,19 @@ setup('authenticate as admin', async ({ page }) => {
     .then(() => 'two_fa' as const)
     .catch(() => 'timeout' as const);
 
-  const outcome = await Promise.race([navigatedAway, twoFaVisible]);
+  // Also watch for an inline error message so CI gets a useful failure reason
+  // rather than a generic "credentials" timeout when the API rejects the login.
+  const loginError = page.locator('[class*="destructive"], [role="alert"]').first();
+  const errorVisible = loginError.waitFor({ state: 'visible', timeout: 15000 })
+    .then(() => 'error' as const)
+    .catch(() => 'timeout' as const);
+
+  const outcome = await Promise.race([navigatedAway, twoFaVisible, errorVisible]);
+
+  if (outcome === 'error') {
+    const msg = await loginError.textContent().catch(() => '(could not read error)');
+    throw new Error(`Login failed with error: ${msg?.trim()}`);
+  }
 
   if (outcome === 'two_fa') {
     if (!TOTP_SECRET) {

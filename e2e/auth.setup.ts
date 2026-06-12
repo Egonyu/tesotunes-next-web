@@ -69,7 +69,9 @@ setup('authenticate as admin', async ({ page }) => {
 
   // Also watch for an inline error message so CI gets a useful failure reason
   // rather than a generic "credentials" timeout when the API rejects the login.
-  const loginError = page.locator('[class*="destructive"], [role="alert"]').first();
+  // Filter to elements that actually contain text so we don't false-positive on
+  // empty ARIA live regions that are always present on the page.
+  const loginError = page.locator('[class*="destructive"], [role="alert"]').filter({ hasText: /\S/ }).first();
   const errorVisible = loginError.waitFor({ state: 'visible', timeout: 15000 })
     .then(() => 'error' as const)
     .catch(() => 'timeout' as const);

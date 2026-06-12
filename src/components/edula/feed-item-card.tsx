@@ -65,9 +65,7 @@ export function FeedItemCard({
   const cardSize = getFeedCardSize(item);
   const moduleStyle = MODULE_STYLES[item.module] ?? MODULE_STYLES.platform;
   const ModuleIcon = MODULE_ICONS[item.module] ?? Megaphone;
-  const isSponsored =
-    item.feed_type === 'sponsored' ||
-    Boolean((item as { is_sponsored?: boolean }).is_sponsored);
+  const isSponsored = item.feed_type === 'sponsored' || Boolean(item.is_sponsored);
 
   return (
     <article

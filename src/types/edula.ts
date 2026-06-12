@@ -77,9 +77,12 @@ export interface FeedItem {
   has_celebration: boolean;
   is_aggregated: boolean;
   aggregation_count: number;
-  source: 'post' | 'feed_item';
+  source: 'post' | 'feed_item' | 'sponsored';
   published_at: string;
   expires_at: string | null;
+  // Sponsored slot variant (SponsoredSlotsService injects these)
+  feed_type?: 'sponsored';
+  is_sponsored?: boolean;
   // Legacy compat fields (from FeedController transform)
   description?: string;
   image?: string;

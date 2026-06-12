@@ -39,6 +39,7 @@ export interface Song {
   status: SongStatus;
   audio_url?: string | null;
   stream_url?: string | null;
+  hls_master_url?: string | null;
   file_url?: string;
   preview_url?: string | null;
   artwork_url?: string | null;

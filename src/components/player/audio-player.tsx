@@ -6,6 +6,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useRecordPlay, useSavePosition, useResumePosition } from "@/hooks/api";
 import { useSession } from "next-auth/react";
 import { resolvePlayableAudioUrl } from "@/lib/media";
+import { attachAudioSource, type AttachedSource } from "@/lib/hls-playback";
 import { useEffectiveQuality, qualityParamFromSlug } from "@/components/player/StreamingQualityPicker";
 
 /** Append or replace the `quality` query-string param on an audio URL. */
@@ -28,6 +29,16 @@ export function AudioPlayer() {
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const crossfadeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCrossfadingRef = useRef(false);
+  // hls.js attachment for the current song (null when playing progressively)
+  const hlsAttachmentRef = useRef<AttachedSource | null>(null);
+
+  // Tear down any hls.js instance when the player unmounts
+  useEffect(() => {
+    return () => {
+      hlsAttachmentRef.current?.destroy();
+      hlsAttachmentRef.current = null;
+    };
+  }, []);
 
   // Play tracking refs — persist across renders without causing re-renders
   const playTrackedRef = useRef(false);
@@ -287,21 +298,29 @@ export function AudioPlayer() {
     }
 
     const resolvedUrl = resolveAudioUrl(currentSong);
-    if (!resolvedUrl) {
+    const hlsUrl = (currentSong as { hls_master_url?: string | null }).hls_master_url ?? null;
+    if (!resolvedUrl && !hlsUrl) {
       setIsLoading(false);
       pause();
       return;
     }
 
-    audioRef.current.src = resolvedUrl;
-    audioRef.current.volume = effectiveVolume;
-    audioRef.current.load();
+    // Adaptive HLS preferred (starts from the first segment, adapts bitrate);
+    // progressive stream_url remains the fallback and the crossfade source.
+    hlsAttachmentRef.current?.destroy();
+    hlsAttachmentRef.current = null;
 
-    if (isPlaying) {
-      audioRef.current.play().catch(() => {
-        pause();
-      });
-    }
+    const audio = audioRef.current;
+    audio.volume = effectiveVolume;
+
+    void attachAudioSource(audio, currentSong, resolvedUrl).then((attachment) => {
+      hlsAttachmentRef.current = attachment;
+      if (isPlaying) {
+        audio.play().catch(() => {
+          pause();
+        });
+      }
+    });
   }, [currentSong?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle seeking

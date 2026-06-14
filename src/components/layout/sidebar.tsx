@@ -29,6 +29,7 @@ import {
   Coins,
   Megaphone,
   ThumbsUp,
+  Languages,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -37,6 +38,7 @@ import { apiGet } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { STORE_ENABLED } from "@/lib/features";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { useContributionsStatus } from "@/hooks/useContributions";
 import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { AdBanner } from "@/components/ads";
@@ -71,6 +73,7 @@ const moduleItems = [
   { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
+  { href: "/contribute", label: "Ateso corpus", icon: Languages },
 ];
 
 
@@ -132,9 +135,11 @@ export function Sidebar() {
   const compactLabel = brand?.logo_compact_label || brandName.charAt(0);
   const logoSrc = brand?.logo_light || brand?.logo_dark || "";
 
+  const { data: contributionsStatus } = useContributionsStatus();
   const g = platformSettings?.general;
   const visibleModuleItems = moduleItems.filter((item) => {
     if (item.href === "/sacco") return false;
+    if (item.href === "/contribute" && !contributionsStatus?.enabled) return false;
     if (item.href === "/store" && !(g?.store_enabled ?? STORE_ENABLED)) return false;
     if (item.href === "/podcasts" && !(g?.podcasts_enabled ?? false)) return false;
     if (item.href === "/awards" && !(g?.awards_system_enabled ?? false)) return false;

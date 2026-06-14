@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Languages, Loader2, Upload, Download, Target, X } from 'lucide-react';
+import { Languages, Loader2, Upload, Download, Target, X, Power, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
+  useContributionsSettings,
+  useUpdateContributionsSettings,
   useContributionsOverview,
   useAdminTasks,
   useImportTasks,
@@ -23,6 +25,7 @@ export default function AdminContributionsPage() {
         <p className="text-muted-foreground">Author prompts, seed gold items, monitor the pool, and export the corpus.</p>
       </div>
 
+      <Toggles />
       <Overview />
       <ImportPrompts />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -30,6 +33,42 @@ export default function AdminContributionsPage() {
         <ExportCard />
       </div>
       <TaskPool />
+    </div>
+  );
+}
+
+// ── Toggles ────────────────────────────────────────────────────
+
+function Toggles() {
+  const { data, isLoading } = useContributionsSettings();
+  const update = useUpdateContributionsSettings();
+  if (isLoading || !data) return null;
+
+  const row = (label: string, hint: string, value: boolean, Icon: React.ElementType, onChange: (v: boolean) => void) => (
+    <div className="flex items-center gap-3 py-3">
+      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+      <button
+        role="switch"
+        aria-checked={value}
+        onClick={() => onChange(!value)}
+        disabled={update.isPending}
+        className={cn('relative h-6 w-11 rounded-full transition-colors disabled:opacity-60', value ? 'bg-primary' : 'bg-muted')}
+      >
+        <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform', value ? 'translate-x-5' : 'translate-x-0.5')} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="rounded-xl border bg-card p-5 divide-y">
+      {row('Ateso corpus module', 'Master switch — when off, the whole feature is hidden from users.', data.enabled, Power, (v) => update.mutate({ enabled: v }))}
+      {row('Edula "Earn" cards', 'Weave one-tap translation cards into the community feed.', data.feed_cards_enabled, Rss, (v) => update.mutate({ feed_cards_enabled: v }))}
     </div>
   );
 }

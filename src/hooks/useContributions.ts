@@ -74,6 +74,22 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+// ── Public availability (for nav gating) ───────────────────────
+
+export interface ContributionsStatus {
+  enabled: boolean;
+  feed_cards_enabled: boolean;
+}
+
+export function useContributionsStatus() {
+  return useQuery({
+    queryKey: ['contributions', 'status'],
+    queryFn: () => apiGet<Wrapped<ContributionsStatus>>('/contributions/status').then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
 // ── Consent ────────────────────────────────────────────────────
 
 export function useConsentStatus(enabled = true) {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, isApiError } from '@/lib/api';
+import { apiGet, apiPost, apiPut, isApiError } from '@/lib/api';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -37,6 +37,33 @@ interface Wrapped<T> {
 function msg(error: unknown, fallback: string): string {
   if (isApiError(error)) return (error.response?.data as { message?: string })?.message ?? fallback;
   return fallback;
+}
+
+export interface ContributionsSettings {
+  enabled: boolean;
+  feed_cards_enabled: boolean;
+}
+
+export function useContributionsSettings() {
+  return useQuery({
+    queryKey: ['admin', 'contributions', 'settings'],
+    queryFn: () => apiGet<Wrapped<ContributionsSettings>>('/contributions/admin/settings').then((r) => r.data),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useUpdateContributionsSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<ContributionsSettings>) =>
+      apiPut<Wrapped<ContributionsSettings>>('/contributions/admin/settings', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'contributions', 'settings'] });
+      qc.invalidateQueries({ queryKey: ['contributions', 'status'] });
+      toast.success('Settings updated.');
+    },
+    onError: (e) => toast.error(msg(e, 'Could not update settings.')),
+  });
 }
 
 export function useContributionsOverview() {

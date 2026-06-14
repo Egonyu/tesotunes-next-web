@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { PostCard } from '@/components/edula/post-card';
 import { FeedItemCard } from '@/components/edula/feed-item-card';
+import { EarnFeedCard, type EarnCardData } from '@/components/contributions/earn-feed-card';
 import { CreatePostComposer } from '@/components/edula/create-post-composer';
 import { ModuleFilterChips } from '@/components/edula/module-filter-chips';
 import { transformPost, type MixedFeedContent } from '@/types/edula';
@@ -155,6 +156,12 @@ export default function EdulaPage() {
                 isOwner={postCardData.author.id === currentUserId}
               />
             );
+          }
+
+          // "Earn" translation task card (Ateso corpus) woven into the feed.
+          const raw = item.data as unknown as { feed_type?: string } & EarnCardData;
+          if (raw.feed_type === 'contribution_task') {
+            return <EarnFeedCard key={`earn-${item.data.uuid ?? item.data.id}-${idx}`} item={raw} />;
           }
 
           // FeedItem card

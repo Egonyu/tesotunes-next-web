@@ -44,7 +44,22 @@ export interface ValidationItem {
   register: string | null;
 }
 
-export type Verdict = 'agree' | 'minor_fix' | 'reject';
+export type Verdict = 'agree' | 'minor_fix' | 'valid_variant' | 'reject';
+
+/** Ateso varieties — keep in sync with config('contributions.dialects'). */
+export const DIALECTS: Array<{ value: string; label: string }> = [
+  { value: 'katakwi', label: 'Katakwi / Usuk' },
+  { value: 'amuria', label: 'Amuria' },
+  { value: 'soroti', label: 'Soroti' },
+  { value: 'serere', label: 'Serere' },
+  { value: 'kumi', label: 'Kumi' },
+  { value: 'ngora', label: 'Ngora' },
+  { value: 'bukedea', label: 'Bukedea' },
+  { value: 'pallisa', label: 'Pallisa' },
+  { value: 'tororo', label: 'Tororo' },
+  { value: 'kenya', label: 'Kenya-Teso' },
+  { value: 'general', label: 'Unsure / General' },
+];
 
 interface Wrapped<T> {
   success: boolean;
@@ -103,11 +118,19 @@ export function useTranslationTasks(params?: { song_id?: number }, enabled = tru
   });
 }
 
+export interface SubmitTranslationVars {
+  uuid: string;
+  translation: string;
+  dialect?: string;
+  code_switched?: boolean;
+  note?: string;
+}
+
 export function useSubmitTranslation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ uuid, translation }: { uuid: string; translation: string }) =>
-      apiPost<Wrapped<unknown>>(`/contributions/tasks/${uuid}/submit`, { translation }),
+    mutationFn: ({ uuid, translation, dialect, code_switched, note }: SubmitTranslationVars) =>
+      apiPost<Wrapped<unknown>>(`/contributions/tasks/${uuid}/submit`, { translation, dialect, code_switched, note }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contributions', 'tasks'] });
       qc.invalidateQueries({ queryKey: ['contributions', 'profile'] });

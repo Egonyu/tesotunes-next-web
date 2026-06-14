@@ -22,6 +22,7 @@ import {
   useSubmitTranslation,
   useValidationQueue,
   useSubmitValidation,
+  DIALECTS,
   type Verdict,
 } from '@/hooks/useContributions';
 
@@ -129,15 +130,27 @@ function TranslateTab() {
   const { data, isLoading } = useTranslationTasks();
   const submit = useSubmitTranslation();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [mixed, setMixed] = useState<Record<string, boolean>>({});
+  const [dialect, setDialect] = useState('');
 
   if (isLoading) return <SectionLoader />;
 
   const tasks = data?.data ?? [];
-  if (tasks.length === 0) return <EmptyState text="No translation tasks right now. Check back soon." />;
 
   return (
     <div className="space-y-3">
-      {tasks.map((task) => (
+      <div className="rounded-xl border bg-card p-3 flex items-center gap-3 flex-wrap">
+        <span className="text-sm text-muted-foreground">Your Ateso dialect:</span>
+        <select value={dialect} onChange={(e) => setDialect(e.target.value)} className="px-3 py-1.5 border rounded-lg bg-background text-sm">
+          <option value="">Choose…</option>
+          {DIALECTS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+        </select>
+        <span className="text-xs text-muted-foreground">Helps us keep every regional variant — there are no wrong dialects.</span>
+      </div>
+
+      {tasks.length === 0 ? (
+        <EmptyState text="No translation tasks right now. Check back soon." />
+      ) : tasks.map((task) => (
         <div key={task.uuid} className="rounded-xl border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -155,16 +168,23 @@ function TranslateTab() {
             rows={2}
             className="w-full px-3 py-2 border rounded-lg bg-background resize-none"
           />
-          <button
-            onClick={() => submit.mutate({ uuid: task.uuid, translation: drafts[task.uuid] ?? '' }, {
-              onSuccess: () => setDrafts((d) => ({ ...d, [task.uuid]: '' })),
-            })}
-            disabled={submit.isPending || !(drafts[task.uuid] ?? '').trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-60 text-sm font-medium"
-          >
-            {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Submit
-          </button>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={!!mixed[task.uuid]} onChange={(e) => setMixed((m) => ({ ...m, [task.uuid]: e.target.checked }))} />
+              Mixes in English/Swahili/Luganda words
+            </label>
+            <button
+              onClick={() => submit.mutate(
+                { uuid: task.uuid, translation: drafts[task.uuid] ?? '', dialect: dialect || undefined, code_switched: !!mixed[task.uuid] },
+                { onSuccess: () => setDrafts((d) => ({ ...d, [task.uuid]: '' })) }
+              )}
+              disabled={submit.isPending || !(drafts[task.uuid] ?? '').trim()}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-60 text-sm font-medium"
+            >
+              {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Submit
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -206,6 +226,7 @@ function ValidateTab() {
           <div className="flex flex-wrap gap-2">
             {verdictBtn(item.submission_uuid, 'agree', 'Looks right', ThumbsUp, 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300')}
             {verdictBtn(item.submission_uuid, 'minor_fix', 'Minor fix', PencilLine, 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-300')}
+            {verdictBtn(item.submission_uuid, 'valid_variant', 'Different dialect — also valid', Languages, 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300')}
             {verdictBtn(item.submission_uuid, 'reject', 'Wrong', ThumbsDown, 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300')}
           </div>
         </div>

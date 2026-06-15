@@ -85,7 +85,11 @@ export function useContributionsStatus() {
   return useQuery({
     queryKey: ['contributions', 'status'],
     queryFn: () => apiGet<Wrapped<ContributionsStatus>>('/contributions/status').then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
+    // Refetch on every mount so the nav reflects an admin toggle promptly
+    // (the cached value still renders instantly meanwhile).
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }

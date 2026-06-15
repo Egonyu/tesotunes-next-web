@@ -459,15 +459,19 @@ export function useSearch(query: string, type?: "songs" | "artists" | "albums" |
   return useQuery({
     queryKey: ["search", query, type],
     queryFn: async () => {
+      // Global content search lives at /v1/public/search and nests the hits
+      // under data.results (not a top-level /search route, which 404s).
       const res = await apiGet<{
         data: {
-          songs?: Song[];
-          artists?: Artist[];
-          albums?: Album[];
-          playlists?: Playlist[];
+          results: {
+            songs?: Song[];
+            artists?: Artist[];
+            albums?: Album[];
+            playlists?: Playlist[];
+          };
         };
-      }>("/search", { params: { q: query, type } });
-      return res.data;
+      }>("/v1/public/search", { params: { q: query, type } });
+      return res.data.results;
     },
     enabled: query.length >= 2,
     staleTime: 30 * 1000, // 30 seconds

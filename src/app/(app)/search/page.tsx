@@ -113,9 +113,9 @@ export default function SearchPage() {
                     className="text-center group"
                   >
                     <div className="relative aspect-square mb-3 overflow-hidden rounded-full bg-muted">
-                      {artist.profile_image_url ? (
+                      {artist.avatar_url ? (
                         <Image
-                          src={artist.profile_image_url}
+                          src={artist.avatar_url}
                           alt={artist.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform"

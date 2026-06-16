@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { usePlayerStore } from '@/stores';
 import { mapArtistSongToPlayerSong } from '@/lib/artist-player-song';
 import { resolvePlayableAudioUrl } from '@/lib/media';
+import { LyricOptInToggle } from '@/components/contributions/lyric-optin-toggle';
 
 interface Song {
   id: number;
@@ -243,6 +244,9 @@ export default function SongDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Ateso translation opt-in (hidden unless the contributions module is on) */}
+      <LyricOptInToggle songId={song.id} />
 
       {/* Main Content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

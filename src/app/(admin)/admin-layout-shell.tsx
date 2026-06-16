@@ -35,6 +35,7 @@ import {
   BadgeCheck,
   Target,
   ShieldAlert,
+  Languages,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasAnyPermission } from '@/lib/permissions';
@@ -62,6 +63,7 @@ const navItems = [
   { href: '/admin/store', label: 'Store', icon: ShoppingBag, requiredPermissions: ['manage-store', 'admin.settings'] },
   { href: '/admin/events', label: 'Events', icon: Calendar, requiredPermissions: ['admin.dashboard', 'admin.music'] },
   { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
+  { href: '/admin/contributions', label: 'Ateso Corpus', icon: Languages, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/ads', label: 'Ads Library', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/ad-placements', label: 'Ad Zones', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },

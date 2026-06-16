@@ -43,6 +43,7 @@ import {
   OPPORTUNITY_STATUS_LABELS,
   APPLICATION_STATUS_LABELS,
 } from "@/types/promotions-v2";
+import { DashboardOverviewSection } from "@/components/dashboard/overview-section";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -636,11 +637,14 @@ export default function DashboardPage() {
     <div className="container max-w-4xl py-8 space-y-8">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold">Activity Hub</h1>
+        <h1 className="text-2xl font-bold">Your dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Your wallet, orders, opportunities, and promotion activity in one place.
+          Your wallet, earnings, listening, contributions, and activity in one place.
         </p>
       </div>
+
+      {/* Unified overview — wallet, earnings, plays, Ateso corpus, activity */}
+      <DashboardOverviewSection />
 
       {/* Summary cards */}
       {summaryLoading ? (

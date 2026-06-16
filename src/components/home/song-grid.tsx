@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ShareBottomSheet, type SharePayload } from "@/components/social/ShareBottomSheet";
 import { AddToPlaylistAction } from "@/components/playlists/AddToPlaylistAction";
+import { SnapCarousel } from "@/components/ui/snap-carousel";
 
 function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): SharePayload {
   const fallbackShareUrl = typeof window !== "undefined"
@@ -46,9 +47,16 @@ function buildSongSharePayload(song: Song, source?: Partial<SharePayload>): Shar
 interface SongGridProps {
   type: "trending" | "new" | "recent" | "top";
   limit?: number;
+  /**
+   * "compact" (default) — multi-card horizontal snap scroller on mobile, grid on desktop.
+   * "featured" — one large artwork centered with neighbor halves peeking on mobile.
+   */
+  variant?: "compact" | "featured";
 }
 
-export function SongGrid({ type, limit = 10 }: SongGridProps) {
+const SONG_GRID_COLS = "md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+
+export function SongGrid({ type, limit = 10, variant = "compact" }: SongGridProps) {
   const { play, currentSong, isPlaying, pause, resume } = usePlayerStore();
   const { data: session } = useSession();
   const router = useRouter();
@@ -75,15 +83,17 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <SnapCarousel variant={variant} mdGridClassName={SONG_GRID_COLS}>
         {Array.from({ length: limit }).map((_, i) => (
-          <div key={i} className="space-y-2 animate-pulse">
-            <div className="aspect-square bg-muted rounded-lg" />
-            <div className="h-4 w-3/4 bg-muted rounded" />
-            <div className="h-3 w-1/2 bg-muted rounded" />
-          </div>
+          <SnapCarousel.Item key={i}>
+            <div className="space-y-2 animate-pulse">
+              <div className="aspect-square bg-muted rounded-lg" />
+              <div className="h-4 w-3/4 bg-muted rounded" />
+              <div className="h-3 w-1/2 bg-muted rounded" />
+            </div>
+          </SnapCarousel.Item>
         ))}
-      </div>
+      </SnapCarousel>
     );
   }
 
@@ -137,14 +147,14 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <SnapCarousel variant={variant} mdGridClassName={SONG_GRID_COLS}>
         {songs.map((song) => {
           const isCurrentSong = currentSong?.id === song.id;
           const isCurrentlyPlaying = isCurrentSong && isPlaying;
 
           return (
+            <SnapCarousel.Item key={song.id}>
             <div
-              key={song.id}
               className="group relative rounded-lg bg-card/50 p-3 transition-colors hover:bg-card"
             >
             {/* Artwork - entire area is clickable to play */}
@@ -264,9 +274,10 @@ export function SongGrid({ type, limit = 10 }: SongGridProps) {
               </div>
             </div>
             </div>
+            </SnapCarousel.Item>
           );
         })}
-      </div>
+      </SnapCarousel>
 
       <ShareBottomSheet
         open={shareOpen}

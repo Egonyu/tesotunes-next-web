@@ -95,7 +95,7 @@ export function ClassicHomePage({ user }: { user: HomeUser | null }) {
           subtitle="What's hot in East Africa"
         />
         <Suspense fallback={<LoadingSkeleton />}>
-          <SongGrid type="trending" limit={10} />
+          <SongGrid type="trending" limit={10} variant="featured" />
         </Suspense>
       </section>
 

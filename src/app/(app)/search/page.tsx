@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSearch } from "@/hooks";
 import { Search as SearchIcon, X, Loader2, Music, User, Disc, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +10,16 @@ import { usePlayerStore } from "@/stores";
 import type { Song } from "@/types";
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
+  return (
+    <Suspense fallback={null}>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+
+function SearchPageContent() {
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const { play } = usePlayerStore();
   
   const { data, isLoading } = useSearch(query);
@@ -113,9 +123,9 @@ export default function SearchPage() {
                     className="text-center group"
                   >
                     <div className="relative aspect-square mb-3 overflow-hidden rounded-full bg-muted">
-                      {artist.profile_image_url ? (
+                      {artist.avatar_url ? (
                         <Image
-                          src={artist.profile_image_url}
+                          src={artist.avatar_url}
                           alt={artist.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform"

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins, Wallet } from "lucide-react";
+import { Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins, Wallet } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { signOut, useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useUnreadCount } from "@/hooks/useNotifications";
+import { HeaderSearch } from "@/components/layout/header-search";
 
 function formatRoleLabel(role: string | undefined): string {
   if (!role) return "Listener";
@@ -25,7 +26,7 @@ function formatRoleLabel(role: string | undefined): string {
 }
 
 export function Header() {
-  const { sidebarCollapsed, setSearchOpen } = useUIStore();
+  const { sidebarCollapsed } = useUIStore();
   const { data: session } = useSession();
   const router = useRouter();
   const roleLabel = formatRoleLabel(session?.user?.role);
@@ -68,15 +69,7 @@ export function Header() {
       {/* Left Section */}
       <div className="flex items-center gap-4">
         {/* Search */}
-        <Link
-          href="/search"
-          onClick={() => setSearchOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground hover:bg-muted/80 md:w-64"
-        >
-          <Search className="h-4 w-4" />
-          <span className="hidden md:inline">Search songs, artists, albums...</span>
-        </Link>
-
+        <HeaderSearch />
       </div>
 
       {/* Right Section */}

@@ -136,6 +136,38 @@ body {
   display: none;
 }
 
+/* Scroll-snap carousel primitives (Spotify-style mobile sliders) */
+.snap-track-x {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.snap-track-x::-webkit-scrollbar {
+  display: none;
+}
+
+.snap-item-center {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  flex-shrink: 0;
+}
+
+.snap-item-start {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .snap-track-x {
+    scroll-behavior: smooth;
+  }
+}
+
 /* Audio visualizer animation */
 @keyframes pulse-bar {
   0%, 100% { transform: scaleY(0.3); }

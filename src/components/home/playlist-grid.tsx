@@ -3,7 +3,7 @@ import Image from "next/image";
 import { ListMusic, Users } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Playlist } from "@/types";
-import { SnapCarousel } from "@/components/ui/snap-carousel";
+import { SnapCarousel, SnapCarouselItem } from "@/components/ui/snap-carousel";
 
 async function getFeaturedPlaylists(): Promise<Playlist[]> {
   try {
@@ -73,9 +73,9 @@ export async function PlaylistGrid() {
   return (
     <SnapCarousel variant="compact" mdGridClassName="md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {playlists.map((playlist) => (
-        <SnapCarousel.Item key={playlist.id}>
+        <SnapCarouselItem key={playlist.id}>
           <PlaylistCard playlist={playlist} />
-        </SnapCarousel.Item>
+        </SnapCarouselItem>
       ))}
     </SnapCarousel>
   );

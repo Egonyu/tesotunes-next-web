@@ -106,8 +106,16 @@ interface SnapCarouselItemProps {
   className?: string;
 }
 
-/** Wrap each card in a carousel. Applies the snap alignment + responsive width. */
-function SnapCarouselItem({ children, className = "" }: SnapCarouselItemProps) {
+/**
+ * Wrap each card in a carousel. Applies the snap alignment + responsive width.
+ *
+ * Exported as a standalone named component (not only as `SnapCarousel.Item`)
+ * because static properties attached to a "use client" component do NOT survive
+ * the server→client boundary: a React Server Component importing `SnapCarousel`
+ * receives a client reference proxy whose `.Item` is `undefined`. Server
+ * consumers MUST import `SnapCarouselItem` directly.
+ */
+export function SnapCarouselItem({ children, className = "" }: SnapCarouselItemProps) {
   const { variant, hasGridFallback } = useContext(SnapCarouselContext);
 
   const sizing =

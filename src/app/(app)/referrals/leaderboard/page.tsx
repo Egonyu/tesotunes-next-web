@@ -42,7 +42,7 @@ export default function LeaderboardPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl flex items-center justify-center min-h-[400px]">
+      <div className="container mx-auto py-8 max-w-4xl flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
       </div>
     );
@@ -50,7 +50,7 @@ export default function LeaderboardPage() {
 
   if (error || !data) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto py-8 max-w-4xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-400" />
@@ -69,7 +69,7 @@ export default function LeaderboardPage() {
   const restOfBoard = leaderboard.slice(3);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto py-8 max-w-4xl">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Referral Leaderboard</h1>

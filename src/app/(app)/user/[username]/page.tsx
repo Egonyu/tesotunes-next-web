@@ -102,7 +102,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
     return (
       <div className="animate-pulse">
         <div className="h-48 bg-muted" />
-        <div className="container mx-auto px-4 -mt-16">
+        <div className="container mx-auto -mt-16">
           <div className="flex items-end gap-6 mb-8">
             <div className="w-32 h-32 bg-muted rounded-full border-4 border-background" />
             <div className="space-y-2">
@@ -117,7 +117,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
   if (!profile) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">User Not Found</h1>
         <p className="text-muted-foreground mb-6">
@@ -148,7 +148,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
         )}
       </div>
 
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto">
         {/* Profile Header */}
         <div className="relative -mt-16 mb-8">
           <div className="flex flex-col md:flex-row md:items-end gap-6">

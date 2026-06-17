@@ -32,13 +32,9 @@ import {
   Trophy,
   Rss,
   TrendingUp,
-  Bell,
-  Clock,
   Coins,
-  CreditCard,
   Megaphone,
   ThumbsUp,
-  MessageCircle,
   BadgePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -105,12 +101,12 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
     return (
       <button
         onClick={onClick}
-        className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
+        className="relative flex flex-col items-center justify-center px-3 py-1 group"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/60 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/10 dark:bg-[#161a22]/95 dark:group-hover:bg-[#1d2230]">
-          <Icon className="h-4.5 w-4.5 text-foreground/65 group-hover:text-foreground transition-colors" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/60 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/10 dark:bg-[#161a22]/95 dark:group-hover:bg-[#1d2230]">
+          <Icon className="h-4 w-4 text-foreground/65 group-hover:text-foreground transition-colors" />
         </div>
-        <span className="mt-1 text-[10px] font-semibold tracking-[0.01em] text-foreground/55 group-hover:text-foreground transition-colors">
+        <span className="mt-0.5 text-[10px] font-semibold leading-none tracking-tight text-foreground/55 group-hover:text-foreground transition-colors">
           {label}
         </span>
       </button>
@@ -121,11 +117,11 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
     <Link
       href={href}
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center px-3 py-1.5 group"
+      className="relative flex flex-col items-center justify-center px-3 py-1 group"
     >
       <div
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200",
+          "flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200",
           isActive
             ? "border-primary/20 bg-primary/12 shadow-[0_8px_18px_rgba(220,38,90,0.16)] dark:border-primary/30 dark:bg-primary/20"
             : "border-black/5 bg-white/60 shadow-sm group-hover:-translate-y-0.5 group-hover:bg-white dark:border-white/10 dark:bg-[#181a1f]/90 dark:group-hover:bg-[#1d2026]"
@@ -133,14 +129,14 @@ function MobileNavItem({ href, label, icon: Icon, onClick }: MobileNavItemProps)
       >
         <Icon
           className={cn(
-            "h-4.5 w-4.5 transition-colors",
+            "h-4 w-4 transition-colors",
             isActive ? "text-primary" : "text-foreground/60 group-hover:text-foreground"
           )}
         />
       </div>
       <span
         className={cn(
-          "mt-1 text-[10px] font-semibold tracking-[0.01em] transition-colors",
+          "mt-0.5 text-[10px] font-semibold leading-none tracking-tight transition-colors",
           isActive ? "text-primary" : "text-foreground/55 group-hover:text-foreground"
         )}
       >
@@ -354,40 +350,42 @@ export function MobileBottomNav() {
                 </div>
               </div>
 
-              {/* User Section */}
-              <div className="border-t border-border/70 pt-3 dark:border-white/12">
-                <div className="space-y-2">
-                  {session ? (
-                    <>
-                      {!hasArtistAccess && !isAdmin && (
-                        <Link
-                          href="/become-artist"
-                          onClick={closeMenu}
-                          className="mb-1 flex items-center gap-3 rounded-2xl bg-linear-to-r from-primary via-rose-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(220,38,90,0.28)]"
-                        >
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
-                            <Sparkles className="h-4 w-4" />
-                          </div>
-                          <span>Become an Artist</span>
-                        </Link>
-                      )}
-                      <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
-                        <MenuItem href="/notifications" label="Notifications" icon={Bell} onClick={closeMenu} />
-                        <MenuItem href="/messages" label="Messages" icon={MessageCircle} onClick={closeMenu} />
-                        <MenuItem href="/history" label="History" icon={Clock} onClick={closeMenu} />
-                        {!hasArtistAccess && <MenuItem href="/wallet" label="Wallet" icon={CreditCard} onClick={closeMenu} />}
-                        {!hasArtistAccess && <MenuItem href="/credits" label="Credits" icon={Coins} onClick={closeMenu} />}
-                        {!hasArtistAccess && <MenuItem href="/profile" label="Profile" icon={User} onClick={closeMenu} />}
-                        {!hasArtistAccess && <MenuItem href="/settings" label="Settings" icon={Settings} onClick={closeMenu} />}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
-                      <MenuItem href="/login" label="Sign In" icon={User} onClick={closeMenu} />
+              {/* User Section — account links live in the header profile menu,
+                  so here we surface only the "grow with us" CTAs. */}
+              {session ? (
+                !hasArtistAccess && !isAdmin && (
+                  <div className="border-t border-border/70 pt-3 dark:border-white/12">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Link
+                        href="/become-artist"
+                        onClick={closeMenu}
+                        className="flex items-center gap-3 rounded-2xl bg-linear-to-r from-primary via-rose-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(220,38,90,0.28)]"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
+                          <Sparkles className="h-4 w-4" />
+                        </div>
+                        <span>Become an Artist</span>
+                      </Link>
+                      <Link
+                        href="/become-promoter"
+                        onClick={closeMenu}
+                        className="flex items-center gap-3 rounded-2xl bg-linear-to-r from-indigo-500 via-blue-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)]"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
+                          <Megaphone className="h-4 w-4" />
+                        </div>
+                        <span>Become a Promoter</span>
+                      </Link>
                     </div>
-                  )}
+                  </div>
+                )
+              ) : (
+                <div className="border-t border-border/70 pt-3 dark:border-white/12">
+                  <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4">
+                    <MenuItem href="/login" label="Sign In" icon={User} onClick={closeMenu} />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -453,11 +451,11 @@ export function MobileBottomNav() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className={cn(
-          "flex items-center justify-around rounded-full px-1.5 py-1.5",
-          "bg-linear-to-r from-white/92 via-white/88 to-rose-50/82 dark:bg-linear-to-r dark:from-[#070d17]/96 dark:via-[#070d17]/96 dark:to-[#070d17]/96",
+          "flex items-center justify-around rounded-full px-1.5 py-1",
+          "bg-white/90 dark:bg-[#070d17]/96",
           "backdrop-blur-2xl backdrop-saturate-150",
           "shadow-[0_10px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_14px_36px_rgba(0,0,0,0.55)]",
-          "border border-black/[0.05] dark:border-white/[0.1]",
+          "border border-black/[0.06] dark:border-white/[0.1]",
           "pb-[max(0.25rem,env(safe-area-inset-bottom))]"
         )}>
           {mainTabs.map((tab) => (

@@ -71,7 +71,7 @@ export default function ProfilePage() {
   const approvedClaims = myClaims.filter((claim) => claim.status === "approved");
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Profile Header */}
       <div className="relative rounded-2xl bg-linear-to-r from-primary/20 to-primary/5 p-8 mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">

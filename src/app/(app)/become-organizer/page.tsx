@@ -56,7 +56,7 @@ export default function BecomeOrganizerPage() {
 
   if (organizerPosture?.status === "pending") {
     return (
-      <div className="container mx-auto max-w-md px-4 py-16 text-center">
+      <div className="container mx-auto max-w-md py-16 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
           <ShieldCheck className="h-7 w-7 text-amber-600" />
         </div>
@@ -70,7 +70,7 @@ export default function BecomeOrganizerPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-8">
+    <div className="container mx-auto max-w-lg py-8">
       <div className="mb-8 text-center space-y-3">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <Calendar className="h-8 w-8 text-primary" />

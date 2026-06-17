@@ -108,7 +108,7 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           {[1, 2, 3].map((i) => (
@@ -125,7 +125,7 @@ export default function CartPage() {
       (isApiError(error) && error.response?.status === 401);
 
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
         <h2 className="mb-2 text-2xl font-bold">
           {isUnauthenticated ? "Sign in to view your cart" : "Cart unavailable right now"}
@@ -160,7 +160,7 @@ export default function CartPage() {
   const isEmpty = items.length === 0;
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       <div className="flex items-center gap-3 mb-8">
         <ShoppingCart className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">Shopping Cart</h1>

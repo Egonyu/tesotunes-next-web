@@ -75,6 +75,9 @@ export interface UserProfile {
   username?: string | null;
   bio?: string | null;
   website?: string | null;
+  // The profile endpoint returns the raw `avatar` (often already a full URL);
+  // `avatar_url` is kept for any callers/resources that expose the aliased form.
+  avatar?: string | null;
   avatar_url?: string | null;
 }
 
@@ -259,8 +262,10 @@ export function useUpdatePrivacySettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Backend exposes a single PUT /settings that accepts nested sections;
+    // there is no /settings/privacy route. Nest the payload accordingly.
     mutationFn: (data: Partial<PrivacySettings>) =>
-      apiPut<{ message: string }>("/settings/privacy", data),
+      apiPut<{ message: string }>("/settings", { privacy: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
@@ -271,11 +276,23 @@ export function useUpdateAppearanceSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<AppearanceSettings & LanguageSettings>) =>
-      apiPut<{ message: string }>("/settings/appearance", data),
+    // Nest appearance + language under the canonical PUT /settings endpoint.
+    mutationFn: (data: Partial<AppearanceSettings & LanguageSettings>) => {
+      const payload: { appearance?: Partial<AppearanceSettings>; language?: Partial<LanguageSettings> } = {};
+      if (data.theme !== undefined || data.accent_color !== undefined) {
+        payload.appearance = {};
+        if (data.theme !== undefined) payload.appearance.theme = data.theme;
+        if (data.accent_color !== undefined) payload.appearance.accent_color = data.accent_color;
+      }
+      if (data.app_language !== undefined || data.content_language !== undefined) {
+        payload.language = {};
+        if (data.app_language !== undefined) payload.language.app_language = data.app_language;
+        if (data.content_language !== undefined) payload.language.content_language = data.content_language;
+      }
+      return apiPut<{ message: string }>("/settings", payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
-      // Also invalidate theme if theme was changed
     },
   });
 }

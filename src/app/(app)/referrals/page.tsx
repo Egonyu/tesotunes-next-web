@@ -80,7 +80,7 @@ export default function ReferralsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl flex items-center justify-center min-h-[400px]">
+      <div className="container mx-auto py-8 max-w-6xl flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
       </div>
     );
@@ -88,7 +88,7 @@ export default function ReferralsPage() {
 
   if (error || !dashboard) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto py-8 max-w-6xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-400" />
@@ -105,7 +105,7 @@ export default function ReferralsPage() {
   const { stats, referral_code, referral_link, recent_referrals, next_milestone, claimable_rewards } = dashboard;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Invite Friends, Earn Rewards</h1>

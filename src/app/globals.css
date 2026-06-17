@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * Bind Tailwind's `dark:` variant to the `.dark` class (set by next-themes),
+ * not the OS `prefers-color-scheme` media query. Without this, forcing light
+ * mode while the OS is in dark mode leaves hardcoded `dark:` utilities dark
+ * even though the CSS-variable theme switches to light — they must agree.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* CSS Variables for theming */
 :root {
   --background: 0 0% 100%;

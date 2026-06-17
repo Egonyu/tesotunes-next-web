@@ -52,7 +52,7 @@ export default function PromotionsLandingPage() {
   ];
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="container mx-auto max-w-3xl py-8">
       <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold sm:text-3xl">Promotions</h1>

@@ -82,7 +82,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
   return (
     <div className="min-h-screen bg-linear-to-b from-purple-900 via-zinc-900 to-black">
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="container mx-auto py-12 text-center">
         {/* Referrer Badge */}
         <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8">
           <Gift className="w-4 h-4 text-yellow-400" />
@@ -152,7 +152,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
       </div>
 
       {/* Features Grid */}
-      <div className="container mx-auto px-4 pb-16">
+      <div className="container mx-auto pb-16">
         <h2 className="text-2xl font-bold text-white text-center mb-8">
           Everything you need to enjoy Ugandan music
         </h2>
@@ -173,7 +173,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
 
       {/* Bottom CTA */}
       <div className="bg-purple-600 py-12">
-        <div className="container mx-auto px-4 text-center">
+        <div className="container mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
             Ready to start streaming?
           </h2>
@@ -189,7 +189,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
       </div>
 
       {/* Footer Note */}
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto py-8 text-center">
         <p className="text-gray-500 text-sm">
           By signing up, you agree to our Terms of Service and Privacy Policy.
           <br />

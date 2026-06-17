@@ -58,7 +58,7 @@ export default function StorePage() {
 
   if (!STORE_ENABLED) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <ShoppingBag className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <h1 className="text-3xl font-bold mb-2">Store Coming Soon</h1>
         <p className="text-muted-foreground max-w-xl mx-auto">
@@ -70,7 +70,7 @@ export default function StorePage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">

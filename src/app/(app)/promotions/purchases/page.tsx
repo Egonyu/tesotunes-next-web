@@ -77,7 +77,7 @@ export default function PromotionPurchasesPage() {
   }, [orders]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-8">
       <div className="space-y-8">
         <section className="rounded-[28px] border bg-card p-6">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_340px]">

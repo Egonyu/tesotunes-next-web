@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Variant = "featured" | "compact";
@@ -30,6 +30,10 @@ interface SnapCarouselProps {
   mdGridClassName?: string;
   /** Show hover arrow buttons on desktop (only meaningful when staying horizontal). */
   arrows?: boolean;
+  /** Auto-advance the track on an interval. Pauses on hover/touch and respects reduced-motion. */
+  autoPlay?: boolean;
+  /** Auto-advance cadence in ms (default 4000). */
+  autoPlayInterval?: number;
   className?: string;
 }
 
@@ -43,6 +47,8 @@ export function SnapCarousel({
   variant = "compact",
   mdGridClassName,
   arrows = false,
+  autoPlay = false,
+  autoPlayInterval = 4000,
   className = "",
 }: SnapCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -57,12 +63,52 @@ export function SnapCarousel({
     });
   };
 
-  // Edge-to-edge bleed on mobile; for the featured variant we pad by ~10vw so the
-  // centered card centers and the first/last items can still reach center.
+  // Auto-advance: nudge the track forward, looping to the start at the end.
+  // Pauses while the user interacts and is disabled under prefers-reduced-motion.
+  useEffect(() => {
+    if (!autoPlay) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    let paused = false;
+    const pause = () => { paused = true; };
+    const resume = () => { paused = false; };
+    el.addEventListener("pointerdown", pause);
+    el.addEventListener("pointerup", resume);
+    el.addEventListener("mouseenter", pause);
+    el.addEventListener("mouseleave", resume);
+    el.addEventListener("touchstart", pause, { passive: true });
+    el.addEventListener("touchend", resume, { passive: true });
+
+    const id = window.setInterval(() => {
+      if (paused) return;
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      if (scrollLeft + clientWidth >= scrollWidth - 8) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: clientWidth * 0.8, behavior: "smooth" });
+      }
+    }, autoPlayInterval);
+
+    return () => {
+      window.clearInterval(id);
+      el.removeEventListener("pointerdown", pause);
+      el.removeEventListener("pointerup", resume);
+      el.removeEventListener("mouseenter", pause);
+      el.removeEventListener("mouseleave", resume);
+      el.removeEventListener("touchstart", pause);
+      el.removeEventListener("touchend", resume);
+    };
+  }, [autoPlay, autoPlayInterval]);
+
+  // The compact scroller stays inside the page gutter (cards align with the
+  // section headers, not the screen edge). The featured variant still bleeds so
+  // the centered card can sit mid-screen with neighbours peeking.
   const bleed =
     variant === "featured"
-      ? "-mx-6 px-[10vw] md:mx-0 md:px-0"
-      : "-mx-6 px-6 md:mx-0 md:px-0";
+      ? "-mx-5 px-[10vw] md:mx-0 md:px-0"
+      : "";
 
   const trackBase = `snap-track-x gap-4 pb-2 ${bleed}`;
   const trackLayout = hasGridFallback

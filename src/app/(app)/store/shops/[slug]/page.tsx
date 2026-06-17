@@ -112,7 +112,7 @@ export default function StoreShopPage({
 
   if (isError || !store) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="container mx-auto py-16 text-center">
         <ShoppingBag className="mx-auto mb-4 h-14 w-14 text-muted-foreground" />
         <h1 className="text-2xl font-bold">Storefront not found</h1>
         <p className="mt-2 text-muted-foreground">
@@ -159,7 +159,7 @@ export default function StoreShopPage({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-8">
       <div className="space-y-8">
         <Link
           href="/store"

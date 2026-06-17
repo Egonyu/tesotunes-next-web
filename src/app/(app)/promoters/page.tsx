@@ -78,7 +78,7 @@ export default function PromotersDiscoveryPage() {
   const total = meta?.total ?? 0;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 space-y-6">
+    <div className="container mx-auto max-w-7xl py-8 space-y-6">
       {/* Header */}
       <div className="rounded-xl bg-card shadow-sm p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

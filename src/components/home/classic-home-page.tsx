@@ -7,6 +7,8 @@ import { ArtistCarousel } from "@/components/home/artist-carousel";
 import { GenreGrid } from "@/components/home/genre-grid";
 import { DiscoverSections } from "@/components/home/discover-sections";
 import { ClassicHomeRecommendations } from "@/components/home/classic-home-recommendations";
+import { MoodMixes } from "@/components/home/mood-mixes";
+import { ActivitiesStrip } from "@/components/home/activities-strip";
 import { PlaylistGrid } from "@/components/home/playlist-grid";
 import { HomeHero } from "@/components/home/home-hero";
 import { UserWelcomeBanner } from "@/components/home/user-welcome-banner";
@@ -65,8 +67,10 @@ function LoadingSkeleton() {
 }
 
 export function ClassicHomePage({ user }: { user: HomeUser | null }) {
+    // Horizontal padding comes from the app layout's <main> (px-4 on mobile);
+    // only add vertical rhythm here so mobile content uses the full screen width.
   return (
-    <div className="space-y-10 p-6">
+    <div className="space-y-10 py-4 md:py-6">
       {user ? <UserWelcomeBanner user={user} /> : <HomeHero />}
 
       {!user && (
@@ -76,6 +80,15 @@ export function ClassicHomePage({ user }: { user: HomeUser | null }) {
       )}
 
       <ClassicHomeRecommendations />
+
+      <section>
+        <SectionHeader
+          title="Popular mixes"
+          href="/moods"
+          subtitle="Mood mixes to match the moment"
+        />
+        <MoodMixes />
+      </section>
 
       <section>
         <SectionHeader
@@ -97,6 +110,14 @@ export function ClassicHomePage({ user }: { user: HomeUser | null }) {
         <Suspense fallback={<LoadingSkeleton />}>
           <SongGrid type="trending" limit={10} variant="featured" />
         </Suspense>
+      </section>
+
+      <section>
+        <SectionHeader
+          title="While you listen"
+          subtitle="Polls, events, and more to dive into"
+        />
+        <ActivitiesStrip />
       </section>
 
       <section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, CreditCard, Coins, Wallet } from "lucide-react";
+import { Bell, User, MessageSquare, Sparkles, LogOut, Settings, ChevronDown, Clock, Wallet, LayoutDashboard } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { signOut, useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { pickMediaUrl } from "@/lib/media";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import { HeaderSearch } from "@/components/layout/header-search";
+import { useUserProfile } from "@/hooks/useSettings";
 
 function formatRoleLabel(role: string | undefined): string {
   if (!role) return "Listener";
@@ -50,15 +51,20 @@ export function Header() {
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.total ?? 0;
 
+  // Resolve the avatar from the session first, then fall back to the uploaded
+  // avatar on the profile API so a freshly uploaded image always shows.
+  const { data: userProfile } = useUserProfile();
   const sessionImage = pickMediaUrl(
     session?.user?.image,
-    (session?.user as { avatar_url?: string } | undefined)?.avatar_url
+    (session?.user as { avatar_url?: string } | undefined)?.avatar_url,
+    userProfile?.avatar,
+    userProfile?.avatar_url
   );
 
   return (
     <header
       className={cn(
-        "fixed top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all",
+        "fixed top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-3 sm:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all",
         // On mobile: full width (left-0 right-0)
         // On desktop: adjust for sidebar
         "left-0 right-0",
@@ -67,9 +73,36 @@ export function Header() {
       )}
     >
       {/* Left Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {/* Search */}
         <HeaderSearch />
+
+        {/* Mobile quick actions — fills the otherwise-empty top bar on phones */}
+        {session?.user && (
+          <div className="flex items-center gap-1 lg:hidden">
+            <button
+              onClick={() => router.push("/messages")}
+              aria-label="Messages"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <MessageSquare className="h-4.5 w-4.5" />
+            </button>
+            <button
+              onClick={() => router.push(hasArtistAccess ? "/artist/wallet" : "/wallet")}
+              aria-label="Wallet"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Wallet className="h-4.5 w-4.5" />
+            </button>
+            <button
+              onClick={() => router.push("/settings/subscription")}
+              aria-label="Upgrade to Pro"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10"
+            >
+              <Sparkles className="h-4.5 w-4.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right Section */}
@@ -141,6 +174,15 @@ export function Header() {
               </div>
 
               <div className="p-2">
+                {!hasArtistAccess && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/dashboard")}
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                   onClick={() => router.push("/notifications")}
@@ -168,29 +210,14 @@ export function Header() {
                   <span>History</span>
                 </DropdownMenuItem>
                 {!hasArtistAccess && (
-                  <>
-                    <DropdownMenuItem
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                      onClick={() => router.push("/wallet")}
-                    >
-                      <Wallet className="h-4 w-4 text-muted-foreground" />
-                      <span>Wallet</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                      onClick={() => router.push("/credits")}
-                    >
-                      <Coins className="h-4 w-4 text-muted-foreground" />
-                      <span>Credits</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                      onClick={() => router.push("/profile")}
-                    >
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                  </>
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    onClick={() => router.push("/wallet")}
+                  >
+                    <Wallet className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-left">Wallet</span>
+                    <span className="text-xs text-muted-foreground">Credits & balance</span>
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
@@ -206,15 +233,6 @@ export function Header() {
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                {!hasArtistAccess && (
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    onClick={() => router.push("/claim-artist")}
-                  >
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    <span>Claim Artist Profile</span>
-                  </DropdownMenuItem>
-                )}
 
                 <DropdownMenuSeparator className="my-2" />
 
@@ -229,22 +247,22 @@ export function Header() {
             </DropdownMenu>
           </>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link
               href="/claim-artist"
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="hidden whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground min-[380px]:inline-flex sm:px-4 sm:py-2 sm:text-sm"
             >
               Claim Artist
             </Link>
             <Link
               href="/register"
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground sm:px-4 sm:py-2 sm:text-sm"
             >
               Sign Up
             </Link>
             <Link
               href="/login"
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="whitespace-nowrap rounded-full bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 sm:px-4 sm:py-2 sm:text-sm"
             >
               Log In
             </Link>

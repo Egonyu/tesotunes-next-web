@@ -184,7 +184,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           {[1, 2, 3].map((i) => (
@@ -197,7 +197,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
 
   if (!eventsData) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Artist Not Found</h1>
         <Link href="/browse" className="text-primary hover:underline">
@@ -208,7 +208,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Header */}
       <div className="mb-8">
         <Link

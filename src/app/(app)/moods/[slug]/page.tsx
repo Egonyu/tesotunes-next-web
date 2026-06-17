@@ -18,17 +18,16 @@ import {
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { formatDuration, formatNumber, formatResolvedDuration } from "@/lib/utils";
+import { moodIcon } from "@/lib/mood-icons";
 
 interface MoodDetail {
   id: number;
   name: string;
   slug: string;
-  description: string;
+  description: string | null;
   color: string;
-  gradient?: string;
-  image_url?: string;
-  songs_count: number;
-  total_duration: number;
+  artwork_url?: string | null;
+  song_count: number;
   songs: {
     id: number;
     title: string;
@@ -48,14 +47,14 @@ interface MoodDetail {
       slug: string;
     };
   }[];
-  related_playlists: {
+  related_playlists?: {
     id: number;
     name: string;
     slug: string;
     artwork_url?: string | null;
     tracks_count: number;
   }[];
-  related_moods: {
+  related_moods?: {
     id: number;
     name: string;
     slug: string;
@@ -63,36 +62,19 @@ interface MoodDetail {
   }[];
 }
 
-const moodEmojis: Record<string, string> = {
-  happy: "😊",
-  sad: "😢",
-  energetic: "⚡",
-  chill: "😌",
-  romantic: "💕",
-  focused: "🎯",
-  party: "🎉",
-  workout: "💪",
-  sleep: "😴",
-  angry: "😤",
-  peaceful: "🕊️",
-  nostalgic: "📷",
-  confident: "👑",
-  melancholic: "🌧️",
-};
-
 export default function MoodDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
 
   const { data: mood, isLoading } = useQuery({
     queryKey: ["mood", slug],
-    queryFn: () => apiGet<MoodDetail>(`/content/moods/${slug}`),
+    queryFn: () => apiGet<{ data: MoodDetail }>(`/content/moods/${slug}`).then((r) => r.data),
   });
 
   if (isLoading) {
     return (
       <div className="animate-pulse">
         <div className="h-64 bg-muted" />
-        <div className="container mx-auto px-4 py-8 space-y-4">
+        <div className="container mx-auto py-8 space-y-4">
           <div className="h-8 w-64 bg-muted rounded" />
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-16 bg-muted rounded" />
@@ -104,7 +86,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
 
   if (!mood) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Sparkles className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Mood Not Found</h1>
         <Link href="/moods" className="text-primary hover:underline">
@@ -114,7 +96,8 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
     );
   }
 
-  const emoji = moodEmojis[mood.slug] || "🎵";
+  const Icon = moodIcon(mood.slug);
+  const totalDuration = mood.songs.reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0);
 
   return (
     <div>
@@ -122,18 +105,18 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
       <div
         className="relative py-16 md:py-24"
         style={{
-          background: mood.gradient || `linear-gradient(135deg, ${mood.color}, ${mood.color}80)`,
+          background: `linear-gradient(135deg, ${mood.color}, ${mood.color}80)`,
         }}
       >
-        {mood.image_url && (
+        {mood.artwork_url && (
           <Image
-            src={mood.image_url}
+            src={mood.artwork_url}
             alt={mood.name}
             fill
             className="object-cover opacity-30"
           />
         )}
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <Link
             href="/moods"
             className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6"
@@ -143,8 +126,8 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
           </Link>
 
           <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-6xl md:text-8xl">
-              {emoji}
+            <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white">
+              <Icon className="h-16 w-16 md:h-24 md:w-24" strokeWidth={1.5} />
             </div>
 
             <div className="text-white">
@@ -152,9 +135,13 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
               <h1 className="text-4xl md:text-6xl font-bold mb-3">{mood.name}</h1>
               <p className="text-white/80 max-w-xl mb-4">{mood.description}</p>
               <div className="flex items-center gap-4 text-sm text-white/60">
-                <span>{formatNumber(mood.songs_count)} songs</span>
-                <span>•</span>
-                <span>{formatDuration(mood.total_duration)}</span>
+                <span>{formatNumber(mood.song_count)} songs</span>
+                {totalDuration > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>{formatDuration(totalDuration)}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -176,7 +163,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Songs List */}
           <div className="lg:col-span-2">
@@ -262,11 +249,11 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Related Playlists */}
-            {mood.related_playlists.length > 0 && (
+            {(mood.related_playlists?.length ?? 0) > 0 && (
               <div>
                 <h3 className="font-bold text-lg mb-4">Related Playlists</h3>
                 <div className="space-y-3">
-                  {mood.related_playlists.map((playlist) => (
+                  {(mood.related_playlists ?? []).map((playlist) => (
                     <Link
                       key={playlist.id}
                       href={`/playlists/${playlist.slug}`}
@@ -297,12 +284,12 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
             )}
 
             {/* Related Moods */}
-            {mood.related_moods.length > 0 && (
+            {(mood.related_moods?.length ?? 0) > 0 && (
               <div>
                 <h3 className="font-bold text-lg mb-4">Similar Moods</h3>
                 <div className="flex flex-wrap gap-2">
-                  {mood.related_moods.map((relatedMood) => {
-                    const relatedEmoji = moodEmojis[relatedMood.slug] || "🎵";
+                  {(mood.related_moods ?? []).map((relatedMood) => {
+                    const RelatedIcon = moodIcon(relatedMood.slug);
                     return (
                       <Link
                         key={relatedMood.id}
@@ -310,7 +297,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full border hover:border-primary transition-colors"
                         style={{ borderColor: `${relatedMood.color}50` }}
                       >
-                        <span>{relatedEmoji}</span>
+                        <RelatedIcon className="h-4 w-4" strokeWidth={1.75} style={{ color: relatedMood.color }} />
                         <span>{relatedMood.name}</span>
                       </Link>
                     );

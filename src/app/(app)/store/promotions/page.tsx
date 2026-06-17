@@ -183,7 +183,7 @@ export default function PromotionsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -200,7 +200,7 @@ export default function PromotionsPage() {
   const upcomingPromotions = promotions?.filter((p) => new Date(p.starts_at) > new Date()) || [];
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Header */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">

@@ -181,7 +181,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse grid md:grid-cols-2 gap-8">
           <div className="aspect-square bg-muted rounded-lg" />
           <div className="space-y-4">
@@ -208,7 +208,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   if (product.productType === "promotion") {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Package className="mx-auto mb-4 h-14 w-14 text-primary" />
         <h1 className="text-2xl font-bold">Opening promotion listing</h1>
         <p className="mt-2 text-muted-foreground">
@@ -333,7 +333,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
         <Link href="/store" className="hover:text-foreground">

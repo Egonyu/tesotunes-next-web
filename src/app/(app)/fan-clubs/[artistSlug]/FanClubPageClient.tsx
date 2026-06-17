@@ -204,7 +204,7 @@ export default function FanClubPageClient() {
     return (
       <div className="animate-pulse">
         <div className="h-80 bg-muted" />
-        <div className="container mx-auto px-4 -mt-20">
+        <div className="container mx-auto -mt-20">
           <div className="h-40 bg-muted rounded-lg" />
         </div>
       </div>
@@ -213,7 +213,7 @@ export default function FanClubPageClient() {
 
   if (!fanClub) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Fan Club Not Found</h1>
         <p className="text-muted-foreground mb-6">
@@ -255,7 +255,7 @@ export default function FanClubPageClient() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 -mt-24 relative z-10">
+      <div className="container mx-auto -mt-24 relative z-10">
         {/* Artist Info Card */}
         <div className="bg-card rounded-lg border p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-6">

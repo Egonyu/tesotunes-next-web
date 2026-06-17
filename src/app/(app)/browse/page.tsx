@@ -43,7 +43,7 @@ const browseCategories = [
 
 export default function BrowsePage() {
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <Compass className="h-8 w-8 text-primary" />

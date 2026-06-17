@@ -256,7 +256,7 @@ export default function OpportunitiesPage() {
   const lastPage = (data as unknown as { last_page?: number })?.last_page ?? 1;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8 space-y-6">
+    <div className="container mx-auto max-w-4xl py-8 space-y-6">
       {/* Header */}
       <div className="rounded-xl bg-card shadow-sm p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

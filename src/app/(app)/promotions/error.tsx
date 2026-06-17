@@ -4,7 +4,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 export default function PromotionsError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="container mx-auto max-w-md px-4 py-16 text-center">
+    <div className="container mx-auto max-w-md py-16 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
         <AlertCircle className="h-7 w-7 text-destructive" />
       </div>

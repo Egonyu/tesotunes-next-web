@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Music } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import { SnapCarousel, SnapCarouselItem } from "@/components/ui/snap-carousel";
 import type { Genre } from "@/types";
 
 const gradientColors = [
@@ -32,14 +33,13 @@ export function GenreGrid() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <SnapCarousel arrows>
         {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-24 rounded-lg bg-muted animate-pulse"
-          />
+          <SnapCarouselItem key={i} className="sm:w-56">
+            <div className="h-24 rounded-lg bg-muted animate-pulse" />
+          </SnapCarouselItem>
         ))}
-      </div>
+      </SnapCarousel>
     );
   }
 
@@ -53,12 +53,12 @@ export function GenreGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {displayGenres.slice(0, 8).map((genre, index) => (
+    <SnapCarousel autoPlay arrows>
+      {displayGenres.slice(0, 12).map((genre, index) => (
+        <SnapCarouselItem key={genre.id} className="sm:w-56">
         <Link
-          key={genre.id}
           href={`/genres/${genre.slug || genre.id}`}
-          className={`relative h-24 rounded-lg overflow-hidden bg-linear-to-br ${
+          className={`relative block h-24 rounded-lg overflow-hidden bg-linear-to-br ${
             gradientColors[index % gradientColors.length]
           } group`}
         >
@@ -87,7 +87,8 @@ export function GenreGrid() {
           {/* Hover Effect */}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
         </Link>
+        </SnapCarouselItem>
       ))}
-    </div>
+    </SnapCarousel>
   );
 }

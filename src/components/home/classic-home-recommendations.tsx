@@ -5,7 +5,7 @@ import { Play, Pause, ChevronRight } from "lucide-react";
 import { useHomepageRecommendations } from "@/hooks/useHomepage";
 import { usePlayerStore } from "@/stores";
 import { SafeImage, InitialsAvatar } from "@/components/ui/safe-image";
-import { cn } from "@/lib/utils";
+import { SnapCarousel, SnapCarouselItem } from "@/components/ui/snap-carousel";
 import type { HomepageItem, HomepageModule, HomepageModuleType } from "@/types/homepage";
 
 const PERSONALIZED_MODULE_ORDER: HomepageModuleType[] = [
@@ -186,7 +186,7 @@ function RecommendationCard({ item, queue }: { item: HomepageItem; queue: Homepa
 }
 
 function RecommendationSection({ module }: { module: HomepageModule }) {
-  const visibleItems = module.items.slice(0, 5);
+  const visibleItems = module.items.slice(0, 12);
 
   if (visibleItems.length === 0) {
     return null;
@@ -195,11 +195,13 @@ function RecommendationSection({ module }: { module: HomepageModule }) {
   return (
     <section>
       <SectionHeader title={module.title} subtitle={module.subtitle} href={module.view_all_href} />
-      <div className={cn("grid gap-4", "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
+      <SnapCarousel arrows>
         {visibleItems.map((item) => (
-          <RecommendationCard key={`${module.id}-${item.id}`} item={item} queue={visibleItems} />
+          <SnapCarouselItem key={`${module.id}-${item.id}`} className="sm:w-44">
+            <RecommendationCard item={item} queue={visibleItems} />
+          </SnapCarouselItem>
         ))}
-      </div>
+      </SnapCarousel>
     </section>
   );
 }

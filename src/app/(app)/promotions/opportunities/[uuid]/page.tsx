@@ -77,7 +77,7 @@ export default function OpportunityDetailPage() {
 
   if (isError || !opp) {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-16 text-center">
+      <div className="container mx-auto max-w-3xl py-16 text-center">
         <XCircle className="mx-auto mb-3 h-10 w-10 text-destructive/40" />
         <p className="font-medium">Could not load this opportunity.</p>
         <Link href="/promotions/opportunities" className="mt-4 inline-block rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
@@ -94,7 +94,7 @@ export default function OpportunityDetailPage() {
   const deliverables = opp.deliverables ?? [];
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 space-y-5">
+    <div className="container mx-auto max-w-3xl py-8 space-y-5">
       {/* Back nav */}
       <Link
         href="/promotions/opportunities"

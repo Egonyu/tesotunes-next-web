@@ -20,3 +20,4 @@ export { Alert, AlertTitle, AlertDescription } from './alert';
 export { Toast, ToastContainer } from './toast';
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './accordion';
 export { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from './dropdown-menu';
+export { SnapCarousel, SnapCarouselItem } from './snap-carousel';

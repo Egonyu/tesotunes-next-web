@@ -1,6 +1,6 @@
 export default function PromotionsLoading() {
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="container mx-auto max-w-3xl py-8">
       <div className="space-y-6">
         <div className="mx-auto h-8 w-48 animate-pulse rounded bg-muted" />
         <div className="mx-auto h-4 w-72 animate-pulse rounded bg-muted" />

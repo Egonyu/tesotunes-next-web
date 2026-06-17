@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { Palette, Sun, Moon, Monitor, Loader2, Save, Check } from 'lucide-react';
 import { useSettings, useUpdateAppearanceSettings, type AppearanceSettings } from '@/hooks/useSettings';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ const accentColors = [
 export default function AppearanceSettingsPage() {
   const { data: settings, isLoading } = useSettings();
   const updateAppearance = useUpdateAppearanceSettings();
+  const { setTheme } = useTheme();
 
   const [appearance, setAppearance] = useState<AppearanceSettings>({
     theme: 'system',
@@ -84,7 +86,10 @@ export default function AppearanceSettingsPage() {
             return (
               <button
                 key={theme.value}
-                onClick={() => setAppearance((prev) => ({ ...prev, theme: theme.value }))}
+                onClick={() => {
+                  setAppearance((prev) => ({ ...prev, theme: theme.value }));
+                  setTheme(theme.value); // apply immediately via next-themes
+                }}
                 className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all ${
                   isSelected
                     ? 'border-primary bg-primary/5'

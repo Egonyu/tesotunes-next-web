@@ -3,49 +3,38 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Music, Play } from "lucide-react";
+import { Sparkles, Play } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { formatNumber } from "@/lib/utils";
+import { moodIcon } from "@/lib/mood-icons";
 
+// Matches MoodController::index() output.
 interface Mood {
   id: number;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | null;
   color: string;
-  gradient?: string;
-  icon?: string;
-  image_url?: string;
-  songs_count: number;
-  playlists_count: number;
+  artwork_url?: string | null;
+  song_count: number;
 }
 
-const moodEmojis: Record<string, string> = {
-  happy: "😊",
-  sad: "😢",
-  energetic: "⚡",
-  chill: "😌",
-  romantic: "💕",
-  focused: "🎯",
-  party: "🎉",
-  workout: "💪",
-  sleep: "😴",
-  angry: "😤",
-  peaceful: "🕊️",
-  nostalgic: "📷",
-  confident: "👑",
-  melancholic: "🌧️",
-};
+const quickSuggestions = [
+  { slug: "chill", label: "Chill Vibes" },
+  { slug: "energetic", label: "Energy Boost" },
+  { slug: "focus", label: "Deep Focus" },
+  { slug: "happy", label: "Good Vibes" },
+];
 
 export default function MoodsPage() {
   const { data: moods, isLoading } = useQuery({
     queryKey: ["moods"],
-    queryFn: () => apiGet<Mood[]>("/content/moods"),
+    queryFn: () => apiGet<{ data: Mood[] }>("/content/moods").then((r) => r.data),
   });
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -59,7 +48,7 @@ export default function MoodsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Hero */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
@@ -75,29 +64,29 @@ export default function MoodsPage() {
       {/* Featured Moods */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
         {moods?.slice(0, 8).map((mood) => {
-          const emoji = moodEmojis[mood.slug] || "🎵";
+          const Icon = moodIcon(mood.slug);
           return (
             <Link
               key={mood.id}
               href={`/moods/${mood.slug}`}
               className="group relative aspect-square rounded-2xl overflow-hidden"
               style={{
-                background: mood.gradient || `linear-gradient(135deg, ${mood.color}, ${mood.color}80)`,
+                background: `linear-gradient(135deg, ${mood.color}, ${mood.color}80)`,
               }}
             >
-              {mood.image_url && (
+              {mood.artwork_url && (
                 <Image
-                  src={mood.image_url}
+                  src={mood.artwork_url}
                   alt={mood.name}
                   fill
                   className="object-cover opacity-50 group-hover:scale-105 transition-transform duration-300"
                 />
               )}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
-                <span className="text-4xl mb-2">{emoji}</span>
+                <Icon className="mb-3 h-10 w-10" strokeWidth={1.75} />
                 <h3 className="text-xl font-bold text-center">{mood.name}</h3>
                 <p className="text-sm text-white/80 mt-1">
-                  {formatNumber(mood.songs_count)} songs
+                  {formatNumber(mood.song_count)} songs
                 </p>
               </div>
               <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -116,7 +105,7 @@ export default function MoodsPage() {
           <h2 className="text-2xl font-bold mb-6">All Moods</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {moods.slice(8).map((mood) => {
-              const emoji = moodEmojis[mood.slug] || "🎵";
+              const Icon = moodIcon(mood.slug);
               return (
                 <Link
                   key={mood.id}
@@ -124,15 +113,15 @@ export default function MoodsPage() {
                   className="flex items-center gap-4 p-4 bg-card rounded-xl border hover:border-primary transition-colors group"
                 >
                   <div
-                    className="w-14 h-14 rounded-lg flex items-center justify-center text-2xl"
+                    className="w-14 h-14 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `${mood.color}20` }}
                   >
-                    {emoji}
+                    <Icon className="h-6 w-6" strokeWidth={1.75} style={{ color: mood.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold truncate">{mood.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {formatNumber(mood.songs_count)} songs
+                      {formatNumber(mood.song_count)} songs
                     </p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -152,30 +141,19 @@ export default function MoodsPage() {
           Let us suggest some music based on the time of day
         </p>
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/moods/chill"
-            className="px-4 py-2 bg-background rounded-full border hover:border-primary transition-colors"
-          >
-            😌 Chill Vibes
-          </Link>
-          <Link
-            href="/moods/energetic"
-            className="px-4 py-2 bg-background rounded-full border hover:border-primary transition-colors"
-          >
-            ⚡ Energy Boost
-          </Link>
-          <Link
-            href="/moods/focused"
-            className="px-4 py-2 bg-background rounded-full border hover:border-primary transition-colors"
-          >
-            🎯 Deep Focus
-          </Link>
-          <Link
-            href="/moods/happy"
-            className="px-4 py-2 bg-background rounded-full border hover:border-primary transition-colors"
-          >
-            😊 Good Vibes
-          </Link>
+          {quickSuggestions.map(({ slug, label }) => {
+            const Icon = moodIcon(slug);
+            return (
+              <Link
+                key={slug}
+                href={`/moods/${slug}`}
+                className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border hover:border-primary transition-colors"
+              >
+                <Icon className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

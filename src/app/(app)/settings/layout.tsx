@@ -52,51 +52,46 @@ export default function SettingsLayout({
   }
 
   return (
-    <div className="container max-w-6xl py-8">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
-
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Settings Navigation */}
-        <aside className="w-full md:w-64 flex-shrink-0">
-          <nav className="space-y-1">
-            {settingsNav.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors w-full mt-4"
-            >
-              <LogOut className="h-5 w-5" />
-              Sign Out
-            </button>
-          </nav>
-        </aside>
-
-        {/* Settings Content */}
-        <main className="flex-1 min-w-0">
-          <div className="bg-card rounded-xl border p-6">
-            {children}
-          </div>
-        </main>
+    <div className="container max-w-5xl py-8">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <button
+          onClick={() => signOut({ callbackUrl: '/' })}
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">Sign Out</span>
+        </button>
       </div>
+
+      {/* Horizontal tab bar — scrolls sideways instead of stacking vertically */}
+      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+        {settingsNav.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Settings Content */}
+      <main className="min-w-0">
+        <div className="rounded-xl border bg-card p-6">{children}</div>
+      </main>
     </div>
   );
 }

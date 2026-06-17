@@ -90,7 +90,7 @@ export default function AwardDetailPageClient() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 animate-pulse space-y-8">
+      <div className="container mx-auto py-8 animate-pulse space-y-8">
         <div className="h-6 w-32 bg-muted rounded" />
         <div className="h-56 bg-muted rounded-2xl" />
         <div className="grid lg:grid-cols-4 gap-8">
@@ -112,7 +112,7 @@ export default function AwardDetailPageClient() {
   // ── Not Found ────────────────────────────────────────────────────────────
   if (!award || error) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
+      <div className="container mx-auto py-20 text-center">
         <Trophy className="h-16 w-16 mx-auto text-muted-foreground/40 mb-4" />
         <h1 className="text-2xl font-bold mb-2">Award Not Found</h1>
         <p className="text-muted-foreground mb-6">
@@ -132,7 +132,7 @@ export default function AwardDetailPageClient() {
   const display = statusDisplay[award.status] ?? statusDisplay.upcoming;
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-8">
       {/* ── Back Navigation ─────────────────────────────────────────────── */}
       <Link
         href="/awards"

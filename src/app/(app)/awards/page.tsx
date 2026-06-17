@@ -84,7 +84,7 @@ export default function AwardsPage() {
 
   if (awardsLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-8">
           <div className="h-64 rounded-2xl bg-muted" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -103,7 +103,7 @@ export default function AwardsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-10">
+    <div className="container mx-auto py-8 space-y-10">
       {/* Hero */}
       {heroAward && <HeroBanner award={heroAward} />}
 

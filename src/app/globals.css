@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * Bind Tailwind's `dark:` variant to the `.dark` class (set by next-themes),
+ * not the OS `prefers-color-scheme` media query. Without this, forcing light
+ * mode while the OS is in dark mode leaves hardcoded `dark:` utilities dark
+ * even though the CSS-variable theme switches to light — they must agree.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* CSS Variables for theming */
 :root {
   --background: 0 0% 100%;
@@ -134,6 +142,38 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Scroll-snap carousel primitives (Spotify-style mobile sliders) */
+.snap-track-x {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.snap-track-x::-webkit-scrollbar {
+  display: none;
+}
+
+.snap-item-center {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  flex-shrink: 0;
+}
+
+.snap-item-start {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .snap-track-x {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Audio visualizer animation */

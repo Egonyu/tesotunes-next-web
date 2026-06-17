@@ -49,7 +49,7 @@ export default function PodcastSubscriptionsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-64 bg-muted rounded" />
           <div className="h-12 bg-muted rounded-lg" />
@@ -64,7 +64,7 @@ export default function PodcastSubscriptionsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
+    <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

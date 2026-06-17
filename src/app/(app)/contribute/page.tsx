@@ -25,8 +25,19 @@ import {
   DIALECTS,
   type Verdict,
 } from '@/hooks/useContributions';
+import { EarningsTicker } from '@/components/contributions/earnings-ticker';
 
 type Tab = 'translate' | 'validate' | 'standing';
+
+/**
+ * Estimated reward per action, mirroring the backend reward config
+ * (app/Modules/Contributions/Config/contributions.php → rewards). Shown as a
+ * live "pending review" estimate; the real settled total comes from the profile.
+ */
+const REWARD_TRANSLATION = 200; // rewards.per_pair_ugx
+const REWARD_VALIDATION = 100; // per_pair_ugx * validation_pct (0.50)
+/** Verdicts that pay the reviewer (RewardService rewards agree + minor_fix). */
+const PAYING_VERDICTS: ReadonlySet<Verdict> = new Set(['agree', 'minor_fix']);
 
 export default function ContributePage() {
   const { data: consent, isLoading: consentLoading } = useConsentStatus();
@@ -92,6 +103,13 @@ function ConsentGate({ onAccept, pending, licenseVersion }: { onAccept: () => vo
 
 function ContributeHub() {
   const [tab, setTab] = useState<Tab>('translate');
+  // In-session tally of work done, broken down by action so the ticker can show
+  // the math (counts × rate) rather than a bare "earned" figure.
+  const [tally, setTally] = useState({ translations: 0, reviews: 0 });
+  const recordTranslation = () => setTally((t) => ({ ...t, translations: t.translations + 1 }));
+  const recordReview = () => setTally((t) => ({ ...t, reviews: t.reviews + 1 }));
+
+  const { data: profile } = useContributorProfile();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -101,6 +119,14 @@ function ContributeHub() {
         </h1>
         <p className="text-muted-foreground">Translate, review, and earn credits for accepted work.</p>
       </div>
+
+      <EarningsTicker
+        lifetime={profile?.credits_earned_total ?? 0}
+        translations={tally.translations}
+        reviews={tally.reviews}
+        perTranslation={REWARD_TRANSLATION}
+        perReview={REWARD_VALIDATION}
+      />
 
       <div className="flex gap-1 rounded-lg bg-muted p-1">
         {([['translate', 'Translate'], ['validate', 'Review'], ['standing', 'Your standing']] as const).map(([key, label]) => (
@@ -117,8 +143,8 @@ function ContributeHub() {
         ))}
       </div>
 
-      {tab === 'translate' && <TranslateTab />}
-      {tab === 'validate' && <ValidateTab />}
+      {tab === 'translate' && <TranslateTab onEarn={recordTranslation} />}
+      {tab === 'validate' && <ValidateTab onEarn={recordReview} />}
       {tab === 'standing' && <StandingTab />}
     </div>
   );
@@ -126,7 +152,7 @@ function ContributeHub() {
 
 // ── Translate ──────────────────────────────────────────────────
 
-function TranslateTab() {
+function TranslateTab({ onEarn }: { onEarn: () => void }) {
   const { data, isLoading } = useTranslationTasks();
   const submit = useSubmitTranslation();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -176,7 +202,7 @@ function TranslateTab() {
             <button
               onClick={() => submit.mutate(
                 { uuid: task.uuid, translation: drafts[task.uuid] ?? '', dialect: dialect || undefined, code_switched: !!mixed[task.uuid] },
-                { onSuccess: () => setDrafts((d) => ({ ...d, [task.uuid]: '' })) }
+                { onSuccess: () => { setDrafts((d) => ({ ...d, [task.uuid]: '' })); onEarn(); } }
               )}
               disabled={submit.isPending || !(drafts[task.uuid] ?? '').trim()}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-60 text-sm font-medium"
@@ -193,7 +219,7 @@ function TranslateTab() {
 
 // ── Validate ───────────────────────────────────────────────────
 
-function ValidateTab() {
+function ValidateTab({ onEarn }: { onEarn: () => void }) {
   const { data, isLoading } = useValidationQueue();
   const validate = useSubmitValidation();
 
@@ -204,7 +230,10 @@ function ValidateTab() {
 
   const verdictBtn = (uuid: string, verdict: Verdict, label: string, Icon: React.ElementType, tone: string) => (
     <button
-      onClick={() => validate.mutate({ uuid, verdict })}
+      onClick={() => validate.mutate(
+        { uuid, verdict },
+        { onSuccess: () => { if (PAYING_VERDICTS.has(verdict)) onEarn(); } }
+      )}
       disabled={validate.isPending}
       className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-60', tone)}
     >

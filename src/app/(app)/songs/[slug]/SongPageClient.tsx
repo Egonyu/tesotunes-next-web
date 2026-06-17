@@ -298,7 +298,7 @@ export default function SongDetailPage({
   if (isLoading) {
     return (
       <div className="animate-pulse">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto py-8">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="w-full md:w-80 aspect-square bg-muted rounded-xl" />
             <div className="flex-1 space-y-4">
@@ -314,7 +314,7 @@ export default function SongDetailPage({
 
   if (!song) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Music className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Song Not Found</h1>
         <Link href="/browse" className="text-primary hover:underline">
@@ -325,7 +325,7 @@ export default function SongDetailPage({
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-8">
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Column - Cover & Actions */}

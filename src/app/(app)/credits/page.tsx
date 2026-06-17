@@ -181,7 +181,7 @@ export default function CreditsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 animate-pulse space-y-6">
+      <div className="container mx-auto py-8 animate-pulse space-y-6">
         <div className="h-40 bg-muted rounded-xl" />
         <div className="grid md:grid-cols-2 gap-4">
           <div className="h-56 bg-muted rounded-lg" />
@@ -192,7 +192,7 @@ export default function CreditsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-8">
       <Link href="/wallet" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
         <ArrowLeftRight className="h-4 w-4" />
         Back to Wallet

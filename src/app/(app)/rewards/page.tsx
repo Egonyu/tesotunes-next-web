@@ -106,7 +106,7 @@ export default function RewardsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-40 bg-muted rounded-lg" />
           <div className="grid sm:grid-cols-3 gap-4">
@@ -121,7 +121,7 @@ export default function RewardsPage() {
 
   if (!data) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Award className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Rewards Program</h1>
         <p className="text-muted-foreground mb-6">
@@ -140,7 +140,7 @@ export default function RewardsPage() {
   const tierColor = tierColors[data.tier.name.toLowerCase()] || tierColors.bronze;
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       {/* Hero Card */}
       <div className={`relative rounded-2xl overflow-hidden mb-8 ${tierColor.bg}`}>
         <div className="absolute inset-0 opacity-20">

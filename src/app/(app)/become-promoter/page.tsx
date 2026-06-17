@@ -83,7 +83,7 @@ export default function BecomePromoterPage() {
 
   if (existing) {
     return (
-      <div className="container mx-auto max-w-xl px-4 py-16 text-center">
+      <div className="container mx-auto max-w-xl py-16 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40">
           <BadgeCheck className="h-7 w-7 text-emerald-500" />
         </div>
@@ -136,7 +136,7 @@ export default function BecomePromoterPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-8 space-y-6">
+    <div className="container mx-auto max-w-2xl py-8 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-950/40">

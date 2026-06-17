@@ -79,7 +79,7 @@ export default function WishlistPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -94,7 +94,7 @@ export default function WishlistPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="text-center py-16 bg-card rounded-lg border">
           <Heart className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-medium mb-2">Wishlist is being wired up</h2>
@@ -114,7 +114,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">My Wishlist</h1>

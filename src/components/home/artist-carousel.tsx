@@ -2,17 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Play, User, Headphones } from "lucide-react";
+import { Play, User, Headphones } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import { useRef } from "react";
 import type { Artist, PaginatedResponse } from "@/types";
 import { formatNumber } from "@/lib/utils";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
+import { SnapCarousel } from "@/components/ui/snap-carousel";
 
 export function ArtistCarousel() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   const { data, isLoading } = useQuery({
     queryKey: ["artists", "popular"],
     queryFn: () =>
@@ -24,26 +22,19 @@ export function ArtistCarousel() {
 
   const artists = data?.data || [];
 
-  const scroll = (direction: "left" | "right") => {
-    if (!scrollRef.current) return;
-    const scrollAmount = 300;
-    scrollRef.current.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  };
-
   if (isLoading) {
     return (
-      <div className="flex gap-4 overflow-hidden">
+      <SnapCarousel variant="compact" arrows>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="shrink-0 w-40 animate-pulse">
-            <div className="aspect-square rounded-full bg-muted mb-3" />
-            <div className="h-4 w-3/4 bg-muted rounded mx-auto" />
-            <div className="h-3 w-1/2 bg-muted rounded mx-auto mt-2" />
-          </div>
+          <SnapCarousel.Item key={i} className="sm:w-40">
+            <div className="animate-pulse">
+              <div className="aspect-square rounded-full bg-muted mb-3" />
+              <div className="h-4 w-3/4 bg-muted rounded mx-auto" />
+              <div className="h-3 w-1/2 bg-muted rounded mx-auto mt-2" />
+            </div>
+          </SnapCarousel.Item>
         ))}
-      </div>
+      </SnapCarousel>
     );
   }
 
@@ -57,40 +48,20 @@ export function ArtistCarousel() {
   }
 
   return (
-    <div className="relative group">
-      {/* Scroll Buttons */}
-      <button
-        onClick={() => scroll("left")}
-        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        onClick={() => scroll("right")}
-        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
+    <SnapCarousel variant="compact" arrows>
+      {artists.map((artist) => {
+        const imageSrc = pickMediaUrl(
+          artist.avatar_url,
+          artist.profile_image_url,
+          artist.cover_image_url,
+          artist.cover_url
+        );
 
-      {/* Artist Cards */}
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {artists.map((artist) => {
-          const imageSrc = pickMediaUrl(
-            artist.avatar_url,
-            artist.profile_image_url,
-            artist.cover_image_url,
-            artist.cover_url
-          );
-
-          return (
+        return (
+          <SnapCarousel.Item key={artist.id} className="sm:w-40">
           <Link
-            key={artist.id}
             href={`/artists/${artist.slug || artist.id}`}
-            className="group/card shrink-0 w-40 text-center"
+            className="group/card block text-center"
           >
             {/* Artist Image */}
             <div className="relative aspect-square mb-3 overflow-hidden rounded-full bg-muted">
@@ -123,8 +94,8 @@ export function ArtistCarousel() {
               {formatNumber(artist.total_plays || 0)} plays
             </p>
           </Link>
+          </SnapCarousel.Item>
         )})}
-      </div>
-    </div>
+    </SnapCarousel>
   );
 }

@@ -83,7 +83,7 @@ export default function ActivityHubPage() {
   const pending = summary?.pending_actions;
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 space-y-8">
+    <div className="container mx-auto max-w-6xl py-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>

@@ -97,7 +97,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-64 bg-muted rounded" />
           <div className="h-64 bg-muted rounded-lg" />
@@ -108,7 +108,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
   if (!order) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
+      <div className="container mx-auto py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Order Not Found</h1>
         <p className="text-muted-foreground mb-6">
@@ -125,7 +125,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const currentStatusIndex = statusOrder.indexOf(order.status);
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       <Link
         href="/store/orders"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"

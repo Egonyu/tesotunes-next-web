@@ -317,7 +317,7 @@ export default function PromotionsBrowsePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto py-8">
       <div className="space-y-6">
         <section className="rounded-lg border bg-card p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

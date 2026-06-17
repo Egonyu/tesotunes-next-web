@@ -336,7 +336,7 @@ export default function CheckoutPage() {
         (isApiError(error) && error.response?.status === 401);
 
       return (
-        <div className="container mx-auto py-16 px-4 text-center">
+        <div className="container mx-auto py-16 text-center">
           <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
           <h2 className="mb-2 text-2xl font-bold">
             {isUnauthenticated ? "Sign in to checkout" : "Checkout unavailable right now"}
@@ -367,7 +367,7 @@ export default function CheckoutPage() {
     }
 
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="h-64 bg-muted rounded-lg" />
@@ -382,7 +382,7 @@ export default function CheckoutPage() {
 
   if (paymentState === "success") {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-lg">
+      <div className="container mx-auto py-8 max-w-lg">
         <div className="text-center py-12 space-y-4">
           <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
             <CheckCircle className="h-10 w-10 text-green-600" />
@@ -424,7 +424,7 @@ export default function CheckoutPage() {
 
   if (paymentState === "failed") {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-lg">
+      <div className="container mx-auto py-8 max-w-lg">
         <div className="text-center py-12 space-y-4">
           <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
             <AlertCircle className="h-10 w-10 text-red-600" />
@@ -454,7 +454,7 @@ export default function CheckoutPage() {
 
   if (paymentState === "processing" && orderNumber && paymentMethod !== "credits") {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-lg">
+      <div className="container mx-auto py-8 max-w-lg">
         <div className="text-center py-12 space-y-6">
           <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
@@ -489,7 +489,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8">
       <div className="flex items-center gap-3 mb-8">
         <Link href="/store/cart" className="p-2 hover:bg-muted rounded-lg">
           <ChevronLeft className="h-5 w-5" />

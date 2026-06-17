@@ -48,21 +48,21 @@ export default function AppLayout({
         <Header />
 
         {/* Top banner ad for free-tier users */}
-        <div className="pt-16 px-4 md:px-6 lg:px-8">
+        <div className="pt-16 px-5 md:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <AdBanner placement="web_top_banner" className="mb-4" />
           </div>
         </div>
 
         {/* Page Content */}
-        <main className="px-4 md:px-6 lg:px-8">
+        <main className="px-5 md:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
         </main>
 
         {/* Site footer — legal links required for Google OAuth verification */}
-        <footer className="mt-8 border-t px-4 py-4 md:px-6 lg:px-8">
+        <footer className="mt-8 border-t px-5 py-4 md:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>© {new Date().getFullYear()} TesoTunes</span>
             <a href="/privacy" className="hover:underline">Privacy Policy</a>

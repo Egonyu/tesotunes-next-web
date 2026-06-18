@@ -24,7 +24,7 @@ import { CommunityPoll } from "./community-poll";
 import { useUpcomingEvents } from "@/hooks/useEvents";
 import { useStoreProducts } from "@/hooks/useStoreProducts";
 import { useAwards } from "@/hooks/useAwards";
-import { STORE_ENABLED } from "@/lib/features";
+import { useStoreEnabled } from "@/hooks/usePlatformSettings";
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
@@ -71,6 +71,7 @@ const saccoRewards = [
 
 export function DiscoverSections() {
   const { data: session } = useSession();
+  const storeEnabled = useStoreEnabled();
   const { data: eventsData } = useUpcomingEvents(5);
   const { data: storeData } = useStoreProducts();
   const { data: awardsData } = useAwards({ per_page: 1 });
@@ -120,7 +121,7 @@ export function DiscoverSections() {
     },
   ];
 
-  if (STORE_ENABLED) {
+  if (storeEnabled) {
     discoverCards.splice(1, 0, {
       title: "Artist Stores",
       description: productCount > 0
@@ -324,7 +325,7 @@ export function DiscoverSections() {
           <Sparkles className="h-4 w-4 text-violet-500" />
           100% East African music
         </span>
-        {STORE_ENABLED && (
+        {storeEnabled && (
           <span className="hidden md:flex items-center gap-1.5">
           <ShoppingBag className="h-4 w-4 text-pink-500" />
           Artist-owned stores

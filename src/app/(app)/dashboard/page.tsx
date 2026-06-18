@@ -44,6 +44,7 @@ import {
   APPLICATION_STATUS_LABELS,
 } from "@/types/promotions-v2";
 import { DashboardOverviewSection } from "@/components/dashboard/overview-section";
+import { KycJourneyCard } from "@/components/kyc/kyc-journey-card";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -642,6 +643,9 @@ export default function DashboardPage() {
           Your wallet, earnings, listening, contributions, and activity in one place.
         </p>
       </div>
+
+      {/* Identity verification nudge — hidden once verified */}
+      <KycJourneyCard />
 
       {/* Unified overview — wallet, earnings, plays, Ateso corpus, activity */}
       <DashboardOverviewSection />

@@ -103,7 +103,7 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
     <div>
       {/* Hero Header */}
       <div
-        className="relative py-16 md:py-24"
+        className="relative py-10 md:py-24"
         style={{
           background: `linear-gradient(135deg, ${mood.color}, ${mood.color}80)`,
         }}
@@ -119,22 +119,24 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
         <div className="container mx-auto relative z-10">
           <Link
             href="/moods"
-            className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6"
+            className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-5 md:mb-6"
           >
             <ChevronLeft className="h-4 w-4" />
             All Moods
           </Link>
 
-          <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white">
-              <Icon className="h-16 w-16 md:h-24 md:w-24" strokeWidth={1.5} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end md:gap-6">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur md:h-48 md:w-48">
+              <Icon className="h-10 w-10 md:h-24 md:w-24" strokeWidth={1.5} />
             </div>
 
-            <div className="text-white">
-              <p className="text-sm uppercase tracking-wider opacity-80 mb-2">Mood</p>
-              <h1 className="text-4xl md:text-6xl font-bold mb-3">{mood.name}</h1>
-              <p className="text-white/80 max-w-xl mb-4">{mood.description}</p>
-              <div className="flex items-center gap-4 text-sm text-white/60">
+            <div className="min-w-0 text-white">
+              <p className="mb-1 text-xs uppercase tracking-wider opacity-80 md:mb-2 md:text-sm">Mood</p>
+              <h1 className="mb-2 break-words text-3xl font-bold md:mb-3 md:text-6xl">{mood.name}</h1>
+              {mood.description && (
+                <p className="mb-3 max-w-xl text-sm text-white/80 md:mb-4 md:text-base">{mood.description}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/60">
                 <span>{formatNumber(mood.song_count)} songs</span>
                 {totalDuration > 0 && (
                   <>
@@ -147,16 +149,16 @@ export default function MoodDetailPage({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-4 mt-8">
-            <button className="flex items-center gap-2 px-8 py-3 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform">
-              <Play className="h-5 w-5 ml-1" />
+          <div className="mt-6 flex flex-wrap items-center gap-3 md:mt-8">
+            <button className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white px-6 py-2.5 font-bold text-black transition-transform hover:scale-105 md:px-8 md:py-3">
+              <Play className="ml-0.5 h-5 w-5" />
               Play All
             </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-white/20 text-white rounded-full hover:bg-white/30">
+            <button className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white/20 px-5 py-2.5 text-white hover:bg-white/30 md:px-6 md:py-3">
               <Shuffle className="h-5 w-5" />
               Shuffle
             </button>
-            <button className="p-3 bg-white/20 text-white rounded-full hover:bg-white/30">
+            <button className="shrink-0 rounded-full bg-white/20 p-2.5 text-white hover:bg-white/30 md:p-3">
               <Share2 className="h-5 w-5" />
             </button>
           </div>

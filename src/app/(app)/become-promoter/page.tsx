@@ -93,17 +93,19 @@ export default function BecomePromoterPage() {
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link
-            href="/artist/promotions/profile"
+            href="/dashboard"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Edit profile
+            Go to dashboard
           </Link>
-          <Link
-            href="/artist/promotions"
-            className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Seller dashboard
-          </Link>
+          {existing.slug && (
+            <Link
+              href={`/promoters/${existing.slug}`}
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              View public profile
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -131,7 +133,9 @@ export default function BecomePromoterPage() {
     };
 
     onboard.mutate(payload, {
-      onSuccess: () => router.push('/artist/promotions/profile'),
+      // Promoters are not necessarily artists, so send them to the universal
+      // activity hub (not the artist-gated studio, which would 403/AccessNotice).
+      onSuccess: () => router.push('/dashboard'),
     });
   };
 

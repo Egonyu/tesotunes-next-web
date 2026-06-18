@@ -105,6 +105,9 @@ export default function ArtistLayoutShell({
   // missing/loading posture stays permissive — backend gates protect each page.
   const positivelyNoAccess = Array.isArray(capabilities) && !isAdmin && granted.size === 0;
   const studioName = granted.has('artist') ? 'Artist Studio' : 'Creator Studio';
+  // The studio home/logo lands artists on the artist dashboard, everyone else on
+  // the universal hub (the artist dashboard fails to load for non-artists).
+  const homeHref = granted.has('artist') ? '/artist' : '/dashboard';
 
   const artistName = profile?.stage_name || userName || 'Creator';
   const artistAvatar = pickMediaUrl(profile?.avatar, userImage);
@@ -137,7 +140,7 @@ export default function ArtistLayoutShell({
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex items-center justify-between p-4 border-b">
-          <Link href="/artist" className="flex items-center gap-2">
+          <Link href={homeHref} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold">
               T
             </div>

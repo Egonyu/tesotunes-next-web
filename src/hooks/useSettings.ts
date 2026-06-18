@@ -222,42 +222,6 @@ export function useUpdateAvatar() {
   });
 }
 
-export function useUpdateNotificationSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: Partial<NotificationSettings>) =>
-      apiPut<{ message: string }>("/settings/notifications", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-    },
-  });
-}
-
-export function useUpdateAudioSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: Partial<AudioSettings>) =>
-      apiPut<{ message: string }>("/settings/audio", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-    },
-  });
-}
-
-export function useUpdateDownloadSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: Partial<DownloadSettings>) =>
-      apiPut<{ message: string }>("/settings/downloads", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-    },
-  });
-}
-
 export function useUpdatePrivacySettings() {
   const queryClient = useQueryClient();
 

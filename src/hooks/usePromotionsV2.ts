@@ -12,7 +12,6 @@ import type {
   BrowseOpportunitiesParams,
   BrowsePromotersParams,
   OnboardAsPromoterRequest,
-  UpdatePromoterProfileV2Request,
   CreateOpportunityRequest,
   UpdateOpportunityRequest,
   ApplyToOpportunityRequest,
@@ -70,15 +69,6 @@ export function usePromotersV2(params: BrowsePromotersParams = {}) {
   });
 }
 
-/** Single promoter profile by slug — public */
-export function usePromoterV2(slug: string) {
-  return useQuery({
-    queryKey: v2Keys.promoter(slug),
-    queryFn: () => api.fetchPromoterBySlug(slug).then((r) => r.data),
-    enabled: !!slug,
-  });
-}
-
 /** My promoter profile */
 export function useMyPromoterProfileV2() {
   return useQuery({
@@ -100,22 +90,6 @@ export function useOnboardAsPromoter() {
     },
     onError: () => {
       toast.error("Failed to set up promoter profile. Please try again.");
-    },
-  });
-}
-
-/** Update my promoter profile */
-export function useUpdateMyPromoterProfileV2() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdatePromoterProfileV2Request) =>
-      api.updateMyPromoterProfileV2(data),
-    onSuccess: () => {
-      toast.success("Profile updated.");
-      qc.invalidateQueries({ queryKey: v2Keys.myPromoterProfile() });
-    },
-    onError: () => {
-      toast.error("Failed to update profile.");
     },
   });
 }
@@ -295,16 +269,6 @@ export function useMyPostedOpportunities(
   return useQuery({
     queryKey: [...v2Keys.myPosted(), params],
     queryFn: () => api.fetchMyPostedOpportunities(params),
-  });
-}
-
-/** My submitted applications (as promoter) */
-export function useMyApplicationsV2(
-  params: { per_page?: number; page?: number } = {}
-) {
-  return useQuery({
-    queryKey: [...v2Keys.myApplications(), params],
-    queryFn: () => api.fetchMyApplicationsV2(params),
   });
 }
 

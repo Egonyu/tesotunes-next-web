@@ -28,26 +28,37 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
+import { useCapabilities, type CapabilityName } from '@/hooks/useCapabilities';
+import { isAdminRole } from '@/lib/roles';
+import AccessNotice from '@/components/auth/AccessNotice';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
 import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
 import { pickMediaUrl } from '@/lib/media';
 import { usePlayerStore, useUIStore } from '@/stores';
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Capabilities that may see this item. Omitted = visible to anyone in the studio. */
+  caps?: CapabilityName[];
+};
+
+const navItems: NavItem[] = [
   { href: '/artist', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/artist/songs', label: 'My Songs', icon: Music },
-  { href: '/artist/albums', label: 'My Albums', icon: Disc3 },
-  { href: '/artist/upload', label: 'Upload', icon: Upload },
-  { href: '/artist/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/artist/earnings', label: 'Earnings', icon: Wallet },
-  { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users },
-  { href: '/artist/distribution', label: 'Distribution', icon: Globe },
-  { href: '/artist/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/artist/fan-club', label: 'Fan Club', icon: Crown },
-  { href: '/artist/referrals', label: 'Fan Referrals', icon: Users },
-  { href: '/artist/events', label: 'Events', icon: Calendar },
-  { href: '/artist/store', label: 'Store', icon: ShoppingBag },
-  { href: '/artist/promotions', label: 'Promotions', icon: Megaphone },
+  { href: '/artist/songs', label: 'My Songs', icon: Music, caps: ['artist'] },
+  { href: '/artist/albums', label: 'My Albums', icon: Disc3, caps: ['artist'] },
+  { href: '/artist/upload', label: 'Upload', icon: Upload, caps: ['artist'] },
+  { href: '/artist/analytics', label: 'Analytics', icon: BarChart3, caps: ['artist'] },
+  { href: '/artist/earnings', label: 'Earnings', icon: Wallet, caps: ['artist'] },
+  { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users, caps: ['artist'] },
+  { href: '/artist/distribution', label: 'Distribution', icon: Globe, caps: ['artist'] },
+  { href: '/artist/wallet', label: 'Wallet', icon: Wallet, caps: ['artist'] },
+  { href: '/artist/fan-club', label: 'Fan Club', icon: Crown, caps: ['artist'] },
+  { href: '/artist/referrals', label: 'Fan Referrals', icon: Users, caps: ['artist'] },
+  { href: '/artist/events', label: 'Events', icon: Calendar, caps: ['organizer', 'artist'] },
+  { href: '/artist/store', label: 'Store', icon: ShoppingBag, caps: ['seller'] },
+  { href: '/artist/promotions', label: 'Promotions', icon: Megaphone, caps: ['promoter', 'seller'] },
   { href: '/sacco', label: 'SACCO', icon: PiggyBank },
   { href: '/artist/settings', label: 'Settings', icon: Settings },
 ];
@@ -76,10 +87,41 @@ export default function ArtistLayoutShell({
   const { currentSong } = usePlayerStore();
   const { playerMinimized } = useUIStore();
 
-  const artistName = profile?.stage_name || userName || 'Artist';
+  // Capability-aware access: artists, sellers, promoters and organizers each see
+  // only their own sections. Admins see everything.
+  const { data: capabilities } = useCapabilities();
+  const isAdmin = isAdminRole(session?.user?.role);
+  const granted = new Set<CapabilityName>(
+    (capabilities ?? []).filter((c) => c.status === 'granted').map((c) => c.capability),
+  );
+  if (sessionLooksArtistBacked) granted.add('artist');
+  if (session?.user?.isEventOrganizer) granted.add('organizer');
+
+  const visibleNav = navItems.filter(
+    (item) => !item.caps || isAdmin || item.caps.some((c) => granted.has(c)),
+  );
+  // Only deny when we positively know the account holds no studio capabilities
+  // (capabilities loaded as an array, nothing granted, not an admin). A
+  // missing/loading posture stays permissive — backend gates protect each page.
+  const positivelyNoAccess = Array.isArray(capabilities) && !isAdmin && granted.size === 0;
+  const studioName = granted.has('artist') ? 'Artist Studio' : 'Creator Studio';
+
+  const artistName = profile?.stage_name || userName || 'Creator';
   const artistAvatar = pickMediaUrl(profile?.avatar, userImage);
   const isVerified = profile?.is_verified || false;
   const hasActivePlayer = !!currentSong && !playerMinimized;
+
+  if (positivelyNoAccess) {
+    return (
+      <AccessNotice
+        title="No creator tools yet"
+        description="Your account doesn't have artist, seller, promoter or organizer access yet. Pick a path from your account to get started."
+        callbackUrl="/"
+        role={session?.user?.role ?? undefined}
+        variant="forbidden"
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -100,7 +142,7 @@ export default function ArtistLayoutShell({
               T
             </div>
             <div>
-              <span className="font-bold">Artist Studio</span>
+              <span className="font-bold">{studioName}</span>
               <p className="text-[11px] text-muted-foreground">Tesotunes creator workspace</p>
             </div>
           </Link>
@@ -157,14 +199,18 @@ export default function ArtistLayoutShell({
               : 'pb-24'
           )}
         >
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            // Non-artists' "Dashboard" lands on the universal activity hub, not
+            // the artist-only studio dashboard (which would fail to load for them).
+            const href =
+              item.href === '/artist' && !granted.has('artist') ? '/dashboard' : item.href;
+            const isActive = pathname === href;
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={href}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
@@ -205,20 +251,22 @@ export default function ArtistLayoutShell({
               <Menu className="h-5 w-5" />
             </button>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold">Artist Studio</h1>
+              <h1 className="text-lg font-semibold">{studioName}</h1>
               <p className="text-xs text-muted-foreground">Manage releases, earnings, store and promotions</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <Link
-              href="/artist/upload"
-              className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-primary-foreground hover:bg-primary/90 text-sm font-medium"
-            >
-              <Upload className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Upload Music</span>
-              <span className="sm:hidden">Upload</span>
-            </Link>
+            {granted.has('artist') && (
+              <Link
+                href="/artist/upload"
+                className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-primary-foreground hover:bg-primary/90 text-sm font-medium"
+              >
+                <Upload className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Upload Music</span>
+                <span className="sm:hidden">Upload</span>
+              </Link>
+            )}
 
             <button className="relative p-2 hover:bg-muted rounded-lg">
               <Bell className="h-5 w-5" />

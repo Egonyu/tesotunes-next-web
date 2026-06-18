@@ -115,7 +115,7 @@ export function ClassicHomePage({ user }: { user: HomeUser | null }) {
       <section>
         <SectionHeader
           title="While you listen"
-          subtitle="Polls, events, and more to dive into"
+          subtitle="Events, store, and more to dive into"
         />
         <ActivitiesStrip />
       </section>
@@ -151,8 +151,8 @@ export function ClassicHomePage({ user }: { user: HomeUser | null }) {
 
       <section>
         <SectionHeader
-          title="Discover More"
-          subtitle="More than just music — join the community"
+          title="Get involved"
+          subtitle="Vote in polls and help build the Ateso corpus while you listen"
         />
         <DiscoverSections />
       </section>

@@ -38,7 +38,7 @@ const CAPABILITY_META: Record<
   promoter: {
     icon: Megaphone,
     blurb: "Earn by promoting music to your following.",
-    dashboardHref: "/hub",
+    dashboardHref: "/artist/promotions",
     applyHref: "/become-promoter",
     applyLabel: "Become a promoter",
   },

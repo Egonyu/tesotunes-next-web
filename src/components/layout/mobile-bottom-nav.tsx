@@ -269,7 +269,7 @@ export function MobileBottomNav() {
           { href: "/login", label: "Sign In", icon: User },
         ];
 
-  const fabBottomClass = "bottom-[6.75rem]";
+  const fabBottomClass = "bottom-[5.5rem]";
 
   return (
     <>

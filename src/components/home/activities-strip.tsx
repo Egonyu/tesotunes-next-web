@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Vote, CalendarDays, ShoppingBag, Languages, Trophy, ArrowRight } from "lucide-react";
+import { CalendarDays, ShoppingBag, Trophy, ArrowRight } from "lucide-react";
 import { SnapCarousel, SnapCarouselItem } from "@/components/ui/snap-carousel";
 import { useStoreEnabled } from "@/hooks/usePlatformSettings";
-import { useContributionsStatus } from "@/hooks/useContributions";
 
 interface Activity {
   title: string;
@@ -15,22 +14,14 @@ interface Activity {
 }
 
 /**
- * A compact, interleaved row of non-music things to do while listening —
- * vote in polls, catch events, shop, or help build the Ateso corpus. Sits
- * between song rows so the home feed mixes activity with playback.
+ * A compact, interleaved row of things to browse while listening — events,
+ * store, awards. Participate-style actions (polls, Ateso corpus) live in the
+ * "Get involved" block instead.
  */
 export function ActivitiesStrip() {
-  const { data: contributions } = useContributionsStatus();
   const storeEnabled = useStoreEnabled();
 
   const activities: Activity[] = [
-    {
-      title: "Community Polls",
-      description: "Cast your vote and shape the platform.",
-      href: "/polls",
-      icon: <Vote className="h-5 w-5" />,
-      gradient: "from-violet-500/20 to-purple-500/20",
-    },
     {
       title: "Live Events",
       description: "Concerts & shows happening near you.",
@@ -48,22 +39,12 @@ export function ActivitiesStrip() {
   ];
 
   if (storeEnabled) {
-    activities.splice(2, 0, {
+    activities.splice(1, 0, {
       title: "Shop Merch",
       description: "Support artists with merch & extras.",
       href: "/store",
       icon: <ShoppingBag className="h-5 w-5" />,
       gradient: "from-pink-500/20 to-rose-500/20",
-    });
-  }
-
-  if (contributions?.enabled) {
-    activities.unshift({
-      title: "Ateso Corpus",
-      description: "Translate a line, earn credits.",
-      href: "/contribute",
-      icon: <Languages className="h-5 w-5" />,
-      gradient: "from-emerald-500/20 to-teal-500/20",
     });
   }
 

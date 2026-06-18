@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Vote, CalendarDays, ShoppingBag, Languages, Trophy, ArrowRight } from "lucide-react";
 import { SnapCarousel, SnapCarouselItem } from "@/components/ui/snap-carousel";
-import { STORE_ENABLED } from "@/lib/features";
+import { useStoreEnabled } from "@/hooks/usePlatformSettings";
 import { useContributionsStatus } from "@/hooks/useContributions";
 
 interface Activity {
@@ -21,6 +21,7 @@ interface Activity {
  */
 export function ActivitiesStrip() {
   const { data: contributions } = useContributionsStatus();
+  const storeEnabled = useStoreEnabled();
 
   const activities: Activity[] = [
     {
@@ -46,7 +47,7 @@ export function ActivitiesStrip() {
     },
   ];
 
-  if (STORE_ENABLED) {
+  if (storeEnabled) {
     activities.splice(2, 0, {
       title: "Shop Merch",
       description: "Support artists with merch & extras.",

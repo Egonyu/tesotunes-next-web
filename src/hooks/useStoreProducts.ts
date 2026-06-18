@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
-import { STORE_ENABLED } from "@/lib/features";
+import { useStoreEnabled } from "@/hooks/usePlatformSettings";
 
 interface StoreProductRecord {
   id: number;
@@ -91,6 +91,7 @@ function normalizeStoreProduct(product: StoreProductRecord): Product {
 }
 
 export function useStoreProducts(filters?: ProductsFilters) {
+  const storeEnabled = useStoreEnabled();
   return useQuery({
     queryKey: ["store-products", filters?.searchQuery, filters?.category],
     queryFn: async () => {
@@ -106,7 +107,7 @@ export function useStoreProducts(filters?: ProductsFilters) {
       const res = await apiGet<{ data: StoreProductRecord[] }>(endpoint);
       return res.data.map(normalizeStoreProduct);
     },
-    enabled: STORE_ENABLED,
+    enabled: storeEnabled,
     retry: 2,
   });
 }

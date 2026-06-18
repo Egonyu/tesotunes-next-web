@@ -6,7 +6,7 @@ import { Search, ShoppingBag, ShoppingCart, ReceiptText, ArrowRight } from "luci
 import { StoreProductGrid } from "@/components/store/product-grid";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
-import { STORE_ENABLED } from "@/lib/features";
+import { useStoreEnabled } from "@/hooks/usePlatformSettings";
 import { useSession } from "next-auth/react";
 
 interface StoreCategory {
@@ -27,6 +27,7 @@ export default function StorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { status } = useSession();
+  const storeEnabled = useStoreEnabled();
 
   const { data: apiCategories } = useQuery({
     queryKey: ["store-categories"],
@@ -41,7 +42,7 @@ export default function StorePage() {
         return defaultCategories;
       }
     },
-    enabled: STORE_ENABLED,
+    enabled: storeEnabled,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -49,14 +50,14 @@ export default function StorePage() {
     queryKey: ["cart-summary"],
     queryFn: () =>
       apiGet<{ data?: { items_count?: number } }>("/store/cart").then((response) => response.data),
-    enabled: STORE_ENABLED && status === "authenticated",
+    enabled: storeEnabled && status === "authenticated",
     retry: false,
   });
 
   const categories = apiCategories ?? defaultCategories;
   const cartCount = cartSummary?.items_count ?? 0;
 
-  if (!STORE_ENABLED) {
+  if (!storeEnabled) {
     return (
       <div className="container mx-auto py-16 text-center">
         <ShoppingBag className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />

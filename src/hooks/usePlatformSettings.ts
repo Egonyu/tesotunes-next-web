@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { apiGet } from "@/lib/api";
+import { STORE_ENABLED } from "@/lib/features";
 import {
   defaultPlatformSettings,
   normalizePlatformSettings,
@@ -33,4 +34,14 @@ export function usePlatformSettings() {
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
+}
+
+/**
+ * Whether the storefront is live. Prefers the admin-controlled platform setting
+ * (`general.store_enabled`) over the build-time `STORE_ENABLED` env flag, so
+ * enabling the store from the admin panel takes effect without a redeploy.
+ */
+export function useStoreEnabled(): boolean {
+  const { data } = usePlatformSettings();
+  return data?.general?.store_enabled ?? STORE_ENABLED;
 }

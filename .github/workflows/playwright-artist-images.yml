@@ -1,8 +1,18 @@
 name: Playwright Artist Images
 
+# NOT a PR gate. This suite logs in against a real API, and reCAPTCHA Enterprise
+# rejects the headless CI browser ("Security verification failed"), so it failed
+# on every pull request regardless of the change — training everyone to ignore a
+# red X. It now runs on demand (and nightly) until a staging API exists to point
+# it at; the reliable PR gate lives in ci.yml.
+#
+# To make this a gate again: stand up a staging API, set API_URL/NEXT_PUBLIC_API_URL
+# to it, allow the CI IP or a test key past reCAPTCHA, then restore the
+# pull_request trigger.
 on:
-  pull_request:
-    branches: [main, staging]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
   push:
     branches: [staging]
 

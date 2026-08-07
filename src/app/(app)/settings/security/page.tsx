@@ -6,6 +6,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import { Lock, Loader2, Smartphone } from "lucide-react";
 import TwoFactorManager from "@/components/security/TwoFactorManager";
+import { WalletPinSettings } from "@/components/wallet/wallet-pin-settings";
 
 export default function SecuritySettingsPage() {
   return (
@@ -18,6 +19,8 @@ export default function SecuritySettingsPage() {
       </div>
 
       <TwoFactorManager />
+
+      <WalletPinSettings />
 
       <PasswordChangeSection />
 

@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWallet, useWalletTransactions, useWithdraw, formatPhoneNumber, normalizePhoneNumber } from '@/hooks/usePayments';
+import { useWalletPinGuard } from '@/hooks/useWalletPin';
+import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 import { toast } from 'sonner';
 
 export default function WalletPage() {
@@ -34,6 +36,9 @@ export default function WalletPage() {
 
   // Withdraw mutation
   const withdrawMutation = useWithdraw();
+
+  // Wallet PIN challenge handling (raises the modal, then retries the action)
+  const { runGuarded, pinModal } = useWalletPinGuard();
 
   const paymentMethods: Array<{ id: number; provider: string; masked_number: string; is_default: boolean }> = [];
   const recentTransactions = transactionsData?.data || [];
@@ -78,11 +83,17 @@ export default function WalletPage() {
     }
 
     try {
-      await withdrawMutation.mutateAsync({
-        amount,
-        phone: normalizePhoneNumber(withdrawPhone),
-        provider: 'zengapay',
-      });
+      // Guarded: if the wallet PIN is required, the modal is raised and this
+      // withdrawal is retried automatically once the PIN is set/verified.
+      const result = await runGuarded(() =>
+        withdrawMutation.mutateAsync({
+          amount,
+          phone: normalizePhoneNumber(withdrawPhone),
+          provider: 'zengapay',
+        }),
+      );
+
+      if (result === undefined) return;
 
       toast.success('Withdrawal initiated! You will receive your funds shortly.');
       setShowWithdrawModal(false);
@@ -368,6 +379,9 @@ export default function WalletPage() {
           </div>
         </div>
       )}
+
+      {/* Wallet PIN — setup or verification, raised when a transaction needs it */}
+      <WalletPinModal {...pinModal} />
     </div>
   );
 }

@@ -20,12 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Build-time only. No real secrets and no calls to a live API: the build
-      # must never depend on production being reachable.
+      # No real secrets, and nothing here points at a live API — the gate must
+      # never depend on production being reachable.
       NEXTAUTH_URL: http://127.0.0.1:3000
       NEXTAUTH_SECRET: ci-build-secret
-      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000/api
-      API_URL: http://127.0.0.1:8000/api
 
     steps:
       - name: Checkout
@@ -43,10 +41,15 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Deliberately no API URL overrides: tests assert against the app's own
+      # default API origin, so overriding it here would fail them spuriously.
       - name: Unit tests
         run: npm test -- --ci
 
       - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8000/api
+          API_URL: http://127.0.0.1:8000/api
         run: npx next build
 
   audit:

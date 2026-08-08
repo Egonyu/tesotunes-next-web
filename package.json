@@ -43,7 +43,6 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@auth/core": "^0.34.3",
     "@caneara/iodine": "^8.5.0",
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@popperjs/core": "^2.11.8",

@@ -1,16 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Wallet,
   ArrowUpCircle,
   ArrowDownCircle,
   History,
-  CreditCard,
-  Smartphone,
   Gift,
-  TrendingUp,
   ChevronRight,
   Loader2,
   X
@@ -40,29 +37,11 @@ export default function WalletPage() {
   // Wallet PIN challenge handling (raises the modal, then retries the action)
   const { runGuarded, pinModal } = useWalletPinGuard();
 
-  const paymentMethods: Array<{ id: number; provider: string; masked_number: string; is_default: boolean }> = [];
   const recentTransactions = transactionsData?.data || [];
 
   const balance = wallet?.balance || 0;
   const creditsBalance = wallet?.credits_balance || 0;
   const inFlight = wallet?.in_flight ?? [];
-  const monthlyStats = useMemo(() => {
-    const now = new Date();
-    return recentTransactions.reduce(
-      (acc, tx) => {
-        const createdAt = new Date(tx.created_at);
-        const sameMonth = createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear();
-        if (!sameMonth) return acc;
-        if (tx.type === 'credit') acc.monthlyTopups += tx.amount;
-        if (tx.type === 'debit') acc.monthlySpent += tx.amount;
-        return acc;
-      },
-      { monthlyTopups: 0, monthlySpent: 0 }
-    );
-  }, [recentTransactions]);
-
-  const monthlyTopups = monthlyStats.monthlyTopups;
-  const monthlySpent = monthlyStats.monthlySpent;
 
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount.replace(/\D/g, ''));
@@ -107,10 +86,11 @@ export default function WalletPage() {
   };
 
   // Top-up moved into the primary thumb row above, so it is not repeated here.
+  // "Cards" was removed with the rest of the dead surfaces: /wallet/cards has
+  // never existed, so the link was a 404.
   const quickActions = [
     { label: 'Credits', icon: Gift, href: '/credits', color: 'bg-purple-500' },
     { label: 'History', icon: History, href: '/wallet/history', color: 'bg-blue-500' },
-    { label: 'Cards', icon: CreditCard, href: '/wallet/cards', color: 'bg-orange-500' },
   ];
 
   const formatDate = (dateString: string) => {
@@ -185,7 +165,7 @@ export default function WalletPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {quickActions.map((action) => {
           const Icon = action.icon;
           return (
@@ -203,63 +183,18 @@ export default function WalletPage() {
         })}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 rounded-xl border bg-card">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            This Month
-          </div>
-          <p className="text-xl font-bold mt-1">
-            UGX {monthlyTopups.toLocaleString()}
-          </p>
-          <p className="text-xs text-muted-foreground">Total top-ups</p>
-        </div>
-        <div className="p-4 rounded-xl border bg-card">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <ArrowUpCircle className="h-4 w-4 text-blue-500" />
-            Spent
-          </div>
-          <p className="text-xl font-bold mt-1">
-            UGX {monthlySpent.toLocaleString()}
-          </p>
-          <p className="text-xs text-muted-foreground">This month</p>
-        </div>
-      </div>
+      {/*
+        Removed here, deliberately:
 
-      {/* Payment Methods */}
-      <div className="p-4 rounded-xl border bg-card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold">Payment Methods</h2>
-          <button className="text-sm text-primary hover:underline">Add New</button>
-        </div>
-        <div className="space-y-3">
-          {paymentMethods.length > 0 ? (
-            paymentMethods.map((method) => (
-              <div key={method.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-green-600">
-                    <Smartphone className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium">ZengaPay • {method.provider}</p>
-                    <p className="text-sm text-muted-foreground">{method.masked_number}</p>
-                  </div>
-                </div>
-                {method.is_default && (
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full">
-                    Primary
-                  </span>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No payment methods added yet
-            </p>
-          )}
-        </div>
-      </div>
+        - "This Month" / "Spent" tiles. They summed whatever happened to be in
+          the five most recently fetched transactions and labelled it a monthly
+          total, so the figure was wrong for anyone active and got worse the
+          more they used the wallet. A missing number beats a false one; these
+          come back when the API exposes real month-to-date aggregates.
+        - "Payment Methods". The list was a hardcoded empty array and the
+          "Add New" button had no handler, so the card could never show or do
+          anything.
+      */}
 
       {/* Recent Transactions */}
       <div>

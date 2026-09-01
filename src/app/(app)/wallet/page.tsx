@@ -12,7 +12,6 @@ import {
   Gift,
   TrendingUp,
   ChevronRight,
-  Plus,
   Loader2,
   X
 } from 'lucide-react';
@@ -44,7 +43,7 @@ export default function WalletPage() {
   const recentTransactions = transactionsData?.data || [];
 
   const balance = wallet?.balance || 0;
-  const pendingBalance = 0;
+  const creditsBalance = wallet?.credits_balance || 0;
   const monthlyStats = useMemo(() => {
     const now = new Date();
     return recentTransactions.reduce(
@@ -105,8 +104,8 @@ export default function WalletPage() {
     }
   };
 
+  // Top-up moved into the primary thumb row above, so it is not repeated here.
   const quickActions = [
-    { label: 'Top Up', icon: Plus, href: '/wallet/topup', color: 'bg-green-500' },
     { label: 'Credits', icon: Gift, href: '/credits', color: 'bg-purple-500' },
     { label: 'History', icon: History, href: '/wallet/history', color: 'bg-blue-500' },
     { label: 'Cards', icon: CreditCard, href: '/wallet/cards', color: 'bg-orange-500' },
@@ -137,40 +136,50 @@ export default function WalletPage() {
         <h1 className="text-2xl font-bold">My Wallet</h1>
       </div>
 
-      {/* Balance Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary via-primary to-primary/80 p-6 text-primary-foreground">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="relative">
-          <p className="text-sm opacity-80">Available Balance</p>
-          <p className="text-4xl font-bold mt-1">
-            UGX {balance.toLocaleString()}
-          </p>
-          {pendingBalance > 0 && (
-            <p className="text-sm mt-2 opacity-80">
-              + UGX {pendingBalance.toLocaleString()} pending
-            </p>
-          )}
-          <div className="flex gap-3 mt-6">
-            <Link
-              href="/wallet/topup"
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-            >
-              <ArrowDownCircle className="h-5 w-5" />
-              Top Up
-            </Link>
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-            >
-              <ArrowUpCircle className="h-5 w-5" />
-              Withdraw
-            </button>
-          </div>
+      {/*
+        Balance card — credits lead because credits are what people actually
+        hold here (on production: 67 users hold credits, 4 hold shillings), and
+        earnings from listening, tips and corpus contributions all settle in
+        credits. Cash sits beneath as the secondary line. Flat fills, no
+        gradient.
+      */}
+      <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Credits
+        </p>
+        <p className="mt-1 text-4xl font-bold tabular-nums">
+          {creditsBalance.toLocaleString()}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Earned on TesoTunes — spend on the platform, or cash out after verification.
+        </p>
+
+        <div className="mt-4 flex items-baseline justify-between border-t border-primary/20 pt-3">
+          <span className="text-sm text-muted-foreground">Cash balance</span>
+          <span className="font-semibold tabular-nums">UGX {balance.toLocaleString()}</span>
         </div>
       </div>
 
+      {/* The two money actions, full width and thumb-reachable on a phone. */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/wallet/topup"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <ArrowDownCircle className="h-5 w-5" />
+          Add money
+        </Link>
+        <button
+          onClick={() => setShowWithdrawModal(true)}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border bg-card px-4 font-medium transition-colors hover:bg-muted"
+        >
+          <ArrowUpCircle className="h-5 w-5" />
+          Cash out
+        </button>
+      </div>
+
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {quickActions.map((action) => {
           const Icon = action.icon;
           return (

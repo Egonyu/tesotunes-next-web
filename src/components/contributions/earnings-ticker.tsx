@@ -1,20 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Coins, Sparkles } from 'lucide-react';
+import { Coins, Sparkles, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
  * Live earnings panel for the Ateso corpus contribution flow.
  *
- * Rather than flashing a bare "you earned X", it shows the *math*: how many
- * lines you translated and reviewed this session, each multiplied by its rate,
- * summed to an estimate. The total is framed as "pending peer review" because
- * credits only settle once a contribution is accepted.
+ * Two figures, both sourced from the profile API so they survive a refresh:
+ *  - `lifetime`       — credits actually settled (accepted work), withdrawable after KYC.
+ *  - `pendingCredits` — estimated credits for submitted-but-not-yet-accepted work.
+ *  - `pendingCount`   — how many submissions make up that pending estimate.
  *
- *  - `lifetime` — credits actually settled (real, from the profile API).
- *  - `translations` / `reviews` — counts of work done this session.
- *  - `perTranslation` / `perReview` — the per-action rates (from backend config).
+ * Earlier versions kept the pending figure in React state, so it reset to 0 on
+ * every reload and looked like earnings were "disappearing". It is now server-backed.
  */
 
 const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -48,66 +47,34 @@ function useCountUp(target: number, duration = 600): number {
   return value;
 }
 
-function MathRow({
-  label,
-  count,
-  rate,
-}: {
-  label: string;
-  count: number;
-  rate: number;
-}) {
-  const dim = count === 0;
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-between gap-3 text-sm tabular-nums transition-opacity',
-        dim && 'opacity-50'
-      )}
-    >
-      <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground">{count.toLocaleString()}</span> {label}
-        <span className="text-muted-foreground"> × {rate}</span>
-      </span>
-      <span className="font-medium">{(count * rate).toLocaleString()}</span>
-    </div>
-  );
-}
-
-function encouragement(total: number, anyWork: boolean): string {
-  if (total >= 1500) return "You're on fire 🔥 every line teaches the machine Ateso.";
-  if (total >= 600) return 'Great momentum — keep them coming!';
-  if (anyWork) return 'Nice start — each accepted line settles to real credits.';
-  return 'Translate or review a line to see your earnings add up.';
+function encouragement(lifetime: number, pendingCount: number): string {
+  if (lifetime >= 1500) return "You're on fire 🔥 every accepted line teaches the machine Ateso.";
+  if (lifetime > 0) return 'Great momentum — your accepted lines have settled to real credits.';
+  if (pendingCount > 0) return 'Nice work — your submissions settle to credits once peers review them.';
+  return 'Translate or review a line to start earning credits.';
 }
 
 export function EarningsTicker({
   lifetime,
-  translations,
-  reviews,
-  perTranslation,
-  perReview,
+  pendingCount,
+  pendingCredits,
 }: {
   lifetime: number;
-  translations: number;
-  reviews: number;
-  perTranslation: number;
-  perReview: number;
+  pendingCount: number;
+  pendingCredits: number;
 }) {
-  const estimate = translations * perTranslation + reviews * perReview;
-  const anyWork = translations + reviews > 0;
-
   const animatedLifetime = useCountUp(lifetime);
-  const animatedEstimate = useCountUp(estimate);
+  const animatedPending = useCountUp(pendingCredits);
 
-  // Flash a "+N" badge each time the estimate grows.
-  const prev = useRef(estimate);
+  // Flash a "+N" badge each time the pending estimate grows (e.g. after a submit
+  // triggers a profile refetch).
+  const prev = useRef(pendingCredits);
   const flashId = useRef(0);
   const [flash, setFlash] = useState<{ amount: number; key: number } | null>(null);
 
   useEffect(() => {
-    const delta = estimate - prev.current;
-    prev.current = estimate;
+    const delta = pendingCredits - prev.current;
+    prev.current = pendingCredits;
     if (delta > 0) {
       flashId.current += 1;
       const key = flashId.current;
@@ -117,47 +84,42 @@ export function EarningsTicker({
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [estimate]);
+  }, [pendingCredits]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-amber-50 via-card to-primary/5 p-5 dark:from-amber-950/30">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15">
-            <Coins className="h-6 w-6 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Credits earned
-            </p>
-            <p className="text-2xl font-bold tabular-nums">{animatedLifetime.toLocaleString()}</p>
-            <p className="text-[11px] text-muted-foreground">settled — withdrawable after KYC</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15">
+          <Coins className="h-6 w-6 text-amber-500" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Credits earned
+          </p>
+          <p className="text-2xl font-bold tabular-nums">{animatedLifetime.toLocaleString()}</p>
+          <p className="text-[11px] text-muted-foreground">settled — withdrawable after KYC</p>
         </div>
       </div>
 
-      {/* The math: counts × rate, summed to a pending estimate. */}
+      {/* Pending peer review — persistent, from the profile API. */}
       <div className="relative mt-4 rounded-xl border bg-background/60 p-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          This session
-        </p>
-        <div className="space-y-1.5">
-          <MathRow label="translations" count={translations} rate={perTranslation} />
-          <MathRow label="reviews" count={reviews} rate={perReview} />
-        </div>
-        <div className="mt-2.5 flex items-center justify-between gap-3 border-t pt-2.5">
-          <span className="text-sm font-medium">Estimated</span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+            <Clock className="h-4 w-4 text-muted-foreground" /> Pending peer review
+          </span>
           <span
             className={cn(
               'text-xl font-bold tabular-nums transition-colors',
-              anyWork ? 'text-primary' : 'text-muted-foreground'
+              pendingCount > 0 ? 'text-primary' : 'text-muted-foreground'
             )}
           >
-            {animatedEstimate.toLocaleString()} cr
+            {animatedPending.toLocaleString()} cr
           </span>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Pending peer review — credits settle once contributions are accepted.
+          {pendingCount > 0
+            ? `${pendingCount.toLocaleString()} submission${pendingCount === 1 ? '' : 's'} awaiting review — settles to credits once accepted.`
+            : 'Submitted work waiting on review will show here.'}
         </p>
 
         {flash && (
@@ -170,7 +132,7 @@ export function EarningsTicker({
         )}
       </div>
 
-      <p className="mt-3 text-sm text-muted-foreground">{encouragement(estimate, anyWork)}</p>
+      <p className="mt-3 text-sm text-muted-foreground">{encouragement(lifetime, pendingCount)}</p>
 
       {/* Local keyframes for the float-up flash. */}
       <style jsx>{`

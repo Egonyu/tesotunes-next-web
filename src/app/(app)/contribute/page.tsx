@@ -29,16 +29,6 @@ import { EarningsTicker } from '@/components/contributions/earnings-ticker';
 
 type Tab = 'translate' | 'validate' | 'standing';
 
-/**
- * Estimated reward per action, mirroring the backend reward config
- * (app/Modules/Contributions/Config/contributions.php → rewards). Shown as a
- * live "pending review" estimate; the real settled total comes from the profile.
- */
-const REWARD_TRANSLATION = 200; // rewards.per_pair_ugx
-const REWARD_VALIDATION = 100; // per_pair_ugx * validation_pct (0.50)
-/** Verdicts that pay the reviewer (RewardService rewards agree + minor_fix). */
-const PAYING_VERDICTS: ReadonlySet<Verdict> = new Set(['agree', 'minor_fix']);
-
 export default function ContributePage() {
   const { data: consent, isLoading: consentLoading } = useConsentStatus();
   const recordConsent = useRecordConsent();
@@ -103,13 +93,10 @@ function ConsentGate({ onAccept, pending, licenseVersion }: { onAccept: () => vo
 
 function ContributeHub() {
   const [tab, setTab] = useState<Tab>('translate');
-  // In-session tally of work done, broken down by action so the ticker can show
-  // the math (counts × rate) rather than a bare "earned" figure.
-  const [tally, setTally] = useState({ translations: 0, reviews: 0 });
-  const recordTranslation = () => setTally((t) => ({ ...t, translations: t.translations + 1 }));
-  const recordReview = () => setTally((t) => ({ ...t, reviews: t.reviews + 1 }));
 
   const { data: profile } = useContributorProfile();
+  const { data: queue } = useValidationQueue();
+  const reviewCount = queue?.meta?.total ?? queue?.data?.length ?? 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -122,11 +109,13 @@ function ContributeHub() {
 
       <EarningsTicker
         lifetime={profile?.credits_earned_total ?? 0}
-        translations={tally.translations}
-        reviews={tally.reviews}
-        perTranslation={REWARD_TRANSLATION}
-        perReview={REWARD_VALIDATION}
+        pendingCount={profile?.submissions_pending ?? 0}
+        pendingCredits={profile?.pending_estimate_credits ?? 0}
       />
+
+      {reviewCount > 0 && tab !== 'validate' && (
+        <ReviewNudge count={reviewCount} onReview={() => setTab('validate')} />
+      )}
 
       <div className="flex gap-1 rounded-lg bg-muted p-1">
         {([['translate', 'Translate'], ['validate', 'Review'], ['standing', 'Your standing']] as const).map(([key, label]) => (
@@ -134,25 +123,56 @@ function ContributeHub() {
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+              'flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5',
               tab === key ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {label}
+            {key === 'validate' && reviewCount > 0 && (
+              <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground tabular-nums">
+                {reviewCount > 99 ? '99+' : reviewCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {tab === 'translate' && <TranslateTab onEarn={recordTranslation} />}
-      {tab === 'validate' && <ValidateTab onEarn={recordReview} />}
+      {tab === 'translate' && <TranslateTab />}
+      {tab === 'validate' && <ValidateTab />}
       {tab === 'standing' && <StandingTab />}
     </div>
   );
 }
 
+/**
+ * Reviews are what convert everyone's submitted work into settled credits, but
+ * they are the step contributors skip — so nudge toward the Review tab whenever
+ * there is a queue waiting.
+ */
+function ReviewNudge({ count, onReview }: { count: number; onReview: () => void }) {
+  return (
+    <button
+      onClick={onReview}
+      className="w-full flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+        <ThumbsUp className="h-5 w-5 text-primary" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">
+          {count.toLocaleString()} translation{count === 1 ? '' : 's'} need your review
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Earn credits for each review — and reviews are what release everyone&apos;s pending credits. Tap to start.
+        </p>
+      </div>
+    </button>
+  );
+}
+
 // ── Translate ──────────────────────────────────────────────────
 
-function TranslateTab({ onEarn }: { onEarn: () => void }) {
+function TranslateTab() {
   const { data, isLoading } = useTranslationTasks();
   const submit = useSubmitTranslation();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -202,7 +222,7 @@ function TranslateTab({ onEarn }: { onEarn: () => void }) {
             <button
               onClick={() => submit.mutate(
                 { uuid: task.uuid, translation: drafts[task.uuid] ?? '', dialect: dialect || undefined, code_switched: !!mixed[task.uuid] },
-                { onSuccess: () => { setDrafts((d) => ({ ...d, [task.uuid]: '' })); onEarn(); } }
+                { onSuccess: () => setDrafts((d) => ({ ...d, [task.uuid]: '' })) }
               )}
               disabled={submit.isPending || !(drafts[task.uuid] ?? '').trim()}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-60 text-sm font-medium"
@@ -219,7 +239,7 @@ function TranslateTab({ onEarn }: { onEarn: () => void }) {
 
 // ── Validate ───────────────────────────────────────────────────
 
-function ValidateTab({ onEarn }: { onEarn: () => void }) {
+function ValidateTab() {
   const { data, isLoading } = useValidationQueue();
   const validate = useSubmitValidation();
 
@@ -230,10 +250,7 @@ function ValidateTab({ onEarn }: { onEarn: () => void }) {
 
   const verdictBtn = (uuid: string, verdict: Verdict, label: string, Icon: React.ElementType, tone: string) => (
     <button
-      onClick={() => validate.mutate(
-        { uuid, verdict },
-        { onSuccess: () => { if (PAYING_VERDICTS.has(verdict)) onEarn(); } }
-      )}
+      onClick={() => validate.mutate({ uuid, verdict })}
       disabled={validate.isPending}
       className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-60', tone)}
     >

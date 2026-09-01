@@ -23,6 +23,10 @@ export interface ContributorProfile {
   submissions_accepted: number;
   validations_total: number;
   credits_earned_total: number;
+  /** Submitted work still awaiting peer acceptance (persists across refresh). */
+  submissions_pending: number;
+  /** Estimated credits for that pending work (submissions_pending × per-pair rate). */
+  pending_estimate_credits: number;
   consented: boolean;
 }
 

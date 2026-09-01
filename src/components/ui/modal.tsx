@@ -9,22 +9,62 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
+  /** id of the element naming this dialog, for screen readers. */
+  labelledBy?: string;
 }
 
-function Modal({ open, onClose, children, className }: ModalProps) {
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function Modal({ open, onClose, children, className, labelledBy }: ModalProps) {
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
   React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    if (!open) return;
+
+    // Remember where focus came from so it can be handed back on close —
+    // otherwise keyboard users are dumped at the top of the page.
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key !== 'Tab' || !panelRef.current) return;
+
+      // Trap Tab inside the dialog: without this, focus walks out into the page
+      // behind the overlay while the overlay is still covering it.
+      const focusable = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
+      ).filter((el) => el.offsetParent !== null);
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
 
-    if (open) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    // Move focus into the dialog once it is on screen.
+    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    firstFocusable?.focus();
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
+      previouslyFocused?.focus?.();
     };
   }, [open, onClose]);
 
@@ -37,9 +77,13 @@ function Modal({ open, onClose, children, className }: ModalProps) {
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Content */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
         className={cn(
           'relative z-50 w-full max-w-lg rounded-lg bg-background p-6 shadow-lg',
           'animate-in fade-in-0 zoom-in-95',

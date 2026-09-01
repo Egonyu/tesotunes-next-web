@@ -9,21 +9,18 @@ import {
   History,
   Gift,
   ChevronRight,
-  Loader2,
-  X
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWallet, useWalletTransactions, useWithdraw, formatPhoneNumber, normalizePhoneNumber } from '@/hooks/usePayments';
+import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber } from '@/hooks/usePayments';
 import { useWalletPinGuard } from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
+import { WithdrawDialog } from '@/components/wallet/withdraw-dialog';
 import { toast } from 'sonner';
 
 export default function WalletPage() {
-  // Withdraw modal state
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawPhone, setWithdrawPhone] = useState('');
 
   // Fetch wallet data
   const { data: wallet, isLoading } = useWallet();
@@ -43,44 +40,26 @@ export default function WalletPage() {
   const creditsBalance = wallet?.credits_balance || 0;
   const inFlight = wallet?.in_flight ?? [];
 
-  const handleWithdraw = async () => {
-    const amount = parseInt(withdrawAmount.replace(/\D/g, ''));
-
-    if (!amount || amount < 1000) {
-      toast.error('Minimum withdrawal is UGX 1,000');
-      return;
-    }
-
-    if (amount > balance) {
-      toast.error('Insufficient balance');
-      return;
-    }
-
-    const cleanPhone = withdrawPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 9) {
-      toast.error('Please enter a valid phone number');
-      return;
-    }
-
+  // The dialog validates amount and phone before calling this and disables its
+  // own submit until both are good, so this only handles the network round trip.
+  const handleWithdraw = async (amount: number, phone: string) => {
     try {
       // Guarded: if the wallet PIN is required, the modal is raised and this
       // withdrawal is retried automatically once the PIN is set/verified.
       const result = await runGuarded(() =>
         withdrawMutation.mutateAsync({
           amount,
-          phone: normalizePhoneNumber(withdrawPhone),
+          phone: normalizePhoneNumber(phone),
           provider: 'zengapay',
         }),
       );
 
       if (result === undefined) return;
 
-      toast.success('Withdrawal initiated! You will receive your funds shortly.');
+      toast.success('Cash out started. The money should reach your phone shortly.');
       setShowWithdrawModal(false);
-      setWithdrawAmount('');
-      setWithdrawPhone('');
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to process withdrawal';
+      const errorMessage = error instanceof Error ? error.message : 'Could not start the cash out';
       toast.error(errorMessage);
     }
   };
@@ -246,89 +225,13 @@ export default function WalletPage() {
         )}
       </div>
 
-      {/* Withdraw Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowWithdrawModal(false)}
-          />
-          <div className="relative bg-background rounded-2xl p-6 w-full max-w-md mx-4 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Withdraw Funds</h2>
-              <button
-                onClick={() => setShowWithdrawModal(false)}
-                className="p-2 hover:bg-muted rounded-lg"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Available Balance */}
-              <div className="p-4 rounded-lg bg-muted">
-                <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="text-2xl font-bold">UGX {balance.toLocaleString()}</p>
-              </div>
-
-              {/* Amount Input */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Amount (UGX)</label>
-                <input
-                  type="text"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter amount"
-                  className="w-full px-4 py-3 rounded-lg border bg-background"
-                />
-              </div>
-
-              {/* Phone Number */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">ZengaPay Mobile Money Number</label>
-                <input
-                  type="tel"
-                  value={withdrawPhone}
-                  onChange={(e) => setWithdrawPhone(e.target.value)}
-                  placeholder="e.g., 0772123456"
-                  className="w-full px-4 py-3 rounded-lg border bg-background"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter the phone number where ZengaPay should send the withdrawal prompt.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowWithdrawModal(false)}
-                className="flex-1 py-3 border rounded-lg font-medium hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleWithdraw}
-                disabled={withdrawMutation.isPending}
-                className={cn(
-                  'flex-1 py-3 rounded-lg font-medium transition-colors',
-                  withdrawMutation.isPending
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                )}
-              >
-                {withdrawMutation.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Processing...
-                  </span>
-                ) : (
-                  'Withdraw'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <WithdrawDialog
+        open={showWithdrawModal}
+        onClose={() => setShowWithdrawModal(false)}
+        balance={balance}
+        onSubmit={handleWithdraw}
+        isSubmitting={withdrawMutation.isPending}
+      />
 
       {/* Wallet PIN — setup or verification, raised when a transaction needs it */}
       <WalletPinModal {...pinModal} />

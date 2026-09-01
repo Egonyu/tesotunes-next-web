@@ -182,10 +182,26 @@ export function usePaymentStatus(reference: string, options?: { enabled?: boolea
 // Wallet Hooks
 // ============================================================================
 
+/** Money committed but not yet landed — pending, processing, or recently failed. */
+export interface InFlightPayment {
+  reference: string | null;
+  type: string;
+  direction: "in" | "out";
+  amount: number;
+  currency: string;
+  status: "pending" | "processing" | "failed";
+  provider: string | null;
+  failure_reason: string | null;
+  created_at: string | null;
+  age_hours: number;
+  /** Still settling long past when a mobile-money confirmation should have arrived. */
+  is_stale: boolean;
+}
+
 export function useWallet() {
   return useQuery({
     queryKey: ["wallet"],
-    queryFn: () => apiGet<{ data: { ugx_balance?: number; credits_balance?: number; currency?: string; balance?: number; formatted_balance?: string } }>("/payments/wallet")
+    queryFn: () => apiGet<{ data: { ugx_balance?: number; credits_balance?: number; currency?: string; balance?: number; formatted_balance?: string; in_flight?: InFlightPayment[] } }>("/payments/wallet")
       .then(res => {
         const balance = Number(res.data.ugx_balance ?? res.data.balance ?? 0);
         const currency = res.data.currency ?? "UGX";
@@ -195,9 +211,14 @@ export function useWallet() {
           credits_balance: Number(res.data.credits_balance ?? 0),
           currency,
           formatted_balance: res.data.formatted_balance ?? `${currency} ${balance.toLocaleString()}`,
+          in_flight: res.data.in_flight ?? [],
         };
       }),
-    staleTime: 30 * 1000, // 30 seconds
+    // Money in flight changes without the user acting, so poll while the tab is
+    // open rather than leaving a stale "on its way" row on screen.
+    staleTime: 15 * 1000,
+    refetchInterval: (query) =>
+      (query.state.data?.in_flight?.length ?? 0) > 0 ? 15 * 1000 : false,
   });
 }
 

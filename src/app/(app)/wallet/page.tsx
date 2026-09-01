@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useWallet, useWalletTransactions, useWithdraw, formatPhoneNumber, normalizePhoneNumber } from '@/hooks/usePayments';
 import { useWalletPinGuard } from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
+import { InFlightMoney } from '@/components/wallet/in-flight-money';
 import { toast } from 'sonner';
 
 export default function WalletPage() {
@@ -44,6 +45,7 @@ export default function WalletPage() {
 
   const balance = wallet?.balance || 0;
   const creditsBalance = wallet?.credits_balance || 0;
+  const inFlight = wallet?.in_flight ?? [];
   const monthlyStats = useMemo(() => {
     const now = new Date();
     return recentTransactions.reduce(
@@ -159,6 +161,10 @@ export default function WalletPage() {
           <span className="font-semibold tabular-nums">UGX {balance.toLocaleString()}</span>
         </div>
       </div>
+
+      {/* Anything committed but not landed, before the actions — so a stuck
+          payment is seen before another one is started on top of it. */}
+      <InFlightMoney payments={inFlight} />
 
       {/* The two money actions, full width and thumb-reachable on a phone. */}
       <div className="grid grid-cols-2 gap-3">

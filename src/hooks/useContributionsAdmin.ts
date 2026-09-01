@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 export interface ContributionsOverview {
   corpus: { total_pairs: number; by_region: Record<string, number>; by_register: Record<string, number>; exported: number };
   tasks: { open: number; fulfilled: number; gold: number };
-  submissions: { awaiting_validation: number; accepted: number };
+  submissions: { awaiting_validation: number; accepted: number; never_reviewed: number; total: number };
   contributors: { total: number; by_tier: Record<string, number> };
   rewards: { daily_pool: number; pool_spent_today: number; pool_remaining_today: number };
 }
@@ -116,6 +116,86 @@ export function useSeedGold() {
       toast.success('Gold item seeded.');
     },
     onError: (e) => toast.error(msg(e, 'Could not seed gold item.')),
+  });
+}
+
+// ── Review backlog ─────────────────────────────────────────────
+
+export type SubmissionStatus = 'submitted' | 'accepted' | 'rejected' | 'superseded';
+
+export interface AdminSubmission {
+  uuid: string;
+  translation: string;
+  source_text: string | null;
+  source_lang: string | null;
+  target_lang: string | null;
+  register: string | null;
+  is_gold: boolean;
+  dialect: string | null;
+  is_code_switched: boolean;
+  status: SubmissionStatus;
+  settled: boolean;
+  contributor: { id: number; name: string } | null;
+  validations_count: number;
+  approval: number;
+  validations_needed: number;
+  clears_threshold: boolean;
+  created_at: string | null;
+}
+
+export interface SubmissionsMeta {
+  current_page: number;
+  last_page: number;
+  total: number;
+  min_validations: number;
+  approval_threshold: number;
+}
+
+export interface AdminSubmissionFilters {
+  status?: SubmissionStatus | 'all';
+  unreviewed?: boolean;
+  search?: string;
+  user_id?: number;
+  dialect?: string;
+  per_page?: number;
+}
+
+export function useAdminSubmissions(params?: AdminSubmissionFilters) {
+  return useQuery({
+    queryKey: ['admin', 'contributions', 'submissions', params],
+    queryFn: () =>
+      apiGet<Wrapped<AdminSubmission[]> & { meta: SubmissionsMeta }>(
+        '/contributions/admin/submissions',
+        { params }
+      ),
+    staleTime: 10 * 1000,
+  });
+}
+
+export type AdminVerdict = 'agree' | 'minor_fix' | 'valid_variant' | 'reject';
+
+export interface BulkReviewResult {
+  reviewed: number;
+  skipped: number;
+  accepted: number;
+  errors: Array<{ uuid: string; message: string }>;
+}
+
+export function useBulkReviewSubmissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { uuids: string[]; verdict: AdminVerdict; suggested_fix?: string }) =>
+      apiPost<Wrapped<BulkReviewResult>>('/contributions/admin/submissions/bulk-review', body),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'contributions'] });
+      toast.success(res.message ?? 'Review recorded.');
+
+      const failed = res.data?.errors ?? [];
+      if (failed.length > 0) {
+        toast.warning(`${failed.length} skipped — ${failed[0]?.message ?? 'already reviewed or closed.'}`);
+      }
+    },
+    onError: (e) => toast.error(msg(e, 'Could not record review.')),
   });
 }
 

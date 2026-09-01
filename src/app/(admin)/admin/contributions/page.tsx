@@ -14,6 +14,7 @@ import {
   useExportCorpus,
   type Direction,
 } from '@/hooks/useContributionsAdmin';
+import { AdminReviewBacklog } from '@/components/contributions/admin-review-backlog';
 
 export default function AdminContributionsPage() {
   return (
@@ -27,6 +28,9 @@ export default function AdminContributionsPage() {
 
       <Toggles />
       <Overview />
+      {/* Reviewing is the pipeline's bottleneck — nothing is accepted or paid
+          until a verdict lands, so the backlog sits above the authoring tools. */}
+      <AdminReviewBacklog />
       <ImportPrompts />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SeedGold />
@@ -85,6 +89,7 @@ function Overview() {
     ['Open tasks', data.tasks.open],
     ['Gold items', data.tasks.gold],
     ['Awaiting review', data.submissions.awaiting_validation],
+    ['Never reviewed', data.submissions.never_reviewed],
     ['Accepted', data.submissions.accepted],
     ['Contributors', data.contributors.total],
     ['Pool spent today', `${data.rewards.pool_spent_today}/${data.rewards.daily_pool}`],

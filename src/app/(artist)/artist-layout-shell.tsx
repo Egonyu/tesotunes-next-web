@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   { href: '/artist/earnings', label: 'Earnings', icon: Wallet, caps: ['artist'] },
   { href: '/artist/royalty-splits', label: 'Royalty Splits', icon: Users, caps: ['artist'] },
   { href: '/artist/distribution', label: 'Distribution', icon: Globe, caps: ['artist'] },
-  { href: '/artist/wallet', label: 'Wallet', icon: Wallet, caps: ['artist'] },
+  { href: '/wallet', label: 'Wallet', icon: Wallet, caps: ['artist'] },
   { href: '/artist/fan-club', label: 'Fan Club', icon: Crown, caps: ['artist'] },
   { href: '/artist/referrals', label: 'Fan Referrals', icon: Users, caps: ['artist'] },
   { href: '/artist/events', label: 'Events', icon: Calendar, caps: ['organizer', 'artist'] },

@@ -245,7 +245,7 @@ export function MobileBottomNav() {
     { href: "/artist/upload", label: "Upload Music", icon: Upload },
     { href: "/artist/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
-    { href: "/artist/wallet", label: "Studio Wallet", icon: Wallet },
+    { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/credits", label: "Credits", icon: Coins },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/settings", label: "Settings", icon: Settings },

@@ -845,7 +845,7 @@ function OnboardingChecklist({
 
 const quickActions = [
   { href: '/artist/upload', label: 'Upload Song', description: 'Release new music', icon: Upload, color: 'from-primary to-purple-600' },
-  { href: '/artist/wallet', label: 'Wallet', description: 'Balance & top-up', icon: Wallet, color: 'from-green-500 to-emerald-600' },
+  { href: '/wallet', label: 'Wallet', description: 'Balance & top-up', icon: Wallet, color: 'from-green-500 to-emerald-600' },
   { href: '/artist/earnings', label: 'Earnings', description: 'Revenue & withdrawals', icon: DollarSign, color: 'from-amber-500 to-orange-600' },
   { href: '/artist/events', label: 'Events', description: 'Manage your events', icon: Calendar, color: 'from-blue-500 to-cyan-600' },
   { href: '/artist/royalty-splits', label: 'Royalty Splits', description: 'Collaborator shares', icon: Users, color: 'from-pink-500 to-rose-600' },

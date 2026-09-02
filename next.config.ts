@@ -97,6 +97,25 @@ const nextConfig: NextConfig = {
   // Permanent redirects for old URL formats (pre-rebranding slugs)
   async redirects() {
     return [
+      // ── Retired: the second wallet ─────────────────────────────
+      // An artist used to have two pages both titled "Wallet" — this one and
+      // /wallet — each with its own balance and its own cash-out, so there was
+      // no single answer to "how much do I have?". One account holds many
+      // capabilities (docs/architecture/CAPABILITIES.md), so earnings are now
+      // sections of the one wallet. The artist payout flow itself was not lost:
+      // it also lives on /artist/earnings, which keeps the per-song detail.
+      // Not permanent — a 308 would be cached in browsers and is awkward to
+      // undo while the consolidation is still settling.
+      {
+        source: '/artist/wallet',
+        destination: '/wallet',
+        permanent: false,
+      },
+      {
+        source: '/artist/wallet/topup',
+        destination: '/wallet/topup',
+        permanent: false,
+      },
       // ── Old /song/:id/:slug  → New /songs/:slug ────────────────
       {
         source: '/song/:id(\\d+)/:slug',

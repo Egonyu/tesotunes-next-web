@@ -110,7 +110,7 @@ export const promotionsIntegrations: IntegrationSurface[] = [
   },
   {
     label: "Wallet top-up",
-    href: "/artist/wallet/topup",
+    href: "/wallet/topup",
     status: "live",
     summary: "Wallet funding is already productized and can be presented as the practical path for local-dev promotion spend simulations.",
   },

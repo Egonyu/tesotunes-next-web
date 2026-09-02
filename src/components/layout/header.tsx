@@ -88,7 +88,7 @@ export function Header() {
               <MessageSquare className="h-4.5 w-4.5" />
             </button>
             <button
-              onClick={() => router.push(hasArtistAccess ? "/artist/wallet" : "/wallet")}
+              onClick={() => router.push("/wallet")}
               aria-label="Wallet"
               className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >

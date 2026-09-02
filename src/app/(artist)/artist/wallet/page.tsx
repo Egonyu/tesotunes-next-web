@@ -23,13 +23,18 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistEarnings, useRequestWithdrawal, useArtistProfile } from '@/hooks/useArtist';
 import { usePaymentMethods } from '@/hooks/usePayments';
+import { Modal } from '@/components/ui/modal';
+import { AmountField, amountProblem } from '@/components/wallet/amount-field';
 import { toast } from 'sonner';
 
 type WithdrawMethodId = 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay';
 
+/** Artist earnings payouts clear a much higher floor than wallet cash-outs. */
+const MIN_ARTIST_WITHDRAWAL = 50000;
+
 export default function ArtistWalletPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState(0);
   const [withdrawMethod, setWithdrawMethod] = useState<WithdrawMethodId>('zengapay');
   const [withdrawPhone, setWithdrawPhone] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'methods'>('overview');
@@ -67,15 +72,8 @@ export default function ArtistWalletPage() {
   const earningsSources = earningsData?.earnings_sources || [];
 
   const handleWithdraw = () => {
-    const amount = parseInt(withdrawAmount);
-    if (amount < 50000) {
-      toast.error('Minimum withdrawal amount is UGX 50,000');
-      return;
-    }
-    if (amount > stats.balance) {
-      toast.error('Insufficient balance');
-      return;
-    }
+    // The amount field renders its own inline validation and the submit button
+    // is gated on the same helper, so only the phone needs checking here.
     if (selectedNeedsPhone && !withdrawPhone && !profile?.payout_phone_number) {
       toast.error('Please enter a phone number');
       return;
@@ -83,7 +81,7 @@ export default function ArtistWalletPage() {
 
     withdrawMutation.mutate(
       {
-        amount,
+        amount: withdrawAmount,
         payment_method: withdrawMethod,
         phone_number: withdrawPhone || undefined,
       },
@@ -91,7 +89,7 @@ export default function ArtistWalletPage() {
         onSuccess: () => {
           toast.success('Withdrawal request submitted successfully');
           setShowWithdrawModal(false);
-          setWithdrawAmount('');
+          setWithdrawAmount(0);
           setWithdrawPhone('');
         },
         onError: () => {
@@ -101,7 +99,7 @@ export default function ArtistWalletPage() {
     );
   };
 
-  const quickAmounts = [50000, 100000, 200000, 500000];
+  const quickAmounts = [MIN_ARTIST_WITHDRAWAL, 100000, 200000, 500000];
 
   if (isLoading) {
     return (
@@ -144,7 +142,7 @@ export default function ArtistWalletPage() {
           </Link>
           <button
             onClick={() => setShowWithdrawModal(true)}
-            disabled={stats.balance < 50000}
+            disabled={stats.balance < MIN_ARTIST_WITHDRAWAL}
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="h-4 w-4" />
@@ -156,18 +154,18 @@ export default function ArtistWalletPage() {
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Main Balance */}
-        <div className="md:col-span-2 p-6 rounded-xl bg-linear-to-br from-primary to-purple-600 text-white">
+        <div className="md:col-span-2 p-6 rounded-xl border border-primary/25 bg-primary/5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              <span className="text-sm opacity-90">Available Balance</span>
+              <Wallet className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Available Balance</span>
             </div>
-            <Shield className="h-5 w-5 opacity-60" />
+            <Shield className="h-5 w-5 text-muted-foreground" />
           </div>
-          <p className="text-4xl font-bold mb-2">UGX {stats.balance.toLocaleString()}</p>
-          <div className="flex items-center gap-4 text-sm opacity-80">
+          <p className="text-4xl font-bold mb-2 tabular-nums">UGX {stats.balance.toLocaleString()}</p>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>Ready for withdrawal</span>
-            {stats.balance >= 50000 ? (
+            {stats.balance >= MIN_ARTIST_WITHDRAWAL ? (
               <button
                 onClick={() => setShowWithdrawModal(true)}
                 className="underline hover:no-underline"
@@ -455,61 +453,35 @@ export default function ArtistWalletPage() {
       )}
 
       {/* Withdrawal Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
-            <h2 className="text-xl font-bold mb-4">Withdraw Funds</h2>
+      <Modal
+        open={showWithdrawModal}
+        onClose={() => !withdrawMutation.isPending && setShowWithdrawModal(false)}
+        labelledBy="artist-withdraw-title"
+        className="max-w-md"
+      >
+        <div>
+          <h2 id="artist-withdraw-title" className="text-xl font-bold mb-4">
+            Withdraw Funds
+          </h2>
 
             <div className="space-y-4">
               {/* Balance Display */}
-              <div className="p-4 rounded-lg bg-linear-to-r from-primary/10 to-purple-500/10">
+              <div className="p-4 rounded-lg bg-muted">
                 <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="text-2xl font-bold">UGX {stats.balance.toLocaleString()}</p>
+                <p className="text-2xl font-bold tabular-nums">UGX {stats.balance.toLocaleString()}</p>
               </div>
 
-              {/* Amount Input */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Amount (UGX)</label>
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Enter amount (min 50,000)"
-                  min="50000"
-                  max={stats.balance}
-                  className="w-full px-4 py-2.5 border rounded-lg bg-background"
-                />
-                {/* Quick Amount Buttons */}
-                <div className="flex gap-2 mt-2">
-                  {quickAmounts.filter(a => a <= stats.balance).map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setWithdrawAmount(String(amount))}
-                      className={cn(
-                        'px-3 py-1 text-xs rounded-full border transition-colors',
-                        withdrawAmount === String(amount)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      {amount >= 1000000 ? `${amount / 1000000}M` : `${amount / 1000}K`}
-                    </button>
-                  ))}
-                  {stats.balance >= 50000 && (
-                    <button
-                      onClick={() => setWithdrawAmount(String(stats.balance))}
-                      className={cn(
-                        'px-3 py-1 text-xs rounded-full border transition-colors',
-                        withdrawAmount === String(stats.balance)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      Max
-                    </button>
-                  )}
-                </div>
-              </div>
+              <AmountField
+                id="artist-withdraw-amount"
+                label="Amount"
+                value={withdrawAmount}
+                onChange={setWithdrawAmount}
+                min={MIN_ARTIST_WITHDRAWAL}
+                max={stats.balance}
+                presets={quickAmounts}
+                maxLabel="Max"
+                disabled={withdrawMutation.isPending}
+              />
 
               {/* Payment Method */}
               <div>
@@ -586,9 +558,8 @@ export default function ArtistWalletPage() {
                 onClick={handleWithdraw}
                 disabled={
                   withdrawMutation.isPending ||
-                  !withdrawAmount ||
-                  parseInt(withdrawAmount) < 50000 ||
-                  parseInt(withdrawAmount) > stats.balance
+                  amountProblem(withdrawAmount, MIN_ARTIST_WITHDRAWAL, stats.balance) !== null ||
+                  withdrawAmount < MIN_ARTIST_WITHDRAWAL
                 }
                 className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
               >
@@ -599,9 +570,8 @@ export default function ArtistWalletPage() {
                 )}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ArrowUpCircle, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
+import { AmountField, amountProblem } from '@/components/wallet/amount-field';
 
 /**
  * Cash-out dialog.
@@ -22,16 +23,6 @@ export const MIN_WITHDRAWAL = 1000;
 
 const PRESETS = [1000, 5000, 10000];
 
-/** Digits only, so "50,000" and "50 000" both parse. */
-function parseAmount(raw: string): number {
-  const digits = raw.replace(/\D/g, '');
-  return digits === '' ? 0 : parseInt(digits, 10);
-}
-
-function formatAmount(value: number): string {
-  return value === 0 ? '' : value.toLocaleString();
-}
-
 export function WithdrawDialog({
   open,
   onClose,
@@ -45,18 +36,11 @@ export function WithdrawDialog({
   onSubmit: (amount: number, phone: string) => void;
   isSubmitting: boolean;
 }) {
-  const [amountText, setAmountText] = useState('');
+  const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState('');
 
-  const amount = parseAmount(amountText);
   const phoneDigits = phone.replace(/\D/g, '');
-
-  const problem = useMemo(() => {
-    if (amount === 0) return null;
-    if (amount < MIN_WITHDRAWAL) return `The smallest cash out is UGX ${MIN_WITHDRAWAL.toLocaleString()}.`;
-    if (amount > balance) return "That's more than your cash balance.";
-    return null;
-  }, [amount, balance]);
+  const problem = amountProblem(amount, MIN_WITHDRAWAL, balance);
 
   const phoneProblem = phoneDigits.length > 0 && phoneDigits.length < 9
     ? 'Enter a full mobile money number, e.g. 0772 123 456.'
@@ -70,7 +54,7 @@ export function WithdrawDialog({
 
   const close = () => {
     if (isSubmitting) return;
-    setAmountText('');
+    setAmount(0);
     setPhone('');
     onClose();
   };
@@ -102,62 +86,15 @@ export function WithdrawDialog({
           <p className="text-2xl font-bold tabular-nums">UGX {balance.toLocaleString()}</p>
         </div>
 
-        {/* Amount */}
-        <div className="space-y-2">
-          <label htmlFor="withdraw-amount" className="block text-sm font-medium">
-            Amount
-          </label>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-              UGX
-            </span>
-            <input
-              id="withdraw-amount"
-              // Numeric keypad on a phone — this is a money field on a
-              // mobile-first product, not free text.
-              inputMode="numeric"
-              autoComplete="off"
-              value={amountText}
-              onChange={(e) => setAmountText(formatAmount(parseAmount(e.target.value)))}
-              placeholder="0"
-              aria-describedby="withdraw-amount-help"
-              aria-invalid={problem !== null}
-              className={cn(
-                'w-full rounded-lg border bg-background py-3 pl-14 pr-4 text-lg font-semibold tabular-nums',
-                problem && 'border-red-500'
-              )}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {PRESETS.filter((p) => p <= balance).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setAmountText(formatAmount(preset))}
-                className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted"
-              >
-                {preset.toLocaleString()}
-              </button>
-            ))}
-            {balance >= MIN_WITHDRAWAL && (
-              <button
-                type="button"
-                onClick={() => setAmountText(formatAmount(balance))}
-                className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted"
-              >
-                All of it
-              </button>
-            )}
-          </div>
-
-          <p
-            id="withdraw-amount-help"
-            className={cn('text-xs', problem ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}
-          >
-            {problem ?? `Minimum UGX ${MIN_WITHDRAWAL.toLocaleString()}.`}
-          </p>
-        </div>
+        <AmountField
+          id="withdraw-amount"
+          value={amount}
+          onChange={setAmount}
+          min={MIN_WITHDRAWAL}
+          max={balance}
+          presets={PRESETS}
+          disabled={isSubmitting}
+        />
 
         {/* Phone */}
         <div className="space-y-2">

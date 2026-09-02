@@ -394,14 +394,19 @@ export function MobileBottomNav() {
       {/* FAB Expanded Overlay */}
       {fabExpanded && (
         <div
-          className="fixed inset-0 z-50 lg:hidden"
+          // Must stay below the FAB buttons (z-40) so they remain clickable,
+          // and below dialogs (z-50) so it never covers a modal.
+          className="fixed inset-0 z-30 lg:hidden"
           onClick={() => setFabExpanded(false)}
         />
       )}
 
       {/* Right-side Vertical Action Buttons */}
       <div className={cn(
-        "fixed left-4 z-[55] flex flex-col items-start gap-2.5 transition-all duration-300 lg:hidden",
+        // z-40 keeps this under dialogs (z-50). At z-[55] it floated above every
+        // modal on the site and physically covered the Cancel button in the
+        // cash-out dialog at phone widths.
+        "fixed left-4 z-40 flex flex-col items-start gap-2.5 transition-all duration-300 lg:hidden",
         fabBottomClass
       )}>
         {fabExpanded && fabActions.map((action, i) => (

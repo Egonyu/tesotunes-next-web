@@ -20,9 +20,15 @@ import { AmountField, amountProblem } from '@/components/wallet/amount-field';
  * wallet if the provider rejects it, so "you receive" equals the amount.
  */
 
-export const MIN_WITHDRAWAL = 1000;
+/**
+ * Keep in sync with config('payments.wallet_withdrawal.min_amount').
+ * ZengaPay's per-transaction charge does not scale down — a measured 1,000 UGX
+ * movement lost roughly 220 to fees — so the floor sits where charges stop
+ * dominating the transfer.
+ */
+export const MIN_WITHDRAWAL = 5000;
 
-const PRESETS = [1000, 5000, 10000];
+const PRESETS = [5000, 10000, 20000];
 
 const STEP_LABELS: Record<string, string> = {
   kyc_verified: 'Verify your identity',

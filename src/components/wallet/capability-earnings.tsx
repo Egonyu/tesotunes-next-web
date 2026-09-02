@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, CalendarDays, ChevronRight, Megaphone, Music2, Store } from 'lucide-react';
+import { Building2, CalendarDays, ChevronRight, Languages, Megaphone, Music2, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useCapabilities, type CapabilityName } from '@/hooks/useCapabilities';
 import { useArtistEarnings } from '@/hooks/useArtist';
@@ -64,6 +64,12 @@ const CAPABILITY_SURFACES: Record<CapabilityName, CapabilitySurface> = {
     href: '/artist/earnings',
     icon: Building2,
     blurb: 'Across the artists you manage',
+  },
+  contributor: {
+    label: 'Contributions',
+    href: '/contribute',
+    icon: Languages,
+    blurb: 'Translation and validation work',
   },
 };
 
@@ -133,10 +139,19 @@ function ArtistEarningsRow() {
 export function CapabilityEarnings() {
   const { data: capabilities } = useCapabilities();
 
-  const granted = (capabilities ?? []).filter((c) => c.status === 'granted');
+  // Drop any capability this build has no surface for rather than indexing into
+  // the map blind. The backend enum is free to grow — it already carried
+  // `contributor` while the frontend union still listed five names — and an
+  // unknown capability must not be able to take somebody's wallet down with it.
+  const rows = (capabilities ?? [])
+    .filter((c) => c.status === 'granted')
+    .map((c) => ({ capability: c.capability, surface: CAPABILITY_SURFACES[c.capability] }))
+    .filter((row): row is { capability: CapabilityName; surface: CapabilitySurface } =>
+      Boolean(row.surface),
+    );
 
   // A listener with no capabilities gets no empty section shouting at them.
-  if (granted.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
@@ -145,11 +160,11 @@ export function CapabilityEarnings() {
       <h2 className="mb-4 font-semibold">Your earnings</h2>
 
       <div className="divide-y overflow-hidden rounded-xl border bg-card">
-        {granted.map(({ capability }) =>
+        {rows.map(({ capability, surface }) =>
           capability === 'artist' ? (
             <ArtistEarningsRow key={capability} />
           ) : (
-            <CapabilityRow key={capability} surface={CAPABILITY_SURFACES[capability]} />
+            <CapabilityRow key={capability} surface={surface} />
           ),
         )}
       </div>

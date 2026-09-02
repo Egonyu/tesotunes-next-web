@@ -2,7 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { apiGet, apiPost } from "@/lib/api";
 
-export type CapabilityName = "artist" | "seller" | "organizer" | "promoter" | "label";
+/**
+ * Mirrors App\Enums\Capability on the backend. `contributor` was missing here
+ * long after the enum gained it, so anything indexing a map by capability got
+ * `undefined` for the five accounts that hold it — with the type still claiming
+ * the lookup was total. Keep this list in step with the enum.
+ */
+export type CapabilityName =
+  | "artist"
+  | "seller"
+  | "organizer"
+  | "promoter"
+  | "label"
+  | "contributor";
 
 export type CapabilityStatus = "none" | "pending" | "granted" | "rejected" | "suspended" | "revoked";
 

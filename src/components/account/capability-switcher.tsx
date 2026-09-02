@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Clock3, Mic2, Megaphone, Store, Calendar, Disc3 } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock3, Mic2, Megaphone, Store, Calendar, Disc3, Languages } from "lucide-react";
 import { useCapabilities, type CapabilityName, type CapabilityPosture } from "@/hooks/useCapabilities";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +48,13 @@ const CAPABILITY_META: Record<
     dashboardHref: "/artist",
     applyHref: null,
     applyLabel: "Coming soon",
+  },
+  contributor: {
+    icon: Languages,
+    blurb: "Translate and validate Ateso lyrics, and earn for it.",
+    dashboardHref: "/contribute",
+    applyHref: "/contribute",
+    applyLabel: "Start contributing",
   },
 };
 

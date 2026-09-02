@@ -103,6 +103,19 @@ export function useLockWallet() {
 export function useWalletPinGuard() {
   const [challenge, setChallenge] = useState<PinChallenge | null>(null);
   const pendingAction = useRef<(() => Promise<unknown>) | null>(null);
+  /**
+   * Settles the caller's `await runGuarded(...)` once the retried action has
+   * actually finished. Without this the retry ran fire-and-forget: a withdrawal
+   * that needed a PIN really did move the money, but the caller had already
+   * been handed `undefined` and taken its early-return, so the dialog never
+   * closed, its fields were never cleared, and the freshly-lowered balance made
+   * the stale amount read as "more than your available balance" — three
+   * symptoms of one dropped promise.
+   */
+  const pendingSettle = useRef<{
+    resolve: (value: unknown) => void;
+    reject: (error: unknown) => void;
+  } | null>(null);
 
   const runGuarded = useCallback(async <T,>(action: () => Promise<T>): Promise<T | undefined> => {
     try {
@@ -114,20 +127,40 @@ export function useWalletPinGuard() {
       pendingAction.current = action as () => Promise<unknown>;
       setChallenge(needed);
 
-      return undefined;
+      return new Promise<T | undefined>((resolve, reject) => {
+        pendingSettle.current = { resolve: resolve as (value: unknown) => void, reject };
+      });
     }
   }, []);
 
   const close = useCallback(() => {
+    const settle = pendingSettle.current;
     pendingAction.current = null;
+    pendingSettle.current = null;
     setChallenge(null);
+
+    // Dismissing the PIN prompt abandons the action. Resolve rather than leave
+    // the caller awaiting forever with its submit button stuck spinning; the
+    // undefined lands on the same path as "nothing happened".
+    settle?.resolve(undefined);
   }, []);
 
   const onUnlocked = useCallback(() => {
     const retry = pendingAction.current;
+    const settle = pendingSettle.current;
     pendingAction.current = null;
+    pendingSettle.current = null;
     setChallenge(null);
-    void retry?.();
+
+    if (!retry) {
+      settle?.resolve(undefined);
+      return;
+    }
+
+    retry().then(
+      (value) => settle?.resolve(value),
+      (error) => settle?.reject(error),
+    );
   }, []);
 
   return {

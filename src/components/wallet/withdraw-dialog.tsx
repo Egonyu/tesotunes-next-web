@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -89,6 +89,17 @@ export function WithdrawDialog({
 }) {
   const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState('');
+
+  // The dialog stays mounted when it is hidden, so its own close() only ran
+  // when the user dismissed it — a cash-out that succeeded left the last
+  // amount and number sitting in the fields, and reopening showed them against
+  // an already-debited balance. Clear on any close, whoever caused it.
+  useEffect(() => {
+    if (!open) {
+      setAmount(0);
+      setPhone('');
+    }
+  }, [open]);
 
   const phoneDigits = phone.replace(/\D/g, '');
   const problem = amountProblem(amount, MIN_WITHDRAWAL, balance);

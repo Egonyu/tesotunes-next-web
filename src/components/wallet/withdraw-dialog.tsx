@@ -6,6 +6,7 @@ import { ArrowUpCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { AmountField, amountProblem } from '@/components/wallet/amount-field';
+import type { WithdrawalTerms } from '@/hooks/usePayments';
 
 /**
  * Cash-out dialog.
@@ -26,9 +27,14 @@ import { AmountField, amountProblem } from '@/components/wallet/amount-field';
  * movement lost roughly 220 to fees — so the floor sits where charges stop
  * dominating the transfer.
  */
+/**
+ * The absolute floor, kept only as the fallback for callers without live terms.
+ * The real floor for an account arrives from the API as WithdrawalTerms, since
+ * it depends on whether the account carries a subscription.
+ */
 export const MIN_WITHDRAWAL = 5000;
 
-const PRESETS = [5000, 10000, 20000];
+const PRESETS = [5000, 10000, 25000, 50000];
 
 const STEP_LABELS: Record<string, string> = {
   kyc_verified: 'Verify your identity',
@@ -79,6 +85,7 @@ export function WithdrawDialog({
   onSubmit,
   isSubmitting,
   kycRequirement,
+  terms,
 }: {
   open: boolean;
   onClose: () => void;
@@ -86,6 +93,7 @@ export function WithdrawDialog({
   onSubmit: (amount: number, phone: string) => void;
   isSubmitting: boolean;
   kycRequirement?: { missing_steps: string[]; redirect: string } | null;
+  terms: WithdrawalTerms;
 }) {
   const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState('');
@@ -101,8 +109,20 @@ export function WithdrawDialog({
     }
   }, [open]);
 
+  /*
+   * The tier rule collapses to one number. An account below its tier floor may
+   * still take everything out, so the floor drops to the balance — leaving the
+   * whole balance as the only amount that passes. The absolute floor still
+   * wins underneath, so a balance too small to be worth its fee is simply not
+   * withdrawable, and says so rather than failing at the API.
+   */
+  const effectiveMin = Math.max(
+    terms.absolute_minimum,
+    Math.min(terms.tier_minimum, balance),
+  );
+
   const phoneDigits = phone.replace(/\D/g, '');
-  const problem = amountProblem(amount, MIN_WITHDRAWAL, balance);
+  const problem = amountProblem(amount, effectiveMin, balance);
 
   const phoneProblem = phoneDigits.length > 0 && phoneDigits.length < 9
     ? 'Enter a full mobile money number, e.g. 0772 123 456.'
@@ -110,7 +130,7 @@ export function WithdrawDialog({
 
   const canSubmit =
     !isSubmitting &&
-    amount >= MIN_WITHDRAWAL &&
+    amount >= effectiveMin &&
     amount <= balance &&
     phoneDigits.length >= 9;
 
@@ -159,9 +179,9 @@ export function WithdrawDialog({
           id="withdraw-amount"
           value={amount}
           onChange={setAmount}
-          min={MIN_WITHDRAWAL}
+          min={effectiveMin}
           max={balance}
-          presets={PRESETS}
+          presets={PRESETS.filter((preset) => preset >= effectiveMin && preset <= balance)}
           disabled={isSubmitting}
         />
 

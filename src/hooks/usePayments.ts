@@ -198,10 +198,35 @@ export interface InFlightPayment {
   is_stale: boolean;
 }
 
+/**
+ * What this account is allowed to cash out. Comes from the API rather than
+ * being assumed here, because the floor depends on whether the account carries
+ * a subscription and the dialog must not invent a rule the backend will then
+ * reject.
+ */
+export interface WithdrawalTerms {
+  /** Smallest partial cash-out for this account. */
+  tier_minimum: number;
+  /** Nobody may go below this, subscribed or not. */
+  absolute_minimum: number;
+  max_single: number;
+  subscribed: boolean;
+  /** Balance sits under the tier floor, so the only move left is all of it. */
+  whole_balance_only: boolean;
+}
+
+export const DEFAULT_WITHDRAWAL_TERMS: WithdrawalTerms = {
+  tier_minimum: 25000,
+  absolute_minimum: 5000,
+  max_single: 5000000,
+  subscribed: false,
+  whole_balance_only: false,
+};
+
 export function useWallet() {
   return useQuery({
     queryKey: ["wallet"],
-    queryFn: () => apiGet<{ data: { ugx_balance?: number; credits_balance?: number; currency?: string; balance?: number; formatted_balance?: string; in_flight?: InFlightPayment[] } }>("/payments/wallet")
+    queryFn: () => apiGet<{ data: { ugx_balance?: number; credits_balance?: number; currency?: string; balance?: number; formatted_balance?: string; in_flight?: InFlightPayment[]; withdrawal?: Partial<WithdrawalTerms> } }>("/payments/wallet")
       .then(res => {
         const balance = Number(res.data.ugx_balance ?? res.data.balance ?? 0);
         const currency = res.data.currency ?? "UGX";
@@ -212,6 +237,7 @@ export function useWallet() {
           currency,
           formatted_balance: res.data.formatted_balance ?? `${currency} ${balance.toLocaleString()}`,
           in_flight: res.data.in_flight ?? [],
+          withdrawal: { ...DEFAULT_WITHDRAWAL_TERMS, ...(res.data.withdrawal ?? {}) },
         };
       }),
     // Money in flight changes without the user acting, so poll while the tab is

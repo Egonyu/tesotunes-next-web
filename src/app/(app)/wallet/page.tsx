@@ -12,7 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber, kycRequirementFrom, type KycRequiredError } from '@/hooks/usePayments';
+import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber, kycRequirementFrom, DEFAULT_WITHDRAWAL_TERMS, type KycRequiredError } from '@/hooks/usePayments';
 import { useWalletPinGuard } from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
@@ -41,6 +41,9 @@ export default function WalletPage() {
   const balance = wallet?.balance || 0;
   const creditsBalance = wallet?.credits_balance || 0;
   const inFlight = wallet?.in_flight ?? [];
+  // Falls back to the stricter unsubscribed floor: if the terms have not
+  // arrived, offer the more conservative rule rather than one the API rejects.
+  const withdrawalTerms = wallet?.withdrawal ?? DEFAULT_WITHDRAWAL_TERMS;
 
   // The dialog validates amount and phone before calling this and disables its
   // own submit until both are good, so this only handles the network round trip.
@@ -253,6 +256,7 @@ export default function WalletPage() {
         onSubmit={handleWithdraw}
         isSubmitting={withdrawMutation.isPending}
         kycRequirement={kycRequirement}
+        terms={withdrawalTerms}
       />
 
       {/* Wallet PIN — setup or verification, raised when a transaction needs it */}

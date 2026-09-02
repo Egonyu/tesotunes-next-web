@@ -17,6 +17,7 @@ import { useWalletPinGuard } from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
 import { WithdrawDialog } from '@/components/wallet/withdraw-dialog';
+import { CapabilityEarnings } from '@/components/wallet/capability-earnings';
 import { toast } from 'sonner';
 
 export default function WalletPage() {
@@ -186,6 +187,14 @@ export default function WalletPage() {
           "Add New" button had no handler, so the card could never show or do
           anything.
       */}
+
+      {/*
+        Earnings from every capability this account holds, in the one wallet.
+        A person can be an artist, an organizer and a promoter at once, so these
+        are sections of their balance rather than separate wallets to go hunting
+        for. Renders nothing for a listener who holds no capabilities.
+      */}
+      <CapabilityEarnings />
 
       {/* Recent Transactions */}
       <div>

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, isApiError } from "@/lib/api";
 
 // ============================================================================
 // Types
@@ -325,6 +325,35 @@ export interface WithdrawResponse {
   amount: number;
   phone: string;
   message: string;
+}
+
+/** Steps the API says stand between this user and a withdrawal. */
+export type KycStep = "kyc_verified" | "phone_verified" | "payout_method";
+
+export interface KycRequiredError {
+  error: "kyc_required";
+  action: string;
+  missing_steps: KycStep[];
+  redirect: string;
+}
+
+/**
+ * The withdraw endpoint answers 403 with a structured payload describing what
+ * the user still has to do. Pull it out so the UI can show that instead of a
+ * bare error string.
+ */
+export function kycRequirementFrom(error: unknown): KycRequiredError | null {
+  if (!isApiError(error)) return null;
+
+  const body = error.response?.data as Partial<KycRequiredError> | undefined;
+  if (body?.error !== "kyc_required") return null;
+
+  return {
+    error: "kyc_required",
+    action: body.action ?? "withdrawal",
+    missing_steps: Array.isArray(body.missing_steps) ? body.missing_steps : [],
+    redirect: body.redirect ?? "/account/verify-identity",
+  };
 }
 
 export function useWithdraw() {

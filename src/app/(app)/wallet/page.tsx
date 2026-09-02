@@ -12,7 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber } from '@/hooks/usePayments';
+import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber, kycRequirementFrom, type KycRequiredError } from '@/hooks/usePayments';
 import { useWalletPinGuard } from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 
 export default function WalletPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [kycRequirement, setKycRequirement] = useState<KycRequiredError | null>(null);
 
   // Fetch wallet data
   const { data: wallet, isLoading } = useWallet();
@@ -43,6 +44,8 @@ export default function WalletPage() {
   // The dialog validates amount and phone before calling this and disables its
   // own submit until both are good, so this only handles the network round trip.
   const handleWithdraw = async (amount: number, phone: string) => {
+    setKycRequirement(null);
+
     try {
       // Guarded: if the wallet PIN is required, the modal is raised and this
       // withdrawal is retried automatically once the PIN is set/verified.
@@ -59,6 +62,15 @@ export default function WalletPage() {
       toast.success('Cash out started. The money should reach your phone shortly.');
       setShowWithdrawModal(false);
     } catch (error: unknown) {
+      // A gated withdrawal comes back as a structured 403 listing what is still
+      // outstanding. Render that in the dialog rather than flashing a toast the
+      // user can't act on.
+      const requirement = kycRequirementFrom(error);
+      if (requirement) {
+        setKycRequirement(requirement);
+        return;
+      }
+
       const errorMessage = error instanceof Error ? error.message : 'Could not start the cash out';
       toast.error(errorMessage);
     }
@@ -231,6 +243,7 @@ export default function WalletPage() {
         balance={balance}
         onSubmit={handleWithdraw}
         isSubmitting={withdrawMutation.isPending}
+        kycRequirement={kycRequirement}
       />
 
       {/* Wallet PIN — setup or verification, raised when a transaction needs it */}

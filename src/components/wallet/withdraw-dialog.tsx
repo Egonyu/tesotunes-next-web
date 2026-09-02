@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUpCircle, Loader2, X } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { AmountField, amountProblem } from '@/components/wallet/amount-field';
@@ -23,18 +24,62 @@ export const MIN_WITHDRAWAL = 1000;
 
 const PRESETS = [1000, 5000, 10000];
 
+const STEP_LABELS: Record<string, string> = {
+  kyc_verified: 'Verify your identity',
+  phone_verified: 'Confirm your phone number',
+  payout_method: 'Add a mobile money number to your account',
+};
+
+/**
+ * The API answers a gated withdrawal with the exact steps still outstanding.
+ * Showing them beats a toast that just says the request was forbidden.
+ */
+function KycRequiredNotice({ steps, redirect }: { steps: string[]; redirect: string }) {
+  return (
+    <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex items-start gap-2.5">
+        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+        <div>
+          <p className="text-sm font-semibold">A few things first</p>
+          <p className="text-xs text-muted-foreground">
+            Cashing out needs these finished. Your money stays in your wallet meanwhile.
+          </p>
+        </div>
+      </div>
+
+      <ul className="space-y-1.5">
+        {steps.map((step) => (
+          <li key={step} className="flex items-center gap-2 text-sm">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
+            {STEP_LABELS[step] ?? step.replace(/_/g, ' ')}
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href={redirect}
+        className="inline-flex w-full items-center justify-center rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        Continue verification
+      </Link>
+    </div>
+  );
+}
+
 export function WithdrawDialog({
   open,
   onClose,
   balance,
   onSubmit,
   isSubmitting,
+  kycRequirement,
 }: {
   open: boolean;
   onClose: () => void;
   balance: number;
   onSubmit: (amount: number, phone: string) => void;
   isSubmitting: boolean;
+  kycRequirement?: { missing_steps: string[]; redirect: string } | null;
 }) {
   const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState('');
@@ -85,6 +130,13 @@ export function WithdrawDialog({
           <p className="text-sm text-muted-foreground">Cash balance</p>
           <p className="text-2xl font-bold tabular-nums">UGX {balance.toLocaleString()}</p>
         </div>
+
+        {kycRequirement && (
+          <KycRequiredNotice
+            steps={kycRequirement.missing_steps}
+            redirect={kycRequirement.redirect}
+          />
+        )}
 
         <AmountField
           id="withdraw-amount"

@@ -19,6 +19,16 @@ const FOCUSABLE =
 function Modal({ open, onClose, children, className, labelledBy }: ModalProps) {
   const panelRef = React.useRef<HTMLDivElement>(null);
 
+  // Callers pass an inline arrow for onClose, so its identity changes on every
+  // render. Holding it in a ref keeps the effect below keyed on `open` alone —
+  // otherwise every keystroke re-ran the effect, whose cleanup restored focus
+  // to the trigger and whose body re-focused the first control, kicking the
+  // user out of whatever input they were typing in after a single character.
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   React.useEffect(() => {
     if (!open) return;
 
@@ -28,7 +38,7 @@ function Modal({ open, onClose, children, className, labelledBy }: ModalProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -66,7 +76,7 @@ function Modal({ open, onClose, children, className, labelledBy }: ModalProps) {
       document.body.style.overflow = 'unset';
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

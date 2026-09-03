@@ -11,6 +11,8 @@ declare module "next-auth" {
       permissions?: string[];
       apiAuthorized?: boolean;
     } & DefaultSession["user"];
+    /** The API token behind this session expired and could not be refreshed. */
+    expired?: boolean;
   }
 
   interface User extends DefaultUser {
@@ -31,5 +33,7 @@ declare module "next-auth/jwt" {
     permissions?: string[];
     accessToken?: string;
     accessTokenRefreshedAt?: number;
+    /** Set when the API token lapsed, so the stale cookie can be cleared. */
+    sessionExpired?: boolean;
   }
 }

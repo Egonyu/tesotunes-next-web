@@ -150,7 +150,7 @@ function getRequiredPermissions(pathname: string): string[] {
   return [];
 }
 
-function redirectToAccessRequired(request: NextRequest, reason: 'auth' | 'forbidden') {
+function redirectToAccessRequired(request: NextRequest, reason: 'auth' | 'forbidden' | 'expired') {
   const callbackUrl = `${request.nextUrl.pathname}${request.nextUrl.search}`;
   const redirectUrl = new URL('/access-required', request.url);
   redirectUrl.searchParams.set('reason', reason);
@@ -188,7 +188,16 @@ export async function middleware(request: NextRequest) {
   const token = await resolveAuthToken(request);
 
   if (!token || !hasApiAccess(token)) {
-    return redirectToAccessRequired(request, 'auth');
+    /*
+     * Someone holding a session cookie whose API token has lapsed is not the
+     * same as someone who never signed in, and telling them apart is the whole
+     * point: the cookie lives 30 days while the token it carries lasts 24
+     * hours, so a person returning after a day away was being shown a bare
+     * "sign in required" with nothing to say their session had simply aged out.
+     */
+    const expired = Boolean(token?.sessionExpired);
+
+    return redirectToAccessRequired(request, expired ? 'expired' : 'auth');
   }
 
   if (matchesRoutePrefix(pathname, '/artist') || matchesRoutePrefix(pathname, '/artist-dashboard')) {

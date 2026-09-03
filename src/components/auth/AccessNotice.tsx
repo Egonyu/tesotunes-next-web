@@ -1,15 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { Lock, ShieldAlert } from 'lucide-react';
+import { Clock, Lock, ShieldAlert } from 'lucide-react';
 
 type AccessNoticeProps = {
   title: string;
   description: string;
   callbackUrl?: string;
   role?: string;
-  variant?: 'auth' | 'forbidden';
+  variant?: 'auth' | 'forbidden' | 'expired';
 };
+
+const ICONS = {
+  auth: Lock,
+  forbidden: ShieldAlert,
+  expired: Clock,
+} as const;
 
 export default function AccessNotice({
   title,
@@ -22,7 +28,7 @@ export default function AccessNotice({
     ? callbackUrl
     : '/';
   const loginHref = `/login?callbackUrl=${encodeURIComponent(safeCallback || '/')}`;
-  const Icon = variant === 'forbidden' ? ShieldAlert : Lock;
+  const Icon = ICONS[variant] ?? Lock;
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">

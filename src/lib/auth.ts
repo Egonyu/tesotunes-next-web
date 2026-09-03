@@ -598,9 +598,15 @@ export const authConfig: NextAuthOptions = {
         if (refreshedToken && 'accessToken' in refreshedToken) {
           token.accessToken = refreshedToken.accessToken;
           token.accessTokenRefreshedAt = now;
+          token.sessionExpired = false;
         } else if (refreshedToken && 'expired' in refreshedToken) {
           console.warn("[Auth] Clearing expired access token after refresh failure");
           token.accessToken = undefined;
+          // Say why. Without this the session cookie lives on for its full 30
+          // days wrapping a token that died after 24 hours, and every protected
+          // page bounces the user to a generic "sign in required" with no hint
+          // that their session simply aged out.
+          token.sessionExpired = true;
         }
       }
 
@@ -617,6 +623,7 @@ export const authConfig: NextAuthOptions = {
           } else if (refreshedToken && 'expired' in refreshedToken) {
             console.warn("[Auth] Clearing expired access token");
             token.accessToken = undefined;
+            token.sessionExpired = true;
           }
         }
 
@@ -641,6 +648,11 @@ export const authConfig: NextAuthOptions = {
         session.user.permissions = (token.permissions as string[] | undefined) ?? [];
         session.user.apiAuthorized = Boolean(token.accessToken);
       }
+
+      // Surfaced so the client can clear a session whose API token has already
+      // died, rather than holding a cookie that outlives what it authorises.
+      session.expired = Boolean(token.sessionExpired) && ! token.accessToken;
+
       return session;
     },
   },

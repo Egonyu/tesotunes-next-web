@@ -22,6 +22,8 @@ import {
   type UserSearchResult,
 } from '@/hooks/usePayments';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useWalletPinGuard } from '@/hooks/useWalletPin';
+import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 
 const QUICK_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
@@ -37,6 +39,8 @@ export default function CreditTransferPage() {
   const { data: balance } = useCreditBalance();
   const { data: searchResults, isFetching: searching } = useUserSearch(debouncedQuery);
   const transfer = useTransferCredits();
+  // Raises the PIN modal on a 423 and replays the transfer once unlocked.
+  const { runGuarded, pinModal } = useWalletPinGuard();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,20 +64,33 @@ export default function CreditTransferPage() {
   const parsedAmount = parseInt(amount, 10);
   const isAmountValid = parsedAmount >= 1 && parsedAmount <= 1000 && parsedAmount <= availableCredits;
 
-  const handleSubmit = () => {
+  /*
+   * The transfer endpoint sits behind the wallet.pin middleware, so it answers
+   * 423 until the PIN window is open. Without the guard that 423 surfaced as a
+   * raw "Transfer failed" toast with no way to enter a PIN — the transfer was
+   * simply impossible. Every money action behind that middleware needs this;
+   * only /wallet had it.
+   */
+  const handleSubmit = async () => {
     if (!recipient || !isAmountValid) return;
-    transfer.mutate(
-      { recipient_id: recipient.id, amount: parsedAmount, message: message.trim() || undefined },
-      {
-        onSuccess: (res) => {
-          setDone(res.message ?? `Sent ${parsedAmount} credits to ${recipient.name}`);
-        },
-        onError: (err: unknown) => {
-          const msg = (err as { message?: string })?.message ?? 'Transfer failed';
-          toast.error(msg);
-        },
-      }
-    );
+
+    try {
+      const result = await runGuarded(() =>
+        transfer.mutateAsync({
+          recipient_id: recipient.id,
+          amount: parsedAmount,
+          message: message.trim() || undefined,
+        }),
+      );
+
+      // Undefined means the PIN prompt was dismissed — nothing was sent, and
+      // the form is left as it was so the amount need not be retyped.
+      if (result === undefined) return;
+
+      setDone(result.message ?? `Sent ${parsedAmount} credits to ${recipient.name}`);
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message ?? 'Transfer failed');
+    }
   };
 
   if (done) {
@@ -277,6 +294,10 @@ export default function CreditTransferPage() {
       <p className="text-center text-xs text-muted-foreground">
         Transfers are instant and irreversible. Max 1,000 credits per transfer.
       </p>
+
+      {/* Raised when the transfer comes back 423; the send is replayed once the
+          PIN is set or verified. */}
+      <WalletPinModal {...pinModal} />
     </div>
   );
 }

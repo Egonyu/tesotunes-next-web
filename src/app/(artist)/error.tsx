@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RefreshCcw, LayoutDashboard } from 'lucide-react';
+import { ErrorDetails } from '@/components/errors/error-details';
 
 export default function ArtistError({
   error,
@@ -27,6 +28,9 @@ export default function ArtistError({
         <p className="mb-6 text-muted-foreground">
           Something went wrong in your artist studio. Please try again or go back to the dashboard.
         </p>
+
+        <ErrorDetails error={error} />
+
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button

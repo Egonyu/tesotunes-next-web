@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RefreshCcw, Home } from 'lucide-react';
+import { ErrorDetails } from '@/components/errors/error-details';
 
 export default function Error({
   error,
@@ -27,6 +28,9 @@ export default function Error({
         <p className="mb-6 text-muted-foreground">
           We encountered an error while loading this page. Please try again.
         </p>
+        
+        <ErrorDetails error={error} />
+
         
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button

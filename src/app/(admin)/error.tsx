@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RefreshCcw, LayoutDashboard } from 'lucide-react';
+import { ErrorDetails } from '@/components/errors/error-details';
 
 export default function AdminError({
   error,
@@ -28,11 +29,8 @@ export default function AdminError({
           Something went wrong loading this admin page. Please try again or return to the dashboard.
         </p>
 
-        {error.digest && (
-          <p className="mb-4 text-xs text-muted-foreground font-mono">
-            Error ID: {error.digest}
-          </p>
-        )}
+        <ErrorDetails error={error} />
+
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button

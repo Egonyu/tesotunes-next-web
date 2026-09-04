@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RefreshCcw, Home } from 'lucide-react';
+import { ErrorDetails } from '@/components/errors/error-details';
 
 export default function AppError({
   error,
@@ -27,6 +28,9 @@ export default function AppError({
         <p className="mb-6 text-muted-foreground">
           We hit a snag loading this page. This is usually temporary.
         </p>
+
+        <ErrorDetails error={error} />
+
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button

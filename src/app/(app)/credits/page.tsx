@@ -68,8 +68,17 @@ interface CreditDashboard {
   daily_challenges: DailyChallenge[];
 }
 
+/**
+ * Types that put credits in rather than take them out.
+ *
+ * Both spellings appear because the model carries both — every row written so
+ * far uses the longer one, and the short forms are kept until the duplicate
+ * constants are retired. This list previously lacked 'earned' entirely, so a
+ * purchase was coloured and signed as a withdrawal.
+ */
 const POSITIVE_TYPES = new Set([
   'earn',
+  'earned',
   'bonus',
   'refund',
   'transfer_in',
@@ -386,13 +395,14 @@ export default function CreditsPage() {
                       {transaction.relative_date || transaction.date}
                     </p>
                   </div>
+                  {/* The API already signs the amount, e.g. "-1,000 credits".
+                      Adding another sign here produced "-+1,000 credits". */}
                   <span
                     className={cn(
                       'shrink-0 font-semibold tabular-nums',
                       positive ? 'text-green-600 dark:text-green-400' : undefined
                     )}
                   >
-                    {positive ? '+' : '-'}
                     {transaction.amount}
                   </span>
                 </div>

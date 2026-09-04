@@ -22,6 +22,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { formatPhoneNumber } from "@/hooks/usePayments";
 import { getStoreProductName, getStoreProductPrice } from "@/lib/store-product-utils";
 import { toast } from "sonner";
+import { useWalletPinGuard } from "@/components/wallet/wallet-pin-provider";
 
 interface CartItem {
   id: number;
@@ -170,6 +171,8 @@ export default function CheckoutPage() {
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>(emptyAddress);
   const [notes, setNotes] = useState("");
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
+  // Order creation is PIN-gated; this raises the prompt and replays it.
+  const runGuarded = useWalletPinGuard();
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
 
@@ -284,7 +287,20 @@ export default function CheckoutPage() {
     setPaymentState("processing");
 
     try {
-      const createdOrder = await createOrder.mutateAsync();
+      /*
+       * Order creation sits behind the wallet.pin middleware, so it answers 423
+       * until the PIN window is open — unguarded, checkout simply failed with
+       * no prompt and no way through.
+       */
+      const createdOrder = await runGuarded(() => createOrder.mutateAsync());
+
+      // Prompt dismissed: no order was created, so drop back out of the
+      // processing state rather than leaving the button spinning.
+      if (createdOrder === undefined) {
+        setPaymentState("idle");
+        return;
+      }
+
       setOrderNumber(createdOrder.order_number);
 
       if (paymentMethod === "credits") {

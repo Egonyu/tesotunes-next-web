@@ -90,17 +90,14 @@ export function useLockWallet() {
 }
 
 /**
- * Wraps a money action so a PIN challenge is handled transparently: if the
- * backend answers 423, the right modal is raised and the original action is
- * retried once the PIN is set or verified. Any other error is rethrown so the
- * caller keeps its own handling.
+ * The PIN-challenge state machine.
  *
- *   const { runGuarded, pinModal } = useWalletPinGuard();
- *   await runGuarded(() => withdraw.mutateAsync(payload));
- *   ...
- *   <WalletPinModal {...pinModal} />
+ * Exported for WalletPinProvider, which owns the single instance for the app.
+ * Components should reach for useWalletPinGuard() from that provider rather
+ * than calling this directly — a second instance would render a second modal
+ * and only one of them would be holding the pending action.
  */
-export function useWalletPinGuard() {
+export function useWalletPinGuardState() {
   const [challenge, setChallenge] = useState<PinChallenge | null>(null);
   const pendingAction = useRef<(() => Promise<unknown>) | null>(null);
   /**

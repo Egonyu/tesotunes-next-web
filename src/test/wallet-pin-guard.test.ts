@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { AxiosError } from "axios";
-import { useWalletPinGuard } from "@/hooks/useWalletPin";
+import { useWalletPinGuardState } from "@/hooks/useWalletPin";
 
 // A withdrawal that needs a PIN really does move money once the PIN is
 // accepted, so the caller's `await runGuarded(...)` has to settle with what the
@@ -24,9 +24,9 @@ const pinRequired = new AxiosError(
   } as never,
 );
 
-describe("useWalletPinGuard", () => {
+describe("useWalletPinGuardState", () => {
   it("resolves the original call with the retry's result once unlocked", async () => {
-    const { result } = renderHook(() => useWalletPinGuard());
+    const { result } = renderHook(() => useWalletPinGuardState());
 
     const action = jest
       .fn()
@@ -53,7 +53,7 @@ describe("useWalletPinGuard", () => {
   });
 
   it("rejects the original call when the retry fails", async () => {
-    const { result } = renderHook(() => useWalletPinGuard());
+    const { result } = renderHook(() => useWalletPinGuardState());
 
     const failure = new Error("provider rejected the transfer");
     const action = jest
@@ -76,7 +76,7 @@ describe("useWalletPinGuard", () => {
   });
 
   it("settles rather than hanging when the prompt is dismissed", async () => {
-    const { result } = renderHook(() => useWalletPinGuard());
+    const { result } = renderHook(() => useWalletPinGuardState());
 
     const action = jest.fn().mockRejectedValueOnce(pinRequired);
 

@@ -5,6 +5,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from "@/components/player";
 import { AdBanner, AudioAdManager } from "@/components/ads";
 import { PlaylistPickerModal } from "@/components/playlists/PlaylistPickerModal";
+import { WalletPinProvider } from "@/components/wallet/wallet-pin-provider";
 import { useUIStore, usePlayerStore } from "@/stores";
 import { useQueueSync } from "@/hooks/useQueueSync";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,12 @@ export default function AppLayout({
   const hasActivePlayer = !!currentSong && !playerMinimized;
 
   return (
+    /*
+      One PIN prompt for every money action beneath this layout — cash-out,
+      credit transfer, tips, SACCO, store checkout. Holding it here means a
+      page only calls runGuarded and has no modal to remember to render.
+    */
+    <WalletPinProvider>
     <div className="min-h-screen bg-background">
       {/* Hidden audio element for playback */}
       <AudioPlayer />
@@ -84,5 +91,6 @@ export default function AppLayout({
       {/* Global playlist picker — rendered outside any dropdown tree */}
       <PlaylistPickerModal />
     </div>
+    </WalletPinProvider>
   );
 }

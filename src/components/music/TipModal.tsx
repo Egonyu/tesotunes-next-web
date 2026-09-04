@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Heart, Coins, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react";
 import { useSendTip } from "@/hooks/api";
 import { useCreditBalance } from "@/hooks/usePayments";
+import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
 import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils";
 import Link from "next/link";
@@ -33,32 +34,41 @@ export function TipModal({
   const { data: balance } = useCreditBalance();
 
   const tipMutation = useSendTip();
+  const runGuarded = useWalletPinGuard();
 
   const activeAmount = customAmount ? parseInt(customAmount) || 0 : amount;
   const hasEnoughCredits = (balance?.credits ?? 0) >= activeAmount && activeAmount > 0;
 
-  function handleSend() {
+  /*
+   * Tipping sits behind the wallet.pin middleware, so it answers 423 until the
+   * PIN window is open. Unguarded, that 423 became "Failed to send tip. Please
+   * try again." — advice that could never work, because trying again produced
+   * the same 423 with still no way to enter a PIN.
+   */
+  async function handleSend() {
     if (activeAmount <= 0) return;
-    tipMutation.mutate(
-      {
-        recipient_id: recipientId,
-        recipient_type: recipientType,
-        amount: activeAmount,
-        message: message.trim() || undefined,
-      },
-      {
-        onSuccess: (res) => {
-          setSent(true);
-          toast.success(res.message || `Tip of ${activeAmount} credits sent!`);
-        },
-        onError: (error) => {
-          const msg =
-            (error as { response?: { data?: { message?: string } } })?.response?.data
-              ?.message || "Failed to send tip. Please try again.";
-          toast.error(msg);
-        },
-      }
-    );
+
+    try {
+      const res = await runGuarded(() =>
+        tipMutation.mutateAsync({
+          recipient_id: recipientId,
+          recipient_type: recipientType,
+          amount: activeAmount,
+          message: message.trim() || undefined,
+        }),
+      );
+
+      // Prompt dismissed: nothing was sent, and the amount stays typed.
+      if (res === undefined) return;
+
+      setSent(true);
+      toast.success(res.message || `Tip of ${activeAmount} credits sent!`);
+    } catch (error) {
+      const msg =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to send tip. Please try again.";
+      toast.error(msg);
+    }
   }
 
   function handleClose() {

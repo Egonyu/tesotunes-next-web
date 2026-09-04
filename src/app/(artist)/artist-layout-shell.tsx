@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useArtistProfile } from '@/hooks/useArtist';
 import { useCapabilities, type CapabilityName } from '@/hooks/useCapabilities';
+import { WalletPinProvider } from '@/components/wallet/wallet-pin-provider';
 import { isAdminRole } from '@/lib/roles';
 import AccessNotice from '@/components/auth/AccessNotice';
 import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
@@ -127,6 +128,9 @@ export default function ArtistLayoutShell({
   }
 
   return (
+    /* Artist earnings withdrawal sits behind wallet.pin too, and this tree is
+       outside the (app) layout that provides the prompt everywhere else. */
+    <WalletPinProvider>
     <div className="min-h-screen bg-background text-foreground">
       {sidebarOpen && (
         <div
@@ -345,5 +349,6 @@ export default function ArtistLayoutShell({
       <PlayerBar />
       <FullScreenPlayer />
     </div>
+    </WalletPinProvider>
   );
 }

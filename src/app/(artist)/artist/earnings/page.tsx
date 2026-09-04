@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useArtistEarnings, useArtistTransactions, useRequestWithdrawal, useRoyaltySplits, usePerSongEarnings, usePayoutHistory, type SongEarning } from '@/hooks/useArtist';
+import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
+import { toast } from 'sonner';
 import { usePaymentMethods } from '@/hooks/usePayments';
 
 export default function ArtistEarningsPage() {
@@ -35,6 +37,7 @@ export default function ArtistEarningsPage() {
   const { data: payoutData, isLoading: payoutsLoading } = usePayoutHistory();
   const { data: txData, isLoading: txLoading } = useArtistTransactions({ page: txPage, per_page: TX_PER_PAGE });
   const withdrawMutation = useRequestWithdrawal();
+  const runGuarded = useWalletPinGuard();
   const { data: methodsData } = usePaymentMethods();
 
   const availableMethods = [
@@ -95,19 +98,34 @@ export default function ArtistEarningsPage() {
     });
   }, [earningsData?.monthly_chart, earningsData?.monthly_trends]);
 
-  const handleWithdraw = () => {
+  /*
+   * The artist payout sits behind kyc:withdrawal and wallet.pin, so it answers
+   * 423 until the PIN window is open. Unguarded, the modal simply sat there:
+   * no prompt, no error the artist could act on, no payout.
+   */
+  const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
-    if (amount >= MIN_PAYOUT && amount <= stats.balance) {
-      withdrawMutation.mutate({
-        amount,
-        payment_method: withdrawMethod as 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay',
-        phone_number: withdrawPhone || undefined,
-      }, {
-        onSuccess: () => {
-          setShowWithdrawModal(false);
-          setWithdrawAmount('');
-        }
-      });
+    if (!(amount >= MIN_PAYOUT && amount <= stats.balance)) return;
+
+    try {
+      const result = await runGuarded(() =>
+        withdrawMutation.mutateAsync({
+          amount,
+          payment_method: withdrawMethod as 'mtn_momo' | 'airtel_money' | 'bank_transfer' | 'zengapay',
+          phone_number: withdrawPhone || undefined,
+        }),
+      );
+
+      // Prompt dismissed — leave the modal as it was so the amount survives.
+      if (result === undefined) return;
+
+      setShowWithdrawModal(false);
+      setWithdrawAmount('');
+    } catch (error) {
+      toast.error(
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? 'Could not start the payout',
+      );
     }
   };
 

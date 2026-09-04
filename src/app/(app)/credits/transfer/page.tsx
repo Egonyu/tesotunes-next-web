@@ -22,8 +22,7 @@ import {
   type UserSearchResult,
 } from '@/hooks/usePayments';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useWalletPinGuard } from '@/hooks/useWalletPin';
-import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
+import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
 
 const QUICK_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
@@ -40,7 +39,7 @@ export default function CreditTransferPage() {
   const { data: searchResults, isFetching: searching } = useUserSearch(debouncedQuery);
   const transfer = useTransferCredits();
   // Raises the PIN modal on a 423 and replays the transfer once unlocked.
-  const { runGuarded, pinModal } = useWalletPinGuard();
+  const runGuarded = useWalletPinGuard();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -295,9 +294,6 @@ export default function CreditTransferPage() {
         Transfers are instant and irreversible. Max 1,000 credits per transfer.
       </p>
 
-      {/* Raised when the transfer comes back 423; the send is replayed once the
-          PIN is set or verified. */}
-      <WalletPinModal {...pinModal} />
     </div>
   );
 }

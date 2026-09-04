@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber, kycRequirementFrom, DEFAULT_WITHDRAWAL_TERMS, type KycRequiredError } from '@/hooks/usePayments';
-import { useWalletPinGuard } from '@/hooks/useWalletPin';
-import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
+import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
 import { WithdrawDialog } from '@/components/wallet/withdraw-dialog';
 import { CapabilityEarnings } from '@/components/wallet/capability-earnings';
@@ -34,7 +33,7 @@ export default function WalletPage() {
   const withdrawMutation = useWithdraw();
 
   // Wallet PIN challenge handling (raises the modal, then retries the action)
-  const { runGuarded, pinModal } = useWalletPinGuard();
+  const runGuarded = useWalletPinGuard();
 
   const recentTransactions = transactionsData?.data || [];
 
@@ -259,8 +258,6 @@ export default function WalletPage() {
         terms={withdrawalTerms}
       />
 
-      {/* Wallet PIN — setup or verification, raised when a transaction needs it */}
-      <WalletPinModal {...pinModal} />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
 import {
   PiggyBank,
   TrendingUp,
@@ -50,6 +51,7 @@ export default function SavingsPage() {
   const { data: platformSettings } = usePlatformSettings();
   const depositMutation = useSaccoDeposit();
   const withdrawMutation = useSaccoWithdraw();
+  const runGuarded = useWalletPinGuard();
   const saccoSettings = platformSettings?.sacco;
 
   // Handle deposit
@@ -71,15 +73,25 @@ export default function SavingsPage() {
     }
   };
 
-  // Handle withdraw
+  /*
+   * SACCO withdrawal sits behind the wallet.pin middleware and answers 423
+   * until the PIN window is open. Unguarded that surfaced as a bare
+   * "Withdrawal failed" with no prompt, so the money could not be taken out.
+   */
   const handleWithdraw = async () => {
     if (!withdrawAmount || !phoneNumber) return;
     try {
-      await withdrawMutation.mutateAsync({
-        amount: Number(withdrawAmount),
-        phone_number: phoneNumber,
-        payment_method: withdrawMethod,
-      });
+      const result = await runGuarded(() =>
+        withdrawMutation.mutateAsync({
+          amount: Number(withdrawAmount),
+          phone_number: phoneNumber,
+          payment_method: withdrawMethod,
+        }),
+      );
+
+      // Prompt dismissed — leave the form filled in.
+      if (result === undefined) return;
+
       setShowWithdrawModal(false);
       setWithdrawAmount('');
       setPhoneNumber('');
@@ -529,9 +541,7 @@ export default function SavingsPage() {
                   !phoneNumber ||
                   withdrawMutation.isPending
                 }
-                onClick={() => {
-                  withdrawMutation.mutate({ amount: parseInt(withdrawAmount), phone_number: phoneNumber, payment_method: withdrawMethod });
-                }}
+                onClick={handleWithdraw}
                 className={cn(
                   'w-full py-3 rounded-lg font-medium transition-colors',
                   !withdrawAmount ||

@@ -41,7 +41,18 @@ interface CreditWallet {
   earned_today: number;
   spent_today: number;
   login_streak: number;
-  next_milestone: { credits_needed: number; reward: string } | null;
+  /**
+   * Mirrors CreditService::getNextMilestone. The page previously declared
+   * `credits_needed`, a field the API has never sent — it sends `remaining` —
+   * so reading it gave undefined and crashed formatNumber for every account
+   * that had a milestone at all.
+   */
+  next_milestone: {
+    target: number;
+    remaining: number;
+    progress_percentage: number;
+    reward: string;
+  } | null;
   recent_transactions: CreditTransaction[];
 }
 
@@ -364,7 +375,7 @@ export default function CreditsPage() {
       {wallet?.next_milestone && (
         <p className="text-sm text-muted-foreground">
           <span className="font-medium text-foreground tabular-nums">
-            {formatNumber(wallet.next_milestone.credits_needed)}
+            {formatNumber(wallet.next_milestone.remaining)}
           </span>{' '}
           more credits unlocks {wallet.next_milestone.reward}.
         </p>

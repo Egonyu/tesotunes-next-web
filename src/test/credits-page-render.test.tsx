@@ -19,7 +19,16 @@ const dashboard = {
     spent_today: 1000,
     earning_potential_remaining: 0,
     login_streak: 0,
-    next_milestone: null,
+    // The exact shape production sends. The page used to read
+    // `credits_needed`, which is not a field here, so formatNumber received
+    // undefined and threw — taking the page down behind the error boundary for
+    // every account far enough along to have a milestone at all.
+    next_milestone: {
+      target: 10000,
+      remaining: 4844,
+      progress_percentage: 51.56,
+      reward: "Platform ambassador + 500 bonus credits",
+    },
     recent_transactions: [
       {
         type: "earned",
@@ -100,5 +109,12 @@ describe("CreditsPage", () => {
     expect(screen.getByText("+1,000 credits")).toBeInTheDocument();
     expect(screen.getByText("-1,000 credits")).toBeInTheDocument();
     expect(screen.queryByText("-+1,000 credits")).not.toBeInTheDocument();
+  });
+
+  it("renders the milestone using the field the API actually sends", async () => {
+    render(<CreditsPage />);
+
+    await waitFor(() => expect(screen.getByText(/4.8K/)).toBeInTheDocument());
+    expect(screen.getByText(/Platform ambassador/)).toBeInTheDocument();
   });
 });

@@ -97,6 +97,19 @@ describe('Utils - formatNumber', () => {
     expect(formatNumber(500)).toBe('500');
     expect(formatNumber(999)).toBe('999');
   });
+
+  /**
+   * Called in 271 places, nearly all with a field straight off an API
+   * response. It used to end in `num.toString()`, so one absent field threw
+   * "Cannot read properties of undefined" and took the whole page down through
+   * the error boundary — which is how /credits died for anyone holding a
+   * milestone, the API sending `remaining` where the page read `credits_needed`.
+   */
+  it('survives an absent value instead of taking the page down', () => {
+    expect(formatNumber(undefined)).toBe('0');
+    expect(formatNumber(null)).toBe('0');
+    expect(formatNumber(NaN)).toBe('0');
+  });
 });
 
 describe('Utils - getInitials', () => {

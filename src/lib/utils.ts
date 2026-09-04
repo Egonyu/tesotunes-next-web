@@ -79,7 +79,25 @@ export function formatResolvedDuration(
   return formatDuration(resolveDurationSeconds(duration, explicitDurationSeconds));
 }
 
-export function formatNumber(num: number): string {
+/**
+ * Compact number for display, e.g. 2656 -> "2.7K".
+ *
+ * Tolerates null, undefined and NaN because it is called in 271 places, nearly
+ * all of them with a field straight off an API response. It used to end in
+ * `num.toString()`, so a single absent field threw "Cannot read properties of
+ * undefined" and took down the whole page through the error boundary — which
+ * is exactly what happened on /credits when next_milestone turned out to carry
+ * `remaining` rather than the `credits_needed` the page asked for.
+ *
+ * Returning '0' rather than a dash follows the defensive copy someone had
+ * already written locally in the admin dashboard, presumably after meeting
+ * this same crash and working around it privately.
+ */
+export function formatNumber(num: number | null | undefined): string {
+  if (num == null || Number.isNaN(num)) {
+    return '0';
+  }
+
   if (num >= 1_000_000) {
     const val = num / 1_000_000;
     return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M`;

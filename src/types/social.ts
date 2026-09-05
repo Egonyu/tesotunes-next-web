@@ -138,7 +138,6 @@ export type ActivityModule =
   | 'events'
   | 'store'
   | 'sacco'
-  | 'ojokotau'
   | 'loyalty'
   | 'forum'
   | 'awards'

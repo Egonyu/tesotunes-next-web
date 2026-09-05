@@ -40,7 +40,6 @@ const MODULE_ICONS: Record<string, React.ElementType> = {
   awards: Trophy,
   store: ShoppingBag,
   sacco: Star,
-  ojokotau: Users,
   loyalty: Star,
   forum: MessageSquare,
   podcasts: Mic,

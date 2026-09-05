@@ -68,7 +68,6 @@ const navItems = [
   { href: '/admin/ads', label: 'Ads Library', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/ad-placements', label: 'Ad Zones', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/rewards', label: 'Rewards', icon: Coins, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions', label: 'Promotions', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/promoters', label: 'Promoter Profiles', icon: BadgeCheck, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/promotions/opportunities', label: 'Opportunities', icon: Target, requiredPermissions: ['admin.dashboard'] },

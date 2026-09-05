@@ -32,7 +32,6 @@ const MODULE_CHIPS: ModuleChip[] = [
   { key: 'awards', label: 'Awards', icon: Trophy, color: '#EF4444' },
   { key: 'store', label: 'Store', icon: ShoppingBag, color: '#10B981' },
   { key: 'sacco', label: 'SACCO', icon: Star, color: '#14B8A6' },
-  { key: 'ojokotau', label: 'Ojokotau', icon: Users, color: '#F97316' },
   { key: 'forum', label: 'Forum', icon: MessageSquare, color: '#6366F1' },
   { key: 'podcasts', label: 'Podcasts', icon: Mic, color: '#8B5CF6' },
   { key: 'platform', label: 'Platform', icon: Megaphone, color: '#6B7280' },

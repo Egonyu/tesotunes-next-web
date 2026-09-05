@@ -11,7 +11,6 @@ export * from "./useReferrals";
 export * from "./useFeed";
 export * from "./useForums";
 export * from "./usePolls";
-export * from "./useCampaigns";
 export * from "./useNotifications";
 export * from "./useEvents";
 export * from "./useSubscriptions";

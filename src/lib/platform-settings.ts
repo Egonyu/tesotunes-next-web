@@ -26,8 +26,6 @@ export interface PlatformSettings {
     polls_enabled: boolean;
     credits_enabled: boolean;
     podcasts_enabled: boolean;
-    campaigns_enabled: boolean;
-    ojokotau_enabled: boolean;
     edula_enabled: boolean;
     promotions_enabled: boolean;
     sacco_enabled: boolean;
@@ -239,8 +237,6 @@ export const defaultPlatformSettings: PlatformSettings = {
     polls_enabled: false,
     credits_enabled: true,
     podcasts_enabled: false,
-    campaigns_enabled: false,
-    ojokotau_enabled: false,
     edula_enabled: false,
     promotions_enabled: false,
     sacco_enabled: false,

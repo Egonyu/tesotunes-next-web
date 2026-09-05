@@ -81,7 +81,6 @@ const moduleItems = [
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },
   { href: "/polls", label: "Polls", icon: ThumbsUp },
   { href: "/promotions", label: "Promotions", icon: Megaphone },
-  { href: "/ojokotau", label: "Ojokotau", icon: BookOpen },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
 ];
@@ -215,8 +214,6 @@ export function MobileBottomNav() {
     if (item.href === "/store" && !(g?.store_enabled ?? STORE_ENABLED)) return false;
     if (item.href === "/podcasts" && !(g?.podcasts_enabled ?? false)) return false;
     if (item.href === "/awards" && !(g?.awards_system_enabled ?? false)) return false;
-    if (item.href === "/campaigns" && !(g?.campaigns_enabled ?? false)) return false;
-    if (item.href === "/ojokotau" && !(g?.ojokotau_enabled ?? false)) return false;
     if (item.href === "/edula" && !(g?.edula_enabled ?? false)) return false;
     if (item.href === "/promotions" && !(g?.promotions_enabled ?? false)) return false;
     if (item.href === "/forums" && !(g?.forums_enabled ?? false)) return false;

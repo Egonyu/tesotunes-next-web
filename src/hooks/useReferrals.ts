@@ -43,6 +43,15 @@ export interface ReferralDashboard {
   recent_referrals: RecentReferral[];
   claimable_rewards: number;
   next_milestone: NextMilestone | null;
+  /**
+   * What the programme pays today, read from credit_rates on the server.
+   * The page states these rather than hardcoding a figure, because the rate
+   * is operator-editable and can sit inside a time-limited window.
+   */
+  reward_rates?: {
+    referrer_credits: number;
+    joiner_credits: number;
+  };
 }
 
 export interface ReferralHistoryItem {
@@ -286,291 +295,17 @@ export function useTrackShare() {
   });
 }
 
-// ============================================================================
-// Campaign Referrals Types
-// ============================================================================
-
-export interface EventReferral {
-  id: number;
-  event: {
-    id: number;
-    title: string;
-    image: string | null;
-    date: string;
-    venue: string;
-  };
-  referral_link: string;
-  referral_code: string;
-  stats: {
-    total_referred: number;
-    tickets_sold: number;
-    revenue_generated: number;
-    free_tickets_earned: number;
-  };
-  reward_rule: string;
-  status: 'active' | 'expired' | 'completed';
-  expires_at: string;
-}
-
-export interface CampaignReferralStats {
-  total_campaigns: number;
-  active_campaigns: number;
-  total_referred: number;
-  total_conversions: number;
-  conversion_rate: number;
-  total_revenue: number;
-}
-
-export interface ReferralCampaign {
-  id: number;
-  name: string;
-  description: string;
-  type: 'event' | 'signup' | 'store' | 'subscription';
-  status: 'draft' | 'active' | 'paused' | 'completed' | 'expired';
-  start_date: string;
-  end_date: string;
-  reward_type: 'credits' | 'ticket' | 'discount' | 'badge';
-  reward_value: number;
-  reward_description: string;
-  referral_required: number;
-  image: string | null;
-  stats: {
-    total_participants: number;
-    total_referrals: number;
-    total_conversions: number;
-    total_rewards_claimed: number;
-    conversion_rate: number;
-  };
-  created_at: string;
-}
-
-export interface ReferralCampaignDetail extends ReferralCampaign {
-  participants: Array<{
-    user_id: number;
-    name: string;
-    avatar: string | null;
-    referrals: number;
-    conversions: number;
-    rewards_earned: number;
-    joined_at: string;
-  }>;
-  conversion_chart: Array<{ date: string; referrals: number; conversions: number }>;
-}
-
-export interface ConversionAnalytics {
-  overview: {
-    total_campaigns: number;
-    total_referrals: number;
-    total_conversions: number;
-    overall_conversion_rate: number;
-    total_revenue: number;
-    total_rewards_distributed: number;
-  };
-  by_campaign_type: Array<{
-    type: string;
-    campaigns: number;
-    referrals: number;
-    conversions: number;
-    conversion_rate: number;
-    revenue: number;
-  }>;
-  by_period: Array<{
-    period: string;
-    referrals: number;
-    conversions: number;
-    revenue: number;
-  }>;
-  top_campaigns: Array<{
-    id: number;
-    name: string;
-    type: string;
-    referrals: number;
-    conversions: number;
-    conversion_rate: number;
-    revenue: number;
-  }>;
-  top_referrers: Array<{
-    user_id: number;
-    name: string;
-    avatar: string | null;
-    total_referrals: number;
-    total_conversions: number;
-    total_revenue: number;
-  }>;
-}
 
 // ============================================================================
-// Event Referrals Hooks
+// Removed surfaces
 // ============================================================================
-
-export function useEventReferrals(params?: { status?: string; page?: number }) {
-  return useQuery({
-    queryKey: ["referrals", "events", params],
-    queryFn: () => apiGet<{
-            data: EventReferral[];
-      pagination: {
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-      };
-    }>("/referrals/events", { params }),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useEventReferralLink(eventId: number) {
-  return useQuery({
-    queryKey: ["referrals", "events", eventId, "link"],
-    queryFn: () => apiGet<{ data: EventReferral }>(`/referrals/events/${eventId}/link`)
-      .then(res => res.data),
-    enabled: !!eventId,
-  });
-}
-
-export function useCreateEventReferral() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (eventId: number) =>
-      apiPost<{ data: EventReferral }>(`/referrals/events/${eventId}/create`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["referrals", "events"] });
-    },
-  });
-}
-
-// ============================================================================
-// Campaign Tracking Hooks (Admin)
-// ============================================================================
-
-export function useCampaignReferralStats() {
-  return useQuery({
-    queryKey: ["admin", "campaigns", "referral-stats"],
-    queryFn: () => apiGet<{ data: CampaignReferralStats }>("/admin/referrals/campaigns/stats")
-      .then(res => res.data),
-    staleTime: 60 * 1000,
-  });
-}
-
-export function useReferralCampaigns(params?: {
-  type?: string;
-  status?: string;
-  page?: number;
-  per_page?: number;
-  search?: string;
-}) {
-  return useQuery({
-    queryKey: ["admin", "campaigns", params],
-    queryFn: () => apiGet<{
-            data: ReferralCampaign[];
-      pagination: {
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-      };
-    }>("/admin/referrals/campaigns", { params }),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useCampaignDetail(id: number) {
-  return useQuery({
-    queryKey: ["admin", "campaigns", id],
-    queryFn: () => apiGet<{ data: ReferralCampaignDetail }>(`/admin/referrals/campaigns/${id}`)
-      .then(res => res.data),
-    enabled: !!id,
-  });
-}
-
-export function useCreateReferralCampaign() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: {
-      name: string;
-      description: string;
-      type: 'event' | 'signup' | 'store' | 'subscription';
-      start_date: string;
-      end_date: string;
-      reward_type: 'credits' | 'ticket' | 'discount' | 'badge';
-      reward_value: number;
-      reward_description: string;
-      referral_required: number;
-    }) => apiPost<{ data: ReferralCampaign }>("/admin/referrals/campaigns", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] });
-    },
-  });
-}
-
-export function useUpdateCampaignStatus() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: 'active' | 'paused' | 'completed' }) =>
-      apiPost<void>(`/admin/referrals/campaigns/${id}/status`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] });
-    },
-  });
-}
-
-// ============================================================================
-// Conversion Analytics Hook (Admin)
-// ============================================================================
-
-export function useConversionAnalytics(period?: string) {
-  return useQuery({
-    queryKey: ["admin", "referrals", "analytics", period],
-    queryFn: () => apiGet<{ data: ConversionAnalytics }>("/admin/referrals/analytics", {
-      params: period ? { period } : undefined,
-    }).then(res => res.data),
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-// ============================================================================
-// Special Referral Campaigns (User-facing)
-// ============================================================================
-
-export interface SpecialCampaign {
-  id: number;
-  name: string;
-  description: string;
-  type: 'double_points' | 'bonus_credits' | 'exclusive_badge' | 'premium_trial';
-  multiplier: number; // e.g., 2 for 2x points
-  bonus_credits: number;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  participants_count: number;
-  max_participants?: number;
-  requirements?: string;
-  reward_description: string;
-  banner_url?: string;
-  has_joined?: boolean;
-}
-
-export function useActiveSpecialCampaigns() {
-  return useQuery({
-    queryKey: ["referrals", "special-campaigns"],
-    queryFn: () => apiGet<{ data: SpecialCampaign[] }>("/referrals/special-campaigns").then(res => res.data),
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useJoinSpecialCampaign() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (campaignId: number) =>
-      apiPost(`/referrals/special-campaigns/${campaignId}/join`, {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["referrals", "special-campaigns"] });
-    },
-  });
-}
+//
+// Event referrals (/referrals/events/*) and special campaigns
+// (/referrals/special-campaigns) were defined here against endpoints that
+// have never existed, and no page mounted the event hooks at all.
+//
+// They were dropped rather than built because the platform already has the
+// mechanism each was reaching for: a time-limited referral push is a window
+// on the referral rate — credit_rates carries starts_at and ends_at, and
+// RewardRuleService honours them — set from /admin/rewards. A second system
+// for the same thing is how this codebase acquired two of everything else.

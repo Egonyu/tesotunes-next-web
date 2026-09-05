@@ -27,8 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useReferralDashboard, useReferralLeaderboard, useTrackShare, useActiveSpecialCampaigns, useJoinSpecialCampaign } from '@/hooks/useReferrals';
-import type { SpecialCampaign } from '@/hooks/useReferrals';
+import { useReferralDashboard, useReferralLeaderboard, useTrackShare } from '@/hooks/useReferrals';
 
 const statusColors: Record<string, string> = {
   active: 'bg-green-500/20 text-green-400',
@@ -50,8 +49,8 @@ export default function ReferralsPage() {
   
   const { data: dashboard, isLoading, error } = useReferralDashboard();
   const { data: leaderboardData } = useReferralLeaderboard('all_time', 5);
-  const { data: specialCampaigns } = useActiveSpecialCampaigns();
-  const joinCampaign = useJoinSpecialCampaign();
+
+
   const trackShare = useTrackShare();
 
   const copyToClipboard = (text: string) => {
@@ -65,7 +64,7 @@ export default function ReferralsPage() {
     if (!dashboard?.referral_link) return;
     
     const message = encodeURIComponent(
-      `Join me on TesoTunes - Uganda's #1 music streaming platform! 🎵 Get 50 free credits when you sign up: ${dashboard.referral_link}`
+      `Join me on TesoTunes - Uganda's #1 music streaming platform! 🎵 Get ${dashboard.reward_rates?.joiner_credits ?? 0} free credits when you sign up: ${dashboard.referral_link}`
     );
     
     const urls: Record<string, string> = {
@@ -103,6 +102,11 @@ export default function ReferralsPage() {
   }
 
   const { stats, referral_code, referral_link, recent_referrals, next_milestone, claimable_rewards } = dashboard;
+
+  // Read from credit_rates rather than stated in copy, so the page cannot
+  // advertise a rate the platform will not pay.
+  const referrerCredits = dashboard.reward_rates?.referrer_credits ?? 0;
+  const joinerCredits = dashboard.reward_rates?.joiner_credits ?? 0;
 
   return (
     <div className="container mx-auto py-8 max-w-6xl">
@@ -172,104 +176,13 @@ export default function ReferralsPage() {
           </CardContent>
         </Card>
       </div>
+      {/* A time-limited referral push (double credits for a week, say) is a
+          window on the referral rate at /admin/rewards — credit_rates carries
+          starts_at and ends_at and RewardRuleService honours them. A separate
+          "special campaigns" system would be a second way to say the same
+          thing, so this section and its endpoints were dropped rather than
+          built. */}
 
-      {/* Special Campaigns */}
-      {specialCampaigns && specialCampaigns.length > 0 && (
-        <div className="space-y-4 mb-8">
-          {specialCampaigns.map((campaign: SpecialCampaign) => {
-            const typeConfig: Record<string, { icon: React.ReactNode; gradient: string; badge: string; badgeColor: string }> = {
-              double_points: {
-                icon: <Zap className="w-6 h-6 text-yellow-400" />,
-                gradient: 'from-yellow-500/20 to-orange-500/20',
-                badge: `${campaign.multiplier}x Points`,
-                badgeColor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-              },
-              bonus_credits: {
-                icon: <Star className="w-6 h-6 text-green-400" />,
-                gradient: 'from-green-500/20 to-emerald-500/20',
-                badge: `+${campaign.bonus_credits} Bonus`,
-                badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
-              },
-              exclusive_badge: {
-                icon: <Crown className="w-6 h-6 text-purple-400" />,
-                gradient: 'from-purple-500/20 to-pink-500/20',
-                badge: 'Exclusive Badge',
-                badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-              },
-              premium_trial: {
-                icon: <Trophy className="w-6 h-6 text-cyan-400" />,
-                gradient: 'from-cyan-500/20 to-blue-500/20',
-                badge: 'Premium Trial',
-                badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-              },
-            };
-
-            const config = typeConfig[campaign.type] || typeConfig.double_points;
-            const endDate = new Date(campaign.end_date);
-            const now = new Date();
-            const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-            const spotsLeft = campaign.max_participants ? campaign.max_participants - campaign.participants_count : null;
-
-            return (
-              <Card key={campaign.id} className={`bg-linear-to-r ${config.gradient} border-zinc-700 overflow-hidden`}>
-                <CardContent className="p-5">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="p-3 bg-zinc-800/50 rounded-xl shrink-0">
-                      {config.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-bold text-white text-lg">{campaign.name}</h3>
-                        <Badge className={`${config.badgeColor} border`}>{config.badge}</Badge>
-                      </div>
-                      <p className="text-gray-300 text-sm mb-2">{campaign.description}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Timer className="w-3.5 h-3.5" />
-                          {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5" />
-                          {campaign.participants_count.toLocaleString()} joined
-                        </span>
-                        {spotsLeft !== null && (
-                          <span className="text-orange-400">
-                            {spotsLeft.toLocaleString()} spots left
-                          </span>
-                        )}
-                      </div>
-                      {campaign.requirements && (
-                        <p className="text-xs text-gray-500 mt-1">Requires: {campaign.requirements}</p>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {campaign.has_joined ? (
-                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 py-1.5 px-3">
-                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                          Joined
-                        </Badge>
-                      ) : (
-                        <Button
-                          onClick={() => joinCampaign.mutate(campaign.id)}
-                          disabled={joinCampaign.isPending}
-                          className="bg-purple-600 hover:bg-purple-700"
-                        >
-                          {joinCampaign.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Zap className="w-4 h-4 mr-2" />
-                          )}
-                          Join Campaign
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left Column - Share Tools */}
@@ -282,7 +195,7 @@ export default function ReferralsPage() {
                 Share Your Link
               </CardTitle>
               <CardDescription>
-                Friends who join get 50 bonus credits. You get 50 credits per signup!
+                {joinerCredits > 0 ? `Friends who join get ${joinerCredits.toLocaleString()} bonus credits. You get ${referrerCredits.toLocaleString()} credits per signup.` : 'Share your link and earn credits for every person who joins.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -554,7 +467,7 @@ export default function ReferralsPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">They sign up</p>
-                    <p className="text-sm text-gray-400">They get 50 bonus credits</p>
+                    <p className="text-sm text-gray-400">They get {joinerCredits.toLocaleString()} bonus credits</p>
                   </div>
                 </div>
                 <div className="flex gap-3">

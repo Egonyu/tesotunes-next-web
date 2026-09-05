@@ -129,7 +129,6 @@ export type FeedModule =
   | 'awards'
   | 'store'
   | 'sacco'
-  | 'ojokotau'
   | 'loyalty'
   | 'forum'
   | 'podcasts'
@@ -292,7 +291,6 @@ export const MODULE_STYLES: Record<
   awards:   { color: '#EF4444', icon: '🏆', label: 'Awards' },
   store:    { color: '#10B981', icon: '🛍️', label: 'Store' },
   sacco:    { color: '#14B8A6', icon: '💰', label: 'SACCO' },
-  ojokotau: { color: '#F97316', icon: '🤝', label: 'Ojokotau' },
   loyalty:  { color: '#EC4899', icon: '⭐', label: 'Loyalty' },
   forum:    { color: '#6366F1', icon: '💬', label: 'Forum' },
   podcasts: { color: '#8B5CF6', icon: '🎙️', label: 'Podcasts' },

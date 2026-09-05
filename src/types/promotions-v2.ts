@@ -166,7 +166,7 @@ export interface ActivityHubSummary {
     pending_actions: {
       buyer_orders_awaiting_review: number;
       seller_orders_to_verify: number;
-      open_promotionRequests: number;
+      open_requests: number;
       pending_applications: number;
     };
   };

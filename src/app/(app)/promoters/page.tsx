@@ -101,10 +101,10 @@ export default function PromotersDiscoveryPage() {
               Browse services
             </Link>
             <Link
-              href="/promotions/opportunities"
+              href="/promotions/requests"
               className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Browse opportunities
+              Browse requests
             </Link>
           </div>
         </div>

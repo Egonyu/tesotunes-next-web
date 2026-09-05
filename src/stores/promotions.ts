@@ -8,7 +8,7 @@ import type {
   BrowsePromotionsParams,
 } from "@/types/promotions";
 import type {
-  BrowseOpportunitiesParams,
+  BrowsePromotionRequestsParams,
   BrowsePromotersParams,
   PromotableType,
 } from "@/types/promotions-v2";
@@ -65,17 +65,17 @@ export const usePromotionsStore = create<PromotionsState>((set) => ({
 }));
 
 // ============================================================================
-// V2: Opportunity Feed Store
-// Filters for the new opportunity marketplace and promoter discovery
+// V2: PromotionRequest Feed Store
+// Filters for the new promotionRequest marketplace and promoter discovery
 // ============================================================================
 
-interface OpportunityFeedState {
-  filters: BrowseOpportunitiesParams;
-  setFilter: <K extends keyof BrowseOpportunitiesParams>(
+interface RequestFeedState {
+  filters: BrowsePromotionRequestsParams;
+  setFilter: <K extends keyof BrowsePromotionRequestsParams>(
     key: K,
-    value: BrowseOpportunitiesParams[K]
+    value: BrowsePromotionRequestsParams[K]
   ) => void;
-  setFilters: (filters: Partial<BrowseOpportunitiesParams>) => void;
+  setFilters: (filters: Partial<BrowsePromotionRequestsParams>) => void;
   resetFilters: () => void;
 
   // Onboarding wizard — transient state for the /become-promoter flow
@@ -93,12 +93,12 @@ interface OpportunityFeedState {
     social_links: Record<string, string>;
   }>;
   setOnboardingData: (
-    data: Partial<OpportunityFeedState["onboardingData"]>
+    data: Partial<RequestFeedState["onboardingData"]>
   ) => void;
   resetOnboarding: () => void;
 
-  // Post-opportunity wizard — transient state for the "Promote this track" flow
-  newOpportunityData: Partial<{
+  // Post-promotionRequest wizard — transient state for the "Promote this track" flow
+  newPromotionRequestData: Partial<{
     promotable_type: PromotableType;
     promotable_id: number;
     title: string;
@@ -109,20 +109,20 @@ interface OpportunityFeedState {
     budget_credits: number;
     deadline_at: string;
   }>;
-  setNewOpportunityData: (
-    data: Partial<OpportunityFeedState["newOpportunityData"]>
+  setNewPromotionRequestData: (
+    data: Partial<RequestFeedState["newPromotionRequestData"]>
   ) => void;
-  resetNewOpportunity: () => void;
+  resetNewPromotionRequest: () => void;
 }
 
-const DEFAULT_OPPORTUNITY_FILTERS: BrowseOpportunitiesParams = {
+const DEFAULT_PROMOTION_REQUEST_FILTERS: BrowsePromotionRequestsParams = {
   page: 1,
   per_page: 20,
 };
 
-export const useOpportunityFeedStore = create<OpportunityFeedState>((set) => ({
+export const useRequestFeedStore = create<RequestFeedState>((set) => ({
   // Filters
-  filters: { ...DEFAULT_OPPORTUNITY_FILTERS },
+  filters: { ...DEFAULT_PROMOTION_REQUEST_FILTERS },
   setFilter: (key, value) =>
     set((state) => ({
       filters: {
@@ -136,7 +136,7 @@ export const useOpportunityFeedStore = create<OpportunityFeedState>((set) => ({
       filters: { ...state.filters, ...newFilters, page: 1 },
     })),
   resetFilters: () =>
-    set({ filters: { ...DEFAULT_OPPORTUNITY_FILTERS } }),
+    set({ filters: { ...DEFAULT_PROMOTION_REQUEST_FILTERS } }),
 
   // Onboarding wizard
   onboardingStep: 0,
@@ -148,13 +148,13 @@ export const useOpportunityFeedStore = create<OpportunityFeedState>((set) => ({
     })),
   resetOnboarding: () => set({ onboardingStep: 0, onboardingData: {} }),
 
-  // Post-opportunity wizard
-  newOpportunityData: {},
-  setNewOpportunityData: (data) =>
+  // Post-promotionRequest wizard
+  newPromotionRequestData: {},
+  setNewPromotionRequestData: (data) =>
     set((state) => ({
-      newOpportunityData: { ...state.newOpportunityData, ...data },
+      newPromotionRequestData: { ...state.newPromotionRequestData, ...data },
     })),
-  resetNewOpportunity: () => set({ newOpportunityData: {} }),
+  resetNewPromotionRequest: () => set({ newPromotionRequestData: {} }),
 }));
 
 // ============================================================================

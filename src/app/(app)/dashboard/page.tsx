@@ -27,20 +27,20 @@ import { cn, formatCurrency, formatNumber, formatDate } from "@/lib/utils";
 import {
   useActivityHubSummary,
   useActivityHubOrders,
-  useActivityHubOpportunities,
+  useActivityHubPromotionRequests,
   useActivityHubApplications,
   useActivityHubEarnings,
 } from "@/hooks/usePromotionsV2";
 import type {
-  PromotionOpportunityV2,
+  PromotionRequestV2,
   PromotionApplicationV2,
   PromoterTier,
-  OpportunityStatus,
+  PromotionRequestStatus,
   ApplicationStatus,
 } from "@/types/promotions-v2";
 import {
   PROMOTER_TIER_LABELS,
-  OPPORTUNITY_STATUS_LABELS,
+  PROMOTION_REQUEST_STATUS_LABELS,
   APPLICATION_STATUS_LABELS,
 } from "@/types/promotions-v2";
 import { DashboardOverviewSection } from "@/components/dashboard/overview-section";
@@ -68,7 +68,7 @@ const TIER_COLORS: Record<PromoterTier, string> = {
     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
 };
 
-const OPP_STATUS_COLORS: Record<OpportunityStatus, string> = {
+const OPP_STATUS_COLORS: Record<PromotionRequestStatus, string> = {
   draft: "bg-slate-100 text-slate-600 dark:bg-slate-800",
   open: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   reviewing:
@@ -276,9 +276,9 @@ function OrdersTab() {
   );
 }
 
-function OpportunitiesTab() {
-  const { data, isLoading, isError } = useActivityHubOpportunities();
-  const opps: PromotionOpportunityV2[] = data?.data ?? [];
+function PromotionRequestsTab() {
+  const { data, isLoading, isError } = useActivityHubPromotionRequests();
+  const opps: PromotionRequestV2[] = data?.data ?? [];
 
   if (isLoading)
     return (
@@ -291,7 +291,7 @@ function OpportunitiesTab() {
     return (
       <EmptySlate
         icon={AlertCircle}
-        title="Could not load opportunities"
+        title="Could not load requests"
         description="Refresh the page to try again."
       />
     );
@@ -300,11 +300,11 @@ function OpportunitiesTab() {
     return (
       <EmptySlate
         icon={Briefcase}
-        title="No opportunities posted"
-        description="Artists can post opportunities to find promoters for their tracks."
+        title="No requests posted"
+        description="Artists can post promotionRequests to find promoters for their tracks."
         action={
           <Link
-            href="/opportunities"
+            href="/promotion-requests"
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
             Browse feed
@@ -331,7 +331,7 @@ function OpportunitiesTab() {
               )}
             </div>
             <StatusPill
-              label={OPPORTUNITY_STATUS_LABELS[opp.status]}
+              label={PROMOTION_REQUEST_STATUS_LABELS[opp.status]}
               colorClass={OPP_STATUS_COLORS[opp.status]}
             />
           </div>
@@ -356,7 +356,7 @@ function OpportunitiesTab() {
 
           {opp.application_count > 0 && opp.status === "open" && (
             <Link
-              href={`/opportunities/${opp.uuid}`}
+              href={`/promotion-requests/${opp.uuid}`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
               Review applications
@@ -368,7 +368,7 @@ function OpportunitiesTab() {
 
       <div className="pt-2 flex justify-end">
         <Link
-          href="/opportunities/my/posted"
+          href="/promotion-requests/my/posted"
           className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           View all
@@ -388,7 +388,7 @@ function ApplicationsTab({ isPromoter }: { isPromoter: boolean }) {
       <EmptySlate
         icon={Send}
         title="You're not a promoter yet"
-        description="Set up your promoter profile to apply to opportunities from artists."
+        description="Set up your promoter profile to apply to requests from artists."
         action={
           <Link
             href="/become-promoter"
@@ -422,13 +422,13 @@ function ApplicationsTab({ isPromoter }: { isPromoter: boolean }) {
       <EmptySlate
         icon={Send}
         title="No applications yet"
-        description="Browse the opportunity feed and apply to briefs that match your audience."
+        description="Browse the promotionRequest feed and apply to briefs that match your audience."
         action={
           <Link
-            href="/opportunities"
+            href="/promotion-requests"
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
-            Browse opportunities
+            Browse requests
             <ArrowRight className="h-4 w-4" />
           </Link>
         }
@@ -445,12 +445,12 @@ function ApplicationsTab({ isPromoter }: { isPromoter: boolean }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate">
-                {app.opportunity?.title ?? `Opportunity #${app.opportunity_id}`}
+                {app.promotionRequest?.title ?? `PromotionRequest #${app.promotion_request_id}`}
               </p>
-              {app.opportunity?.promotable && (
+              {app.promotionRequest?.promotable && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {app.opportunity.promotable.title ??
-                    app.opportunity.promotable.name}
+                  {app.promotionRequest.promotable.title ??
+                    app.promotionRequest.promotable.name}
                 </p>
               )}
             </div>
@@ -480,7 +480,7 @@ function ApplicationsTab({ isPromoter }: { isPromoter: boolean }) {
 
       <div className="pt-2 flex justify-end">
         <Link
-          href="/opportunities/my/applications"
+          href="/promotion-requests/my/applications"
           className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           View all
@@ -579,7 +579,7 @@ function EarningsTab() {
 // Tab definitions
 // ---------------------------------------------------------------------------
 
-type TabId = "orders" | "opportunities" | "applications" | "earnings";
+type TabId = "orders" | "promotionRequests" | "applications" | "earnings";
 
 interface TabDef {
   id: TabId;
@@ -590,7 +590,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "orders", label: "Orders", Icon: ShoppingBag },
-  { id: "opportunities", label: "Opportunities", Icon: Briefcase },
+  { id: "promotionRequests", label: "Requests", Icon: Briefcase },
   { id: "applications", label: "Applications", Icon: Send },
   { id: "earnings", label: "Earnings", Icon: TrendingUp, promoterOnly: true },
 ];
@@ -629,7 +629,7 @@ export default function DashboardPage() {
   const totalPendingCount =
     (pendingActions?.buyer_orders_awaiting_review ?? 0) +
     (pendingActions?.seller_orders_to_verify ?? 0) +
-    (pendingActions?.open_opportunities ?? 0) +
+    (pendingActions?.open_promotionRequests ?? 0) +
     (pendingActions?.pending_applications ?? 0);
 
   const visibleTabs = TABS.filter((t) => !t.promoterOnly || isPromoter);
@@ -787,8 +787,8 @@ export default function DashboardPage() {
                   label="Orders to verify"
                 />
                 <ActionBadge
-                  count={pendingActions?.open_opportunities ?? 0}
-                  label="Open opportunities"
+                  count={pendingActions?.open_promotionRequests ?? 0}
+                  label="Open requests"
                 />
                 <ActionBadge
                   count={pendingActions?.pending_applications ?? 0}
@@ -824,7 +824,7 @@ export default function DashboardPage() {
         {/* Tab content */}
         <div className="p-6">
           {activeTab === "orders" && <OrdersTab />}
-          {activeTab === "opportunities" && <OpportunitiesTab />}
+          {activeTab === "promotionRequests" && <PromotionRequestsTab />}
           {activeTab === "applications" && (
             <ApplicationsTab isPromoter={isPromoter} />
           )}
@@ -836,7 +836,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { href: "/promotions", label: "Browse Promotions", Icon: Megaphone },
-          { href: "/opportunities", label: "Opportunity Feed", Icon: Briefcase },
+          { href: "/promotion-requests", label: "PromotionRequest Feed", Icon: Briefcase },
           {
             href: "/promotions/purchases",
             label: "My Purchases",

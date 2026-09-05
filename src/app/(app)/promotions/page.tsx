@@ -10,7 +10,7 @@ import { ArrowRight, Megaphone, Search, Sparkles, Wallet } from "lucide-react";
  *
  * Written for non-technical users: three plain-language paths instead of a
  * wall of filters, stats, and seller tools. The full marketplace lives at
- * /promotions/browse; requests (opportunities) at /promotions/opportunities;
+ * /promotions/browse; requests (promotionRequests) at /promotions/requests;
  * everything you're involved in at /hub.
  */
 export default function PromotionsLandingPage() {
@@ -39,7 +39,7 @@ export default function PromotionsLandingPage() {
       action: "Browse promoters",
     },
     {
-      href: "/promotions/opportunities",
+      href: "/promotions/requests",
       icon: Megaphone,
       title: "Get your music promoted",
       description:

@@ -9,7 +9,7 @@
 
 export type PromoterStatus = "active" | "paused" | "suspended";
 export type PromoterTier = "starter" | "rising" | "established" | "elite";
-export type OpportunityStatus =
+export type PromotionRequestStatus =
   | "draft"
   | "open"
   | "reviewing"
@@ -88,7 +88,7 @@ export interface PromoterProfileV2 {
   user?: UserSummaryV2;
 }
 
-export interface PromotionOpportunityV2 {
+export interface PromotionRequestV2 {
   id: number;
   uuid: string;
   created_by_user_id: number;
@@ -103,7 +103,7 @@ export interface PromotionOpportunityV2 {
   budget_max_ugx: number;
   budget_credits: number;
   deadline_at: string | null;
-  status: OpportunityStatus;
+  status: PromotionRequestStatus;
   slug: string | null;
   view_count: number;
   application_count: number;
@@ -122,7 +122,7 @@ export interface PromotionOpportunityV2 {
 export interface PromotionApplicationV2 {
   id: number;
   uuid: string;
-  opportunity_id: number;
+  promotion_request_id: number;
   promoter_profile_id: number;
   applicant_user_id: number;
   proposed_price_ugx: number;
@@ -137,7 +137,7 @@ export interface PromotionApplicationV2 {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
-  opportunity?: PromotionOpportunityV2;
+  promotionRequest?: PromotionRequestV2;
   promoter_profile?: PromoterProfileV2;
   applicant?: UserSummaryV2;
 }
@@ -166,7 +166,7 @@ export interface ActivityHubSummary {
     pending_actions: {
       buyer_orders_awaiting_review: number;
       seller_orders_to_verify: number;
-      open_opportunities: number;
+      open_promotionRequests: number;
       pending_applications: number;
     };
   };
@@ -217,7 +217,7 @@ export interface UpdatePromoterProfileV2Request {
   response_time_hours?: number;
 }
 
-export interface CreateOpportunityRequest {
+export interface CreatePromotionRequestPayload {
   promotable_type: PromotableType;
   promotable_id: number;
   title: string;
@@ -232,11 +232,11 @@ export interface CreateOpportunityRequest {
   deliverables?: string[];
 }
 
-export type UpdateOpportunityRequest = Partial<
-  Omit<CreateOpportunityRequest, "promotable_type" | "promotable_id">
+export type UpdatePromotionRequestPayload = Partial<
+  Omit<CreatePromotionRequestPayload, "promotable_type" | "promotable_id">
 >;
 
-export interface ApplyToOpportunityRequest {
+export interface ApplyToPromotionRequestPayload {
   proposed_price_ugx?: number;
   proposed_price_credits?: number;
   pitch_message?: string;
@@ -248,7 +248,7 @@ export interface ApplyToOpportunityRequest {
 // Browse / Filter params
 // ---------------------------------------------------------------------------
 
-export interface BrowseOpportunitiesParams {
+export interface BrowsePromotionRequestsParams {
   platform?: string;
   niche?: string;
   region?: string;
@@ -284,7 +284,7 @@ export interface PaginatedV2<T> {
 // Display helpers
 // ---------------------------------------------------------------------------
 
-export const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
+export const PROMOTION_REQUEST_STATUS_LABELS: Record<PromotionRequestStatus, string> = {
   draft: "Draft",
   open: "Open",
   reviewing: "Reviewing",
@@ -324,15 +324,15 @@ export interface AdminPromoterProfile extends Omit<PromoterProfileV2, "user"> {
   user: AdminUserSummary | null;
 }
 
-export interface AdminOpportunityCreator {
+export interface AdminPromotionRequestCreator {
   id: number;
   name: string;
   username: string | null;
   avatar_url: string | null;
 }
 
-export interface AdminOpportunity extends Omit<PromotionOpportunityV2, "creator" | "promotable"> {
-  creator: AdminOpportunityCreator | null;
+export interface AdminPromotionRequest extends Omit<PromotionRequestV2, "creator" | "promotable"> {
+  creator: AdminPromotionRequestCreator | null;
   promotable: { id: number; title: string | null; type: string } | null;
 }
 
@@ -350,8 +350,8 @@ export interface AdminApplication {
   created_at: string;
 }
 
-export interface AdminOpportunityApplicationsResponse {
-  opportunity: AdminOpportunity;
+export interface AdminPromotionRequestApplicationsResponse {
+  promotionRequest: AdminPromotionRequest;
   data: AdminApplication[];
   current_page: number;
   last_page: number;

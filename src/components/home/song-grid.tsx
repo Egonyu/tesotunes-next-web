@@ -250,7 +250,7 @@ export function SongGrid({ type, limit = 10, variant = "compact" }: SongGridProp
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(
-                            `/artist/promotions/opportunities/create?promotable_type=song&promotable_id=${song.id}&promotable_title=${encodeURIComponent(song.title)}`
+                            `/artist/promotions/requests/create?promotable_type=song&promotable_id=${song.id}&promotable_title=${encodeURIComponent(song.title)}`
                           );
                         }}
                         className="gap-2"

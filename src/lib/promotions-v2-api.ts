@@ -1,27 +1,27 @@
 // ============================================================================
 // TesoTunes Promotions V2 — API Client
-// Covers /promoters/*, /opportunities/*, /activity-hub/*
+// Covers /promoters/*, /promotionRequests/*, /activity-hub/*
 // ============================================================================
 
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import type {
   PromoterProfileV2,
-  PromotionOpportunityV2,
+  PromotionRequestV2,
   PromotionApplicationV2,
   ActivityHubSummary,
   ActivityHubWallet,
   ActivityHubEarnings,
   OnboardAsPromoterRequest,
   UpdatePromoterProfileV2Request,
-  CreateOpportunityRequest,
-  UpdateOpportunityRequest,
-  ApplyToOpportunityRequest,
-  BrowseOpportunitiesParams,
+  CreatePromotionRequestPayload,
+  UpdatePromotionRequestPayload,
+  ApplyToPromotionRequestPayload,
+  BrowsePromotionRequestsParams,
   BrowsePromotersParams,
   PaginatedV2,
   AdminPromoterProfile,
-  AdminOpportunity,
-  AdminOpportunityApplicationsResponse,
+  AdminPromotionRequest,
+  AdminPromotionRequestApplicationsResponse,
   AdminSetTierRequest,
   PromoterTier,
 } from "@/types/promotions-v2";
@@ -73,83 +73,83 @@ export function updateMyPromoterProfileV2(data: UpdatePromoterProfileV2Request) 
 }
 
 // ---------------------------------------------------------------------------
-// Opportunity Feed
+// PromotionRequest Feed
 // ---------------------------------------------------------------------------
 
-/** Browse open opportunities — public */
-export function fetchOpportunities(params: BrowseOpportunitiesParams = {}) {
-  return apiGet<PaginatedV2<PromotionOpportunityV2>>(
-    `/opportunities${qs(params as Record<string, unknown>)}`
+/** Browse open promotionRequests — public */
+export function fetchPromotionRequests(params: BrowsePromotionRequestsParams = {}) {
+  return apiGet<PaginatedV2<PromotionRequestV2>>(
+    `/promotion-requests${qs(params as Record<string, unknown>)}`
   );
 }
 
-/** Single opportunity by UUID — public */
-export function fetchOpportunity(uuid: string) {
-  return apiGet<{ data: PromotionOpportunityV2 }>(`/opportunities/${uuid}`);
+/** Single promotionRequest by UUID — public */
+export function fetchPromotionRequest(uuid: string) {
+  return apiGet<{ data: PromotionRequestV2 }>(`/promotion-requests/${uuid}`);
 }
 
-/** Post a new opportunity (artist only, owns the content) — auth required */
-export function createOpportunity(data: CreateOpportunityRequest) {
-  return apiPost<{ data: PromotionOpportunityV2 }>("/opportunities", data);
+/** Post a new promotionRequest (artist only, owns the content) — auth required */
+export function createPromotionRequest(data: CreatePromotionRequestPayload) {
+  return apiPost<{ data: PromotionRequestV2 }>("/promotion-requests", data);
 }
 
-/** Update an opportunity — auth + owner */
-export function updateOpportunity(uuid: string, data: UpdateOpportunityRequest) {
-  return apiPut<{ data: PromotionOpportunityV2 }>(`/opportunities/${uuid}`, data);
+/** Update an promotionRequest — auth + owner */
+export function updatePromotionRequest(uuid: string, data: UpdatePromotionRequestPayload) {
+  return apiPut<{ data: PromotionRequestV2 }>(`/promotion-requests/${uuid}`, data);
 }
 
-/** Cancel an opportunity — auth + owner */
-export function cancelOpportunity(uuid: string) {
-  return apiDelete<{ message: string }>(`/opportunities/${uuid}`);
+/** Cancel an promotionRequest — auth + owner */
+export function cancelPromotionRequest(uuid: string) {
+  return apiDelete<{ message: string }>(`/promotion-requests/${uuid}`);
 }
 
-/** Manually close an opportunity — auth + owner */
-export function closeOpportunity(uuid: string) {
-  return apiPost<{ message: string }>(`/opportunities/${uuid}/close`);
+/** Manually close an promotionRequest — auth + owner */
+export function closePromotionRequest(uuid: string) {
+  return apiPost<{ message: string }>(`/promotion-requests/${uuid}/close`);
 }
 
-/** Apply to an opportunity as a promoter — auth required */
-export function applyToOpportunity(uuid: string, data: ApplyToOpportunityRequest) {
-  return apiPost<{ data: PromotionApplicationV2 }>(`/opportunities/${uuid}/apply`, data);
+/** Apply to an promotionRequest as a promoter — auth required */
+export function applyToPromotionRequest(uuid: string, data: ApplyToPromotionRequestPayload) {
+  return apiPost<{ data: PromotionApplicationV2 }>(`/promotion-requests/${uuid}/apply`, data);
 }
 
-/** List applications for an opportunity — auth + owner */
-export function fetchOpportunityApplications(
+/** List applications for an promotionRequest — auth + owner */
+export function fetchPromotionRequestApplications(
   uuid: string,
   params: { per_page?: number; page?: number } = {}
 ) {
   return apiGet<PaginatedV2<PromotionApplicationV2>>(
-    `/opportunities/${uuid}/applications${qs(params as Record<string, unknown>)}`
+    `/promotion-requests/${uuid}/applications${qs(params as Record<string, unknown>)}`
   );
 }
 
-/** Award an application — auth + opportunity owner */
+/** Award an application — auth + promotionRequest owner */
 export function awardApplication(uuid: string, applicationId: number) {
   return apiPost<{ message: string }>(
-    `/opportunities/${uuid}/applications/${applicationId}/award`
+    `/promotion-requests/${uuid}/applications/${applicationId}/award`
   );
 }
 
-/** Shortlist an application — auth + opportunity owner */
+/** Shortlist an application — auth + promotionRequest owner */
 export function shortlistApplication(uuid: string, applicationId: number) {
   return apiPost<{ message: string }>(
-    `/opportunities/${uuid}/applications/${applicationId}/shortlist`
+    `/promotion-requests/${uuid}/applications/${applicationId}/shortlist`
   );
 }
 
 /** Withdraw my own application — auth */
 export function withdrawApplication(uuid: string, applicationId: number) {
   return apiDelete<{ message: string }>(
-    `/opportunities/${uuid}/applications/${applicationId}`
+    `/promotion-requests/${uuid}/applications/${applicationId}`
   );
 }
 
-/** My posted opportunities — auth */
-export function fetchMyPostedOpportunities(
+/** My posted promotionRequests — auth */
+export function fetchMyPostedPromotionRequests(
   params: { per_page?: number; page?: number } = {}
 ) {
-  return apiGet<PaginatedV2<PromotionOpportunityV2>>(
-    `/opportunities/my/posted${qs(params as Record<string, unknown>)}`
+  return apiGet<PaginatedV2<PromotionRequestV2>>(
+    `/promotion-requests/my/posted${qs(params as Record<string, unknown>)}`
   );
 }
 
@@ -158,7 +158,7 @@ export function fetchMyApplicationsV2(
   params: { per_page?: number; page?: number } = {}
 ) {
   return apiGet<PaginatedV2<PromotionApplicationV2>>(
-    `/opportunities/my/applications${qs(params as Record<string, unknown>)}`
+    `/promotion-requests/my/applications${qs(params as Record<string, unknown>)}`
   );
 }
 
@@ -185,12 +185,12 @@ export function fetchActivityHubOrders(
   );
 }
 
-/** Opportunities posted by me */
-export function fetchActivityHubOpportunities(
+/** PromotionRequests posted by me */
+export function fetchActivityHubPromotionRequests(
   params: { per_page?: number; page?: number } = {}
 ) {
-  return apiGet<PaginatedV2<PromotionOpportunityV2>>(
-    `/activity-hub/opportunities${qs(params as Record<string, unknown>)}`
+  return apiGet<PaginatedV2<PromotionRequestV2>>(
+    `/activity-hub/promotion-requests${qs(params as Record<string, unknown>)}`
   );
 }
 
@@ -255,36 +255,36 @@ export function adminSetPromoterTier(id: number, data: AdminSetTierRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// Admin — Opportunity oversight
+// Admin — PromotionRequest oversight
 // ---------------------------------------------------------------------------
 
-export interface AdminBrowseOpportunitiesParams {
+export interface AdminBrowsePromotionRequestsParams {
   status?: string;
   search?: string;
   per_page?: number;
   page?: number;
 }
 
-/** Admin: list all opportunities */
-export function adminFetchOpportunities(params: AdminBrowseOpportunitiesParams = {}) {
-  return apiGet<PaginatedV2<AdminOpportunity>>(
-    `/admin/opportunities${qs(params as Record<string, unknown>)}`
+/** Admin: list all promotionRequests */
+export function adminFetchPromotionRequests(params: AdminBrowsePromotionRequestsParams = {}) {
+  return apiGet<PaginatedV2<AdminPromotionRequest>>(
+    `/admin/promotion-requests${qs(params as Record<string, unknown>)}`
   );
 }
 
-/** Admin: force-close an opportunity */
-export function adminCloseOpportunity(uuid: string) {
-  return apiPost<{ success: boolean; data: AdminOpportunity }>(
-    `/admin/opportunities/${uuid}/close`
+/** Admin: force-close an promotionRequest */
+export function adminClosePromotionRequest(uuid: string) {
+  return apiPost<{ success: boolean; data: AdminPromotionRequest }>(
+    `/admin/promotion-requests/${uuid}/close`
   );
 }
 
-/** Admin: list all applications for an opportunity */
-export function adminFetchOpportunityApplications(
+/** Admin: list all applications for an promotionRequest */
+export function adminFetchPromotionRequestApplications(
   uuid: string,
   params: { per_page?: number; page?: number } = {}
 ) {
-  return apiGet<AdminOpportunityApplicationsResponse>(
-    `/admin/opportunities/${uuid}/applications${qs(params as Record<string, unknown>)}`
+  return apiGet<AdminPromotionRequestApplicationsResponse>(
+    `/admin/promotion-requests/${uuid}/applications${qs(params as Record<string, unknown>)}`
   );
 }

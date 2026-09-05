@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCreateOpportunity } from '@/hooks/usePromotionsV2';
+import { useCreatePromotionRequest } from '@/hooks/usePromotionsV2';
 import { useMyArtistSongs } from '@/hooks/useArtist';
 import type { PromotableType } from '@/types/promotions-v2';
 
@@ -46,10 +46,10 @@ interface SongOption {
   artwork_url?: string | null;
 }
 
-export default function PostOpportunityPage() {
+export default function PostPromotionRequestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const createOpp = useCreateOpportunity();
+  const createOpp = useCreatePromotionRequest();
 
   const prefillType = (searchParams.get('promotable_type') ?? 'song') as PromotableType;
   const prefillId = searchParams.get('promotable_id') ? Number(searchParams.get('promotable_id')) : null;
@@ -121,7 +121,7 @@ export default function PostOpportunityPage() {
         deliverables: form.deliverables.filter((d) => d.trim()),
       },
       {
-        onSuccess: () => router.push('/promotions/opportunities'),
+        onSuccess: () => router.push('/promotions/requests'),
       }
     );
   };
@@ -137,7 +137,7 @@ export default function PostOpportunityPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Post a promotion opportunity</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Post a promotion request</h1>
           <p className="text-sm text-muted-foreground">
             Tell promoters what you need — they apply, you pick the best fit.
           </p>
@@ -199,13 +199,13 @@ export default function PostOpportunityPage() {
             )}
           </div>
 
-          {/* Opportunity details */}
+          {/* PromotionRequest details */}
           <div className="rounded-xl bg-card shadow-sm p-5 space-y-4">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40">
                 <Megaphone className="h-3.5 w-3.5 text-sky-500" />
               </span>
-              <h2 className="font-semibold">Opportunity details</h2>
+              <h2 className="font-semibold">PromotionRequest details</h2>
             </div>
 
             <div className="space-y-1.5">
@@ -437,20 +437,20 @@ export default function PostOpportunityPage() {
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
             >
               {createOpp.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {createOpp.isPending ? 'Posting…' : 'Post opportunity'}
+              {createOpp.isPending ? 'Posting…' : 'Post request'}
             </button>
 
             <Link
-              href="/promotions/opportunities"
+              href="/promotions/requests"
               className="block text-center text-xs text-muted-foreground hover:text-foreground underline"
             >
-              View all opportunities
+              View all promotionRequests
             </Link>
           </div>
 
           {/* How it works */}
           <div className="rounded-xl bg-card shadow-sm p-5 space-y-3">
-            <h3 className="text-sm font-semibold">How opportunities work</h3>
+            <h3 className="text-sm font-semibold">How requests work</h3>
             {[
               { step: '1', text: 'You post what you need and set a budget range' },
               { step: '2', text: 'Promoters browse and apply with their pitch' },

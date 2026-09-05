@@ -600,7 +600,7 @@ export interface SavingsRecommendation {
   id: string
   title: string
   description: string
-  type: 'strategy' | 'opportunity' | 'warning' | 'milestone'
+  type: 'strategy' | 'promotionRequest' | 'warning' | 'milestone'
   priority: 'high' | 'medium' | 'low'
   action: {
     type: 'auto_save' | 'convert_credits' | 'adjust_goal' | 'apply_loan'

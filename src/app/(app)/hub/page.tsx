@@ -25,7 +25,7 @@ import {
   useActivityHubSummary,
   useActivityHubWallet,
   useActivityHubOrders,
-  useActivityHubOpportunities,
+  useActivityHubPromotionRequests,
   useActivityHubApplications,
   useActivityHubEarnings,
 } from '@/hooks/usePromotionsV2';
@@ -71,7 +71,7 @@ export default function ActivityHubPage() {
   const { data: summary, isLoading: summaryLoading } = useActivityHubSummary();
   const { data: wallet, isLoading: walletLoading } = useActivityHubWallet();
   const { data: ordersData, isLoading: ordersLoading } = useActivityHubOrders({ per_page: 5 });
-  const { data: oppsData, isLoading: oppsLoading } = useActivityHubOpportunities({ per_page: 5 });
+  const { data: oppsData, isLoading: oppsLoading } = useActivityHubPromotionRequests({ per_page: 5 });
   const { data: appsData, isLoading: appsLoading } = useActivityHubApplications({ per_page: 5 });
   const { data: earnings } = useActivityHubEarnings({ per_page: 5 });
 
@@ -89,7 +89,7 @@ export default function ActivityHubPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Activity Hub</h1>
           <p className="text-sm text-muted-foreground">
-            Your complete view — wallet, orders, opportunities, and earnings in one place.
+            Your complete view — wallet, orders, promotionRequests, and earnings in one place.
           </p>
         </div>
         <div className="flex gap-2">
@@ -276,8 +276,8 @@ export default function ActivityHubPage() {
           </div>
         </Section>
 
-        {/* Posted opportunities */}
-        <Section title="My posted opportunities" href="/promotions/opportunities" linkLabel="All opportunities">
+        {/* Posted promotionRequests */}
+        <Section title="My posted requests" href="/promotions/requests" linkLabel="All requests">
           <div className="rounded-xl bg-card shadow-sm overflow-hidden">
             {oppsLoading ? (
               <div className="flex items-center justify-center py-10">
@@ -286,8 +286,8 @@ export default function ActivityHubPage() {
             ) : opps.length === 0 ? (
               <div className="py-10 text-center">
                 <Target className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No opportunities posted</p>
-                <Link href="/artist/promotions/opportunities/create" className="mt-2 block text-xs text-primary hover:underline">Post one now</Link>
+                <p className="text-sm text-muted-foreground">No requests posted</p>
+                <Link href="/artist/promotions/requests/create" className="mt-2 block text-xs text-primary hover:underline">Post one now</Link>
               </div>
             ) : (
               <div className="divide-y">
@@ -313,7 +313,7 @@ export default function ActivityHubPage() {
         </Section>
 
         {/* My applications (as promoter) */}
-        <Section title="My applications (as promoter)" href="/promotions/opportunities" linkLabel="Browse opportunities">
+        <Section title="My applications (as promoter)" href="/promotions/requests" linkLabel="Browse requests">
           <div className="rounded-xl bg-card shadow-sm overflow-hidden">
             {appsLoading ? (
               <div className="flex items-center justify-center py-10">
@@ -323,7 +323,7 @@ export default function ActivityHubPage() {
               <div className="py-10 text-center">
                 <Megaphone className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">No applications submitted</p>
-                <Link href="/promotions/opportunities" className="mt-2 block text-xs text-primary hover:underline">Find opportunities</Link>
+                <Link href="/promotions/requests" className="mt-2 block text-xs text-primary hover:underline">Find requests</Link>
               </div>
             ) : (
               <div className="divide-y">
@@ -331,7 +331,7 @@ export default function ActivityHubPage() {
                   <div key={i} className="flex items-center justify-between p-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {String((app.opportunity as Record<string, unknown>)?.title ?? '—')}
+                        {String((app.promotionRequest as Record<string, unknown>)?.title ?? '—')}
                       </p>
                       <p className="text-xs text-muted-foreground capitalize">{String(app.status ?? '—')}</p>
                     </div>

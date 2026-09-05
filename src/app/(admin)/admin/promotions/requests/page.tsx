@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 import {
-  useAdminOpportunitiesV2,
-  useAdminCloseOpportunity,
+  useAdminPromotionRequestsV2,
+  useAdminClosePromotionRequest,
 } from '@/hooks/usePromotionsV2';
-import { OPPORTUNITY_STATUS_LABELS } from '@/types/promotions-v2';
-import type { OpportunityStatus } from '@/types/promotions-v2';
+import { PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
+import type { PromotionRequestStatus } from '@/types/promotions-v2';
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: '', label: 'All' },
@@ -29,7 +29,7 @@ const STATUS_TABS: { value: string; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const STATUS_COLORS: Record<OpportunityStatus, string> = {
+const STATUS_COLORS: Record<PromotionRequestStatus, string> = {
   open: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   reviewing: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   awarded: 'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
@@ -44,21 +44,21 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function AdminOpportunitiesPage() {
+export default function AdminPromotionRequestsPage() {
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useAdminOpportunitiesV2({
+  const { data, isLoading, isError } = useAdminPromotionRequestsV2({
     status: status || undefined,
     search: search || undefined,
     page,
     per_page: 20,
   });
 
-  const close = useAdminCloseOpportunity();
+  const close = useAdminClosePromotionRequest();
 
-  const opportunities = data?.data ?? [];
+  const promotionRequests = data?.data ?? [];
   const lastPage = data?.last_page ?? 1;
   const total = data?.total ?? 0;
 
@@ -74,7 +74,7 @@ export default function AdminOpportunitiesPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Opportunities</h1>
+            <h1 className="text-2xl font-bold tracking-tight">PromotionRequests</h1>
             <p className="text-sm text-muted-foreground">
               All artist-posted promotion briefs — oversee, close, and review applications
             </p>
@@ -92,9 +92,9 @@ export default function AdminOpportunitiesPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'Total', value: formatNumber(total) },
-          { label: 'Open', value: formatNumber(opportunities.filter(o => o.status === 'open').length) },
-          { label: 'Total applications', value: formatNumber(opportunities.reduce((s, o) => s + o.application_count, 0)) },
-          { label: 'Total views', value: formatNumber(opportunities.reduce((s, o) => s + o.view_count, 0)) },
+          { label: 'Open', value: formatNumber(promotionRequests.filter(o => o.status === 'open').length) },
+          { label: 'Total applications', value: formatNumber(promotionRequests.reduce((s, o) => s + o.application_count, 0)) },
+          { label: 'Total views', value: formatNumber(promotionRequests.reduce((s, o) => s + o.view_count, 0)) },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl bg-card shadow-sm p-4">
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -141,15 +141,15 @@ export default function AdminOpportunitiesPage() {
       ) : isError ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center">
           <XCircle className="mx-auto mb-3 h-10 w-10 text-destructive/40" />
-          <p className="font-medium">Could not load opportunities</p>
+          <p className="font-medium">Could not load requests</p>
         </div>
-      ) : opportunities.length === 0 ? (
+      ) : promotionRequests.length === 0 ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center text-muted-foreground">
-          No opportunities match the current filters.
+          No promotionRequests match the current filters.
         </div>
       ) : (
         <div className="space-y-3">
-          {opportunities.map((opp) => {
+          {promotionRequests.map((opp) => {
             const days = daysUntil(opp.deadline_at);
             return (
               <div key={opp.uuid} className="rounded-xl bg-card shadow-sm p-5">
@@ -158,9 +158,9 @@ export default function AdminOpportunitiesPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={cn(
                         'rounded-full border px-2 py-0.5 text-xs font-medium',
-                        STATUS_COLORS[opp.status as OpportunityStatus] ?? 'border-border bg-muted text-muted-foreground'
+                        STATUS_COLORS[opp.status as PromotionRequestStatus] ?? 'border-border bg-muted text-muted-foreground'
                       )}>
-                        {OPPORTUNITY_STATUS_LABELS[opp.status as OpportunityStatus] ?? opp.status}
+                        {PROMOTION_REQUEST_STATUS_LABELS[opp.status as PromotionRequestStatus] ?? opp.status}
                       </span>
                       {opp.promotable && (
                         <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground capitalize">
@@ -213,14 +213,14 @@ export default function AdminOpportunitiesPage() {
                   {/* Actions */}
                   <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
                     <Link
-                      href={`/admin/promotions/opportunities/${opp.uuid}/applications`}
+                      href={`/admin/promotions/requests/${opp.uuid}/applications`}
                       className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
                     >
                       <span>Applications ({opp.application_count})</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                     <Link
-                      href={`/promotions/opportunities/${opp.uuid}`}
+                      href={`/promotions/requests/${opp.uuid}`}
                       target="_blank"
                       className="rounded-lg border px-3 py-2 text-center text-sm font-medium hover:bg-muted"
                     >

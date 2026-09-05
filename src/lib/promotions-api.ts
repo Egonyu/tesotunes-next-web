@@ -8,7 +8,6 @@ import type {
   Promotion,
   PromotionListItem,
   PublicPromoterProfile,
-  PromotionKind,
   PromotionOrder,
   PromoterProfile,
   BrowsePromotionsParams,
@@ -220,27 +219,14 @@ export function adminFetchPromotions(params: { status?: string; page?: number; s
   );
 }
 
-/**
- * Approve a pending promotion.
- *
- * `kind` says which table the row came from. Store listings and event
- * promotion requests share the moderation queue but not an id sequence, so
- * sending the id alone can act on the wrong record.
- */
-export function adminApprovePromotion(id: number, kind: PromotionKind = "listing") {
-  return apiPost<{ success: boolean; status: string }>(`/admin/promotions/${id}/approve`, { kind });
+/** Approve a pending promotion. */
+export function adminApprovePromotion(id: number) {
+  return apiPost<{ success: boolean; status: string }>(`/admin/promotions/${id}/approve`);
 }
 
-/** Reject a promotion. See adminApprovePromotion for `kind`. */
-export function adminRejectPromotion(
-  id: number,
-  data: { reason: string },
-  kind: PromotionKind = "listing"
-) {
-  return apiPost<{ success: boolean; status: string }>(`/admin/promotions/${id}/reject`, {
-    ...data,
-    kind,
-  });
+/** Reject a promotion. */
+export function adminRejectPromotion(id: number, data: { reason: string }) {
+  return apiPost<{ success: boolean; status: string }>(`/admin/promotions/${id}/reject`, data);
 }
 
 /** List disputed orders */

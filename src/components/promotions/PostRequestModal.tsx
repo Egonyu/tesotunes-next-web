@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Music, X, Megaphone, Calendar, Coins, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCreateOpportunity } from "@/hooks/usePromotionsV2";
+import { useCreatePromotionRequest } from "@/hooks/usePromotionsV2";
 import type { PromotableType } from "@/types/promotions-v2";
 
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ const PLATFORM_OPTIONS = [
 // Props
 // ---------------------------------------------------------------------------
 
-interface PostOpportunityModalProps {
+interface PostRequestModalProps {
   open: boolean;
   onClose: () => void;
   promotableType: PromotableType;
@@ -72,22 +72,22 @@ function Chip({
 // Component
 // ---------------------------------------------------------------------------
 
-export function PostOpportunityModal({
+export function PostRequestModal({
   open,
   onClose,
   promotableType,
   promotableId,
   title,
   artworkUrl,
-}: PostOpportunityModalProps) {
-  const [opportunityTitle, setOpportunityTitle] = useState(`Promote: ${title}`);
+}: PostRequestModalProps) {
+  const [promotionRequestTitle, setPromotionRequestTitle] = useState(`Promote: ${title}`);
   const [brief, setBrief] = useState("");
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [deadline, setDeadline] = useState("");
 
-  const { mutate: createOpportunity, isPending } = useCreateOpportunity();
+  const { mutate: createPromotionRequest, isPending } = useCreatePromotionRequest();
 
   function togglePlatform(platform: string) {
     setPlatforms((prev) =>
@@ -99,13 +99,13 @@ export function PostOpportunityModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!opportunityTitle.trim()) return;
+    if (!promotionRequestTitle.trim()) return;
 
-    createOpportunity(
+    createPromotionRequest(
       {
         promotable_type: promotableType,
         promotable_id: promotableId,
-        title: opportunityTitle.trim(),
+        title: promotionRequestTitle.trim(),
         brief: brief.trim() || undefined,
         target_platforms: platforms.length > 0 ? platforms : undefined,
         budget_min_ugx: budgetMin ? Number(budgetMin) : undefined,
@@ -122,7 +122,7 @@ export function PostOpportunityModal({
   }
 
   function resetForm() {
-    setOpportunityTitle(`Promote: ${title}`);
+    setPromotionRequestTitle(`Promote: ${title}`);
     setBrief("");
     setPlatforms([]);
     setBudgetMin("");
@@ -155,7 +155,7 @@ export function PostOpportunityModal({
               <Megaphone className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-base">Post Promotion Opportunity</h2>
+              <h2 className="font-bold text-base">Post Promotion PromotionRequest</h2>
               <p className="text-xs text-muted-foreground capitalize">{promotableType}</p>
             </div>
           </div>
@@ -196,19 +196,19 @@ export function PostOpportunityModal({
           {/* Title */}
           <div>
             <label className="block text-sm font-medium mb-1.5">
-              Opportunity Title <span className="text-destructive">*</span>
+              PromotionRequest Title <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
-              value={opportunityTitle}
-              onChange={(e) => setOpportunityTitle(e.target.value)}
+              value={promotionRequestTitle}
+              onChange={(e) => setPromotionRequestTitle(e.target.value)}
               maxLength={120}
               required
               placeholder="e.g. Need a TikTok review for my new release"
               className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {opportunityTitle.length}/120
+              {promotionRequestTitle.length}/120
             </p>
           </div>
 
@@ -299,14 +299,14 @@ export function PostOpportunityModal({
             type="submit"
             form=""
             onClick={handleSubmit}
-            disabled={isPending || !opportunityTitle.trim()}
+            disabled={isPending || !promotionRequestTitle.trim()}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isPending ? (
               "Posting..."
             ) : (
               <>
-                Post Opportunity
+                Post PromotionRequest
                 <ChevronRight className="h-4 w-4" />
               </>
             )}

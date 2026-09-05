@@ -16,9 +16,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
-import { useOpportunitiesV2, useApplyToOpportunity } from '@/hooks/usePromotionsV2';
-import { OPPORTUNITY_STATUS_LABELS } from '@/types/promotions-v2';
-import type { PromotionOpportunityV2 } from '@/types/promotions-v2';
+import { usePromotionRequestsV2, useApplyToPromotionRequest } from '@/hooks/usePromotionsV2';
+import { PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
+import type { PromotionRequestV2 } from '@/types/promotions-v2';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
@@ -40,13 +40,13 @@ const STATUS_COLOR: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
 };
 
-function OpportunityCard({ opp }: { opp: PromotionOpportunityV2 }) {
+function PromotionRequestCard({ opp }: { opp: PromotionRequestV2 }) {
   const [showApply, setShowApply] = useState(false);
   const [pitch, setPitch] = useState('');
   const [priceUgx, setPriceUgx] = useState('');
   const [priceCredits, setPriceCredits] = useState('');
   const [timelineDays, setTimelineDays] = useState('');
-  const apply = useApplyToOpportunity(opp.uuid);
+  const apply = useApplyToPromotionRequest(opp.uuid);
 
   const handleApply = () => {
     apply.mutate(
@@ -98,7 +98,7 @@ function OpportunityCard({ opp }: { opp: PromotionOpportunityV2 }) {
           </div>
 
           <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold', STATUS_COLOR[opp.status] ?? STATUS_COLOR.closed)}>
-            {OPPORTUNITY_STATUS_LABELS[opp.status]}
+            {PROMOTION_REQUEST_STATUS_LABELS[opp.status]}
           </span>
         </div>
 
@@ -210,7 +210,7 @@ function OpportunityCard({ opp }: { opp: PromotionOpportunityV2 }) {
             <textarea
               value={pitch}
               onChange={(e) => setPitch(e.target.value)}
-              placeholder="Tell the artist why you're the right fit for this opportunity..."
+              placeholder="Tell the artist why you're the right fit for this request..."
               rows={3}
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
@@ -240,19 +240,19 @@ function OpportunityCard({ opp }: { opp: PromotionOpportunityV2 }) {
   );
 }
 
-export default function OpportunitiesPage() {
+export default function PromotionRequestsPage() {
   const [platform, setPlatform] = useState('');
   const [niche, setNiche] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useOpportunitiesV2({
+  const { data, isLoading, isError } = usePromotionRequestsV2({
     platform: platform || undefined,
     niche: niche || undefined,
     per_page: 12,
     page,
   });
 
-  const opportunities = data?.data ?? [];
+  const promotionRequests = data?.data ?? [];
   const lastPage = (data as unknown as { last_page?: number })?.last_page ?? 1;
 
   return (
@@ -265,7 +265,7 @@ export default function OpportunitiesPage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
                 <Target className="h-4 w-4 text-violet-500" />
               </span>
-              <h1 className="text-2xl font-bold tracking-tight">Promotion Opportunities</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Promotion PromotionRequests</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Artists are looking for promoters. Browse open briefs and apply to the ones that match your audience.
@@ -279,10 +279,10 @@ export default function OpportunitiesPage() {
               Find promoters
             </Link>
             <Link
-              href="/artist/promotions/opportunities/create"
+              href="/artist/promotions/requests/create"
               className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Post opportunity
+              Post promotionRequest
             </Link>
           </div>
         </div>
@@ -317,28 +317,28 @@ export default function OpportunitiesPage() {
       ) : isError ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center">
           <XCircle className="mx-auto mb-3 h-10 w-10 text-destructive/40" />
-          <p className="font-medium">Could not load opportunities</p>
+          <p className="font-medium">Could not load requests</p>
           <button onClick={() => window.location.reload()} className="mt-4 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
             Retry
           </button>
         </div>
-      ) : opportunities.length === 0 ? (
+      ) : promotionRequests.length === 0 ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center">
           <Megaphone className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-          <p className="font-medium">No open opportunities right now</p>
+          <p className="font-medium">No open requests right now</p>
           <p className="mt-1 text-sm text-muted-foreground">Be the first to post one for your track</p>
           <Link
-            href="/artist/promotions/opportunities/create"
+            href="/artist/promotions/requests/create"
             className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Post an opportunity
+            Post an promotionRequest
           </Link>
         </div>
       ) : (
         <>
           <div className="space-y-4">
-            {opportunities.map((opp) => (
-              <OpportunityCard key={opp.id} opp={opp} />
+            {promotionRequests.map((opp) => (
+              <PromotionRequestCard key={opp.id} opp={opp} />
             ))}
           </div>
 

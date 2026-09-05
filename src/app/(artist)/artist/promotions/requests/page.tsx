@@ -14,17 +14,17 @@ import {
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 import {
-  useMyPostedOpportunities,
-  useCloseOpportunity,
-  useCancelOpportunity,
-  useOpportunityApplications,
+  useMyPostedPromotionRequests,
+  useClosePromotionRequest,
+  useCancelPromotionRequest,
+  usePromotionRequestApplications,
   useAwardApplication,
   useShortlistApplication,
 } from '@/hooks/usePromotionsV2';
-import { OPPORTUNITY_STATUS_LABELS, APPLICATION_STATUS_LABELS } from '@/types/promotions-v2';
-import type { OpportunityStatus, ApplicationStatus } from '@/types/promotions-v2';
+import { PROMOTION_REQUEST_STATUS_LABELS, APPLICATION_STATUS_LABELS } from '@/types/promotions-v2';
+import type { PromotionRequestStatus, ApplicationStatus } from '@/types/promotions-v2';
 
-const STATUS_COLORS: Record<OpportunityStatus, string> = {
+const STATUS_COLORS: Record<PromotionRequestStatus, string> = {
   open: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   reviewing: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   awarded: 'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
@@ -46,10 +46,10 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function ApplicationsPanel({ opportunityUuid }: { opportunityUuid: string }) {
-  const { data, isLoading } = useOpportunityApplications(opportunityUuid, { per_page: 10 });
-  const award = useAwardApplication(opportunityUuid);
-  const shortlist = useShortlistApplication(opportunityUuid);
+function ApplicationsPanel({ promotionRequestUuid }: { promotionRequestUuid: string }) {
+  const { data, isLoading } = usePromotionRequestApplications(promotionRequestUuid, { per_page: 10 });
+  const award = useAwardApplication(promotionRequestUuid);
+  const shortlist = useShortlistApplication(promotionRequestUuid);
 
   const apps = data?.data ?? [];
 
@@ -124,15 +124,15 @@ function ApplicationsPanel({ opportunityUuid }: { opportunityUuid: string }) {
   );
 }
 
-export default function ArtistOpportunitiesPage() {
+export default function ArtistPromotionRequestsPage() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useMyPostedOpportunities({ page, per_page: 10 });
-  const close = useCloseOpportunity();
-  const cancel = useCancelOpportunity();
+  const { data, isLoading, isError } = useMyPostedPromotionRequests({ page, per_page: 10 });
+  const close = useClosePromotionRequest();
+  const cancel = useCancelPromotionRequest();
 
-  const opportunities = data?.data ?? [];
+  const promotionRequests = data?.data ?? [];
   const lastPage = data?.last_page ?? 1;
 
   return (
@@ -140,17 +140,17 @@ export default function ArtistOpportunitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Opportunities</h1>
+          <h1 className="text-2xl font-bold tracking-tight">My PromotionRequests</h1>
           <p className="text-sm text-muted-foreground">
             Promotion briefs you posted for your songs and albums
           </p>
         </div>
         <Link
-          href="/artist/promotions/opportunities/create"
+          href="/artist/promotions/requests/create"
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          Post opportunity
+          Post promotionRequest
         </Link>
       </div>
 
@@ -161,26 +161,26 @@ export default function ArtistOpportunitiesPage() {
       ) : isError ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center">
           <XCircle className="mx-auto mb-3 h-10 w-10 text-destructive/40" />
-          <p className="font-medium">Could not load opportunities</p>
+          <p className="font-medium">Could not load requests</p>
         </div>
-      ) : opportunities.length === 0 ? (
+      ) : promotionRequests.length === 0 ? (
         <div className="rounded-xl bg-card shadow-sm py-16 text-center">
           <Target className="mx-auto mb-3 h-12 w-12 text-muted-foreground/40" />
-          <h3 className="font-semibold">No opportunities yet</h3>
+          <h3 className="font-semibold">No requests yet</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Post a brief for a song or album to get promoters applying
           </p>
           <Link
-            href="/artist/promotions/opportunities/create"
+            href="/artist/promotions/requests/create"
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Post your first opportunity
+            Post your first promotionRequest
           </Link>
         </div>
       ) : (
         <div className="space-y-3">
-          {opportunities.map((opp) => {
+          {promotionRequests.map((opp) => {
             const days = daysUntil(opp.deadline_at);
             const isExpanded = expandedId === opp.uuid;
 
@@ -193,9 +193,9 @@ export default function ArtistOpportunitiesPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn(
                           'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                          STATUS_COLORS[opp.status as OpportunityStatus] ?? 'border-border bg-muted text-muted-foreground'
+                          STATUS_COLORS[opp.status as PromotionRequestStatus] ?? 'border-border bg-muted text-muted-foreground'
                         )}>
-                          {OPPORTUNITY_STATUS_LABELS[opp.status as OpportunityStatus] ?? opp.status}
+                          {PROMOTION_REQUEST_STATUS_LABELS[opp.status as PromotionRequestStatus] ?? opp.status}
                         </span>
                         {opp.promotable && (
                           <span className="text-xs text-muted-foreground capitalize">
@@ -261,7 +261,7 @@ export default function ArtistOpportunitiesPage() {
                 {/* Applications panel */}
                 {isExpanded && (
                   <div className="border-t px-5 pb-5">
-                    <ApplicationsPanel opportunityUuid={opp.uuid} />
+                    <ApplicationsPanel promotionRequestUuid={opp.uuid} />
                   </div>
                 )}
               </div>

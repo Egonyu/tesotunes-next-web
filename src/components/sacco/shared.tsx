@@ -279,14 +279,14 @@ interface RecommendationCardProps {
 
 const recTypeColors: Record<string, string> = {
   strategy: 'border-l-blue-500',
-  opportunity: 'border-l-emerald-500',
+  promotionRequest: 'border-l-emerald-500',
   warning: 'border-l-amber-500',
   milestone: 'border-l-purple-500',
 }
 
 const recTypeIcons: Record<string, string> = {
   strategy: '📊',
-  opportunity: '💡',
+  promotionRequest: '💡',
   warning: '⚠️',
   milestone: '🏆',
 }

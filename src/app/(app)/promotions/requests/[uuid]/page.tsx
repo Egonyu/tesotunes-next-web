@@ -18,8 +18,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
-import { useOpportunityV2, useApplyToOpportunity } from '@/hooks/usePromotionsV2';
-import { OPPORTUNITY_STATUS_LABELS } from '@/types/promotions-v2';
+import { usePromotionRequestV2, useApplyToPromotionRequest } from '@/hooks/usePromotionsV2';
+import { PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
 
 const STATUS_COLOR: Record<string, string> = {
   open: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
@@ -35,9 +35,9 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-export default function OpportunityDetailPage() {
+export default function PromotionRequestDetailPage() {
   const { uuid } = useParams<{ uuid: string }>();
-  const { data: opp, isLoading, isError } = useOpportunityV2(uuid);
+  const { data: opp, isLoading, isError } = usePromotionRequestV2(uuid);
 
   const [pitch, setPitch] = useState('');
   const [priceUgx, setPriceUgx] = useState('');
@@ -45,7 +45,7 @@ export default function OpportunityDetailPage() {
   const [timelineDays, setTimelineDays] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const apply = useApplyToOpportunity(uuid);
+  const apply = useApplyToPromotionRequest(uuid);
 
   const handleApply = () => {
     apply.mutate(
@@ -79,9 +79,9 @@ export default function OpportunityDetailPage() {
     return (
       <div className="container mx-auto max-w-3xl py-16 text-center">
         <XCircle className="mx-auto mb-3 h-10 w-10 text-destructive/40" />
-        <p className="font-medium">Could not load this opportunity.</p>
-        <Link href="/promotions/opportunities" className="mt-4 inline-block rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
-          Back to opportunities
+        <p className="font-medium">Could not load this request.</p>
+        <Link href="/promotions/requests" className="mt-4 inline-block rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+          Back to promotionRequests
         </Link>
       </div>
     );
@@ -97,11 +97,11 @@ export default function OpportunityDetailPage() {
     <div className="container mx-auto max-w-3xl py-8 space-y-5">
       {/* Back nav */}
       <Link
-        href="/promotions/opportunities"
+        href="/promotions/requests"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        All opportunities
+        All requests
       </Link>
 
       {/* Header card */}
@@ -126,7 +126,7 @@ export default function OpportunityDetailPage() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <span className={cn('rounded-full border px-2.5 py-0.5 text-xs font-medium', STATUS_COLOR[opp.status] ?? STATUS_COLOR.closed)}>
-                  {OPPORTUNITY_STATUS_LABELS[opp.status] ?? opp.status}
+                  {PROMOTION_REQUEST_STATUS_LABELS[opp.status] ?? opp.status}
                 </span>
                 {opp.promotable && (
                   <span className="text-xs text-muted-foreground capitalize">
@@ -307,7 +307,7 @@ export default function OpportunityDetailPage() {
             <textarea
               value={pitch}
               onChange={(e) => setPitch(e.target.value)}
-              placeholder="Tell the artist why you're the right promoter for this opportunity — your reach, past campaigns, platforms..."
+              placeholder="Tell the artist why you're the right promoter for this request — your reach, past campaigns, platforms..."
               rows={4}
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
@@ -342,7 +342,7 @@ export default function OpportunityDetailPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">New to promoting?</p>
-            <p className="text-xs text-muted-foreground">Set up your promoter profile in 3 minutes and apply to opportunities.</p>
+            <p className="text-xs text-muted-foreground">Set up your promoter profile in 3 minutes and apply to requests.</p>
           </div>
           <Link
             href="/become-promoter"

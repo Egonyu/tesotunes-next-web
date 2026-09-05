@@ -48,7 +48,7 @@ const dashboard = {
       },
     ],
   },
-  earning_opportunities: [
+  earning_promotionRequests: [
     {
       title: "Listen to Music",
       description: "Earn credits by listening to songs",
@@ -59,7 +59,7 @@ const dashboard = {
       icon: "\u{1F3B5}",
     },
   ],
-  promotion_opportunities: [],
+  promotion_promotionRequests: [],
   daily_challenges: [
     {
       title: "Music Explorer",

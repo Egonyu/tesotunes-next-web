@@ -9,7 +9,6 @@ import { useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
-  PromotionKind,
   BrowsePromotionsParams,
   PurchasePromotionRequest,
   SubmitVerificationRequest,
@@ -412,8 +411,7 @@ export function useAdminPromotions(params: { status?: string; page?: number; sea
 export function useAdminApprovePromotion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, kind }: { id: number; kind?: PromotionKind }) =>
-      api.adminApprovePromotion(id, kind ?? "listing"),
+    mutationFn: (id: number) => api.adminApprovePromotion(id),
     onSuccess: () => {
       toast.success("Promotion approved!");
       qc.invalidateQueries({ queryKey: promotionKeys.all });
@@ -428,8 +426,8 @@ export function useAdminApprovePromotion() {
 export function useAdminRejectPromotion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason, kind }: { id: number; reason: string; kind?: PromotionKind }) =>
-      api.adminRejectPromotion(id, { reason }, kind ?? "listing"),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      api.adminRejectPromotion(id, { reason }),
     onSuccess: () => {
       toast.success("Promotion rejected.");
       qc.invalidateQueries({ queryKey: promotionKeys.all });

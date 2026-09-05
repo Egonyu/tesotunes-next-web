@@ -1,6 +1,6 @@
 // ============================================================================
 // TesoTunes Promotions V2 — React Query Hooks
-// Covers the new opportunity marketplace and activity hub
+// Covers the new promotionRequest marketplace and activity hub
 // ============================================================================
 
 "use client";
@@ -9,17 +9,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as api from "@/lib/promotions-v2-api";
 import type {
-  BrowseOpportunitiesParams,
+  BrowsePromotionRequestsParams,
   BrowsePromotersParams,
   OnboardAsPromoterRequest,
-  CreateOpportunityRequest,
-  UpdateOpportunityRequest,
-  ApplyToOpportunityRequest,
+  CreatePromotionRequestPayload,
+  UpdatePromotionRequestPayload,
+  ApplyToPromotionRequestPayload,
   PromoterTier,
 } from "@/types/promotions-v2";
 import type {
   AdminBrowsePromotersParams,
-  AdminBrowseOpportunitiesParams,
+  AdminBrowsePromotionRequestsParams,
 } from "@/lib/promotions-v2-api";
 
 // ---------------------------------------------------------------------------
@@ -36,22 +36,22 @@ export const v2Keys = {
   promoter: (slug: string) => [...v2Keys.promoters(), slug] as const,
   myPromoterProfile: () => [...v2Keys.promoters(), "me"] as const,
 
-  // Opportunities
-  opportunities: () => [...v2Keys.all, "opportunities"] as const,
-  opportunitiesList: (params: BrowseOpportunitiesParams) =>
-    [...v2Keys.opportunities(), "list", params] as const,
-  opportunity: (uuid: string) => [...v2Keys.opportunities(), uuid] as const,
-  opportunityApplications: (uuid: string) =>
-    [...v2Keys.opportunities(), uuid, "applications"] as const,
-  myPosted: () => [...v2Keys.opportunities(), "my-posted"] as const,
-  myApplications: () => [...v2Keys.opportunities(), "my-applications"] as const,
+  // PromotionRequests
+  promotionRequests: () => [...v2Keys.all, "promotionRequests"] as const,
+  promotionRequestsList: (params: BrowsePromotionRequestsParams) =>
+    [...v2Keys.promotionRequests(), "list", params] as const,
+  promotionRequest: (uuid: string) => [...v2Keys.promotionRequests(), uuid] as const,
+  promotionRequestApplications: (uuid: string) =>
+    [...v2Keys.promotionRequests(), uuid, "applications"] as const,
+  myPosted: () => [...v2Keys.promotionRequests(), "my-posted"] as const,
+  myApplications: () => [...v2Keys.promotionRequests(), "my-applications"] as const,
 
   // Activity Hub
   hub: () => [...v2Keys.all, "activity-hub"] as const,
   hubSummary: () => [...v2Keys.hub(), "summary"] as const,
   hubWallet: () => [...v2Keys.hub(), "wallet"] as const,
   hubOrders: () => [...v2Keys.hub(), "orders"] as const,
-  hubOpportunities: () => [...v2Keys.hub(), "opportunities"] as const,
+  hubPromotionRequests: () => [...v2Keys.hub(), "promotionRequests"] as const,
   hubApplications: () => [...v2Keys.hub(), "applications"] as const,
   hubEarnings: () => [...v2Keys.hub(), "earnings"] as const,
 };
@@ -95,99 +95,99 @@ export function useOnboardAsPromoter() {
 }
 
 // ---------------------------------------------------------------------------
-// Opportunity hooks
+// PromotionRequest hooks
 // ---------------------------------------------------------------------------
 
-/** Browse open opportunities — public */
-export function useOpportunitiesV2(params: BrowseOpportunitiesParams = {}) {
+/** Browse open promotionRequests — public */
+export function usePromotionRequestsV2(params: BrowsePromotionRequestsParams = {}) {
   return useQuery({
-    queryKey: v2Keys.opportunitiesList(params),
-    queryFn: () => api.fetchOpportunities(params),
+    queryKey: v2Keys.promotionRequestsList(params),
+    queryFn: () => api.fetchPromotionRequests(params),
     placeholderData: (prev) => prev,
   });
 }
 
-/** Single opportunity by UUID */
-export function useOpportunityV2(uuid: string) {
+/** Single promotionRequest by UUID */
+export function usePromotionRequestV2(uuid: string) {
   return useQuery({
-    queryKey: v2Keys.opportunity(uuid),
-    queryFn: () => api.fetchOpportunity(uuid).then((r) => r.data),
+    queryKey: v2Keys.promotionRequest(uuid),
+    queryFn: () => api.fetchPromotionRequest(uuid).then((r) => r.data),
     enabled: !!uuid,
   });
 }
 
-/** Post a new opportunity */
-export function useCreateOpportunity() {
+/** Post a new promotionRequest */
+export function useCreatePromotionRequest() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateOpportunityRequest) => api.createOpportunity(data),
+    mutationFn: (data: CreatePromotionRequestPayload) => api.createPromotionRequest(data),
     onSuccess: () => {
-      toast.success("Opportunity posted! Promoters can now apply.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunities() });
+      toast.success("PromotionRequest posted! Promoters can now apply.");
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequests() });
       qc.invalidateQueries({ queryKey: v2Keys.myPosted() });
       qc.invalidateQueries({ queryKey: v2Keys.hubSummary() });
     },
     onError: () => {
-      toast.error("Failed to post opportunity.");
+      toast.error("Failed to post promotionRequest.");
     },
   });
 }
 
-/** Update an opportunity */
-export function useUpdateOpportunity(uuid: string) {
+/** Update an promotionRequest */
+export function useUpdatePromotionRequest(uuid: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: UpdateOpportunityRequest) =>
-      api.updateOpportunity(uuid, data),
+    mutationFn: (data: UpdatePromotionRequestPayload) =>
+      api.updatePromotionRequest(uuid, data),
     onSuccess: () => {
-      toast.success("Opportunity updated.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunity(uuid) });
+      toast.success("PromotionRequest updated.");
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequest(uuid) });
       qc.invalidateQueries({ queryKey: v2Keys.myPosted() });
     },
     onError: () => {
-      toast.error("Failed to update opportunity.");
+      toast.error("Failed to update promotionRequest.");
     },
   });
 }
 
-/** Cancel an opportunity */
-export function useCancelOpportunity() {
+/** Cancel an promotionRequest */
+export function useCancelPromotionRequest() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (uuid: string) => api.cancelOpportunity(uuid),
+    mutationFn: (uuid: string) => api.cancelPromotionRequest(uuid),
     onSuccess: () => {
-      toast.success("Opportunity cancelled.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunities() });
+      toast.success("PromotionRequest cancelled.");
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequests() });
       qc.invalidateQueries({ queryKey: v2Keys.myPosted() });
     },
     onError: () => {
-      toast.error("Failed to cancel opportunity.");
+      toast.error("Failed to cancel promotionRequest.");
     },
   });
 }
 
-/** Close an opportunity */
-export function useCloseOpportunity() {
+/** Close an promotionRequest */
+export function useClosePromotionRequest() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (uuid: string) => api.closeOpportunity(uuid),
+    mutationFn: (uuid: string) => api.closePromotionRequest(uuid),
     onSuccess: () => {
-      toast.success("Opportunity closed.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunities() });
+      toast.success("PromotionRequest closed.");
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequests() });
       qc.invalidateQueries({ queryKey: v2Keys.myPosted() });
     },
   });
 }
 
-/** Apply to an opportunity */
-export function useApplyToOpportunity(uuid: string) {
+/** Apply to an promotionRequest */
+export function useApplyToPromotionRequest(uuid: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: ApplyToOpportunityRequest) =>
-      api.applyToOpportunity(uuid, data),
+    mutationFn: (data: ApplyToPromotionRequestPayload) =>
+      api.applyToPromotionRequest(uuid, data),
     onSuccess: () => {
       toast.success("Application submitted!");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunity(uuid) });
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequest(uuid) });
       qc.invalidateQueries({ queryKey: v2Keys.myApplications() });
       qc.invalidateQueries({ queryKey: v2Keys.hubApplications() });
     },
@@ -199,14 +199,14 @@ export function useApplyToOpportunity(uuid: string) {
   });
 }
 
-/** List applications for an opportunity (artist view) */
-export function useOpportunityApplications(
+/** List applications for an promotionRequest (artist view) */
+export function usePromotionRequestApplications(
   uuid: string,
   params: { per_page?: number; page?: number } = {}
 ) {
   return useQuery({
-    queryKey: [...v2Keys.opportunityApplications(uuid), params],
-    queryFn: () => api.fetchOpportunityApplications(uuid, params),
+    queryKey: [...v2Keys.promotionRequestApplications(uuid), params],
+    queryFn: () => api.fetchPromotionRequestApplications(uuid, params),
     enabled: !!uuid,
   });
 }
@@ -219,8 +219,8 @@ export function useAwardApplication(uuid: string) {
       api.awardApplication(uuid, applicationId),
     onSuccess: () => {
       toast.success("Application awarded! The promoter has been notified.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunity(uuid) });
-      qc.invalidateQueries({ queryKey: v2Keys.opportunityApplications(uuid) });
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequest(uuid) });
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequestApplications(uuid) });
       qc.invalidateQueries({ queryKey: v2Keys.myPosted() });
     },
     onError: () => {
@@ -237,7 +237,7 @@ export function useShortlistApplication(uuid: string) {
       api.shortlistApplication(uuid, applicationId),
     onSuccess: () => {
       toast.success("Application shortlisted.");
-      qc.invalidateQueries({ queryKey: v2Keys.opportunityApplications(uuid) });
+      qc.invalidateQueries({ queryKey: v2Keys.promotionRequestApplications(uuid) });
     },
     onError: () => {
       toast.error("Failed to shortlist application.");
@@ -262,13 +262,13 @@ export function useWithdrawApplication() {
   });
 }
 
-/** My posted opportunities */
-export function useMyPostedOpportunities(
+/** My posted promotionRequests */
+export function useMyPostedPromotionRequests(
   params: { per_page?: number; page?: number } = {}
 ) {
   return useQuery({
     queryKey: [...v2Keys.myPosted(), params],
-    queryFn: () => api.fetchMyPostedOpportunities(params),
+    queryFn: () => api.fetchMyPostedPromotionRequests(params),
   });
 }
 
@@ -304,13 +304,13 @@ export function useActivityHubOrders(
   });
 }
 
-/** My posted opportunities (hub view) */
-export function useActivityHubOpportunities(
+/** My posted promotionRequests (hub view) */
+export function useActivityHubPromotionRequests(
   params: { per_page?: number; page?: number } = {}
 ) {
   return useQuery({
-    queryKey: [...v2Keys.hubOpportunities(), params],
-    queryFn: () => api.fetchActivityHubOpportunities(params),
+    queryKey: [...v2Keys.hubPromotionRequests(), params],
+    queryFn: () => api.fetchActivityHubPromotionRequests(params),
   });
 }
 
@@ -340,8 +340,8 @@ export function useActivityHubEarnings(
 
 const adminKeys = {
   promoters: (params: AdminBrowsePromotersParams) => ["admin", "promoters-v2", params] as const,
-  opportunities: (params: AdminBrowseOpportunitiesParams) => ["admin", "opportunities-v2", params] as const,
-  opportunityApplications: (uuid: string, params: object) => ["admin", "opp-applications", uuid, params] as const,
+  promotionRequests: (params: AdminBrowsePromotionRequestsParams) => ["admin", "promotionRequests-v2", params] as const,
+  promotionRequestApplications: (uuid: string, params: object) => ["admin", "opp-applications", uuid, params] as const,
 };
 
 /** Admin: browse all promoter profiles */
@@ -393,36 +393,36 @@ export function useAdminSetPromoterTier() {
   });
 }
 
-/** Admin: browse all opportunities */
-export function useAdminOpportunitiesV2(params: AdminBrowseOpportunitiesParams = {}) {
+/** Admin: browse all promotionRequests */
+export function useAdminPromotionRequestsV2(params: AdminBrowsePromotionRequestsParams = {}) {
   return useQuery({
-    queryKey: adminKeys.opportunities(params),
-    queryFn: () => api.adminFetchOpportunities(params),
+    queryKey: adminKeys.promotionRequests(params),
+    queryFn: () => api.adminFetchPromotionRequests(params),
     placeholderData: (prev) => prev,
   });
 }
 
-/** Admin: force-close an opportunity */
-export function useAdminCloseOpportunity() {
+/** Admin: force-close an promotionRequest */
+export function useAdminClosePromotionRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (uuid: string) => api.adminCloseOpportunity(uuid),
+    mutationFn: (uuid: string) => api.adminClosePromotionRequest(uuid),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "opportunities-v2"] });
-      toast.success("Opportunity closed");
+      queryClient.invalidateQueries({ queryKey: ["admin", "promotionRequests-v2"] });
+      toast.success("PromotionRequest closed");
     },
-    onError: () => toast.error("Failed to close opportunity"),
+    onError: () => toast.error("Failed to close promotionRequest"),
   });
 }
 
-/** Admin: list applications for an opportunity */
-export function useAdminOpportunityApplications(
+/** Admin: list applications for an promotionRequest */
+export function useAdminPromotionRequestApplications(
   uuid: string,
   params: { per_page?: number; page?: number } = {}
 ) {
   return useQuery({
-    queryKey: adminKeys.opportunityApplications(uuid, params),
-    queryFn: () => api.adminFetchOpportunityApplications(uuid, params),
+    queryKey: adminKeys.promotionRequestApplications(uuid, params),
+    queryFn: () => api.adminFetchPromotionRequestApplications(uuid, params),
     enabled: !!uuid,
   });
 }

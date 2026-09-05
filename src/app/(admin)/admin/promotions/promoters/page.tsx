@@ -86,10 +86,10 @@ export default function AdminPromotersV2Page() {
           </div>
         </div>
         <Link
-          href="/admin/promotions/opportunities"
+          href="/admin/promotions/requests"
           className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
         >
-          Opportunities
+          PromotionRequests
         </Link>
       </div>
 

@@ -379,11 +379,11 @@ export default function ArtistPromotionsPage() {
                   label: 'View Analytics',
                 },
                 {
-                  href: '/artist/promotions/opportunities/create',
+                  href: '/artist/promotions/requests/create',
                   icon: Target,
                   light: 'bg-sky-50 dark:bg-sky-950/40',
                   text: 'text-sky-500',
-                  label: 'Post Opportunity',
+                  label: 'Post PromotionRequest',
                 },
               ].map(({ href, icon: Icon, light, text, label }) => (
                 <Link

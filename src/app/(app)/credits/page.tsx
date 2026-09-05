@@ -56,7 +56,7 @@ interface CreditWallet {
   recent_transactions: CreditTransaction[];
 }
 
-interface EarningOpportunity {
+interface EarningPromotionRequest {
   title: string;
   description: string;
   potential_credits: string | number;
@@ -75,7 +75,7 @@ interface DailyChallenge {
 
 interface CreditDashboard {
   wallet: CreditWallet;
-  earning_opportunities: EarningOpportunity[];
+  earning_promotionRequests: EarningPromotionRequest[];
   daily_challenges: DailyChallenge[];
 }
 
@@ -144,7 +144,7 @@ export default function CreditsPage() {
   });
 
   const wallet = dashboard?.wallet;
-  const opportunities = dashboard?.earning_opportunities ?? [];
+  const promotionRequests = dashboard?.earning_promotionRequests ?? [];
   const challenges = dashboard?.daily_challenges ?? [];
   const transactions = showHistory ? transactionsData ?? [] : wallet?.recent_transactions ?? [];
 
@@ -297,20 +297,20 @@ export default function CreditsPage() {
       </div>
 
       {/* Ways to earn, from the API — one line each, no icon per card. */}
-      {opportunities.length > 0 && (
+      {promotionRequests.length > 0 && (
         <div>
           <h2 className="mb-3 font-semibold">Ways to earn</h2>
           <div className="divide-y overflow-hidden rounded-xl border bg-card">
-            {opportunities.map((opportunity) => (
-              <div key={opportunity.title} className="flex items-center justify-between gap-3 p-4">
+            {promotionRequests.map((promotionRequest) => (
+              <div key={promotionRequest.title} className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-sm">{opportunity.title}</p>
+                  <p className="truncate font-medium text-sm">{promotionRequest.title}</p>
                   <p className="truncate text-sm text-muted-foreground">
-                    {opportunity.remaining_today} left today
+                    {promotionRequest.remaining_today} left today
                   </p>
                 </div>
                 <span className="shrink-0 font-semibold tabular-nums">
-                  {opportunity.potential_credits}
+                  {promotionRequest.potential_credits}
                 </span>
               </div>
             ))}

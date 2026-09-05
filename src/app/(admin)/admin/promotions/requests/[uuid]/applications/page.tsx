@@ -14,9 +14,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
-import { useAdminOpportunityApplications } from '@/hooks/usePromotionsV2';
-import { APPLICATION_STATUS_LABELS, OPPORTUNITY_STATUS_LABELS } from '@/types/promotions-v2';
-import type { ApplicationStatus, OpportunityStatus } from '@/types/promotions-v2';
+import { useAdminPromotionRequestApplications } from '@/hooks/usePromotionsV2';
+import { APPLICATION_STATUS_LABELS, PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
+import type { ApplicationStatus, PromotionRequestStatus } from '@/types/promotions-v2';
 
 const APP_STATUS_COLORS: Record<ApplicationStatus, string> = {
   submitted: 'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
@@ -26,7 +26,7 @@ const APP_STATUS_COLORS: Record<ApplicationStatus, string> = {
   withdrawn: 'border-border bg-muted text-muted-foreground',
 };
 
-const OPP_STATUS_COLORS: Record<OpportunityStatus, string> = {
+const OPP_STATUS_COLORS: Record<PromotionRequestStatus, string> = {
   open: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   reviewing: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   awarded: 'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
@@ -35,13 +35,13 @@ const OPP_STATUS_COLORS: Record<OpportunityStatus, string> = {
   cancelled: 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300',
 };
 
-export default function AdminOpportunityApplicationsPage() {
+export default function AdminPromotionRequestApplicationsPage() {
   const { uuid } = useParams<{ uuid: string }>();
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useAdminOpportunityApplications(uuid, { per_page: 20, page });
+  const { data, isLoading, isError } = useAdminPromotionRequestApplications(uuid, { per_page: 20, page });
 
-  const opp = data?.opportunity;
+  const opp = data?.promotionRequest;
   const apps = data?.data ?? [];
   const lastPage = data?.last_page ?? 1;
   const total = data?.total ?? 0;
@@ -51,7 +51,7 @@ export default function AdminOpportunityApplicationsPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/admin/promotions/opportunities"
+          href="/admin/promotions/requests"
           className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -61,20 +61,20 @@ export default function AdminOpportunityApplicationsPage() {
             {opp?.title ?? 'Applications'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            All applications for this opportunity
+            All applications for this promotionRequest
           </p>
         </div>
       </div>
 
-      {/* Opportunity summary card */}
+      {/* PromotionRequest summary card */}
       {opp && (
         <div className="rounded-xl bg-card shadow-sm p-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className={cn(
               'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-              OPP_STATUS_COLORS[opp.status as OpportunityStatus] ?? 'border-border bg-muted text-muted-foreground'
+              OPP_STATUS_COLORS[opp.status as PromotionRequestStatus] ?? 'border-border bg-muted text-muted-foreground'
             )}>
-              {OPPORTUNITY_STATUS_LABELS[opp.status as OpportunityStatus] ?? opp.status}
+              {PROMOTION_REQUEST_STATUS_LABELS[opp.status as PromotionRequestStatus] ?? opp.status}
             </span>
             {opp.promotable && (
               <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground capitalize">
@@ -104,17 +104,17 @@ export default function AdminOpportunityApplicationsPage() {
 
           <div className="mt-3 flex gap-2">
             <Link
-              href={`/promotions/opportunities/${uuid}`}
+              href={`/promotions/requests/${uuid}`}
               target="_blank"
               className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted"
             >
               Public view
             </Link>
             <Link
-              href="/admin/promotions/opportunities"
+              href="/admin/promotions/requests"
               className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted"
             >
-              All opportunities
+              All requests
             </Link>
           </div>
         </div>

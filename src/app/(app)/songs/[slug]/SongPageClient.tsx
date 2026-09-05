@@ -39,7 +39,7 @@ import { useCheckPurchase } from "@/hooks/api";
 import { usePlayerStore } from "@/stores/player";
 import { useSession } from "next-auth/react";
 import type { Song } from "@/types";
-import { PostOpportunityModal } from "@/components/promotions/PostOpportunityModal";
+import { PostRequestModal } from "@/components/promotions/PostRequestModal";
 
 export interface SongDetail {
   id: number;
@@ -869,9 +869,9 @@ export default function SongDetailPage({
         />
       )}
 
-      {/* Post Opportunity Modal — owner only */}
+      {/* Post PromotionRequest Modal — owner only */}
       {song && isOwner && (
-        <PostOpportunityModal
+        <PostRequestModal
           open={promoteModalOpen}
           onClose={() => setPromoteModalOpen(false)}
           promotableType="song"

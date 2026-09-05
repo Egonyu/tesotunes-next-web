@@ -22,7 +22,13 @@ export function DashboardOverviewSection() {
   }
   if (!data) return null;
 
-  const earned = data.earnings.available.ugx + data.earnings.paid_out.ugx;
+  // Settlements clear in UGX, credits, or both. A member whose ledger is
+  // entirely credits — corpus contributors, for one — must still see what they
+  // earned, so lead with whichever currency actually carries value.
+  const earnedUgx = data.earnings.available.ugx + data.earnings.paid_out.ugx;
+  const earnedCredits =
+    data.earnings.available.credits + data.earnings.paid_out.credits;
+  const earnsInCredits = earnedUgx === 0 && earnedCredits > 0;
 
   return (
     <div className="space-y-4">
@@ -30,7 +36,16 @@ export function DashboardOverviewSection() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Tile icon={Wallet} label="Wallet (UGX)" value={formatCurrency(data.wallet.ugx_balance)} href="/credits" />
         <Tile icon={Coins} label="Credits" value={formatNumber(data.wallet.credits_balance)} href="/credits" />
-        <Tile icon={TrendingUp} label="Earned (UGX)" value={formatCurrency(earned)} hint={`${formatCurrency(data.earnings.pending.ugx)} pending`} />
+        <Tile
+          icon={TrendingUp}
+          label={earnsInCredits ? 'Earned (credits)' : 'Earned (UGX)'}
+          value={earnsInCredits ? formatNumber(earnedCredits) : formatCurrency(earnedUgx)}
+          hint={
+            earnsInCredits
+              ? `${formatNumber(data.earnings.pending.credits)} pending`
+              : `${formatCurrency(data.earnings.pending.ugx)} pending`
+          }
+        />
         <Tile icon={Headphones} label="Plays (30d)" value={formatNumber(data.listening.plays_30d)} hint={`${formatNumber(data.listening.plays_total)} all-time`} href="/history" />
       </div>
 

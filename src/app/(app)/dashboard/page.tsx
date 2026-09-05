@@ -629,7 +629,7 @@ export default function DashboardPage() {
   const totalPendingCount =
     (pendingActions?.buyer_orders_awaiting_review ?? 0) +
     (pendingActions?.seller_orders_to_verify ?? 0) +
-    (pendingActions?.open_promotionRequests ?? 0) +
+    (pendingActions?.open_requests ?? 0) +
     (pendingActions?.pending_applications ?? 0);
 
   const visibleTabs = TABS.filter((t) => !t.promoterOnly || isPromoter);
@@ -787,7 +787,7 @@ export default function DashboardPage() {
                   label="Orders to verify"
                 />
                 <ActionBadge
-                  count={pendingActions?.open_promotionRequests ?? 0}
+                  count={pendingActions?.open_requests ?? 0}
                   label="Open requests"
                 />
                 <ActionBadge

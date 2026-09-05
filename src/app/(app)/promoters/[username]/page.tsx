@@ -30,11 +30,14 @@ import {
   PROMOTION_AUDIENCE_NICHE_LABELS,
   PROMOTION_PLATFORM_LABELS,
   PROMOTION_TYPE_LABELS,
-  type PromoterProfile,
+  type PublicPromoterProfile,
+  type PromotionListItem,
+  type PromotionType,
+  type PromotionPlatform,
 } from "@/types/promotions";
 
 const SOCIAL_LABELS: Array<{
-  key: keyof PromoterProfile["social_links"];
+  key: keyof PublicPromoterProfile["social_links"];
   label: string;
 }> = [
   { key: "instagram_url", label: "Instagram" },
@@ -45,53 +48,42 @@ const SOCIAL_LABELS: Array<{
   { key: "website_url", label: "Website" },
 ];
 
-function averagePrice(promoter: PromoterProfile) {
-  if (!promoter.promotions.length) {
+function averagePrice(listings: PromotionListItem[]) {
+  if (!listings.length) {
     return null;
   }
 
-  const totalCredits = promoter.promotions.reduce(
-    (sum, promo) => sum + promo.price_credits,
-    0
-  );
-  const totalUgx = promoter.promotions.reduce(
-    (sum, promo) => sum + promo.price_ugx,
-    0
-  );
+  const totalCredits = listings.reduce((sum, promo) => sum + promo.price_credits, 0);
+  const totalUgx = listings.reduce((sum, promo) => sum + promo.price_ugx, 0);
 
   return {
-    credits: Math.round(totalCredits / promoter.promotions.length),
-    ugx: Math.round(totalUgx / promoter.promotions.length),
+    credits: Math.round(totalCredits / listings.length),
+    ugx: Math.round(totalUgx / listings.length),
   };
 }
 
-function uniqueValues(values: Array<string | undefined | null>) {
-  return Array.from(new Set(values.filter(Boolean))) as string[];
+/**
+ * The kinds of work this promoter actually sells, taken from their live
+ * listings. The profile has no service_types of its own — it used to be read
+ * from a field the payload never carried.
+ */
+function serviceTypes(listings: PromotionListItem[]): PromotionType[] {
+  return Array.from(new Set(listings.map((listing) => listing.type)));
 }
 
-function buildAudienceHighlights(promoter: PromoterProfile) {
-  return uniqueValues(
-    promoter.promotions.flatMap((promotion) => promotion.audience_niches ?? [])
-  ).slice(0, 5);
-}
-
-function buildCoverageHighlights(promoter: PromoterProfile) {
-  return uniqueValues(promoter.promotions.flatMap((promotion) => promotion.audience_regions ?? [])).slice(0, 4);
-}
-
-function storefrontHeadline(promoter: PromoterProfile) {
-  const firstPlatform = promoter.platforms[0];
-  const firstType = promoter.service_types[0];
+function storefrontHeadline(promoter: PublicPromoterProfile, listings: PromotionListItem[]) {
+  const firstPlatform = promoter.platforms[0] as PromotionPlatform | undefined;
+  const firstType = serviceTypes(listings)[0];
 
   if (!firstPlatform && !firstType) {
     return "Promotion services for artists who need trusted reach.";
   }
 
   const platformLabel = firstPlatform
-    ? PROMOTION_PLATFORM_LABELS[firstPlatform]
+    ? (PROMOTION_PLATFORM_LABELS[firstPlatform] ?? firstPlatform)
     : "creator";
   const typeLabel = firstType
-    ? PROMOTION_TYPE_LABELS[firstType]
+    ? (PROMOTION_TYPE_LABELS[firstType] ?? "promotion support")
     : "promotion support";
 
   return `${platformLabel} promoter offering ${typeLabel.toLowerCase()} for artists ready to grow a release.`;
@@ -99,42 +91,31 @@ function storefrontHeadline(promoter: PromoterProfile) {
 
 export default function PromoterProfilePage() {
   const params = useParams();
-  const username = params.username as string;
+  const slug = params.username as string;
   const queryClient = useQueryClient();
-  const { data: promoter, isLoading, isError } = usePromoterProfile(username);
+  const { data: promoter, isLoading, isError } = usePromoterProfile(slug);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (isError || !promoter) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <h2 className="text-xl font-semibold">Promoter Not Found</h2>
-        <p className="mt-2 text-muted-foreground">
-          This promoter profile is unavailable right now.
-        </p>
-        <Link href="/promotions" className="mt-4 inline-flex text-sm text-primary underline">
-          Browse promotions
-        </Link>
-      </div>
-    );
-  }
+  /**
+   * Everything derived from the profile is computed before the early returns
+   * below, and every hook runs unconditionally.
+   *
+   * useQueries, useMutation and useMemo used to sit *after* the loading and
+   * error returns, so the hook count changed between the loading render and
+   * the loaded one and React threw "rendered more hooks than during the
+   * previous render". This page could not reach a successful render at all.
+   */
+  const listings = promoter?.promotions ?? [];
 
   const socialLinks = SOCIAL_LABELS.flatMap(({ key, label }) => {
-    const href = promoter.social_links?.[key];
+    const href = promoter?.social_links?.[key];
     return href ? [{ href, label }] : [];
   });
 
-  const featuredPromotion = promoter.promotions[0] ?? null;
-  const avgPrice = averagePrice(promoter);
-  const audienceHighlights = buildAudienceHighlights(promoter);
-  const coverageHighlights = buildCoverageHighlights(promoter);
-  const reviewSourcePromotions = promoter.promotions.slice(0, 3);
+  const featuredPromotion = listings[0] ?? null;
+  const avgPrice = averagePrice(listings);
+  const audienceHighlights = (promoter?.niches ?? []).slice(0, 5);
+  const coverageHighlights = (promoter?.audience_regions ?? []).slice(0, 4);
+  const reviewSourcePromotions = listings.slice(0, 3);
 
   const promotionReviewQueries = useQueries({
     queries: reviewSourcePromotions.map((promotion) => ({
@@ -189,6 +170,28 @@ export default function PromoterProfilePage() {
 
   const isStorefrontReviewsLoading = promotionReviewQueries.some((query) => query.isLoading);
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError || !promoter) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <h2 className="text-xl font-semibold">Promoter Not Found</h2>
+        <p className="mt-2 text-muted-foreground">
+          This promoter profile is unavailable right now.
+        </p>
+        <Link href="/promotions" className="mt-4 inline-flex text-sm text-primary underline">
+          Browse promotions
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-8">
@@ -205,7 +208,7 @@ export default function PromoterProfilePage() {
             {promoter.banner_url ? (
               <Image
                 src={promoter.banner_url}
-                alt={`${promoter.name} banner`}
+                alt={`${promoter.display_name} banner`}
                 fill
                 priority
                 className="object-cover"
@@ -228,13 +231,13 @@ export default function PromoterProfilePage() {
                   {promoter.avatar_url ? (
                     <Image
                       src={promoter.avatar_url}
-                      alt={promoter.name}
+                      alt={promoter.display_name}
                       fill
                       className="object-cover"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-white/10 text-3xl font-bold text-white">
-                      {promoter.name.slice(0, 1)}
+                      {promoter.display_name.slice(0, 1)}
                     </div>
                   )}
                 </div>
@@ -243,7 +246,7 @@ export default function PromoterProfilePage() {
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-                        {promoter.name}
+                        {promoter.display_name}
                       </h1>
                       {promoter.is_verified ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
@@ -256,13 +259,16 @@ export default function PromoterProfilePage() {
                   </div>
 
                   <p className="max-w-3xl text-sm leading-6 text-white/85 md:text-base">
-                    {promoter.bio?.trim() || storefrontHeadline(promoter)}
+                    {promoter.bio?.trim() || storefrontHeadline(promoter, listings)}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-3 text-sm text-white/75">
+                    {/* Completed work, not follower count — the profile has no
+                        followers of its own, and delivery is what a buyer is
+                        actually judging here. */}
                     <span className="inline-flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      {formatNumber(promoter.follower_count)} followers
+                      {formatNumber(promoter.completed_orders)} campaigns delivered
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -288,7 +294,7 @@ export default function PromoterProfilePage() {
                     Live Services
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-white">
-                    {promoter.active_promotions}
+                    {listings.length}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
@@ -331,10 +337,10 @@ export default function PromoterProfilePage() {
                     key={platform}
                     className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85 backdrop-blur"
                   >
-                    {PROMOTION_PLATFORM_LABELS[platform]}
+                    {PROMOTION_PLATFORM_LABELS[platform as PromotionPlatform] ?? platform}
                   </span>
                 ))}
-                {promoter.service_types.map((type) => (
+                {serviceTypes(listings).map((type) => (
                   <span
                     key={type}
                     className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs font-medium text-rose-100"
@@ -397,8 +403,8 @@ export default function PromoterProfilePage() {
                     <p className="font-medium">Service lanes</p>
                   </div>
                   <p className="mt-2 text-sm text-white/70">
-                    {promoter.service_types.length
-                      ? promoter.service_types
+                    {serviceTypes(listings).length
+                      ? serviceTypes(listings)
                           .map((type) => PROMOTION_TYPE_LABELS[type])
                           .slice(0, 3)
                           .join(", ")
@@ -665,7 +671,7 @@ export default function PromoterProfilePage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-medium text-primary">Live storefront</p>
-              <h2 className="mt-1 text-2xl font-semibold">Active services from {promoter.name}</h2>
+              <h2 className="mt-1 text-2xl font-semibold">Active services from {promoter.display_name}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 These are the current offers artists can book through Tesotunes.
               </p>

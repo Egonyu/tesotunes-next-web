@@ -21,6 +21,7 @@ import type {
   RejectOrderRequest,
   ResolveDisputeRequest,
   PromoterProfile,
+  PublicPromoterProfile,
   SellerAnalytics,
   UpdatePromoterProfileRequest,
 } from "@/types/promotions";
@@ -107,12 +108,12 @@ export function usePlatforms() {
   });
 }
 
-/** Promoter profile */
-export function usePromoterProfile(username: string) {
-  return useQuery<PromoterProfile>({
-    queryKey: promotionKeys.promoter(username),
-    queryFn: () => api.fetchPromoterProfile(username).then((r) => r.data),
-    enabled: !!username,
+/** A promoter's public storefront, by profile slug. */
+export function usePromoterProfile(slug: string) {
+  return useQuery<PublicPromoterProfile>({
+    queryKey: promotionKeys.promoter(slug),
+    queryFn: () => api.fetchPromoterProfile(slug).then((r) => r.data),
+    enabled: !!slug,
   });
 }
 

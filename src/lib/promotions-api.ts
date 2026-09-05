@@ -7,6 +7,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import type {
   Promotion,
   PromotionListItem,
+  PublicPromoterProfile,
   PromotionKind,
   PromotionOrder,
   PromoterProfile,
@@ -68,9 +69,15 @@ export function fetchPlatforms() {
   );
 }
 
-/** Get promoter public profile */
-export function fetchPromoterProfile(username: string) {
-  return apiGet<{ data: PromoterProfile }>(`/promoters/${username}`);
+/**
+ * A promoter's public storefront, addressed by their profile slug.
+ *
+ * The parameter is named `slug` because that is what the route matches — it
+ * was called `username` while the page passed a slug, which is how the page
+ * ended up typed against the wrong record entirely.
+ */
+export function fetchPromoterProfile(slug: string) {
+  return apiGet<{ data: PublicPromoterProfile }>(`/promoters/${slug}`);
 }
 
 // ---------------------------------------------------------------------------

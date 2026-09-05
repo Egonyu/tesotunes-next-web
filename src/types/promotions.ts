@@ -99,6 +99,49 @@ export interface PromoterSummary {
   follower_count: number;
 }
 
+/**
+ * A promoter's public storefront, as GET /promoters/{slug} returns it.
+ *
+ * Distinct from PromoterProfile below, which is the promoter's own studio
+ * editor view (GET /my/promoter-profile) and carries editing affordances the
+ * public page has no use for. The two used to be conflated: this page was
+ * typed against the editor shape while the URL resolved to the profile
+ * record, so it read fields the payload never had.
+ */
+export interface PublicPromoterProfile {
+  id: number;
+  slug: string;
+  display_name: string;
+  username: string | null;
+  avatar_url: string;
+  banner_url: string | null;
+  location: string | null;
+  bio: string | null;
+  tier: string;
+  is_verified: boolean;
+  platforms: string[];
+  niches: string[];
+  audience_regions: string[];
+  audience_summary: string | null;
+  response_time_hours: number | null;
+  proof_points: string[];
+  campaign_highlights: string[];
+  portfolio_items: PromoterPortfolioItem[];
+  social_links: {
+    instagram_url?: string | null;
+    twitter_url?: string | null;
+    facebook_url?: string | null;
+    youtube_url?: string | null;
+    tiktok_url?: string | null;
+    website_url?: string | null;
+  };
+  average_rating: number;
+  review_count: number;
+  completed_orders: number;
+  onboarded_at: string | null;
+  promotions: PromotionListItem[];
+}
+
 export interface PromoterProfile {
   id: number;
   name: string;

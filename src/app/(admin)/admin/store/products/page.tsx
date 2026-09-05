@@ -240,7 +240,7 @@ export default function StoreProductsPage() {
         <Link href="/admin/store/shops" className="px-4 py-2 border rounded-lg hover:bg-muted whitespace-nowrap">
           Shops
         </Link>
-        <Link href="/admin/store/promotions" className="px-4 py-2 border rounded-lg hover:bg-muted whitespace-nowrap">
+        <Link href="/admin/promotions" className="px-4 py-2 border rounded-lg hover:bg-muted whitespace-nowrap">
           Promotions
         </Link>
       </div>

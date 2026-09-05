@@ -34,7 +34,7 @@ import {
   PROMOTION_PLATFORM_LABELS,
   PROMOTION_TYPE_LABELS,
 } from "@/types/promotions";
-import type { PromotionListItem, PromotionPlatform } from "@/types/promotions";
+import type { PromotionListItem, PromotionPlatform, PromotionKind } from "@/types/promotions";
 
 const STATUS_TABS = [
   { value: "", label: "All" },
@@ -146,9 +146,9 @@ export default function AdminPromotionsPage() {
     };
   }, [visiblePromotions]);
 
-  const handleReject = (id: number) => {
+  const handleReject = (id: number, kind: PromotionKind | undefined) => {
     reject.mutate(
-      { id, reason: rejectReason },
+      { id, reason: rejectReason, kind },
       {
         onSuccess: () => {
           setRejectingId(null);
@@ -386,7 +386,7 @@ export default function AdminPromotionsPage() {
                               {promo.status === "pending" ? (
                                 <>
                                   <button
-                                    onClick={() => approve.mutate(promo.id)}
+                                    onClick={() => approve.mutate({ id: promo.id, kind: promo.kind })}
                                     disabled={approve.isPending}
                                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                                   >
@@ -511,7 +511,7 @@ export default function AdminPromotionsPage() {
                           />
                           <div className="mt-3 flex gap-2">
                             <button
-                              onClick={() => handleReject(promo.id)}
+                              onClick={() => handleReject(promo.id, promo.kind)}
                               disabled={!rejectReason || reject.isPending}
                               className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-60"
                             >

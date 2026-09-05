@@ -5,9 +5,11 @@
 
 "use client";
 
+import { useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
+  PromotionKind,
   BrowsePromotionsParams,
   PurchasePromotionRequest,
   SubmitVerificationRequest,
@@ -140,13 +142,24 @@ export function useUpdateMyPromoterProfile() {
 // BUYER HOOKS
 // ---------------------------------------------------------------------------
 
-/** Purchase a promotion */
+/**
+ * Purchase a promotion.
+ *
+ * The idempotency key is held in a ref rather than generated per call, so a
+ * double-tapped Confirm button sends the same key twice and the server
+ * returns the first order instead of charging again. It is rotated only
+ * after a purchase completes, which is when the next attempt becomes a
+ * genuinely new one. A failure keeps the key: the retry is the same attempt.
+ */
 export function usePurchasePromotion(slug: string) {
   const qc = useQueryClient();
+  const attemptKey = useRef<string>(crypto.randomUUID());
+
   return useMutation({
     mutationFn: (data: PurchasePromotionRequest) =>
-      api.purchasePromotion(slug, data),
+      api.purchasePromotion(slug, { idempotency_key: attemptKey.current, ...data }),
     onSuccess: () => {
+      attemptKey.current = crypto.randomUUID();
       toast.success("Promotion purchased successfully!");
       qc.invalidateQueries({ queryKey: promotionKeys.myPurchases() });
     },
@@ -398,7 +411,8 @@ export function useAdminPromotions(params: { status?: string; page?: number; sea
 export function useAdminApprovePromotion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.adminApprovePromotion(id),
+    mutationFn: ({ id, kind }: { id: number; kind?: PromotionKind }) =>
+      api.adminApprovePromotion(id, kind ?? "listing"),
     onSuccess: () => {
       toast.success("Promotion approved!");
       qc.invalidateQueries({ queryKey: promotionKeys.all });
@@ -413,8 +427,8 @@ export function useAdminApprovePromotion() {
 export function useAdminRejectPromotion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-      api.adminRejectPromotion(id, { reason }),
+    mutationFn: ({ id, reason, kind }: { id: number; reason: string; kind?: PromotionKind }) =>
+      api.adminRejectPromotion(id, { reason }, kind ?? "listing"),
     onSuccess: () => {
       toast.success("Promotion rejected.");
       qc.invalidateQueries({ queryKey: promotionKeys.all });

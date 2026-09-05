@@ -173,9 +173,18 @@ export interface PromotionPlatformSpecifics {
   timing?: string;
 }
 
+/**
+ * Which table a moderation-queue row came from. The admin queue mixes store
+ * listings with event promotion requests, and the two have independent id
+ * sequences — so approve/reject must send the kind back, never the id alone.
+ * Absent on the public browse endpoints, which only ever return listings.
+ */
+export type PromotionKind = "listing" | "event_request";
+
 /** Lightweight promotion card used in list / browse views */
 export interface PromotionListItem {
   id: number;
+  kind?: PromotionKind;
   slug: string;
   title: string;
   short_description: string;
@@ -390,6 +399,12 @@ export interface PurchasePromotionRequest {
   event_id?: number;
   notes?: string;
   preferred_delivery_date?: string;
+  /**
+   * Replay protection. The client generates one key per checkout attempt;
+   * resending the same key returns the original order instead of charging
+   * again. Set automatically by purchasePromotion().
+   */
+  idempotency_key?: string;
 }
 
 export interface SubmitVerificationRequest {

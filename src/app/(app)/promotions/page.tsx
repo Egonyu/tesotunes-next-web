@@ -27,7 +27,11 @@ export default function PromotionsLandingPage() {
 
   const paths = [
     {
-      href: "/promotions/browse",
+      // Was pointing at /promotions/browse, the list of services, while
+      // calling itself "find a promoter" — and /promoters, the page that
+      // actually browses people, was not linked from here at all. Services
+      // are one click on from there.
+      href: "/promoters",
       icon: Search,
       title: "Find a promoter",
       description:
@@ -55,7 +59,7 @@ export default function PromotionsLandingPage() {
     <div className="container mx-auto max-w-3xl py-8">
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold sm:text-3xl">Promotions</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Promoter market</h1>
           <p className="mx-auto max-w-md text-muted-foreground">
             Grow your music with promoters — or earn money promoting music you love.
           </p>

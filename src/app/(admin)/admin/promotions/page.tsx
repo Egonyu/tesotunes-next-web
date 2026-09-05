@@ -163,13 +163,28 @@ export default function AdminPromotionsPage() {
       <section className="rounded-lg border bg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Promotion moderation</h1>
+            <h1 className="text-2xl font-semibold">Promoter market</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Review live listings, approve or reject pending submissions, and jump into disputes or analytics.
+              Services promoters sell, requests artists post, and the promoters behind them.
+              Approve or reject submissions here; the tabs cover the rest.
             </p>
           </div>
 
+          {/* The sub-pages used to be five separate entries in the admin
+              sidebar for what is one product. They live here instead. */}
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/promotions/promoters"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Promoters
+            </Link>
+            <Link
+              href="/admin/promotions/opportunities"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Requests
+            </Link>
             <Link
               href="/admin/promotions/analytics"
               className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"

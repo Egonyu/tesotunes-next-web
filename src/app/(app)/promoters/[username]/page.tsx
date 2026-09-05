@@ -394,7 +394,7 @@ export default function PromoterProfilePage() {
                   </div>
                   <p className="mt-2 text-sm text-white/70">
                     {promoter.audience_summary?.trim() ||
-                      "Audience and creator lane details come from the seller's live storefront and active services."}
+                      "Audience and creator lane details come from the promoter's live storefront and active services."}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -659,7 +659,7 @@ export default function PromoterProfilePage() {
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
                   <p className="font-medium">Verification flow</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Buyers submit proof, sellers verify delivery, and admin can resolve disputes when needed.
+                    Buyers submit proof, promoters verify delivery, and admin can resolve disputes when needed.
                   </p>
                 </div>
               </div>

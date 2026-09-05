@@ -68,11 +68,9 @@ const navItems = [
   { href: '/admin/ads', label: 'Ads Library', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/ad-placements', label: 'Ad Zones', icon: Target, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/rewards', label: 'Rewards', icon: Coins, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions', label: 'Promotions', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/promoters', label: 'Promoter Profiles', icon: BadgeCheck, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/opportunities', label: 'Opportunities', icon: Target, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/disputes', label: 'Promotion Disputes', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/promotions/analytics', label: 'Promotion Analytics', icon: BarChart3, requiredPermissions: ['admin.reports', 'view-analytics'] },
+  // One product, one entry. Promoters, briefs, disputes and analytics were
+  // five sidebar rows for the same thing; they are tabs on the hub now.
+  { href: '/admin/promotions', label: 'Promoter Market', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
   { href: '/admin/sacco', label: 'SACCO Ops', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
   { href: '/admin/sacco/board-meetings', label: 'Governance', icon: Building2, requiredPermissions: ['manage-sacco'] },

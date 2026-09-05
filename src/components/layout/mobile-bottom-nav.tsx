@@ -80,7 +80,7 @@ const moduleItems = [
   { href: "/store", label: "Store", icon: ShoppingBag },
   { href: "/podcasts", label: "Podcasts", icon: Mic2 },
   { href: "/polls", label: "Polls", icon: ThumbsUp },
-  { href: "/promotions", label: "Promotions", icon: Megaphone },
+  { href: "/promotions", label: "Promoter Market", icon: Megaphone },
   { href: "/sacco", label: "SACCO", icon: Wallet },
   { href: "/forums", label: "Forums", icon: MessageSquare },
 ];

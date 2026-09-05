@@ -87,18 +87,18 @@ export default function PromotersDiscoveryPage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
                 <Megaphone className="h-4 w-4 text-violet-500" />
               </span>
-              <h1 className="text-2xl font-bold tracking-tight">Find a Promoter</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Promoters</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Browse verified promoters by platform, niche, and tier. Post an opportunity or buy a service directly.
+              Browse verified promoters by platform, niche and tier. Book a service from one, or post a brief and let them come to you.
             </p>
           </div>
           <div className="flex gap-2">
             <Link
-              href="/promotions"
+              href="/promotions/browse"
               className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
             >
-              Services marketplace
+              Browse services
             </Link>
             <Link
               href="/promotions/opportunities"

@@ -90,7 +90,7 @@ export default function SellerPromotionOrderDetailPage() {
           href="/artist/promotions/orders"
           className="mt-3 inline-block text-sm text-primary underline"
         >
-          Back to seller queue
+          Back to my order queue
         </Link>
       </div>
     );

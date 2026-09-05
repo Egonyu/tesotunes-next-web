@@ -329,10 +329,10 @@ export default function PromotionsBrowsePage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/artist/promotions" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
-                Seller dashboard
+                My promoter dashboard
               </Link>
               <Link href="/artist/promotions/create" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                Create service
+                List a service
               </Link>
               <Link href="/promotions/purchases" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
                 My purchases
@@ -428,7 +428,7 @@ export default function PromotionsBrowsePage() {
                       href="/artist/promotions"
                       className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                      Open seller dashboard
+                      Open promoter dashboard
                     </Link>
                   </div>
                 </div>
@@ -453,10 +453,10 @@ export default function PromotionsBrowsePage() {
                       Reset filters
                     </button>
                     <Link
-                      href="/artist/promotions/create"
+                      href="/become-promoter"
                       className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                      Become a seller
+                      Become a promoter
                     </Link>
                   </div>
                 </div>

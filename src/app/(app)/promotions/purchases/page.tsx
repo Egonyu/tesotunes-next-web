@@ -105,7 +105,7 @@ export default function PromotionPurchasesPage() {
                   href="/artist/promotions"
                   className="rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted"
                 >
-                  Open seller dashboard
+                  Open promoter dashboard
                 </Link>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function PromotionPurchasesPage() {
                   href="/artist/promotions"
                   className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted"
                 >
-                  Become a seller
+                  Become a promoter
                 </Link>
               </div>
             </div>

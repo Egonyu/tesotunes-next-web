@@ -7,6 +7,7 @@ import { apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useMySubscription } from "@/hooks/useSubscriptions";
+import { getErrorMessage } from "@/lib/utils";
 
 type AudioQuality = "128" | "192" | "320" | "flac";
 
@@ -102,7 +103,7 @@ export function DownloadGate({ songId, songTitle, isFree, isDownloadable, isPurc
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err instanceof Error ? err.message : "Download failed");
+        (getErrorMessage(err, "Download failed"));
       const errorType = classifyError(message);
       setGateType(errorType);
       setShowGate(true);

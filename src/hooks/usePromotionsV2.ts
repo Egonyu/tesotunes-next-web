@@ -21,6 +21,7 @@ import type {
   AdminBrowsePromotersParams,
   AdminBrowsePromotionRequestsParams,
 } from "@/lib/promotions-v2-api";
+import { getErrorMessage } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -193,7 +194,7 @@ export function useApplyToPromotionRequest(uuid: string) {
     },
     onError: (err) => {
       const message =
-        err instanceof Error ? err.message : "Failed to submit application.";
+        getErrorMessage(err, "Failed to submit application.");
       toast.error(message);
     },
   });

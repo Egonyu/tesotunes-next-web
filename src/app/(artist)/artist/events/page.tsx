@@ -16,7 +16,7 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import {
   getEventCapacity,
   getEventImage,
@@ -67,7 +67,7 @@ export default function ArtistEventsPage() {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-2">Failed to load events</p>
-        <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Please try again later'}</p>
+        <p className="text-sm text-muted-foreground">{getErrorMessage(error, 'Please try again later')}</p>
       </div>
     );
   }

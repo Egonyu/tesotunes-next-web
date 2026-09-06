@@ -17,7 +17,7 @@ import {
   CircleOff,
   BadgeCheck,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Shop {
@@ -55,7 +55,7 @@ export default function AdminStoreShopsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'store', 'shops'] });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to update shop.';
+      const message = getErrorMessage(error, 'Failed to update shop.');
       toast.error(message);
     },
   });

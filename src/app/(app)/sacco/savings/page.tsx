@@ -18,7 +18,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import {
   useSaccoSavings,
   useSaccoTransactions,
@@ -68,7 +68,7 @@ export default function SavingsPage() {
       setPhoneNumber('');
       toast.success('Deposit submitted successfully!');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Deposit failed';
+      const message = getErrorMessage(err, 'Deposit failed');
       toast.error(message);
     }
   };
@@ -97,7 +97,7 @@ export default function SavingsPage() {
       setPhoneNumber('');
       toast.success('Withdrawal request submitted!');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Withdrawal failed';
+      const message = getErrorMessage(err, 'Withdrawal failed');
       toast.error(message);
     }
   };

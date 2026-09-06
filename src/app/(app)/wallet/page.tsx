@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Loader2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import { useWallet, useWalletTransactions, useWithdraw, normalizePhoneNumber, kycRequirementFrom, DEFAULT_WITHDRAWAL_TERMS, type KycRequiredError } from '@/hooks/usePayments';
 import { useWalletPinGuard } from '@/components/wallet/wallet-pin-provider';
 import { InFlightMoney } from '@/components/wallet/in-flight-money';
@@ -74,7 +74,7 @@ export default function WalletPage() {
         return;
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Could not start the cash out';
+      const errorMessage = getErrorMessage(error, 'Could not start the cash out');
       toast.error(errorMessage);
     }
   };

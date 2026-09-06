@@ -15,7 +15,7 @@ import {
   Loader2,
   Phone,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import { useSaccoShares, useBuyShares, useSaccoDividends } from '@/hooks/useSacco';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { toast } from 'sonner';
@@ -430,7 +430,7 @@ export default function SharesPage() {
                         setSharesToBuy(1);
                         setPhoneNumber('');
                       },
-                      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to purchase shares'),
+                      onError: (err) => toast.error(getErrorMessage(err, 'Failed to purchase shares')),
                     }
                   );
                 }}

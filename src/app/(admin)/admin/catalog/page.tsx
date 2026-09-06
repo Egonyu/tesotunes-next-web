@@ -17,6 +17,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react';
+import { getErrorMessage } from '@/lib/utils';
 
 type CatalogSubmissionItem = {
   id: number;
@@ -71,7 +72,7 @@ function apiErrorMessage(error: unknown): string {
     return (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Request failed';
   }
 
-  return error instanceof Error ? error.message : 'Request failed';
+  return getErrorMessage(error, 'Request failed');
 }
 
 export default function CatalogPage() {

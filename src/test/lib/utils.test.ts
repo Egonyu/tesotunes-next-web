@@ -5,6 +5,7 @@ import {
   formatNumber,
   cn,
   formatResolvedDuration,
+  getErrorMessage,
   getInitials,
   parseDurationToSeconds,
   resolveDurationSeconds,
@@ -140,5 +141,43 @@ describe('Utils - slugify', () => {
 
   it('handles multiple spaces', () => {
     expect(slugify('Hello   World')).toBe('hello-world');
+  });
+});
+
+describe('Utils - getErrorMessage', () => {
+  /** Shapes an Axios rejection the way the API client hands it to a catch block. */
+  function axiosError(status: number, data: unknown) {
+    const err = new Error(`Request failed with status code ${status}`) as Error & {
+      response?: { status: number; data: unknown };
+    };
+    err.response = { status, data };
+    return err;
+  }
+
+  it('prefers the API message over the generic axios text', () => {
+    const err = axiosError(422, { message: 'Insufficient wallet balance' });
+    expect(getErrorMessage(err, 'Checkout failed')).toBe('Insufficient wallet balance');
+  });
+
+  it('reports the reason a ticket tier rejects credits', () => {
+    const err = axiosError(422, { message: 'Ordinary ticket does not support credit payment' });
+    expect(getErrorMessage(err, 'Checkout failed')).toBe(
+      'Ordinary ticket does not support credit payment'
+    );
+  });
+
+  it('falls back to the error message when the body carries none', () => {
+    expect(getErrorMessage(axiosError(500, {}), 'Checkout failed')).toBe(
+      'Request failed with status code 500'
+    );
+  });
+
+  it('uses the fallback for non-Error values', () => {
+    expect(getErrorMessage(null, 'Checkout failed')).toBe('Checkout failed');
+    expect(getErrorMessage(undefined, 'Checkout failed')).toBe('Checkout failed');
+  });
+
+  it('passes plain strings through', () => {
+    expect(getErrorMessage('Something specific', 'Checkout failed')).toBe('Something specific');
   });
 });

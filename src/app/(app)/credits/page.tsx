@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftRight, ChevronRight, Loader2 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn, formatNumber , getErrorMessage} from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCreditBalance, useExchangeCredits, usePurchaseCredits } from '@/hooks/usePayments';
 
@@ -165,7 +165,7 @@ export default function CreditsPage() {
           setBuyCredits('');
         },
         onError: (error) =>
-          toast.error(error instanceof Error ? error.message : 'Could not buy credits.'),
+          toast.error(getErrorMessage(error, 'Could not buy credits.')),
       }
     );
   };
@@ -181,7 +181,7 @@ export default function CreditsPage() {
           setCashoutCredits('');
         },
         onError: (error) =>
-          toast.error(error instanceof Error ? error.message : 'Could not convert credits.'),
+          toast.error(getErrorMessage(error, 'Could not convert credits.')),
       }
     );
   };

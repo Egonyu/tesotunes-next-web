@@ -44,6 +44,7 @@ import {
   useVoidOfflineSale,
 } from '@/hooks/useEvents';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 
 interface CampaignSpendRow {
   key: string;
@@ -158,7 +159,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       refreshEvent();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to add staff member');
+      toast.error(getErrorMessage(error, 'Failed to add staff member'));
     },
   });
   const removeStaffMember = useMutation({
@@ -168,7 +169,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       refreshEvent();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove staff member');
+      toast.error(getErrorMessage(error, 'Failed to remove staff member'));
     },
   });
   const saveDiscountCode = useMutation({
@@ -197,7 +198,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       refreshEvent();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to save discount code');
+      toast.error(getErrorMessage(error, 'Failed to save discount code'));
     },
   });
   const removeDiscountCode = useMutation({
@@ -207,7 +208,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       refreshEvent();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove discount code');
+      toast.error(getErrorMessage(error, 'Failed to remove discount code'));
     },
   });
   const lookupTickets = useMutation({
@@ -225,7 +226,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       ticket?: { name?: string; price_ugx?: number } | null;
     }> } }>(`/artist/events/${id}/check-in/lookup`, { params: { query: checkInQuery } }),
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Lookup failed');
+      toast.error(getErrorMessage(error, 'Lookup failed'));
     },
   });
   const checkInTicket = useMutation({
@@ -242,7 +243,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       lookupTickets.mutate();
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Check-in failed';
+      const message = getErrorMessage(error, 'Check-in failed');
       toast.error(message);
     },
   });
@@ -474,7 +475,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       queryClient.invalidateQueries({ queryKey: ['artist', 'events', id] });
       queryClient.invalidateQueries({ queryKey: ['artist', 'events', id, 'analytics'] });
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save campaign spend');
+      toast.error(getErrorMessage(error, 'Failed to save campaign spend'));
     }
   };
 
@@ -543,7 +544,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
       toast.success('Campaign presets saved');
       refreshEvent();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save campaign presets');
+      toast.error(getErrorMessage(error, 'Failed to save campaign presets'));
     }
   };
 
@@ -918,7 +919,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                 setOfflineNotes('');
                 setOfflineVoidReason('');
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to log offline sale');
+                toast.error(getErrorMessage(error, 'Failed to log offline sale'));
               }
             }}
             disabled={storeOfflineSale.isPending}
@@ -997,7 +998,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                     setPrintedCodes('');
                     setPrintedValidationNotes('');
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : 'Failed to import printed ticket codes');
+                    toast.error(getErrorMessage(error, 'Failed to import printed ticket codes'));
                   }
                 }}
                 disabled={storePrintedTicketImport.isPending}
@@ -1082,7 +1083,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                   });
                   toast.success(result.message || 'Printed batch synced');
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : 'Failed to sync printed batch');
+                  toast.error(getErrorMessage(error, 'Failed to sync printed batch'));
                 }
               }}
               disabled={!selectedPrintedOrderId || syncPrintedTicketImport.isPending}
@@ -1153,7 +1154,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                           });
                           toast.success(result.message || 'Offline sale voided');
                         } catch (error) {
-                          toast.error(error instanceof Error ? error.message : 'Failed to void offline sale');
+                          toast.error(getErrorMessage(error, 'Failed to void offline sale'));
                         }
                       }}
                       disabled={voidOfflineSale.isPending}
@@ -1253,7 +1254,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                 setExternalChannelLabel('External outlet');
                 setExternalNotes('');
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to save external allocation');
+                toast.error(getErrorMessage(error, 'Failed to save external allocation'));
               }
             }}
             disabled={storeExternalAllocation.isPending}
@@ -1315,7 +1316,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                         });
                         toast.success(result.message || 'External allocation released');
                       } catch (error) {
-                        toast.error(error instanceof Error ? error.message : 'Failed to release external allocation');
+                        toast.error(getErrorMessage(error, 'Failed to release external allocation'));
                       }
                     }}
                     disabled={releaseExternalAllocation.isPending}
@@ -1558,7 +1559,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                           toast.success(result.message || 'Support case approved');
                           setSupportResolutionNote('');
                         } catch (error) {
-                          toast.error(error instanceof Error ? error.message : 'Failed to approve support case');
+                          toast.error(getErrorMessage(error, 'Failed to approve support case'));
                         }
                       }}
                       disabled={resolveTicketCase.isPending}
@@ -1577,7 +1578,7 @@ export default function ArtistEventDetailPage({ params }: { params: Promise<{ id
                           toast.success(result.message || 'Support case rejected');
                           setSupportResolutionNote('');
                         } catch (error) {
-                          toast.error(error instanceof Error ? error.message : 'Failed to reject support case');
+                          toast.error(getErrorMessage(error, 'Failed to reject support case'));
                         }
                       }}
                       disabled={resolveTicketCase.isPending}

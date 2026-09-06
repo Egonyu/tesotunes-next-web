@@ -28,7 +28,7 @@ import {
   XCircle,
   MoreVertical,
 } from 'lucide-react';
-import { cn, formatResolvedDuration } from '@/lib/utils';
+import { cn, formatResolvedDuration , getErrorMessage} from '@/lib/utils';
 import { toast } from 'sonner';
 import { usePlayerStore } from '@/stores';
 import { mapArtistSongToPlayerSong } from '@/lib/artist-player-song';
@@ -121,7 +121,7 @@ export default function SongDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['artist-songs'] });
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to assign ISRC';
+      const message = getErrorMessage(error, 'Failed to assign ISRC');
       toast.error(message);
     },
   });

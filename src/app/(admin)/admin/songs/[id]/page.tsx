@@ -15,7 +15,7 @@ import {
   CheckCircle, XCircle, AlertCircle,
 } from 'lucide-react';
 import { PageHeader, StatusBadge, ConfirmDialog } from '@/components/admin';
-import { formatResolvedDuration, resolveDurationSeconds } from '@/lib/utils';
+import { formatResolvedDuration, resolveDurationSeconds , getErrorMessage} from '@/lib/utils';
 import { toast } from 'sonner';
 import { isModeratorOnlyRole } from '@/lib/roles';
 
@@ -188,7 +188,7 @@ export default function SongDetailPage({ params }: { params: Promise<{ id: strin
       queryClient.invalidateQueries({ queryKey: ['admin', 'songs'] });
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to assign ISRC';
+      const message = getErrorMessage(error, 'Failed to assign ISRC');
       toast.error(message);
     },
   });

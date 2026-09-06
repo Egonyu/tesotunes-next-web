@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, MapPin, Download, Share2, ChevronLeft, Mail, Send, Gift, Smartphone, ShieldAlert, BadgeDollarSign } from 'lucide-react';
 import { useRequestTicketCase, useResendTicket, useTicket, useTicketCases, useTicketInvoice, useTransferTicket } from '@/hooks/useEvents';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 
@@ -351,7 +351,7 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
       win.print();
       toast.success('Invoice opened in a printable window');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load invoice');
+      toast.error(getErrorMessage(error, 'Failed to load invoice'));
     }
   };
 
@@ -360,7 +360,7 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
       const result = await resendTicket.mutateAsync();
       toast.success(result.message || 'Ticket email resent');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to resend ticket');
+      toast.error(getErrorMessage(error, 'Failed to resend ticket'));
     }
   };
 
@@ -382,7 +382,7 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
       setShowTransferForm(false);
       setTransferMessage('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to transfer ticket');
+      toast.error(getErrorMessage(error, 'Failed to transfer ticket'));
     }
   };
 
@@ -826,7 +826,7 @@ function TicketDetailContent({ ticketId }: { ticketId: string }) {
                       setEvidenceNotes('');
                     }
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : 'Failed to submit support request');
+                    toast.error(getErrorMessage(error, 'Failed to submit support request'));
                   }
                 }}
                 disabled={requestTicketCase.isPending}

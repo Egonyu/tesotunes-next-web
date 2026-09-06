@@ -109,6 +109,13 @@ export interface Event {
   description: string
   short_description?: string
   image_url: string
+  /**
+   * The poster or flyer, usually portrait. EventResource sends this as
+   * `artwork` — already a full URL — so the field is not suffixed `_url`.
+   */
+  artwork?: string
+  /** The wide image for the event hero band. Sent as `banner`, already a URL. */
+  banner?: string
   artwork_url?: string
   banner_url?: string
   video_preview_url?: string

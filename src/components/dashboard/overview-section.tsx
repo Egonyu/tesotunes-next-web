@@ -1,17 +1,29 @@
 'use client';
 
-import Link from 'next/link';
-import { Wallet, Coins, Headphones, Languages, TrendingUp, Loader2, Award } from 'lucide-react';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { Activity as ActivityIcon, Loader2 } from 'lucide-react';
 import { useDashboardOverview } from '@/hooks/useDashboard';
+import {
+  ArtistModule,
+  ContributionsModule,
+  EarningsModule,
+  ListeningModule,
+  ModuleCard,
+  NeedsYouNowModule,
+  WalletsModule,
+} from './modules';
 
 /**
- * Unified "Your overview" block for the account dashboard — wallet, money
- * earned across every vertical, listening, and (when relevant) Ateso corpus
- * standing. Capability-aware: sections appear only when they have data.
+ * The account dashboard body.
+ *
+ * One request serves the whole screen, and every block below the wallets is
+ * gated on what the account actually is — a listener, a contributor, an artist
+ * — so nobody is shown a permanent zero for a capability they do not hold.
+ *
+ * Scope is the page body: the platform header and tab bar are not this
+ * component's to draw.
  */
 export function DashboardOverviewSection() {
-  const { data, isLoading } = useDashboardOverview();
+  const { data, isLoading, isError } = useDashboardOverview();
 
   if (isLoading) {
     return (
@@ -20,93 +32,57 @@ export function DashboardOverviewSection() {
       </div>
     );
   }
-  if (!data) return null;
 
-  // Settlements clear in UGX, credits, or both. A member whose ledger is
-  // entirely credits — corpus contributors, for one — must still see what they
-  // earned, so lead with whichever currency actually carries value.
-  const earnedUgx = data.earnings.available.ugx + data.earnings.paid_out.ugx;
-  const earnedCredits =
-    data.earnings.available.credits + data.earnings.paid_out.credits;
-  const earnsInCredits = earnedUgx === 0 && earnedCredits > 0;
+  if (isError || !data) {
+    return (
+      <div className="rounded-xl border bg-card p-6 text-center">
+        <p className="text-sm font-medium">We couldn&apos;t load your dashboard</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Check your connection and refresh the page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Headline tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Tile icon={Wallet} label="Wallet (UGX)" value={formatCurrency(data.wallet.ugx_balance)} href="/credits" />
-        <Tile icon={Coins} label="Credits" value={formatNumber(data.wallet.credits_balance)} href="/credits" />
-        <Tile
-          icon={TrendingUp}
-          label={earnsInCredits ? 'Earned (credits)' : 'Earned (UGX)'}
-          value={earnsInCredits ? formatNumber(earnedCredits) : formatCurrency(earnedUgx)}
-          hint={
-            earnsInCredits
-              ? `${formatNumber(data.earnings.pending.credits)} pending`
-              : `${formatCurrency(data.earnings.pending.ugx)} pending`
-          }
-        />
-        <Tile icon={Headphones} label="Plays (30d)" value={formatNumber(data.listening.plays_30d)} hint={`${formatNumber(data.listening.plays_total)} all-time`} href="/history" />
-      </div>
+      <NeedsYouNowModule
+        actions={data.next_actions}
+        completion={data.profile.completion_percentage}
+      />
 
-      {/* Contributions standing — only for corpus contributors */}
-      {data.contributions && (
-        <Link href="/contribute" className="block rounded-xl border bg-card p-4 hover:bg-muted/50 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Languages className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium flex items-center gap-2">
-                Ateso corpus
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground capitalize">
-                  <Award className="h-3.5 w-3.5" />{data.contributions.tier}
-                </span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {formatNumber(data.contributions.submissions_accepted)} accepted ·
-                {' '}{formatNumber(data.contributions.validations_total)} reviews ·
-                {' '}{formatNumber(data.contributions.credits_earned_total)} credits earned
-              </p>
-            </div>
-          </div>
-        </Link>
-      )}
+      <WalletsModule wallet={data.wallet} />
 
-      {/* Recent activity */}
+      <EarningsModule earnings={data.earnings} />
+
+      <ListeningModule listening={data.listening} />
+
+      {data.contributions && <ContributionsModule contributions={data.contributions} />}
+
+      {data.artist && <ArtistModule artist={data.artist} />}
+
       {data.recent_activity.length > 0 && (
-        <div className="rounded-xl border bg-card p-4">
-          <p className="font-medium mb-3">Recent activity</p>
-          <ul className="space-y-2">
-            {data.recent_activity.map((a, i) => (
-              <li key={i} className="flex items-center justify-between text-sm">
-                <span className="text-foreground">{a.label}</span>
-                <span className="text-xs text-muted-foreground">{a.at ? new Date(a.at).toLocaleDateString() : ''}</span>
+        <ModuleCard title="What happened" icon={ActivityIcon}>
+          <ul className="divide-y">
+            {data.recent_activity.map((entry, i) => (
+              <li
+                key={`${entry.type}-${entry.at ?? i}`}
+                className="flex items-baseline justify-between gap-3 py-2 first:pt-0 last:pb-0"
+              >
+                <span className="min-w-0 truncate text-sm">{entry.label}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {entry.at
+                    ? new Date(entry.at).toLocaleDateString(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                      })
+                    : ''}
+                </span>
               </li>
             ))}
           </ul>
-        </div>
+        </ModuleCard>
       )}
     </div>
   );
-}
-
-function Tile({ icon: Icon, label, value, hint, href }: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  hint?: string;
-  href?: string;
-}) {
-  const body = (
-    <div className={cn('rounded-xl border bg-card p-4', href && 'hover:bg-muted/50 transition-colors')}>
-      <div className="flex items-center gap-2 text-muted-foreground mb-1">
-        <Icon className="h-4 w-4" />
-        <span className="text-xs">{label}</span>
-      </div>
-      <p className="text-xl font-bold truncate">{value}</p>
-      {hint && <p className="text-[11px] text-muted-foreground truncate">{hint}</p>}
-    </div>
-  );
-  return href ? <Link href={href}>{body}</Link> : body;
 }

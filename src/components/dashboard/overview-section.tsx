@@ -1,14 +1,16 @@
 'use client';
 
 import { Activity as ActivityIcon, Loader2 } from 'lucide-react';
-import { useDashboardOverview } from '@/hooks/useDashboard';
+import { useClaimDailyBonus, useDashboardOverview } from '@/hooks/useDashboard';
 import {
   ArtistModule,
   ContributionsModule,
+  DailyBonusBanner,
   EarningsModule,
   ListeningModule,
   ModuleCard,
   NeedsYouNowModule,
+  ShortcutsModule,
   WalletsModule,
 } from './modules';
 
@@ -24,6 +26,7 @@ import {
  */
 export function DashboardOverviewSection() {
   const { data, isLoading, isError } = useDashboardOverview();
+  const claimBonus = useClaimDailyBonus();
 
   if (isLoading) {
     return (
@@ -46,6 +49,14 @@ export function DashboardOverviewSection() {
 
   return (
     <div className="space-y-4">
+      {data.daily_bonus && (
+        <DailyBonusBanner
+          bonus={data.daily_bonus}
+          onClaim={() => claimBonus.mutate()}
+          isClaiming={claimBonus.isPending}
+        />
+      )}
+
       <NeedsYouNowModule
         actions={data.next_actions}
         completion={data.profile.completion_percentage}
@@ -60,6 +71,8 @@ export function DashboardOverviewSection() {
       {data.contributions && <ContributionsModule contributions={data.contributions} />}
 
       {data.artist && <ArtistModule artist={data.artist} />}
+
+      <ShortcutsModule />
 
       {data.recent_activity.length > 0 && (
         <ModuleCard title="What happened" icon={ActivityIcon}>

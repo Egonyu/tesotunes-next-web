@@ -212,6 +212,22 @@ export default function CreditsPage() {
             </span>
           </div>
         )}
+
+        {/*
+          The next milestone belongs against the balance it measures. It used
+          to float below the page as a loose sentence, which is why it read as
+          stray prose rather than progress.
+        */}
+        {wallet?.next_milestone && (
+          <div className="mt-2 flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">
+              Next: {wallet.next_milestone.reward}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {formatNumber(wallet.next_milestone.remaining)} to go
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

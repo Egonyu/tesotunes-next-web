@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPut, apiPost } from '@/lib/api';
 import { toast } from 'sonner';
 import { Coins, Loader2, Plus, Save, X, Users, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 
 /**
  * What the platform pays people to do.
@@ -89,7 +89,7 @@ export default function AdminRewardsPage() {
       toast.success('Rule updated.');
     },
     onError: (error: unknown) =>
-      toast.error(error instanceof Error ? error.message : 'Could not save the rule'),
+      toast.error(getErrorMessage(error, 'Could not save the rule')),
   });
 
   const seed = useMutation({

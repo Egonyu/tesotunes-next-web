@@ -14,7 +14,7 @@ import {
   Smartphone,
   Wallet,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , getErrorMessage} from '@/lib/utils';
 import {
   formatPhoneNumber,
   formatUGX,
@@ -153,7 +153,7 @@ export default function TopUpPage() {
         }
       } catch (error: unknown) {
         setPaymentStep('failed');
-        toast.error(error instanceof Error ? error.message : 'Failed to initiate payment');
+        toast.error(getErrorMessage(error, 'Failed to initiate payment'));
       }
 
       return;
@@ -175,7 +175,7 @@ export default function TopUpPage() {
       toast.success('Credits purchased successfully!');
     } catch (error: unknown) {
       setPaymentStep('failed');
-      toast.error(error instanceof Error ? error.message : 'Failed to purchase credits');
+      toast.error(getErrorMessage(error, 'Failed to purchase credits'));
     }
   };
 

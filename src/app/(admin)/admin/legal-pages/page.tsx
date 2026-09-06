@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { AlertCircle, CheckCircle, FileText, Plus, Edit, Archive, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/lib/utils';
 
 type LegalPageStatus = 'draft' | 'published' | 'archived';
 
@@ -115,7 +116,7 @@ export default function LegalPageAdmin() {
       alert(editingId ? 'Legal page updated successfully' : 'Legal page created successfully');
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = getErrorMessage(error, 'Unknown error');
       alert('Error saving legal page: ' + message);
     },
   });

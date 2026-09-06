@@ -6,6 +6,7 @@ import { apiGet, apiPost } from '@/lib/api';
 import { PageHeader, FormSection, StatusBadge } from '@/components/admin';
 import { toast } from 'sonner';
 import { BadgeCheck, Loader2, MessageSquareText, Phone, UserRound } from 'lucide-react';
+import { getErrorMessage } from '@/lib/utils';
 
 type CatalogClaim = {
   id: number;
@@ -52,7 +53,7 @@ function apiErrorMessage(error: unknown): string {
     return (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Request failed';
   }
 
-  return error instanceof Error ? error.message : 'Request failed';
+  return getErrorMessage(error, 'Request failed');
 }
 
 export default function CatalogClaimsPage() {

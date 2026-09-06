@@ -17,7 +17,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn , getErrorMessage} from '@/lib/utils'
 import {
   getEventCapacity,
   getEventCityLabel,
@@ -198,7 +198,7 @@ export default function EventDetailPageClient() {
         return
       }
 
-      toast.error(error instanceof Error ? error.message : 'Failed to join waitlist')
+      toast.error(getErrorMessage(error, 'Failed to join waitlist'))
     }
   }
   return (

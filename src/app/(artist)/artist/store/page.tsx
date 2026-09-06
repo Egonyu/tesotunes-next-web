@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Box, CheckCircle2, Package, Pencil, Plus, Store, Trash2, Upload } from "lucide-react";
-import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, formatNumber , getErrorMessage} from "@/lib/utils";
 import { toast } from "sonner";
 import {
   useActivateSellerProduct,
@@ -99,7 +99,7 @@ export default function ArtistStorePage() {
       setShowCreateStore(false);
       toast.success("Storefront created");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create store");
+      toast.error(getErrorMessage(error, "Failed to create store"));
     }
   };
 
@@ -168,7 +168,7 @@ export default function ArtistStorePage() {
 
       resetProductModal();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save product");
+      toast.error(getErrorMessage(error, "Failed to save product"));
     }
   };
 

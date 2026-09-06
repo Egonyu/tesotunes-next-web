@@ -16,6 +16,7 @@ import {
   unsubscribeFromPushNotifications,
 } from '@/lib/push-notifications';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 
 interface NotificationSetting {
   id: string;
@@ -276,7 +277,7 @@ export default function NotificationsPage() {
       setPushPermission('granted');
     } catch (error) {
       console.error('Failed to enable push notifications:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to enable push notifications');
+      toast.error(getErrorMessage(error, 'Failed to enable push notifications'));
     } finally {
       setIsEnablingPush(false);
     }

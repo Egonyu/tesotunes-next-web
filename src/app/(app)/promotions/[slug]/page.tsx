@@ -22,7 +22,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, formatNumber , getErrorMessage} from "@/lib/utils";
 import { usePromotion, usePurchasePromotion } from "@/hooks/usePromotions";
 import { apiPost } from "@/lib/api";
 import { getPromotionProofGuide } from "@/lib/promotions-proof";
@@ -153,7 +153,7 @@ export default function PromotionDetailPage() {
             toast.success(response.message || "Promotion request submitted");
             router.push(`/artist/events/${selectedEvent.id}`);
           },
-          onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Failed to submit promotion request"),
+          onError: (error: unknown) => toast.error(getErrorMessage(error, "Failed to submit promotion request")),
         }
       );
       return;

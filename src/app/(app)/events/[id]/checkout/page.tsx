@@ -14,7 +14,7 @@ import {
   BadgeCheck,
   Receipt,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn , getErrorMessage} from '@/lib/utils'
 import {
   getEventVenueLabel,
   type TicketQuote,
@@ -328,7 +328,7 @@ export default function CheckoutPage({
       clearCart()
     } catch (err: unknown) {
       setStep('payment')
-      const message = err instanceof Error ? err.message : 'Checkout failed. Please try again.'
+      const message = getErrorMessage(err, 'Checkout failed. Please try again.')
       toast.error(message)
     }
   }
@@ -627,7 +627,7 @@ export default function CheckoutPage({
                   setQuote(checkout.quote)
                   setStep('payment')
                 } catch (err: unknown) {
-                  const message = err instanceof Error ? err.message : 'Failed to prepare checkout'
+                  const message = getErrorMessage(err, 'Failed to prepare checkout')
                   toast.error(message)
                 }
               }}

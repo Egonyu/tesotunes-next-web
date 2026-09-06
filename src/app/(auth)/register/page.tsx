@@ -9,6 +9,7 @@ import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { registerUser } from "@/lib/register-client";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function RegisterPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -83,7 +84,7 @@ export default function RegisterPage() {
 
       router.push(`/verify-email?registered=true&email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "An error occurred";
+      const message = getErrorMessage(error, "An error occurred");
       setErrors({ general: [message] });
     } finally {
       setIsLoading(false);

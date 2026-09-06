@@ -174,13 +174,8 @@ export type FeedItemType =
   // Podcasts
   | 'episode_published'
   | 'podcast_milestone'
-  // Ojokotau
-  | 'campaign_created'
-  | 'campaign_funded'
-  | 'campaign_milestone'
   // Promotions
-  | 'promotion_started'
-  | 'promotion_featured'
+  | 'promotion_request_posted'
   // Social
   | 'user_post'
   | 'user_activity'
@@ -249,7 +244,6 @@ export function getFeedCardSize(item: FeedItem): FeedCardSize {
     case 'event_created':
     case 'award_won':
     case 'award_season_started':
-    case 'campaign_created':
     case 'announcement':
       return 'standard';
     case 'user_followed':

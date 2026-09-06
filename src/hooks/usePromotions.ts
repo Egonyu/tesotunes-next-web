@@ -1,6 +1,6 @@
 // ============================================================================
 // TesoTunes Promotions Module - React Query Hooks
-// All server-state hooks for the Promotion Campaigns marketplace
+// All server-state hooks for the promoter market
 // ============================================================================
 
 "use client";

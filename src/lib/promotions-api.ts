@@ -1,6 +1,6 @@
 // ============================================================================
 // TesoTunes Promotions Module - API Layer
-// Dedicated API client for the Promotion Campaigns marketplace
+// Dedicated API client for the promoter market
 // ============================================================================
 
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";

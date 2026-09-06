@@ -22,7 +22,8 @@ import {
   getEventCapacity,
   getEventCityLabel,
   getEventEndDate,
-  getEventImage,
+  getEventBanner,
+  hasEventBanner,
   getEventLocationSummary,
   getEventOrganizerName,
   getEventStartDate,
@@ -204,14 +205,29 @@ export default function EventDetailPageClient() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-[400px] md:h-[500px]">
+      <div className="relative h-[400px] md:h-[500px] overflow-hidden bg-muted">
+        {/*
+          A purpose-made banner is wide, so it fills the band. Anything else is
+          the poster — usually a portrait flyer whose title, date and lineup sit
+          in exactly the top and bottom that object-cover would crop away. Those
+          are letterboxed instead: a blurred, scaled copy fills the band behind
+          the poster shown whole.
+        */}
+        {!hasEventBanner(event) && (
+          <Image
+            src={getEventBanner(event)}
+            alt=""
+            aria-hidden
+            fill
+            className="scale-110 object-cover blur-2xl"
+            priority
+          />
+        )}
         <Image
-          src={
-            getEventImage(event)
-          }
+          src={getEventBanner(event)}
           alt={event.title}
           fill
-          className="object-cover"
+          className={cn(hasEventBanner(event) ? 'object-cover' : 'object-contain')}
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />

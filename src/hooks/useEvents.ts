@@ -842,8 +842,38 @@ function transformEvent(raw: Record<string, unknown>): Event {
   };
 }
 
+const EVENT_IMAGE_PLACEHOLDER = '/images/placeholder-event.jpg';
+
+/**
+ * The poster or flyer — usually portrait, and what listing cards show.
+ */
+export function getEventPoster(event: Event): string {
+  return event.artwork || event.banner || EVENT_IMAGE_PLACEHOLDER;
+}
+
+/**
+ * The wide image for the event hero band.
+ *
+ * Falls back to the poster so an event with no banner still renders, but
+ * callers should pair this with hasEventBanner() — a portrait poster stretched
+ * across the landscape hero gets centre-cropped through its own title and date,
+ * so the hero letterboxes it against a blurred backdrop instead of cropping.
+ */
+export function getEventBanner(event: Event): string {
+  return event.banner || event.artwork || EVENT_IMAGE_PLACEHOLDER;
+}
+
+/** True when the event has a purpose-made wide banner to fill the hero. */
+export function hasEventBanner(event: Event): boolean {
+  return Boolean(event.banner);
+}
+
+/**
+ * @deprecated Prefer getEventPoster() for cards or getEventBanner() for heroes.
+ * Kept so callers that genuinely want "whatever image exists" keep working.
+ */
 export function getEventImage(event: Event): string {
-  return event.artwork || event.banner || '/images/placeholder-event.jpg';
+  return getEventPoster(event);
 }
 
 export function getEventStartDate(event: Event): string | undefined {

@@ -140,7 +140,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [organizerSearch, setOrganizerSearch] = useState('');
 
   const { data: eventData, isLoading } = useQuery({
-    queryKey: ['admin', 'event', id],
+    // Deliberately not ['admin', 'event', id]: the detail page caches a
+    // normalized event under that key, and this page caches the raw API
+    // response. Sharing the key meant whichever page loaded last decided the
+    // shape, and the detail page then read `stats` off a raw record that has
+    // no such field.
+    queryKey: ['admin', 'event', id, 'raw'],
     queryFn: () => apiGet<{ data: EventApiData }>(`/admin/events/${id}`),
   });
 
@@ -301,7 +306,17 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           data.append(`artist_ids[${index}]`, artistId);
         });
       } else if (key === 'ticket_tiers') {
-        data.append('ticket_tiers', JSON.stringify(value));
+        // Rows the admin just added carry a placeholder id like `new-<ts>` so
+        // React can key them. Sending that made the API read them as existing
+        // tiers to update, which matched nothing and silently created nothing —
+        // added tiers never appeared. Drop the id so they post as new tiers.
+        const tiers = (value as TicketTier[]).map((tier) => {
+          const isSaved = typeof tier.id === 'number' || /^\d+$/.test(String(tier.id ?? ''));
+          if (isSaved) return tier;
+          const { id: _placeholder, ...withoutId } = tier;
+          return withoutId;
+        });
+        data.append('ticket_tiers', JSON.stringify(tiers));
       } else if (typeof value === 'boolean') {
         data.append(backendKey, value ? '1' : '0');
       } else if (value instanceof File) {

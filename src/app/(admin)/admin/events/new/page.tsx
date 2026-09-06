@@ -47,6 +47,7 @@ interface EventFormData {
   organizer_user_id: string;
   artist_ids: string[];
   cover_image: File | null;
+  banner_image: File | null;
   ticket_tiers: TicketTier[];
 }
 
@@ -78,6 +79,7 @@ const initialFormData: EventFormData = {
   organizer_user_id: '',
   artist_ids: [],
   cover_image: null,
+  banner_image: null,
   ticket_tiers: [],
 };
 
@@ -100,6 +102,7 @@ export default function CreateEventPage() {
   const [formData, setFormData] = useState<EventFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [artistSearch, setArtistSearch] = useState('');
   const [organizerSearch, setOrganizerSearch] = useState('');
 
@@ -171,11 +174,11 @@ export default function CreateEventPage() {
   };
 
   const handleArtistToggle = (artistId: string) => {
+    // Single selection: the event belongs to one artist, and that artist's
+    // account is where its ticket revenue lands.
     setFormData(prev => ({
       ...prev,
-      artist_ids: prev.artist_ids.includes(artistId)
-        ? prev.artist_ids.filter(id => id !== artistId)
-        : [...prev.artist_ids, artistId],
+      artist_ids: prev.artist_ids.includes(artistId) ? [] : [artistId],
     }));
   };
 
@@ -184,6 +187,14 @@ export default function CreateEventPage() {
     if (file) {
       setFormData(prev => ({ ...prev, cover_image: file }));
       setCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, banner_image: file }));
+      setBannerPreview(URL.createObjectURL(file));
     }
   };
 
@@ -245,11 +256,13 @@ export default function CreateEventPage() {
       const backendKey = fieldMap[key] || key;
 
       if (key === 'artist_ids') {
+        // An event has a single artist_id, and it decides who ticket money
+        // settles to, so only the first selection is sent. This used to post
+        // artist_ids[] — a key the API never validated, so Laravel dropped it
+        // and the chosen artist silently never reached the event.
         const ids = value as string[];
         if (ids.length > 0) {
-          ids.forEach((id, index) => {
-            data.append(`artist_ids[${index}]`, id);
-          });
+          data.append('artist_id', ids[0]);
         }
       } else if (key === 'ticket_tiers') {
         const tiers = value as TicketTier[];
@@ -532,21 +545,66 @@ export default function CreateEventPage() {
           )}
         </FormSection>
 
-        <FormSection title="Cover Image" description="Event banner image">
+        <FormSection
+          title="Poster"
+          description="The flyer people see on listing cards. Portrait is fine — it is never cropped."
+        >
           <div className="flex items-start gap-6">
             {coverPreview ? (
-              <div className="relative w-64 h-36 rounded-lg overflow-hidden">
+              <div className="relative w-40 h-56 rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={coverPreview}
-                  alt="Cover preview"
+                  alt="Poster preview"
                   fill
-                  className="object-cover"
+                  className="object-contain"
                 />
                 <button
                   type="button"
                   onClick={() => {
                     setCoverPreview(null);
                     setFormData(prev => ({ ...prev, cover_image: null }));
+                  }}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-40 h-56 rounded-lg bg-muted flex items-center justify-center">
+                <Calendar className="h-12 w-12 text-muted-foreground" />
+              </div>
+            )}
+            <div>
+              <label className="flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-muted">
+                <Upload className="h-4 w-4" />
+                <span>Upload Poster</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverChange}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground mt-2">
+                Any shape. Portrait flyers are shown whole, not cropped.
+              </p>
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Banner"
+          description="The wide image across the top of the event page. Optional — without one the poster is shown whole against a blurred backdrop."
+        >
+          <div className="flex items-start gap-6">
+            {bannerPreview ? (
+              <div className="relative w-64 h-36 rounded-lg overflow-hidden bg-muted">
+                <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBannerPreview(null);
+                    setFormData(prev => ({ ...prev, banner_image: null }));
                   }}
                   className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
                 >
@@ -561,11 +619,11 @@ export default function CreateEventPage() {
             <div>
               <label className="flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-muted">
                 <Upload className="h-4 w-4" />
-                <span>Upload Cover</span>
+                <span>Upload Banner</span>
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleCoverChange}
+                  onChange={handleBannerChange}
                   className="hidden"
                 />
               </label>
@@ -576,7 +634,10 @@ export default function CreateEventPage() {
           </div>
         </FormSection>
 
-        <FormSection title="Performing Artists" description="Search and select artists appearing at this event">
+        <FormSection
+          title="Artist"
+          description="Whose event this is. Ticket revenue settles to this artist's account, and the event appears in their dashboard. Leave empty to keep it under your own account."
+        >
           {/* Search */}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

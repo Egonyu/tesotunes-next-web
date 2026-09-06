@@ -16,6 +16,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { useCreatorAccess } from '@/hooks/useCreatorAccess';
 import { usePromotionRequestsV2, useApplyToPromotionRequest } from '@/hooks/usePromotionsV2';
 import { PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
 import type { PromotionRequestV2 } from '@/types/promotions-v2';
@@ -241,6 +242,7 @@ function PromotionRequestCard({ opp }: { opp: PromotionRequestV2 }) {
 }
 
 export default function PromotionRequestsPage() {
+  const canPost = useCreatorAccess();
   const [platform, setPlatform] = useState('');
   const [niche, setNiche] = useState('');
   const [page, setPage] = useState(1);
@@ -279,10 +281,10 @@ export default function PromotionRequestsPage() {
               Find promoters
             </Link>
             <Link
-              href="/artist/promotions/requests/create"
+              href={canPost ? "/artist/promotions/requests/create" : "/become-artist"}
               className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Post promotionRequest
+              {canPost ? "Post a request" : "Become an artist"}
             </Link>
           </div>
         </div>
@@ -328,10 +330,10 @@ export default function PromotionRequestsPage() {
           <p className="font-medium">No open requests right now</p>
           <p className="mt-1 text-sm text-muted-foreground">Be the first to post one for your track</p>
           <Link
-            href="/artist/promotions/requests/create"
+            href={canPost ? "/artist/promotions/requests/create" : "/become-artist"}
             className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Post an promotionRequest
+            {canPost ? "Post a request" : "Become an artist"}
           </Link>
         </div>
       ) : (

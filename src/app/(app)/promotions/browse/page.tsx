@@ -25,6 +25,7 @@ import {
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
+import { useCreatorAccess } from "@/hooks/useCreatorAccess";
 import { usePromotions } from "@/hooks/usePromotions";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { usePromotionsStore } from "@/stores/promotions";
@@ -176,6 +177,7 @@ function buildRecommendationLanes(promotions: PromotionListItem[]): Recommendati
 }
 
 export default function PromotionsBrowsePage() {
+  const canCreate = useCreatorAccess();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { filters, setFilter, resetFilters } = usePromotionsStore();
@@ -328,11 +330,11 @@ export default function PromotionsBrowsePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/artist/promotions" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
-                My promoter dashboard
+              <Link href="/promotions/requests" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+                My requests
               </Link>
-              <Link href="/artist/promotions/create" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                List a service
+              <Link href={canCreate ? "/artist/promotions/create" : "/become-promoter"} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                {canCreate ? "List a service" : "Become a promoter"}
               </Link>
               <Link href="/promotions/purchases" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
                 My purchases
@@ -425,10 +427,10 @@ export default function PromotionsBrowsePage() {
                       Retry page
                     </button>
                     <Link
-                      href="/artist/promotions"
+                      href="/promotions/requests"
                       className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                      Open promoter dashboard
+                      My promotion requests
                     </Link>
                   </div>
                 </div>

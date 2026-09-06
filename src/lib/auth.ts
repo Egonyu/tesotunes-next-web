@@ -161,7 +161,14 @@ async function getRuntimeSocialSettings(): Promise<PlatformSocialSettings | null
  * Fetch fresh user data from the API to refresh role.
  * Returns null if the request fails (keeps existing role).
  */
-async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[]; isArtist: boolean; isEventOrganizer: boolean } | { expired: true } | null> {
+
+/** Granted capability slugs from a user payload, e.g. promoter, seller. */
+function readCapabilities(user: Record<string, unknown>): string[] {
+  const raw = user.capabilities;
+  return Array.isArray(raw) ? raw.filter((c): c is string => typeof c === 'string') : [];
+}
+
+async function fetchFreshUserData(accessToken: string): Promise<{ role: string; permissions: string[]; isArtist: boolean; isEventOrganizer: boolean; capabilities: string[] } | { expired: true } | null> {
   try {
     const baseUrls = buildAuthApiBaseUrls(API_URL);
     let response: Response | null = null;
@@ -209,7 +216,7 @@ async function fetchFreshUserData(accessToken: string): Promise<{ role: string; 
       : [];
 
     if (role) {
-      return { role, permissions, isArtist, isEventOrganizer };
+      return { role, permissions, isArtist, isEventOrganizer, capabilities: readCapabilities(user) };
     }
     return null;
   } catch (error) {
@@ -296,6 +303,7 @@ function extractAuthorizedUser(data: Record<string, unknown>) {
     role: (user.role as string) || "user",
     isArtist: Boolean(user.is_artist) || Boolean(user.artist),
     isEventOrganizer: Boolean((user.event_organizer as Record<string, unknown> | undefined)?.enabled),
+    capabilities: readCapabilities(user),
     permissions: Array.isArray(user.permissions)
       ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
       : [],
@@ -339,6 +347,7 @@ async function authorizeSocialProvider(provider: string, tokens: { accessToken?:
     role: (user.role as string) || "user",
     isArtist: Boolean(user.is_artist) || Boolean(user.artist),
     isEventOrganizer: Boolean((user.event_organizer as Record<string, unknown> | undefined)?.enabled),
+    capabilities: readCapabilities(user),
     permissions: Array.isArray(user.permissions)
       ? (user.permissions as unknown[]).filter((p): p is string => typeof p === "string")
       : [],
@@ -566,6 +575,7 @@ export const authConfig: NextAuthOptions = {
         token.role = socialAuthUser.role;
         token.isArtist = socialAuthUser.isArtist;
         token.isEventOrganizer = socialAuthUser.isEventOrganizer;
+        token.capabilities = socialAuthUser.capabilities;
         token.permissions = socialAuthUser.permissions;
         token.accessToken = socialAuthUser.accessToken;
         token.accessTokenRefreshedAt = Date.now();
@@ -582,6 +592,7 @@ export const authConfig: NextAuthOptions = {
         token.role = user.role;
         token.isArtist = user.isArtist;
         token.isEventOrganizer = user.isEventOrganizer;
+        token.capabilities = user.capabilities;
         token.permissions = user.permissions;
         token.accessToken = user.accessToken;
         token.accessTokenRefreshedAt = Date.now();
@@ -631,6 +642,7 @@ export const authConfig: NextAuthOptions = {
           token.role = freshData.role;
           token.isArtist = freshData.isArtist;
           token.isEventOrganizer = freshData.isEventOrganizer;
+          token.capabilities = freshData.capabilities;
           token.permissions = freshData.permissions;
         }
 
@@ -645,6 +657,7 @@ export const authConfig: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.isArtist = Boolean(token.isArtist);
         session.user.isEventOrganizer = Boolean(token.isEventOrganizer);
+        session.user.capabilities = Array.isArray(token.capabilities) ? token.capabilities : [];
         session.user.permissions = (token.permissions as string[] | undefined) ?? [];
         session.user.apiAuthorized = Boolean(token.accessToken);
       }

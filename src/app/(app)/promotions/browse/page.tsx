@@ -25,7 +25,7 @@ import {
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
-import { useCreatorAccess } from "@/hooks/useCreatorAccess";
+import { useSellerAccess } from "@/hooks/useCreatorAccess";
 import { usePromotions } from "@/hooks/usePromotions";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { usePromotionsStore } from "@/stores/promotions";
@@ -177,7 +177,7 @@ function buildRecommendationLanes(promotions: PromotionListItem[]): Recommendati
 }
 
 export default function PromotionsBrowsePage() {
-  const canCreate = useCreatorAccess();
+  const canCreate = useSellerAccess();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { filters, setFilter, resetFilters } = usePromotionsStore();

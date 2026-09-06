@@ -306,7 +306,17 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           data.append(`artist_ids[${index}]`, artistId);
         });
       } else if (key === 'ticket_tiers') {
-        data.append('ticket_tiers', JSON.stringify(value));
+        // Rows the admin just added carry a placeholder id like `new-<ts>` so
+        // React can key them. Sending that made the API read them as existing
+        // tiers to update, which matched nothing and silently created nothing —
+        // added tiers never appeared. Drop the id so they post as new tiers.
+        const tiers = (value as TicketTier[]).map((tier) => {
+          const isSaved = typeof tier.id === 'number' || /^\d+$/.test(String(tier.id ?? ''));
+          if (isSaved) return tier;
+          const { id: _placeholder, ...withoutId } = tier;
+          return withoutId;
+        });
+        data.append('ticket_tiers', JSON.stringify(tiers));
       } else if (typeof value === 'boolean') {
         data.append(backendKey, value ? '1' : '0');
       } else if (value instanceof File) {

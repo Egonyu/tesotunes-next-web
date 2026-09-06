@@ -284,7 +284,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const e = event.data;
   const eventTypeKey = e.event_type ?? 'other';
   const totalTickets = e.ticket_tiers?.reduce((sum, t) => sum + t.quantity, 0) || e.max_capacity || 0;
-  const ticketsSold = e.ticket_tiers?.reduce((sum, t) => sum + (t.sold ?? t.quantity_sold ?? 0), 0) || e.stats.tickets_sold;
+  // An event with no tiers sums to 0, which is a real answer — falling through
+  // to stats on a falsy 0 is what read `tickets_sold` off an undefined stats
+  // and took this page down. Only fall back when there are no tiers at all.
+  const ticketsSold = e.ticket_tiers?.length
+    ? e.ticket_tiers.reduce((sum, t) => sum + (t.sold ?? t.quantity_sold ?? 0), 0)
+    : (e.stats?.tickets_sold ?? 0);
   const soldPercentage = totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0;
 
   return (
@@ -381,21 +386,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <DollarSign className="h-4 w-4" />
                 <span className="text-sm">Revenue</span>
               </div>
-              <p className="text-2xl font-bold">{formatCurrency(e.stats.revenue, e.currency)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(e.stats?.revenue ?? 0, e.currency)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Eye className="h-4 w-4" />
                 <span className="text-sm">Page Views</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(e.stats.page_views)}</p>
+              <p className="text-2xl font-bold">{formatNumber(e.stats?.page_views ?? 0)}</p>
             </div>
             <div className="p-4 rounded-xl border bg-card">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Users className="h-4 w-4" />
                 <span className="text-sm">Interested</span>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(e.stats.interested)}</p>
+              <p className="text-2xl font-bold">{formatNumber(e.stats?.interested ?? 0)}</p>
             </div>
           </div>
 

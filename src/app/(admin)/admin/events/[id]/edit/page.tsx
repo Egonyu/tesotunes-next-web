@@ -140,7 +140,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [organizerSearch, setOrganizerSearch] = useState('');
 
   const { data: eventData, isLoading } = useQuery({
-    queryKey: ['admin', 'event', id],
+    // Deliberately not ['admin', 'event', id]: the detail page caches a
+    // normalized event under that key, and this page caches the raw API
+    // response. Sharing the key meant whichever page loaded last decided the
+    // shape, and the detail page then read `stats` off a raw record that has
+    // no such field.
+    queryKey: ['admin', 'event', id, 'raw'],
     queryFn: () => apiGet<{ data: EventApiData }>(`/admin/events/${id}`),
   });
 

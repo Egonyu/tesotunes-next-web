@@ -204,8 +204,31 @@ export function MobileBottomNav() {
     retry: false,
   });
 
-  const isArtistByStatus = !!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved";
-  const hasArtistAccess = isArtist || isArtistByStatus;
+  /**
+   * The creator menu must agree with what middleware will actually let through.
+   *
+   * Middleware guards /artist/* on the session token — role, isArtist,
+   * isEventOrganizer — while this menu was deciding from a live
+   * /artist/application-status call. The two disagree for anyone whose
+   * application reads approved before the session carries the flag, and the
+   * result is a Dashboard button that bounces to sign-in when tapped. Showing
+   * a door nobody can open is worse than not showing it, so the session is the
+   * authority here and the API call only ever adds to it.
+   */
+  const sessionUser = session?.user as
+    | { isArtist?: boolean; isEventOrganizer?: boolean }
+    | undefined;
+  const isArtistBySession = Boolean(sessionUser?.isArtist) || Boolean(sessionUser?.isEventOrganizer);
+  const hasArtistAccess = isArtist || isAdmin || isArtistBySession;
+
+  /**
+   * An approved application that the session has not caught up with yet. The
+   * studio is not reachable until the token refreshes, so the menu offers the
+   * profile route that will refresh it rather than a door that bounces.
+   */
+  const artistApprovedPendingSession =
+    !hasArtistAccess &&
+    (!!artistStatus?.data?.is_artist || artistStatus?.data?.status === "approved");
   const hasAnyPlayer = !!currentSong;
   const mainTabs = hasArtistAccess ? artistMainTabs : defaultMainTabs;
   const g = platformSettings?.general;
@@ -349,8 +372,28 @@ export function MobileBottomNav() {
 
               {/* User Section — account links live in the header profile menu,
                   so here we surface only the "grow with us" CTAs. */}
+              {session && artistApprovedPendingSession && (
+                <div className="border-t border-border/70 pt-3 dark:border-white/12">
+                  <Link
+                    href="/profile"
+                    onClick={closeMenu}
+                    className="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
+                      <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">Artist access approved</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Sign out and back in to open your studio.
+                      </span>
+                    </span>
+                  </Link>
+                </div>
+              )}
+
               {session ? (
-                !hasArtistAccess && !isAdmin && (
+                !hasArtistAccess && !isAdmin && !artistApprovedPendingSession && (
                   <div className="border-t border-border/70 pt-3 dark:border-white/12">
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Link

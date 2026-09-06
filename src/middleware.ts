@@ -83,7 +83,20 @@ function matchesRoutePrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+/**
+ * Pages that sit under a protected prefix but are deliberately public.
+ *
+ * The credits guide explains what the platform pays for; someone deciding
+ * whether to join has to be able to read it, and its API is public for the
+ * same reason.
+ */
+const PUBLIC_ROUTE_EXCEPTIONS = ['/credits/guide'];
+
 function isAuthProtectedPath(pathname: string): boolean {
+  if (PUBLIC_ROUTE_EXCEPTIONS.some((route) => matchesRoutePrefix(pathname, route))) {
+    return false;
+  }
+
   return AUTH_REQUIRED_ROUTE_PREFIXES.some((prefix) => matchesRoutePrefix(pathname, prefix));
 }
 

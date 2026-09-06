@@ -30,6 +30,7 @@ import {
   Megaphone,
   ThumbsUp,
   Languages,
+  Ticket,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -218,6 +219,17 @@ export function Sidebar() {
             {mainNavItems.map((item) => (
               <NavItem key={item.href} {...item} collapsed={sidebarCollapsed} />
             ))}
+          </div>
+        )}
+
+        {/*
+          A bought ticket needs a way back to it. The tickets page holds the QR
+          code a buyer is scanned by at the door, and until this link existed it
+          could only be reached by typing the URL.
+        */}
+        {session?.user && (
+          <div className="space-y-1">
+            <NavItem href="/tickets" label="My Tickets" icon={Ticket} collapsed={sidebarCollapsed} />
           </div>
         )}
 

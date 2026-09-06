@@ -236,6 +236,13 @@ export default function CheckoutPage({
     )
   }
 
+  // Checked before the empty-cart guard below, because a completed purchase
+  // clears the cart. With the order reversed, the buyer was shown "No Tickets
+  // Selected" at the moment they paid and the confirmation was never reachable.
+  if (step === 'success') {
+    return renderSuccess(event)
+  }
+
   if (items.length === 0) {
     return (
       <div className="container py-16 text-center">
@@ -333,7 +340,9 @@ export default function CheckoutPage({
     }
   }
 
-  if (step === 'success') {
+  // Takes the event rather than closing over it: this is called after the
+  // `!event` guard, but that narrowing does not reach into a nested function.
+  function renderSuccess(confirmedEvent: NonNullable<typeof event>) {
     return (
       <div className="container py-16 max-w-lg mx-auto text-center">
         <div className="h-20 w-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
@@ -341,7 +350,7 @@ export default function CheckoutPage({
         </div>
         <h1 className="text-3xl font-bold mb-3">Booking Confirmed!</h1>
         <p className="text-muted-foreground mb-2">
-          Your tickets for <span className="font-semibold text-foreground">{event.title}</span> are confirmed.
+          Your tickets for <span className="font-semibold text-foreground">{confirmedEvent.title}</span> are confirmed.
         </p>
         {isGuestCheckout && (
           <p className="text-sm text-muted-foreground mb-4">

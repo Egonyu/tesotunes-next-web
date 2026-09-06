@@ -45,6 +45,7 @@ import {
 } from "@/types/promotions-v2";
 import { DashboardOverviewSection } from "@/components/dashboard/overview-section";
 import { KycJourneyCard } from "@/components/kyc/kyc-journey-card";
+import { UpcomingTicketsCard } from "@/components/dashboard/upcoming-tickets-card";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -649,6 +650,9 @@ export default function DashboardPage() {
 
       {/* Unified overview — wallet, earnings, plays, Ateso corpus, activity */}
       <DashboardOverviewSection />
+
+      {/* Tickets the member has already paid for */}
+      <UpcomingTicketsCard />
 
       {/* Summary cards */}
       {summaryLoading ? (

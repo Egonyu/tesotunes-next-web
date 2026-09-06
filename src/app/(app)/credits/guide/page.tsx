@@ -149,27 +149,41 @@ export default function CreditsGuidePage() {
   );
 }
 
+/** A cooldown in words. */
+function cooldownLine(minutes: number): string {
+  if (minutes >= 1440) {
+    const days = Math.round(minutes / 1440);
+    return days === 1 ? 'once a day' : `once every ${days} days`;
+  }
+
+  if (minutes >= 60) {
+    const hours = Math.round(minutes / 60);
+    return hours === 1 ? 'once an hour' : `once every ${hours} hours`;
+  }
+
+  return minutes === 1 ? 'once a minute' : `once every ${minutes} min`;
+}
+
 /** The constraints on a rate, said once and in words. */
 function limitLine(rate: CreditGuideRate): string | null {
   const parts: string[] = [];
 
-  if (rate.daily_limit !== null) {
+  /**
+   * When the cap equals a single award the two constraints say the same thing,
+   * so the cap adds nothing — "up to 10 a day · once a day" for a 10-credit
+   * daily bonus is one fact stated twice.
+   */
+  const capIsOneAward = rate.daily_limit !== null && rate.daily_limit === rate.credits;
+
+  if (rate.daily_limit !== null && !capIsOneAward) {
     parts.push(`up to ${formatNumber(rate.daily_limit)} a day`);
   }
 
   if (rate.cooldown_minutes) {
-    parts.push(
-      rate.cooldown_minutes >= 1440
-        ? `once every ${Math.round(rate.cooldown_minutes / 1440)} day${rate.cooldown_minutes >= 2880 ? 's' : ''}`
-        : `once every ${rate.cooldown_minutes} min`
-    );
+    parts.push(cooldownLine(rate.cooldown_minutes));
   }
 
-  if (parts.length === 0) {
-    return null;
-  }
-
-  return parts.join(' · ');
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function RateRow({

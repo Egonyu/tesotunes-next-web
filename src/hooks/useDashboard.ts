@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '@/lib/api';
 
 // ============================================================================
 // Unified account dashboard — matches App\Services\Dashboard\DashboardService
@@ -51,6 +51,13 @@ export interface DashboardArtist {
   songs_draft: number;
 }
 
+export interface DashboardDailyBonus {
+  available: boolean;
+  credits: number;
+  available_in_minutes: number;
+  streak_days: number;
+}
+
 export interface DashboardOverview {
   wallet: {
     ugx_balance: number;
@@ -71,6 +78,7 @@ export interface DashboardOverview {
     phone_verified: boolean;
     email_verified: boolean;
   };
+  daily_bonus: DashboardDailyBonus | null;
   next_actions: DashboardNextAction[];
   capabilities: Capability[];
   contributions: DashboardContributions | null;
@@ -89,5 +97,18 @@ export function useDashboardOverview(enabled = true) {
     queryFn: () => apiGet<Wrapped<DashboardOverview>>('/dashboard/overview').then((r) => r.data),
     enabled,
     staleTime: 30 * 1000,
+  });
+}
+
+/** Claims the daily login bonus, then refreshes the dashboard showing it. */
+export function useClaimDailyBonus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiPost<{ success: boolean; message: string }>('/credits/claim-daily-bonus'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'overview'] });
+    },
   });
 }

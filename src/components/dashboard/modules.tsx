@@ -4,18 +4,26 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   Award,
+  CalendarDays,
   ChevronRight,
   Coins,
+  Crown,
   Headphones,
+  Landmark,
   Languages,
+  MessageSquare,
+  Mic2,
   Music2,
+  ShoppingBag,
   TrendingUp,
+  Trophy,
   Wallet,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 import type {
   DashboardArtist,
   DashboardContributions,
+  DashboardDailyBonus,
   DashboardNextAction,
   DashboardOverview,
 } from '@/hooks/useDashboard';
@@ -103,6 +111,105 @@ function ProgressBar({ percent }: { percent: number }) {
         style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Daily bonus — offered only when the rules engine would actually award it
+// ---------------------------------------------------------------------------
+
+function waitLabel(minutes: number): string {
+  if (minutes >= 60) {
+    const hours = Math.round(minutes / 60);
+    return `Come back in ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+  return `Come back in ${Math.max(1, minutes)} min`;
+}
+
+export function DailyBonusBanner({
+  bonus,
+  onClaim,
+  isClaiming,
+}: {
+  bonus: DashboardDailyBonus;
+  onClaim: () => void;
+  isClaiming: boolean;
+}) {
+  const streak = bonus.streak_days;
+
+  return (
+    <section className="flex items-center gap-3 rounded-2xl bg-primary/10 p-4">
+      <span
+        aria-hidden
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background"
+      >
+        <Crown className="h-5 w-5 text-primary" />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold leading-snug">
+          {bonus.available ? 'Earn more with daily bonus' : 'Daily bonus claimed'}
+        </p>
+        <p className="text-xs leading-snug text-muted-foreground">
+          {bonus.available
+            ? `Listen, explore and get ${formatNumber(bonus.credits)} free credits everyday.`
+            : waitLabel(bonus.available_in_minutes)}
+          {streak > 1 && ` · ${streak}-day streak`}
+        </p>
+      </div>
+
+      {bonus.available && (
+        <button
+          type="button"
+          onClick={onClaim}
+          disabled={isClaiming}
+          className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {isClaiming ? 'Claiming…' : 'Claim now'}
+        </button>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Shortcuts — the rest of the platform, two up
+// ---------------------------------------------------------------------------
+
+const SHORTCUTS = [
+  { href: '/artists', label: 'Artists', hint: 'Discover & support', Icon: Mic2 },
+  { href: '/events', label: 'Events', hint: 'Find & book tickets', Icon: CalendarDays },
+  { href: '/store', label: 'Store', hint: 'Merch & more', Icon: ShoppingBag },
+  { href: '/sacco', label: 'SACCO', hint: 'Save & grow', Icon: Landmark },
+  { href: '/awards', label: 'Awards', hint: 'Vote & support', Icon: Trophy },
+  { href: '/forums', label: 'Forum', hint: 'Talk music', Icon: MessageSquare },
+] as const;
+
+export function ShortcutsModule() {
+  return (
+    <nav aria-label="Explore TesoTunes" className="grid grid-cols-2 gap-3">
+      {SHORTCUTS.map(({ href, label, hint, Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/50"
+        >
+          <span
+            aria-hidden
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10"
+          >
+            <Icon className="h-4 w-4 text-primary" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold leading-tight">{label}</span>
+            <span className="block truncate text-[11px] leading-snug text-muted-foreground">
+              {hint}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Link>
+      ))}
+    </nav>
   );
 }
 

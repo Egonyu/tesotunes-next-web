@@ -1,31 +1,56 @@
 import { useSession } from 'next-auth/react';
+import {
+  hasFullStudioAccess,
+  holdsSellerCapability,
+  type StudioIdentity,
+} from '@/lib/studio-access';
 
-const CREATOR_ROLES = new Set(['artist', 'admin', 'super_admin']);
-
-/**
- * Whether this account can actually open the creator studio at /artist/*.
- *
- * Middleware guards those routes on the session token — role, isArtist,
- * isEventOrganizer — so anything that decides from a different source will
- * eventually disagree with it and offer a link that bounces to sign-in. This
- * reads the same token, so a rendered creator link is one that will open.
- */
-export function useCreatorAccess(): boolean {
+function useStudioIdentity(): StudioIdentity | null {
   const { data: session } = useSession();
 
   if (!session?.user) {
-    return false;
+    return null;
   }
 
   const user = session.user as {
     role?: string;
     isArtist?: boolean;
     isEventOrganizer?: boolean;
+    capabilities?: string[];
   };
 
-  return (
-    CREATOR_ROLES.has((user.role ?? '').toLowerCase()) ||
-    Boolean(user.isArtist) ||
-    Boolean(user.isEventOrganizer)
-  );
+  return {
+    role: user.role,
+    isArtist: user.isArtist,
+    isEventOrganizer: user.isEventOrganizer,
+    capabilities: user.capabilities,
+  };
+}
+
+/**
+ * Whether this account can open the creator studio at /artist/*.
+ *
+ * Middleware guards those routes with the same rule from the same session
+ * token, so a creator link that renders is one that opens. Deciding from any
+ * other source is how the two drifted apart and produced a Dashboard button
+ * that bounced to sign-in.
+ */
+export function useCreatorAccess(): boolean {
+  const identity = useStudioIdentity();
+
+  return identity ? hasFullStudioAccess(identity) : false;
+}
+
+/**
+ * Whether this account can open the seller sections — /artist/promotions and
+ * /artist/store — which promoters and sellers hold without being artists.
+ */
+export function useSellerAccess(): boolean {
+  const identity = useStudioIdentity();
+
+  if (!identity) {
+    return false;
+  }
+
+  return hasFullStudioAccess(identity) || holdsSellerCapability(identity);
 }

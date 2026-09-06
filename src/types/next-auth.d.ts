@@ -8,6 +8,7 @@ declare module "next-auth" {
       role: string;
       isArtist?: boolean;
       isEventOrganizer?: boolean;
+      capabilities?: string[];
       permissions?: string[];
       apiAuthorized?: boolean;
     } & DefaultSession["user"];
@@ -19,6 +20,7 @@ declare module "next-auth" {
     role: string;
     isArtist?: boolean;
     isEventOrganizer?: boolean;
+    capabilities?: string[];
     permissions?: string[];
     accessToken: string;
   }
@@ -30,6 +32,7 @@ declare module "next-auth/jwt" {
     role?: string;
     isArtist?: boolean;
     isEventOrganizer?: boolean;
+    capabilities?: string[];
     permissions?: string[];
     accessToken?: string;
     accessTokenRefreshedAt?: number;

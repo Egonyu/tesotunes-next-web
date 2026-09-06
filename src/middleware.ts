@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { canEnterStudioPath } from "@/lib/studio-access";
 import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 
@@ -214,11 +215,14 @@ export async function middleware(request: NextRequest) {
   }
 
   if (matchesRoutePrefix(pathname, '/artist') || matchesRoutePrefix(pathname, '/artist-dashboard')) {
-    const role = normalize((token.role as string | undefined) ?? '');
-    const isArtist = Boolean(token.isArtist);
-    const isEventOrganizer = Boolean(token.isEventOrganizer);
+    const allowed = canEnterStudioPath(pathname, {
+      role: (token.role as string | undefined) ?? '',
+      isArtist: Boolean(token.isArtist),
+      isEventOrganizer: Boolean(token.isEventOrganizer),
+      capabilities: Array.isArray(token.capabilities) ? (token.capabilities as string[]) : [],
+    });
 
-    if (!ADMIN_ROLE_NAMES.has(role) && !ARTIST_ROLE_NAMES.has(role) && !isArtist && !isEventOrganizer) {
+    if (!allowed) {
       return redirectToAccessRequired(request, 'forbidden');
     }
   }

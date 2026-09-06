@@ -56,14 +56,6 @@ interface CreditWallet {
   recent_transactions: CreditTransaction[];
 }
 
-interface EarningPromotionRequest {
-  title: string;
-  description: string;
-  potential_credits: string | number;
-  daily_limit: string | number;
-  remaining_today: string | number;
-}
-
 interface DailyChallenge {
   title: string;
   description: string;
@@ -75,7 +67,6 @@ interface DailyChallenge {
 
 interface CreditDashboard {
   wallet: CreditWallet;
-  earning_promotionRequests: EarningPromotionRequest[];
   daily_challenges: DailyChallenge[];
 }
 
@@ -96,18 +87,6 @@ const POSITIVE_TYPES = new Set([
   'daily_login_bonus',
   'wallet_purchase',
 ]);
-
-/**
- * Top-up bonus bands, mirroring PaymentObserver::awardTopUpBonusCredits.
- * Kept because it is the one thing here that changes what someone does with
- * their money — a 10,000 top-up returns twice the bonus rate of a 5,000 one.
- */
-const TOPUP_BONUS_BANDS = [
-  { from: 5000, bonus: '+10%' },
-  { from: 10000, bonus: '+20%' },
-  { from: 20000, bonus: '+30%' },
-  { from: 50000, bonus: '+40%' },
-];
 
 export default function CreditsPage() {
   const queryClient = useQueryClient();
@@ -144,7 +123,6 @@ export default function CreditsPage() {
   });
 
   const wallet = dashboard?.wallet;
-  const promotionRequests = dashboard?.earning_promotionRequests ?? [];
   const challenges = dashboard?.daily_challenges ?? [];
   const transactions = showHistory ? transactionsData ?? [] : wallet?.recent_transactions ?? [];
 
@@ -198,9 +176,17 @@ export default function CreditsPage() {
     <div className="container py-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Credits</h1>
-        <Link href="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
-          Wallet
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/credits/guide"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            How credits work
+          </Link>
+          <Link href="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
+            Wallet
+          </Link>
+        </div>
       </div>
 
       {/* Balance, matching the wallet card: flat fill, no gradient. */}
@@ -223,6 +209,22 @@ export default function CreditsPage() {
             <span className="text-muted-foreground">Earned today</span>
             <span className="font-semibold tabular-nums">
               {formatNumber(wallet?.earned_today ?? 0)}
+            </span>
+          </div>
+        )}
+
+        {/*
+          The next milestone belongs against the balance it measures. It used
+          to float below the page as a loose sentence, which is why it read as
+          stray prose rather than progress.
+        */}
+        {wallet?.next_milestone && (
+          <div className="mt-2 flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">
+              Next: {wallet.next_milestone.reward}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {formatNumber(wallet.next_milestone.remaining)} to go
             </span>
           </div>
         )}
@@ -296,28 +298,6 @@ export default function CreditsPage() {
         </div>
       </div>
 
-      {/* Ways to earn, from the API — one line each, no icon per card. */}
-      {promotionRequests.length > 0 && (
-        <div>
-          <h2 className="mb-3 font-semibold">Ways to earn</h2>
-          <div className="divide-y overflow-hidden rounded-xl border bg-card">
-            {promotionRequests.map((promotionRequest) => (
-              <div key={promotionRequest.title} className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-sm">{promotionRequest.title}</p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {promotionRequest.remaining_today} left today
-                  </p>
-                </div>
-                <span className="shrink-0 font-semibold tabular-nums">
-                  {promotionRequest.potential_credits}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {challenges.length > 0 && (
         <div>
           <h2 className="mb-3 font-semibold">Today</h2>
@@ -348,37 +328,6 @@ export default function CreditsPage() {
             ))}
           </div>
         </div>
-      )}
-
-      {/*
-        Top-up bonus. Kept as a compact band list rather than the four
-        explanatory rows it was: the rate is the whole message, and it is the
-        one fact on this page that changes how much someone tops up.
-      */}
-      <div className="rounded-xl border bg-card p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-semibold text-sm">Top-up bonus</h2>
-          <Link href="/wallet/topup" className="text-sm text-primary hover:underline">
-            Top up
-          </Link>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-          {TOPUP_BONUS_BANDS.map((band) => (
-            <span key={band.from} className="text-muted-foreground tabular-nums">
-              {band.from.toLocaleString()}+{' '}
-              <span className="font-semibold text-foreground">{band.bonus}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {wallet?.next_milestone && (
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground tabular-nums">
-            {formatNumber(wallet.next_milestone.remaining)}
-          </span>{' '}
-          more credits unlocks {wallet.next_milestone.reward}.
-        </p>
       )}
 
       <div>

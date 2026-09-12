@@ -243,6 +243,40 @@ export default function CheckoutPage({
     return renderSuccess(event)
   }
 
+  /*
+    Guest checkout is refused by the API while transactional mail is
+    undeliverable: a guest's ticket would exist only in an email that never
+    arrives. Say so here rather than letting someone fill in the whole form and
+    be rejected at the point of payment.
+  */
+  if (sessionStatus === 'unauthenticated') {
+    return (
+      <div className="container py-16 max-w-md mx-auto text-center">
+        <ShieldCheck className="h-14 w-14 text-primary mx-auto mb-5" />
+        <h2 className="text-2xl font-bold mb-2">Sign in to buy your ticket</h2>
+        <p className="text-muted-foreground mb-6">
+          Your ticket and its entry code are kept in your account, so you can open
+          them at the gate from any device.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link
+            href={`/login?callbackUrl=${encodeURIComponent(`/events/${id}/checkout`)}`}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+          >
+            Sign in
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href={`/register?callbackUrl=${encodeURIComponent(`/events/${id}/checkout`)}`}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Create an account
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   if (items.length === 0) {
     return (
       <div className="container py-16 text-center">

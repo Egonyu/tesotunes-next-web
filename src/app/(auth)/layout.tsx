@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { SafeImage, InitialsAvatar } from "@/components/ui/safe-image";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
+import { usePublicStats } from "@/hooks/usePublicStats";
 
 export default function AuthLayout({
   children,
@@ -20,22 +21,24 @@ export default function AuthLayout({
   const authHeroTitle = appearance?.auth_hero_title || "Discover East African Music";
   const authHeroDescription =
     appearance?.auth_hero_description ||
-    "Stream millions of songs, discover new artists, and support the sounds of East Africa.";
+    "Stream music, discover new artists, and support the sounds of East Africa.";
   const authHeroImage = appearance?.auth_hero_image || "";
+
+  // Real counts, not the "10K+ / 500+ / 50K+" that used to be typed in here.
+  // Nothing is shown until the API answers, and zero counts are left out.
+  const { data: publicStats } = usePublicStats();
   const authStats = useMemo(
-    () => [
-      { value: appearance?.auth_stat_1_value || "10K+", label: appearance?.auth_stat_1_label || "Songs" },
-      { value: appearance?.auth_stat_2_value || "500+", label: appearance?.auth_stat_2_label || "Artists" },
-      { value: appearance?.auth_stat_3_value || "50K+", label: appearance?.auth_stat_3_label || "Users" },
-    ],
-    [
-      appearance?.auth_stat_1_label,
-      appearance?.auth_stat_1_value,
-      appearance?.auth_stat_2_label,
-      appearance?.auth_stat_2_value,
-      appearance?.auth_stat_3_label,
-      appearance?.auth_stat_3_value,
-    ]
+    () =>
+      publicStats
+        ? [
+            { value: publicStats.songs, label: "Songs" },
+            { value: publicStats.artists, label: "Artists" },
+            { value: publicStats.members, label: "Members" },
+          ]
+            .filter((stat) => stat.value > 0)
+            .map((stat) => ({ ...stat, value: stat.value.toLocaleString() }))
+        : [],
+    [publicStats]
   );
 
   return (
@@ -72,14 +75,16 @@ export default function AuthLayout({
             <p className="text-xl leading-8 text-white/70">{authHeroDescription}</p>
           </div>
 
-          <div className="mt-14 grid grid-cols-3 gap-6">
-            {authStats.map((stat) => (
-              <div key={`${stat.label}-${stat.value}`} className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center backdrop-blur-sm">
-                <div className="text-3xl font-bold text-white">{stat.value}</div>
-                <div className="mt-1 text-sm uppercase tracking-[0.18em] text-white/55">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          {authStats.length > 0 && (
+            <div className="mt-14 grid grid-cols-3 gap-6">
+              {authStats.map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-white">{stat.value}</div>
+                  <div className="mt-1 text-sm uppercase tracking-[0.18em] text-white/55">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

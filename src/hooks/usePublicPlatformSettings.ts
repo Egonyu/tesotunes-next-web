@@ -33,8 +33,13 @@ function reshape(rows: PublicSettingsRow[]): Partial<PlatformSettings> {
   const appearance: Record<string, unknown> = {};
   const users: Record<string, unknown> = {};
   const security: Record<string, unknown> = {};
+  const payments: Record<string, unknown> = {};
 
   for (const row of rows) {
+    if (row.key === "artist_revenue_share") {
+      payments.artist_revenue_share = Number(row.value);
+      continue;
+    }
     if (row.key.startsWith("general_")) {
       general[row.key.slice("general_".length)] = row.value;
       continue;
@@ -62,6 +67,9 @@ function reshape(rows: PublicSettingsRow[]): Partial<PlatformSettings> {
     appearance: appearance as PlatformSettings["appearance"],
     users: users as PlatformSettings["users"],
     security: security as PlatformSettings["security"],
+    ...(Object.keys(payments).length > 0
+      ? { payments: payments as PlatformSettings["payments"] }
+      : {}),
   };
 }
 

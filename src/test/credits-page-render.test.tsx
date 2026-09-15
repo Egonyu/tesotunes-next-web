@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@/test/test-utils";
+import { fireEvent, render, screen, waitFor } from "@/test/test-utils";
 import CreditsPage from "@/app/(app)/credits/page";
 
 // Renders the credits page against the exact payloads production returns for
@@ -19,15 +19,26 @@ const dashboard = {
     spent_today: 1000,
     earning_potential_remaining: 0,
     login_streak: 0,
-    // The exact shape production sends. The page used to read
-    // `credits_needed`, which is not a field here, so formatNumber received
-    // undefined and threw — taking the page down behind the error boundary for
-    // every account far enough along to have a milestone at all.
-    next_milestone: {
-      target: 10000,
-      remaining: 4844,
-      progress_percentage: 51.56,
-      reward: "Platform ambassador + 500 bonus credits",
+    // Goals measure credits earned through activity, not the balance above.
+    goals: {
+      activity_credits: 5156,
+      claimable: 0,
+      next: {
+        id: 5,
+        key: "tesotunes_ambassador",
+        name: "TesoTunes Ambassador",
+        description: "Earn 10,000 credits through activity.",
+        credits_required: 10000,
+        remaining: 4844,
+        reward_type: "credits",
+        reward_value: 500,
+        badge_name: "TesoTunes Ambassador",
+        badge_icon: "\u{1F451}",
+        badge_tier: "diamond",
+        status: "locked",
+        claimed_at: null,
+        progress: 51,
+      },
     },
     recent_transactions: [
       {
@@ -79,9 +90,49 @@ const balance = {
   exchange_rate: { credits_per_ugx: 1, ugx_per_credit: 1 },
 };
 
+const goalsList = {
+  activity_credits: 5156,
+  milestones: [
+    {
+      ...dashboard.wallet.goals.next,
+      id: 1,
+      key: "first_hundred",
+      name: "First 100",
+      credits_required: 100,
+      remaining: 0,
+      reward_value: 10,
+      badge_name: "Rising Fan",
+      badge_icon: "\u{1F331}",
+      status: "claimed",
+      claimed_at: "2026-09-01T10:00:00+03:00",
+      progress: 100,
+    },
+    {
+      ...dashboard.wallet.goals.next,
+      id: 4,
+      key: "five_thousand",
+      name: "Superfan",
+      credits_required: 5000,
+      remaining: 0,
+      reward_value: 200,
+      badge_name: "Superfan",
+      status: "claimable",
+      progress: 100,
+    },
+    dashboard.wallet.goals.next,
+  ],
+};
+
+const mockApiPost = jest.fn((..._args: unknown[]) =>
+  Promise.resolve({ success: true, message: "Superfan claimed. 200 credits added." }),
+);
+
 jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiGet: jest.fn((url: string) => {
+    if (url.includes("/credits/goals")) {
+      return Promise.resolve({ success: true, data: goalsList });
+    }
     if (url.includes("/credits/dashboard")) {
       return Promise.resolve({ success: true, data: dashboard });
     }
@@ -93,7 +144,7 @@ jest.mock("@/lib/api", () => ({
     }
     return Promise.resolve({});
   }),
-  apiPost: jest.fn(() => Promise.resolve({})),
+  apiPost: (...args: unknown[]) => mockApiPost(...args),
 }));
 
 describe("CreditsPage", () => {
@@ -111,10 +162,27 @@ describe("CreditsPage", () => {
     expect(screen.queryByText("-+1,000 credits")).not.toBeInTheDocument();
   });
 
-  it("renders the milestone using the field the API actually sends", async () => {
+  it("labels goal progress as activity credits, not the balance", async () => {
     render(<CreditsPage />);
 
-    await waitFor(() => expect(screen.getByText(/4.8K/)).toBeInTheDocument());
-    expect(screen.getByText(/Platform ambassador/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Earned from activity")).toBeInTheDocument());
+    expect(screen.getByText("5,156")).toBeInTheDocument();
+    expect(screen.getByText("4,844")).toBeInTheDocument();
+    expect(screen.getAllByText("TesoTunes Ambassador").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Platform ambassador/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/verification/i)).not.toBeInTheDocument();
+  });
+
+  it("lists goals with their real state and claims a reached one", async () => {
+    mockApiPost.mockClear();
+    render(<CreditsPage />);
+
+    await waitFor(() => expect(screen.getByText("Goals")).toBeInTheDocument());
+    expect(screen.getByText(/Bought credits don.t count/)).toBeInTheDocument();
+    expect(screen.getByText(/Rising Fan ✓/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Claim" }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith("/credits/goals/4/claim"));
   });
 });

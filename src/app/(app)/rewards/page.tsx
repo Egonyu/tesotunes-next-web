@@ -415,8 +415,11 @@ export default function RewardsPage() {
           </div>
           <div className="flex-1 text-center md:text-left">
             <h3 className="text-2xl font-bold mb-2">Invite Friends & Earn</h3>
+            {/* Said "earn 500 points for every friend". Referrals pay credits,
+                at a rate operators set, and no loyalty points at all — the
+                referrals page shows the live figure. */}
             <p className="text-muted-foreground">
-              Share your referral code and earn 500 points for every friend who joins!
+              Share your referral link and earn credits when friends join.
             </p>
           </div>
           <Link

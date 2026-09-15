@@ -258,8 +258,8 @@ export function useClaimReward() {
 // ============================================================================
 
 export function useReferralLeaderboard(period: 'week' | 'weekly' | 'month' | 'monthly' | 'all_time' = 'all_time', limit = 10) {
-  // Normalize period names
-  const normalizedPeriod = period === 'weekly' ? 'week' : period === 'monthly' ? 'month' : period;
+  // The API accepts weekly | monthly | all_time.
+  const normalizedPeriod = period === 'week' ? 'weekly' : period === 'month' ? 'monthly' : period;
 
   return useQuery({
     queryKey: ["referrals", "leaderboard", normalizedPeriod, limit],

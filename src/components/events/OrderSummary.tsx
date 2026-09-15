@@ -12,18 +12,19 @@ interface OrderSummaryProps {
 }
 
 export function OrderSummary({ className, quote }: OrderSummaryProps) {
-  const { items, subtotal, platformFee, discountAmount, total } =
+  const { items, subtotal, discountAmount, total } =
     useEventCartStore()
 
   if (items.length === 0) return null
 
+  // Fees are never estimated here: until the backend quote exists, the fee
+  // row says so rather than showing a number the buyer won't be charged.
   const summarySubtotal = quote?.base_amount ?? subtotal
   const summaryDiscount = quote?.discount_amount ?? discountAmount
-  const summaryFee = quote?.total_fee_amount ?? platformFee
   const summaryTotal = quote?.total_amount ?? total
   const feeLabel = quote
     ? `Fees (${quote.platform_commission_percent}% platform + ${quote.processing_fee_percent}% processing)`
-    : 'Estimated fees'
+    : 'Fees'
   const quoteItems = quote?.items
 
   return (
@@ -51,19 +52,23 @@ export function OrderSummary({ className, quote }: OrderSummaryProps) {
           )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{feeLabel}</span>
-            <span>UGX {summaryFee.toLocaleString()}</span>
+            <span className={quote ? undefined : 'text-muted-foreground'}>
+              {quote ? `UGX ${quote.total_fee_amount.toLocaleString()}` : 'Shown before you pay'}
+            </span>
           </div>
         </div>
 
         <div className="border-t pt-3 flex justify-between font-bold">
-          <span>Total</span>
+          <span>{quote ? 'Total' : 'Total before fees'}</span>
           <span>UGX {summaryTotal.toLocaleString()}</span>
         </div>
       </div>
 
+      {/* Was "100% money back guarantee". Tickets are non-refundable unless
+          the event is cancelled — the terms at checkout say so. */}
       <div className="flex items-center justify-center gap-1 mt-4 text-[10px] text-muted-foreground">
         <ShieldCheck className="h-3 w-3" />
-        Secure payment - 100% money back guarantee
+        Secure payment
       </div>
     </div>
   )

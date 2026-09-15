@@ -797,7 +797,12 @@ export default function CheckoutPage({
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep('review')}
+                  onClick={() => {
+                    // The cart can change on the review step; a kept quote
+                    // would show the old total beside the new tickets.
+                    setQuote(null)
+                    setStep('review')
+                  }}
                   className="px-6 py-3 rounded-lg border hover:bg-muted text-sm"
                 >
                   Back

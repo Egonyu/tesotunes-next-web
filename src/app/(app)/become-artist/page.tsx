@@ -37,6 +37,8 @@ import {
   useAvailableGenres,
   ArtistApplicationData,
 } from "@/hooks/useArtist";
+import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
+import { usePublicStats } from "@/hooks/usePublicStats";
 
 // ============================================================================
 // Step Configuration - Simplified to 4 steps
@@ -426,6 +428,7 @@ export default function BecomeArtistPage() {
 // ============================================================================
 
 function StepWelcome() {
+  const { data: publicStats } = usePublicStats();
   const benefits = [
     {
       icon: Upload,
@@ -450,7 +453,7 @@ function StepWelcome() {
     {
       icon: Headphones,
       title: "Professional Tools",
-      description: "Album management, release scheduling, promo materials, and more — all in one place.",
+      description: "Album management, release scheduling, and analytics — all in one place.",
     },
     {
       icon: Heart,
@@ -470,7 +473,7 @@ function StepWelcome() {
           Share Your Music With The World
         </h2>
         <p className="mx-auto max-w-lg text-muted-foreground leading-relaxed">
-          Join thousands of artists on TesoTunes. Upload your music, reach new fans,
+          Join the artists on TesoTunes. Upload your music, reach new fans,
           earn from your streams, and grow your career — all from one platform.
         </p>
       </div>
@@ -493,19 +496,24 @@ function StepWelcome() {
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="flex items-center justify-center gap-8 pt-4">
-        {[
-          { label: "Active Artists", value: "2,500+" },
-          { label: "Songs Uploaded", value: "15,000+" },
-          { label: "Monthly Listeners", value: "100K+" },
-        ].map((stat) => (
-          <div key={stat.label} className="text-center">
-            <div className="text-2xl font-bold text-primary">{stat.value}</div>
-            <div className="text-xs text-muted-foreground">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Stats — real counts from /public/stats. These were "2,500+ artists,
+          15,000+ songs, 100K+ monthly listeners". Hidden until known. */}
+      {publicStats && (
+        <div className="flex items-center justify-center gap-8 pt-4">
+          {[
+            { label: "Artists", value: publicStats.artists },
+            { label: "Songs", value: publicStats.songs },
+            { label: "Members", value: publicStats.members },
+          ]
+            .filter((stat) => stat.value > 0)
+            .map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-2xl font-bold text-primary">{stat.value.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+        </div>
+      )}
 
       {/* What you need */}
       <div className="rounded-xl border bg-muted/30 p-6">
@@ -784,6 +792,11 @@ interface StepPayoutProps {
 }
 
 function StepPayout({ formData, updateForm }: StepPayoutProps) {
+  // The share actually applied to revenue (Setting artist_revenue_share),
+  // rather than a "70%" typed into the page.
+  const { data: platformSettings } = usePublicPlatformSettings();
+  const revenueShare = platformSettings?.payments?.artist_revenue_share;
+
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2">
@@ -794,19 +807,21 @@ function StepPayout({ formData, updateForm }: StepPayoutProps) {
       </div>
 
       {/* Commission Info */}
-      <div className="rounded-xl border bg-gradient-to-br from-green-500/5 to-emerald-500/5 p-5">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
-            <DollarSign className="h-5 w-5 text-green-500" />
-          </div>
-          <div>
-            <h3 className="font-semibold">70% Revenue Share</h3>
-            <p className="text-xs text-muted-foreground">
-              You keep 70% of all earnings from streams, downloads, and sales.
-            </p>
+      {typeof revenueShare === 'number' && revenueShare > 0 && (
+        <div className="rounded-xl border bg-gradient-to-br from-green-500/5 to-emerald-500/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+              <DollarSign className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{revenueShare}% Revenue Share</h3>
+              <p className="text-xs text-muted-foreground">
+                You keep {revenueShare}% of earnings from song purchases and tips.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Phone Number */}
       <div>
@@ -1059,7 +1074,7 @@ function StepKyc({
       <div className="text-center">
         <h2 className="text-2xl font-bold">Verify your identity</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Required once. Approved within 24 hours. You can keep using the app while we review.
+          Required once. You can keep using the app while we review it.
         </p>
       </div>
 

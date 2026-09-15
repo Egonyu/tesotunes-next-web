@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trophy, Medal, Crown, TrendingUp, Users, Gift, Calendar, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
+import { Trophy, Medal, Crown, TrendingUp, Users, Calendar, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -276,37 +276,12 @@ export default function LeaderboardPage() {
         </CardContent>
       </Card>
 
-      {/* Prizes Info */}
-      <Card className="bg-zinc-900 border-zinc-800 mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="w-5 h-5 text-yellow-400" />
-            Monthly Prizes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
-              <Crown className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-              <p className="font-semibold text-white">1st Place</p>
-              <p className="text-yellow-400">5,000 Credits + VIP Badge</p>
-            </div>
-            <div className="text-center p-4 bg-gray-500/10 rounded-lg border border-gray-500/30">
-              <Medal className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="font-semibold text-white">2nd Place</p>
-              <p className="text-gray-400">2,500 Credits + Premium Month</p>
-            </div>
-            <div className="text-center p-4 bg-amber-600/10 rounded-lg border border-amber-600/30">
-              <Medal className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-              <p className="font-semibold text-white">3rd Place</p>
-              <p className="text-amber-400">1,000 Credits + Exclusive Merch</p>
-            </div>
-          </div>
-          <p className="text-center text-gray-400 text-sm mt-4">
-            Contest resets on the 1st of each month. Keep referring to climb the ranks!
-          </p>
-        </CardContent>
-      </Card>
+      {/*
+        A "Monthly Prizes" card stood here: 5,000 credits + VIP badge, a
+        Premium month, exclusive merch, resetting on the 1st. No contest was
+        ever run and nothing paid those prizes, so it was removed. Rewards that
+        are real live on /referrals/rewards.
+      */}
     </div>
   );
 }

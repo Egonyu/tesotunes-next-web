@@ -64,7 +64,9 @@ export default function ReferralsPage() {
     if (!dashboard?.referral_link) return;
     
     const message = encodeURIComponent(
-      `Join me on TesoTunes - Uganda's #1 music streaming platform! 🎵 Get ${dashboard.reward_rates?.joiner_credits ?? 0} free credits when you sign up: ${dashboard.referral_link}`
+      (dashboard.reward_rates?.joiner_credits ?? 0) > 0
+        ? `Join me on TesoTunes - stream and support Ugandan music! 🎵 Get ${dashboard.reward_rates?.joiner_credits} free credits when you sign up: ${dashboard.referral_link}`
+        : `Join me on TesoTunes - stream and support Ugandan music! 🎵 ${dashboard.referral_link}`
     );
     
     const urls: Record<string, string> = {
@@ -474,9 +476,15 @@ export default function ReferralsPage() {
                   <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     3
                   </div>
+                  {/* Was "They become active — you earn 50 credits". The
+                      referrer is paid at signup, at the live rate. */}
                   <div>
-                    <p className="font-medium text-white">They become active</p>
-                    <p className="text-sm text-gray-400">You earn 50 credits</p>
+                    <p className="font-medium text-white">You get credited</p>
+                    <p className="text-sm text-gray-400">
+                      {referrerCredits > 0
+                        ? `You earn ${referrerCredits.toLocaleString()} credits for each signup`
+                        : 'Signups count toward your milestones'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -485,7 +493,7 @@ export default function ReferralsPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">Unlock milestones</p>
-                    <p className="text-sm text-gray-400">Get bonus rewards at 5, 10, 25+ referrals</p>
+                    <p className="text-sm text-gray-400">Claim bonus credits as more friends join</p>
                   </div>
                 </div>
               </div>

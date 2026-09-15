@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   Share2,
   Star,
-  Truck,
   Shield,
   Package,
   Minus,
@@ -517,23 +516,15 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </button>
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-3 gap-4 py-4 border-t border-b">
-            <div className="text-center">
-              <Truck className="h-6 w-6 mx-auto text-primary mb-2" />
-              <p className="text-sm font-medium">Free Delivery</p>
-              <p className="text-xs text-muted-foreground">On orders over UGX 100k</p>
-            </div>
-            <div className="text-center">
-              <Shield className="h-6 w-6 mx-auto text-primary mb-2" />
-              <p className="text-sm font-medium">Secure Payment</p>
-              <p className="text-xs text-muted-foreground">100% secure checkout</p>
-            </div>
-            <div className="text-center">
-              <Package className="h-6 w-6 mx-auto text-primary mb-2" />
-              <p className="text-sm font-medium">Easy Returns</p>
-              <p className="text-xs text-muted-foreground">7-day return policy</p>
-            </div>
+          {/*
+            Was three tiles: "Free Delivery on orders over UGX 100k", "100%
+            secure checkout" and "7-day return policy". No free-delivery rule
+            exists (orders are charged shipping), there is no returns flow, and
+            return terms are each seller's own. Only the true one stays.
+          */}
+          <div className="flex items-center gap-2 py-4 border-t border-b text-sm text-muted-foreground">
+            <Shield className="h-4 w-4 text-primary" />
+            Secure checkout. Shipping and return terms are set by the seller.
           </div>
 
           {/* Description */}

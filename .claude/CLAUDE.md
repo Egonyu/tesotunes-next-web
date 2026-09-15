@@ -19,6 +19,13 @@
 - StorageHelper.php uses `config('app.url')` prefix
 - Never pass relative paths to Next.js Image components
 
+### Rule 5: No Unbacked Promises
+- Any figure or reward shown to users — fees, rates, credit amounts, prizes, badges, perks, limits, timelines, catalogue/user counts — must come from the API, or not be shown
+- Never type a number into copy ("50 credits", "5% fee", "10K+ songs", "within 24 hours"); render the live value, and hide the element when the API doesn't supply it — never fall back to an invented one
+- Only advertise a reward if the backend actually pays it, and a perk if the backend enforces it
+- Money totals come from backend quotes (e.g. POST /tickets/quote) — the client never estimates fees
+- Guarded by `src/test/no-unbacked-promises.test.ts`; extend its patterns when you find a new kind
+
 ### Rule 4: Status Fields Must Have Defaults
 - Every `status` field must have a valid default in backend
 - Songs: draft → pending → published/rejected

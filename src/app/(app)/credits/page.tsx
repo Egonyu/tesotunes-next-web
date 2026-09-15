@@ -8,6 +8,12 @@ import { apiGet, apiPost } from '@/lib/api';
 import { cn, formatNumber , getErrorMessage} from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCreditBalance, useExchangeCredits, usePurchaseCredits } from '@/hooks/usePayments';
+import {
+  useClaimCreditGoal,
+  useCreditGoals,
+  type CreditGoal,
+  type CreditGoalsSummary,
+} from '@/hooks/useCreditGoals';
 
 /**
  * Credits.
@@ -42,17 +48,11 @@ interface CreditWallet {
   spent_today: number;
   login_streak: number;
   /**
-   * Mirrors CreditService::getNextMilestone. The page previously declared
-   * `credits_needed`, a field the API has never sent — it sends `remaining` —
-   * so reading it gave undefined and crashed formatNumber for every account
-   * that had a milestone at all.
+   * Real, claimable goals. This replaced `next_milestone`, which measured
+   * every credit ever added — purchases included — against a list of rewards
+   * nothing paid, and sat under the balance as though it measured that.
    */
-  next_milestone: {
-    target: number;
-    remaining: number;
-    progress_percentage: number;
-    reward: string;
-  } | null;
+  goals?: CreditGoalsSummary;
   recent_transactions: CreditTransaction[];
 }
 
@@ -122,7 +122,19 @@ export default function CreditsPage() {
     onError: () => toast.error('Already claimed today, or not eligible.'),
   });
 
+  const { data: goalsData } = useCreditGoals();
+  const claimGoal = useClaimCreditGoal();
+
+  const handleClaimGoal = (goal: CreditGoal) => {
+    claimGoal.mutate(goal.id, {
+      onSuccess: (res) => toast.success(res.message || `${goal.name} claimed.`),
+      onError: (error) => toast.error(getErrorMessage(error, 'Could not claim this goal.')),
+    });
+  };
+
   const wallet = dashboard?.wallet;
+  const nextGoal = wallet?.goals?.next ?? null;
+  const goals = goalsData?.milestones ?? [];
   const challenges = dashboard?.daily_challenges ?? [];
   const transactions = showHistory ? transactionsData ?? [] : wallet?.recent_transactions ?? [];
 
@@ -214,18 +226,56 @@ export default function CreditsPage() {
         )}
 
         {/*
-          The next milestone belongs against the balance it measures. It used
-          to float below the page as a loose sentence, which is why it read as
-          stray prose rather than progress.
+          The next goal, labelled with the figure it actually measures. Goals
+          count credits earned through activity, not the balance above — which
+          can be zero after spending — so the two are never shown as one.
         */}
-        {wallet?.next_milestone && (
-          <div className="mt-2 flex items-baseline justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">
-              Next: {wallet.next_milestone.reward}
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums">
-              {formatNumber(wallet.next_milestone.remaining)} to go
-            </span>
+        {wallet?.goals && nextGoal && (
+          <div className="mt-3 border-t border-primary/20 pt-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-muted-foreground">Earned from activity</span>
+              <span className="font-semibold tabular-nums">
+                {wallet.goals.activity_credits.toLocaleString()}
+              </span>
+            </div>
+
+            {nextGoal.status === 'claimable' ? (
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span>
+                  {nextGoal.badge_icon} <span className="font-medium">{nextGoal.name}</span> reached
+                  {nextGoal.reward_value > 0 && (
+                    <span className="text-muted-foreground"> · +{nextGoal.reward_value.toLocaleString()} credits</span>
+                  )}
+                </span>
+                <button
+                  onClick={() => handleClaimGoal(nextGoal)}
+                  disabled={claimGoal.isPending}
+                  className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                >
+                  Claim
+                </button>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/15"
+                  role="progressbar"
+                  aria-label={`Progress to ${nextGoal.name}`}
+                  aria-valuenow={nextGoal.progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${nextGoal.progress}%` }} />
+                </div>
+                <p className="mt-1.5 text-muted-foreground">
+                  <span className="font-medium text-foreground tabular-nums">
+                    {nextGoal.remaining.toLocaleString()}
+                  </span>{' '}
+                  more to reach {nextGoal.badge_icon} <span className="font-medium text-foreground">{nextGoal.name}</span>
+                  {nextGoal.reward_value > 0 && <> · +{nextGoal.reward_value.toLocaleString()} credits</>}
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -324,6 +374,52 @@ export default function CreditsPage() {
                 <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                   {challenge.progress}/{challenge.target}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {goals.length > 0 && (
+        <div>
+          <h2 className="mb-1 font-semibold">Goals</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Earn credits by listening, sharing and joining in. Bought credits don&apos;t count.
+          </p>
+          <div className="divide-y overflow-hidden rounded-xl border bg-card">
+            {goals.map((goal) => (
+              <div key={goal.id} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      <span aria-hidden="true">{goal.badge_icon}</span> {goal.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {goal.credits_required.toLocaleString()} credits earned
+                      {goal.reward_value > 0 && <> · +{goal.reward_value.toLocaleString()} credits</>}
+                    </p>
+                  </div>
+                  {goal.status === 'claimable' ? (
+                    <button
+                      onClick={() => handleClaimGoal(goal)}
+                      disabled={claimGoal.isPending}
+                      className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                    >
+                      Claim
+                    </button>
+                  ) : goal.status === 'claimed' ? (
+                    <span className="shrink-0 text-sm font-medium text-green-600 dark:text-green-400">
+                      {goal.badge_name || 'Claimed'} ✓
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{goal.progress}%</span>
+                  )}
+                </div>
+                {goal.status === 'locked' && (
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${goal.progress}%` }} />
+                  </div>
+                )}
               </div>
             ))}
           </div>

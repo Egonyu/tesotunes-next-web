@@ -30,7 +30,7 @@ interface EventCartState {
 
   // Computed
   subtotal: number
-  platformFee: number
+  /** Before fees — the real total is quote.total_amount. */
   total: number
 
   // Actions
@@ -46,11 +46,18 @@ interface EventCartState {
   setHybridCalculation: (calc: HybridPaymentCalculation | null) => void
 }
 
+/**
+ * Cart figures before fees.
+ *
+ * This used to add a flat 5% "platform fee". The backend charges commission
+ * plus processing — 12.9% by default, and different per organiser plan — so
+ * the cart showed buyers a lower price than they were charged. Fees now come
+ * only from POST /tickets/quote; the cart never guesses them.
+ */
 function calculateTotals(items: CartItem[], discountAmount: number) {
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0)
-  const platformFee = Math.round(subtotal * 0.05) // 5% platform fee
-  const total = Math.max(0, subtotal + platformFee - discountAmount)
-  return { subtotal, platformFee, total }
+  const total = Math.max(0, subtotal - discountAmount)
+  return { subtotal, total }
 }
 
 export const useEventCartStore = create<EventCartState>()(
@@ -64,7 +71,6 @@ export const useEventCartStore = create<EventCartState>()(
       hybridCalculation: null,
       creditsToUse: 0,
       subtotal: 0,
-      platformFee: 0,
       total: 0,
 
       addToCart: (tier, quantity) => {
@@ -131,7 +137,6 @@ export const useEventCartStore = create<EventCartState>()(
           hybridCalculation: null,
           creditsToUse: 0,
           subtotal: 0,
-          platformFee: 0,
           total: 0,
         }),
 

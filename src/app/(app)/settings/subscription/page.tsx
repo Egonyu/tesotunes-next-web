@@ -506,7 +506,7 @@ function CurrentPlanCard({
           </div>
           <div>
             <p className="text-muted-foreground">Downloads</p>
-            <p className="font-medium">{sub.limits.downloads_per_day}/day</p>
+            <p className="font-medium">{sub.limits.downloads_per_day === null ? 'Unlimited' : `${sub.limits.downloads_per_day}/day`}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Ads</p>
@@ -558,7 +558,7 @@ function CurrentPlanCard({
         <div>
           <p className="text-muted-foreground">Downloads</p>
           <p className="font-medium">
-            {sub.limits.downloads_per_day === 0 ? 'Unlimited' : `${sub.limits.downloads_per_day}/day`}
+            {sub.limits.downloads_per_day === null ? 'Unlimited' : `${sub.limits.downloads_per_day}/day`}
           </p>
         </div>
       </div>

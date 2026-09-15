@@ -56,7 +56,7 @@ const navItems: NavItem[] = [
   { href: '/artist/distribution', label: 'Distribution', icon: Globe, caps: ['artist'] },
   { href: '/wallet', label: 'Wallet', icon: Wallet, caps: ['artist'] },
   { href: '/artist/fan-club', label: 'Fan Club', icon: Crown, caps: ['artist'] },
-  { href: '/artist/referrals', label: 'Fan Referrals', icon: Users, caps: ['artist'] },
+  { href: '/referrals', label: 'Referrals', icon: Users, caps: ['artist'] },
   { href: '/artist/events', label: 'Events', icon: Calendar, caps: ['organizer', 'artist'] },
   { href: '/artist/store', label: 'Store', icon: ShoppingBag, caps: ['seller'] },
   { href: '/artist/promotions', label: 'Promotions', icon: Megaphone, caps: ['promoter', 'seller'] },

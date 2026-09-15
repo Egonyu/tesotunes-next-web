@@ -36,6 +36,7 @@ interface Event {
   starts_at?: string;
   ticketsSold: number;
   tickets_sold?: number;
+  tickets_capacity?: number;
   capacity: number;
   attendee_limit?: number;
   attendee_count?: number;
@@ -70,6 +71,7 @@ interface EventStats {
   tickets_sold_30d: number;
   revenue_30d: number;
   avg_attendance: number;
+  avg_sell_through?: number;
 }
 
 interface PaginatedEvents {
@@ -182,9 +184,10 @@ export default function EventsPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <p className="text-2xl font-bold">
-            {stats?.avg_attendance !== undefined ? `${stats.avg_attendance}%` : '—'}
+            {(stats?.avg_sell_through ?? stats?.avg_attendance) !== undefined ? `${stats?.avg_sell_through ?? stats?.avg_attendance}%` : '—'}
           </p>
-          <p className="text-sm text-muted-foreground">Avg. Attendance</p>
+          {/* Tickets sold ÷ tickets offered. "Attendance" implied check-ins, which this isn't. */}
+          <p className="text-sm text-muted-foreground">Tickets sold</p>
         </div>
       </div>
 
@@ -285,12 +288,12 @@ export default function EventsPage() {
                       <p className="text-xs text-muted-foreground">Sold</p>
                     </div>
                     <div>
-                      <p className="font-semibold">{(event.attendee_limit || event.capacity || 0).toLocaleString()}</p>
+                      <p className="font-semibold">{(event.tickets_capacity || event.attendee_limit || event.capacity || 0).toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Capacity</p>
                     </div>
                     <div>
                       <p className="font-semibold">
-                        {(event.attendee_limit || event.capacity || 0) > 0 ? Math.round((sold / (event.attendee_limit || event.capacity || 1)) * 100) : 0}%
+                        {(event.tickets_capacity || event.attendee_limit || event.capacity || 0) > 0 ? Math.round((sold / (event.tickets_capacity || event.attendee_limit || event.capacity || 1)) * 100) : 0}%
                       </p>
                       <p className="text-xs text-muted-foreground">Filled</p>
                     </div>

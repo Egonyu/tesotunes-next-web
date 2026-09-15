@@ -1,247 +1,31 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Minus, Calendar, MapPin, DollarSign, Ticket, Loader2, Image as ImageIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
-import EventCommissionEstimator from '@/components/events/EventCommissionEstimator';
-import {
-  useUpdateEvent,
-  Event,
-  UpdateEventRequest,
-  getEventCapacity,
-  getEventImage,
-  getEventStartDate,
-  getEventVenueLabel,
-} from '@/hooks/useEvents';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface TicketTierForm {
-  id?: number;
-  name: string;
-  description: string;
-  price: number;
-  price_credits: number;
-  quantity: number;
-  max_per_order: number;
-}
-
-const TICKETING_MODE_OPTIONS = [
-  {
-    value: 'tesotunes_managed',
-    label: 'Tesotunes ticketing',
-    description: 'Sell and validate tickets fully through Tesotunes.',
-  },
-  {
-    value: 'hybrid',
-    label: 'Hybrid ticketing',
-    description: 'Use Tesotunes alongside your own external or printed allocation.',
-  },
-  {
-    value: 'external_only',
-    label: 'External only',
-    description: 'Promote here, but send buyers to your own ticketing channel.',
-  },
-  {
-    value: 'free_rsvp',
-    label: 'Free RSVP',
-    description: 'Collect attendance without paid checkout.',
-  },
-] as const;
+import EventForm from '@/components/events/form/EventForm';
+import { draftFromEvent, mapServerErrors, toArtistRequest } from '@/components/events/form/event-form-model';
+import { apiGet } from '@/lib/api';
+import { Event, UpdateEventRequest, useUpdateEvent } from '@/hooks/useEvents';
+import { getErrorMessage, getValidationErrors } from '@/lib/utils';
 
 export default function EditArtistEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const updateEvent = useUpdateEvent();
+  const [serverErrors, setServerErrors] = useState<ReturnType<typeof mapServerErrors> | null>(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['artist', 'events', id],
-    queryFn: () => apiGet<{ data: Event }>(`/artist/events/${id}`).then(r => r.data),
+    queryFn: () => apiGet<{ data: Event }>(`/artist/events/${id}`).then((r) => r.data),
     enabled: !!id,
   });
 
-  // Event info
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('concert');
-  const [date, setDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [time, setTime] = useState('');
-  const [venue, setVenue] = useState('');
-  const [location, setLocation] = useState('');
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState('Uganda');
-  const [capacity, setCapacity] = useState('');
-  const [ticketingMode, setTicketingMode] = useState<UpdateEventRequest['ticketing_mode']>('tesotunes_managed');
-  const [status, setStatus] = useState('draft');
-  const [registrationDeadline, setRegistrationDeadline] = useState('');
-  const [refundPolicy, setRefundPolicy] = useState('');
-  const [cancellationPolicy, setCancellationPolicy] = useState('');
-  const [supportEmail, setSupportEmail] = useState('');
-  const [supportPhone, setSupportPhone] = useState('');
-  const [invoiceIssuerName, setInvoiceIssuerName] = useState('');
-  const [invoiceSupportEmail, setInvoiceSupportEmail] = useState('');
-  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState('');
-  const [taxRatePercent, setTaxRatePercent] = useState('');
-  const [taxIsInclusive, setTaxIsInclusive] = useState(false);
-  const [ageRestriction, setAgeRestriction] = useState('');
-  const [doorNotes, setDoorNotes] = useState('');
-  const [taxVatNotes, setTaxVatNotes] = useState('');
-  const [requirementsText, setRequirementsText] = useState('');
-  const [website, setWebsite] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
-
-  // Ticket tiers
-  const [ticketTiers, setTicketTiers] = useState<TicketTierForm[]>([]);
-
-  // Load event data
-  useEffect(() => {
-    if (!event) return;
-    setTitle(event.title || '');
-    setDescription(event.description || '');
-    setCategory(event.category || 'concert');
-    setStatus(event.status || 'draft');
-    setCountry(event.country || 'Uganda');
-    setCity(event.city || '');
-    setVenue(getEventVenueLabel(event));
-    setLocation(event.city || '');
-    setCapacity(String(getEventCapacity(event) || ''));
-    setTicketingMode(event.ticketing_mode || (event.is_free ? 'free_rsvp' : 'tesotunes_managed'));
-    setRegistrationDeadline(event.registration_deadline ? event.registration_deadline.slice(0, 16) : '');
-    setRefundPolicy(event.refund_policy || '');
-    setCancellationPolicy(event.cancellation_policy || '');
-    setSupportEmail(event.contact_info?.support_email || '');
-    setSupportPhone(event.contact_info?.support_phone || '');
-    setInvoiceIssuerName(event.contact_info?.invoice_issuer_name || '');
-    setInvoiceSupportEmail(event.contact_info?.invoice_support_email || '');
-    setTaxRegistrationNumber(event.contact_info?.tax_registration_number || '');
-    setTaxRatePercent(event.contact_info?.tax_rate_percent != null ? String(event.contact_info.tax_rate_percent) : '');
-    setTaxIsInclusive(Boolean(event.contact_info?.tax_is_inclusive));
-    setAgeRestriction(event.contact_info?.age_restriction || '');
-    setDoorNotes(event.contact_info?.door_notes || '');
-    setTaxVatNotes(event.contact_info?.tax_vat_notes || '');
-    setRequirementsText((event.requirements || []).join('\n'));
-    setWebsite(event.website || '');
-
-    // Parse date/time from starts_at
-    if (event.starts_at) {
-      const dt = new Date(event.starts_at);
-      setDate(dt.toISOString().split('T')[0]);
-      setTime(dt.toISOString().split('T')[1]?.substring(0, 5) || '');
-    }
-    if (event.ends_at) {
-      setEndDate(new Date(event.ends_at).toISOString().split('T')[0]);
-    }
-
-    // Image preview
-    setImagePreview(getEventImage(event));
-
-    // Ticket tiers
-    if (event.ticket_tiers && event.ticket_tiers.length > 0) {
-      setTicketTiers(event.ticket_tiers.map(t => ({
-        id: t.id,
-        name: t.name || '',
-        description: t.description || '',
-        price: t.price_ugx || t.price || 0,
-        price_credits: t.price_credits || 0,
-        quantity: t.quantity_total || t.quantity || 0,
-        max_per_order: t.max_per_order || 10,
-      })));
-    }
-  }, [event]);
-
-  const isFreeRsvp = ticketingMode === 'free_rsvp';
-
-  const addTicketTier = () => {
-    setTicketTiers([...ticketTiers, { name: '', description: '', price: 0, price_credits: 0, quantity: 0, max_per_order: 10 }]);
-  };
-
-  const removeTicketTier = (index: number) => {
-    if (ticketTiers.length > 1) {
-      setTicketTiers(ticketTiers.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateTier = (index: number, field: keyof TicketTierForm, value: string | number) => {
-    const updated = [...ticketTiers];
-    updated[index] = { ...updated[index], [field]: value };
-    setTicketTiers(updated);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!title || !description || !date || !time || !venue || !city) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (ticketTiers.length === 0) {
-      toast.error('Please add at least one ticket tier');
-      return;
-    }
-
-    if (ticketTiers.some(t => !t.name || t.price < 0 || t.quantity < 1)) {
-      toast.error('Please complete all ticket tier information');
-      return;
-    }
-
-    try {
-      await updateEvent.mutateAsync({
-        id: parseInt(id),
-        title,
-        description,
-        category,
-        date,
-        end_date: endDate || undefined,
-        time,
-        venue,
-        location: location || `${city}, ${country}`,
-        city,
-        country,
-        is_free: isFreeRsvp,
-        ticketing_mode: ticketingMode,
-        status,
-        capacity: capacity ? parseInt(capacity) : undefined,
-        registration_deadline: registrationDeadline || undefined,
-        refund_policy: refundPolicy || undefined,
-        cancellation_policy: cancellationPolicy || undefined,
-        requirements: requirementsText
-          .split('\n')
-          .map((item) => item.trim())
-          .filter(Boolean),
-        contact_info: {
-          support_email: supportEmail || undefined,
-          support_phone: supportPhone || undefined,
-          invoice_issuer_name: invoiceIssuerName || undefined,
-          invoice_support_email: invoiceSupportEmail || undefined,
-          tax_registration_number: taxRegistrationNumber || undefined,
-          tax_rate_percent: taxRatePercent ? Number(taxRatePercent) : undefined,
-          tax_is_inclusive: taxRatePercent ? taxIsInclusive : undefined,
-          age_restriction: ageRestriction || undefined,
-          door_notes: doorNotes || undefined,
-          tax_vat_notes: taxVatNotes || undefined,
-        },
-        website: website || undefined,
-        image: image || undefined,
-        ticket_tiers: ticketTiers.map(t => ({
-          name: t.name,
-          description: t.description,
-          price: isFreeRsvp ? 0 : t.price,
-          quantity: t.quantity,
-          max_per_order: t.max_per_order,
-        })),
-      } as UpdateEventRequest);
-      toast.success('Event updated successfully!');
-      router.push(`/artist/events/${id}`);
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to update event'));
-    }
-  };
+  const initial = useMemo(() => (event ? draftFromEvent(event) : null), [event]);
 
   if (isLoading) {
     return (
@@ -251,516 +35,48 @@ export default function EditArtistEventPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  if (!event) {
+  if (!event || !initial) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-semibold mb-2">Event not found</h2>
-        <Link href="/artist/events" className="text-primary hover:underline">Back to Events</Link>
+      <div className="py-20 text-center">
+        <h2 className="mb-2 text-xl font-semibold">Event not found</h2>
+        <Link href="/artist/events" className="text-primary hover:underline">Back to events</Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href={`/artist/events/${id}`} className="p-2 rounded-lg hover:bg-muted">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Link href={`/artist/events/${id}`} className="rounded-lg p-2 hover:bg-muted" aria-label="Back to event">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Edit Event</h1>
-          <p className="text-muted-foreground">{event.title}</p>
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold">Edit event</h1>
+          <p className="truncate text-sm text-muted-foreground">{event.title}</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Event Information
-          </h2>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Event Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Description *</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              >
-                <option value="concert">Concert</option>
-                <option value="festival">Festival</option>
-                <option value="conference">Conference</option>
-                <option value="workshop">Workshop</option>
-                <option value="party">Party</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Ticketing Mode</label>
-              <select
-                value={ticketingMode}
-                onChange={(e) => setTicketingMode(e.target.value as UpdateEventRequest['ticketing_mode'])}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              >
-                {TICKETING_MODE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {TICKETING_MODE_OPTIONS.find((option) => option.value === ticketingMode)?.description}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Start Date *</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Start Time *</label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Capacity</label>
-              <input
-                type="number"
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-                min={0}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Business Rules & Support</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-2">Registration Deadline</label>
-              <input
-                type="datetime-local"
-                value={registrationDeadline}
-                onChange={(e) => setRegistrationDeadline(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Event Website</label>
-              <input
-                type="url"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Support Email</label>
-              <input
-                type="email"
-                value={supportEmail}
-                onChange={(e) => setSupportEmail(e.target.value)}
-                placeholder="tickets@yourevent.com"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Support Phone</label>
-              <input
-                type="text"
-                value={supportPhone}
-                onChange={(e) => setSupportPhone(e.target.value)}
-                placeholder="+256..."
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Invoice Issuer Name</label>
-              <input
-                type="text"
-                value={invoiceIssuerName}
-                onChange={(e) => setInvoiceIssuerName(e.target.value)}
-                placeholder="Tesotunes Events Limited"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Invoice Support Email</label>
-              <input
-                type="email"
-                value={invoiceSupportEmail}
-                onChange={(e) => setInvoiceSupportEmail(e.target.value)}
-                placeholder="billing@yourevent.com"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tax Registration Number</label>
-              <input
-                type="text"
-                value={taxRegistrationNumber}
-                onChange={(e) => setTaxRegistrationNumber(e.target.value)}
-                placeholder="TIN / VAT Number"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tax Rate Percent</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={taxRatePercent}
-                onChange={(e) => setTaxRatePercent(e.target.value)}
-                placeholder="18"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Age Restriction</label>
-              <input
-                type="text"
-                value={ageRestriction}
-                onChange={(e) => setAgeRestriction(e.target.value)}
-                placeholder="18+ only"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tax / VAT Notes</label>
-              <input
-                type="text"
-                value={taxVatNotes}
-                onChange={(e) => setTaxVatNotes(e.target.value)}
-                placeholder="VAT included in ticket price"
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div className="md:col-span-2 rounded-lg border bg-muted/20 px-4 py-3">
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={taxIsInclusive}
-                  onChange={(e) => setTaxIsInclusive(e.target.checked)}
-                  className="h-4 w-4 rounded border"
-                />
-                Ticket price already includes tax
-              </label>
-              <p className="mt-2 text-xs text-muted-foreground">
-                This affects invoice presentation only. Tesotunes will not add extra tax at checkout unless a charging contract is introduced later.
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Refund Policy</label>
-              <textarea
-                value={refundPolicy}
-                onChange={(e) => setRefundPolicy(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Cancellation Policy</label>
-              <textarea
-                value={cancellationPolicy}
-                onChange={(e) => setCancellationPolicy(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Door Notes</label>
-              <textarea
-                value={doorNotes}
-                onChange={(e) => setDoorNotes(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Attendee Requirements</label>
-              <textarea
-                value={requirementsText}
-                onChange={(e) => setRequirementsText(e.target.value)}
-                rows={4}
-                placeholder={"One requirement per line\nBring ID\nNo outside food"}
-                className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Venue */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Venue
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Venue Name *</label>
-              <input
-                type="text"
-                value={venue}
-                onChange={(e) => setVenue(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">City *</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Country</label>
-              <input
-                type="text"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border bg-background"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Cover Image */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" />
-            Cover Image
-          </h2>
-          <div className="flex items-center gap-4">
-            {(imagePreview || image) && (
-              <div className="relative h-24 w-36 rounded-lg overflow-hidden bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image ? URL.createObjectURL(image) : imagePreview}
-                  alt="Cover preview"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-            <label className="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer hover:bg-muted">
-              <ImageIcon className="h-4 w-4" />
-              {imagePreview || image ? 'Change Image' : 'Upload Image'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setImage(file);
-                }}
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* Ticket Tiers */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Ticket className="h-5 w-5" />
-              Ticket Tiers
-            </h2>
-            <button type="button" onClick={addTicketTier} className="flex items-center gap-1 text-sm text-primary hover:underline">
-              <Plus className="h-4 w-4" /> Add Tier
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {ticketTiers.map((tier, index) => (
-              <div key={index} className="p-4 rounded-lg border space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm">Tier {index + 1}</p>
-                  {ticketTiers.length > 1 && (
-                    <button type="button" onClick={() => removeTicketTier(index)} className="text-red-500 hover:underline text-sm">
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Name *</label>
-                    <input
-                      type="text"
-                      value={tier.name}
-                      onChange={(e) => updateTier(index, 'name', e.target.value)}
-                      placeholder="e.g. Regular"
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Description</label>
-                    <input
-                      type="text"
-                      value={tier.description}
-                      onChange={(e) => updateTier(index, 'description', e.target.value)}
-                      placeholder="Standard entry"
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Price (UGX) *</label>
-                    <input
-                      type="number"
-                      value={isFreeRsvp ? 0 : tier.price}
-                      onChange={(e) => updateTier(index, 'price', parseInt(e.target.value) || 0)}
-                      min={0}
-                      disabled={isFreeRsvp}
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                    {isFreeRsvp && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Free RSVP mode forces ticket prices to 0.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Quantity *</label>
-                    <input
-                      type="number"
-                      value={tier.quantity}
-                      onChange={(e) => updateTier(index, 'quantity', parseInt(e.target.value) || 0)}
-                      min={1}
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Max Per Order</label>
-                    <input
-                      type="number"
-                      value={tier.max_per_order}
-                      onChange={(e) => updateTier(index, 'max_per_order', parseInt(e.target.value) || 1)}
-                      min={1}
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Price (Credits)</label>
-                    <input
-                      type="number"
-                      value={tier.price_credits}
-                      onChange={(e) => updateTier(index, 'price_credits', parseInt(e.target.value) || 0)}
-                      min={0}
-                      className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <EventCommissionEstimator
-          ticketingMode={ticketingMode}
-          currency="UGX"
-          ticketTiers={ticketTiers.map((tier) => ({
-            name: tier.name,
-            price: isFreeRsvp ? 0 : tier.price,
-            price_credits: tier.price_credits,
-            quantity: tier.quantity,
-          }))}
-        />
-
-        {/* Submit */}
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={updateEvent.isPending}
-            className={cn(
-              'flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors',
-              updateEvent.isPending
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            )}
-          >
-            {updateEvent.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              'Update Event'
-            )}
-          </button>
-          <Link
-            href={`/artist/events/${id}`}
-            className="px-6 py-3 rounded-lg border hover:bg-muted transition-colors"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+      <EventForm
+        mode="artist"
+        isEdit
+        initial={initial}
+        submitting={updateEvent.isPending}
+        serverErrors={serverErrors}
+        estimateEndpoint="/artist/events/commission-simulation"
+        onCancel={() => router.push(`/artist/events/${id}`)}
+        onSubmit={async (draft) => {
+          setServerErrors(null);
+          try {
+            await updateEvent.mutateAsync({ id: Number(id), ...toArtistRequest(draft) } as UpdateEventRequest);
+            await queryClient.invalidateQueries({ queryKey: ['artist', 'events', id] });
+            toast.success('Event updated');
+            router.push(`/artist/events/${id}`);
+          } catch (error: unknown) {
+            setServerErrors(mapServerErrors(getValidationErrors(error)));
+            toast.error(getErrorMessage(error, 'Could not save changes'));
+          }
+        }}
+      />
     </div>
   );
 }

@@ -53,7 +53,11 @@ export function OrderSummary({ className, quote }: OrderSummaryProps) {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{feeLabel}</span>
             <span className={quote ? undefined : 'text-muted-foreground'}>
-              {quote ? `UGX ${quote.total_fee_amount.toLocaleString()}` : 'Shown before you pay'}
+              {quote
+                ? quote.fee_handling === 'absorb'
+                  ? 'Included in price'
+                  : `UGX ${quote.total_fee_amount.toLocaleString()}`
+                : 'Shown before you pay'}
             </span>
           </div>
         </div>

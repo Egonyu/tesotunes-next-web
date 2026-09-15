@@ -146,7 +146,10 @@ export function TicketSelector({
           )
           const qty = cartItem?.quantity ?? 0
           const available = tier.available ?? 0
-          const isTierSoldOut = available <= 0
+          // Not on sale (sales not open yet, or ended) is unavailable too — this
+          // used to show as buyable and fail only at checkout.
+          const offSale = tier.is_on_sale === false && available > 0
+          const isTierSoldOut = available <= 0 || offSale
 
           return (
             <div
@@ -185,10 +188,14 @@ export function TicketSelector({
                     <p className="font-bold text-green-500">Free</p>
                   ) : (
                     <>
+                      {/* The checkout price, fees included — not a lower number that grows at payment. */}
                       <p className="font-bold text-sm">
                         UGX{' '}
-                        {(tier.price_ugx || tier.price || 0).toLocaleString()}
+                        {(tier.buyer_price_ugx ?? tier.price_ugx ?? tier.price ?? 0).toLocaleString()}
                       </p>
+                      {tier.buyer_price_ugx != null && tier.buyer_price_ugx > (tier.price_ugx ?? tier.price ?? 0) && (
+                        <p className="text-[10px] text-muted-foreground">incl. fees</p>
+                      )}
                       {(tier.price_credits ?? 0) > 0 && (
                         <p className="text-[10px] text-muted-foreground flex items-center gap-0.5 justify-end">
                           <Coins className="h-3 w-3" />
@@ -203,7 +210,9 @@ export function TicketSelector({
               {/* Quantity Controls */}
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed">
                 <div className="text-xs text-muted-foreground">
-                  {isTierSoldOut ? (
+                  {offSale ? (
+                    <span className="font-medium text-muted-foreground">{tier.availability_message || 'Not on sale'}</span>
+                  ) : isTierSoldOut ? (
                     <span className="text-red-500 font-medium">Sold out</span>
                   ) : available < 50 ? (
                     <span className="text-orange-500 font-medium">

@@ -56,7 +56,10 @@ function formatPrice(event: EventLike) {
   if (tiers.every((t) => t.price === 0 || t.is_free))
     return { label: 'Free', isFree: true }
 
-  const prices = tiers.map((t) => t.price).filter((p) => p > 0)
+  // What buyers pay at checkout (fees included) when the API supplies it.
+  const prices = tiers
+    .map((t) => (t as { buyer_price_ugx?: number | null }).buyer_price_ugx ?? t.price)
+    .filter((p) => p > 0)
   const min = Math.min(...prices)
   const max = Math.max(...prices)
 

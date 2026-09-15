@@ -60,6 +60,13 @@ export interface EventTicketTier {
   max_per_order: number;
   sales_start_date?: string | null;
   sales_end_date?: string | null;
+  sale_starts_at?: string | null;
+  sale_ends_at?: string | null;
+  /** One ticket's checkout total, fees included (EventTicketTierResource). */
+  buyer_price_ugx?: number | null;
+  fees_included_in_price?: boolean | null;
+  is_on_sale?: boolean;
+  availability_message?: string;
   is_active?: boolean;
   required_loyalty_tier?: string | null;
   tier_early_access_hours?: number | null;
@@ -273,6 +280,8 @@ export interface Event {
   virtual_link?: string;
   is_free?: boolean;
   ticketing_mode?: 'tesotunes_managed' | 'hybrid' | 'external_only' | 'free_rsvp';
+  /** Who pays Tesotunes' ticket fees. */
+  fee_handling?: 'pass_to_buyer' | 'absorb';
   is_featured: boolean;
   is_published?: boolean;
   requires_approval?: boolean;
@@ -305,6 +314,8 @@ export interface Event {
 
   // Stats
   tickets_sold?: number;
+  /** Sum of tier quantities, when tiers are loaded. */
+  tickets_capacity?: number;
   attendee_count?: number;
   rating_average?: number | null;
   review_count?: number;
@@ -673,6 +684,8 @@ export interface TicketQuote {
   total_amount: number;
   organizer_net_amount: number;
   fee_source: string;
+  /** pass_to_buyer: fees on top of total; absorb: included in the price. */
+  fee_handling?: 'pass_to_buyer' | 'absorb';
   organizer_plan?: {
     id: number;
     name: string;
@@ -792,6 +805,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
     virtual_link: raw.virtual_link as string | undefined,
     is_free: raw.is_free as boolean | undefined,
     ticketing_mode: raw.ticketing_mode as Event['ticketing_mode'],
+    fee_handling: raw.fee_handling as Event['fee_handling'],
     is_featured: (raw.is_featured || false) as boolean,
     is_published: raw.is_published as boolean | undefined,
     requires_approval: raw.requires_approval as boolean | undefined,
@@ -819,6 +833,7 @@ function transformEvent(raw: Record<string, unknown>): Event {
 
     // Stats
     tickets_sold: raw.tickets_sold as number | undefined,
+    tickets_capacity: raw.tickets_capacity as number | undefined,
     attendee_count: raw.attendee_count as number | undefined,
     rating_average: raw.rating_average as number | null | undefined,
     review_count: raw.review_count as number | undefined,
@@ -974,6 +989,7 @@ export interface CreateEventRequest {
   marketing_settings?: Event['marketing_settings'];
   is_free?: boolean;
   ticketing_mode?: Event['ticketing_mode'];
+  fee_handling?: Event['fee_handling'];
   status?: string;
   // Files — sent via FormData
   image?: File;           // alias → mapped to cover_image in FormData
@@ -981,6 +997,7 @@ export interface CreateEventRequest {
   banner_image?: File;    // alias → mapped to cover_image if no cover_image
   // Ticket tiers (sent as JSON string)
   ticket_tiers?: Array<{
+    id?: number;
     name: string;
     description?: string;
     price: number;

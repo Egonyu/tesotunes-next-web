@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { API_URL } from "./api-config";
 import { buildLocalApiBaseUrls, fetchApiWithFallback } from "./api-fallback";
+import { handleSessionExpired, isSessionExpiredResponse } from "./session-expiry";
 
 // ─── DUAL CODE-PATH ARCHITECTURE ─────────────────────────────────────────────
 //
@@ -141,6 +142,10 @@ api.interceptors.response.use(
       networkError.isNetworkError = true;
       networkError.originalError = error;
       return Promise.reject(networkError);
+    }
+
+    if (typeof window !== "undefined" && isSessionExpiredResponse(error.response)) {
+      handleSessionExpired();
     }
 
     return Promise.reject(error);

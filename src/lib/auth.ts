@@ -614,7 +614,7 @@ export const authConfig: NextAuthOptions = {
           console.warn("[Auth] Clearing expired access token after refresh failure");
           token.accessToken = undefined;
           // Say why. Without this the session cookie lives on for its full 30
-          // days wrapping a token that died after 24 hours, and every protected
+          // days wrapping a token that died after 14 days, and every protected
           // page bounces the user to a generic "sign in required" with no hint
           // that their session simply aged out.
           token.sessionExpired = true;

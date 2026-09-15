@@ -21,7 +21,11 @@ export function Providers({ children, session }: ProvidersProps) {
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000, // 1 minute
-            refetchOnWindowFocus: false,
+            // Coming back to a tab left open (or a phone woken up) must show
+            // current balances, not the numbers from when it was last looked
+            // at. Only queries past their staleTime refetch, so long-lived
+            // public data (genres, home rails) stays cached.
+            refetchOnWindowFocus: true,
             retry: 2,
             retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
           },
@@ -38,7 +42,9 @@ export function Providers({ children, session }: ProvidersProps) {
       <SessionProvider
         session={session}
         refetchInterval={5 * 60}
-        refetchOnWindowFocus={false}
+        // Re-checking the session on return is what rotates the API token
+        // (or notices it has died) before the page starts trusting it.
+        refetchOnWindowFocus
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryClientProvider client={queryClient}>

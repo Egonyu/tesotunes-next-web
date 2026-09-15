@@ -16,7 +16,7 @@ export default async function AccessRequiredPage({ searchParams }: Props) {
   /*
    * A lapsed session, told apart from never having signed in. The component
    * clears the stale cookie as well as explaining itself — a 30-day cookie
-   * wrapping a 24-hour token is the reason this looked like a broken page.
+   * wrapping a shorter-lived API token is why this looked like a broken page.
    */
   if (reason === 'expired') {
     return <ExpiredSessionNotice callbackUrl={callbackUrl} />;

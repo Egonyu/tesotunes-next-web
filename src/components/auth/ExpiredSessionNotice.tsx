@@ -8,8 +8,8 @@ import AccessNotice from '@/components/auth/AccessNotice';
  * Shown when the API token behind a session has lapsed.
  *
  * The session cookie is set to live 30 days; the Sanctum token it carries
- * lasts 24 hours and is refreshed at 12-hour intervals. Someone away longer
- * than a day returns with a cookie the browser still considers valid, wrapping
+ * lasts 14 days and is rotated at 12-hour intervals of use. Someone away longer
+ * than that returns with a cookie the browser still considers valid, wrapping
  * a token that is long dead — so every protected page bounced them to a bare
  * "sign in required" that read like a broken link rather than an expiry.
  *

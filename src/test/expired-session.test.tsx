@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from "@/test/test-utils";
 import ExpiredSessionNotice from "@/components/auth/ExpiredSessionNotice";
 
-// A session cookie lives 30 days; the API token it carries lasts 24 hours and
-// is refreshed every 12. Someone away longer than a day comes back holding a
+// A session cookie lives 30 days; the API token it carries lasts 14 days and
+// is rotated every 12 hours of use. Someone away longer comes back holding a
 // cookie the browser still trusts, wrapping a token that is long dead. The
 // notice has to say so *and* clear the cookie — otherwise they carry the same
 // dead session around for the rest of the month.

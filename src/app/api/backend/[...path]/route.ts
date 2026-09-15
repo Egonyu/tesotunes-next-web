@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { API_ORIGIN, API_URL } from "@/lib/api-config";
 import { buildLocalApiBaseUrls, fetchApiWithFallback, isRetryableNetworkError } from "@/lib/api-fallback";
+import { SESSION_EXPIRED_HEADER } from "@/lib/session-expiry";
 
 const PROXY_RESPONSE_HEADERS_TO_STRIP = [
   "content-encoding",
@@ -56,6 +57,34 @@ async function resolveProxyToken(request: NextRequest) {
   }
 
   return null;
+}
+
+/**
+ * Tells a dead API token apart from a 401 that a live session can still earn.
+ *
+ * Some endpoints answer 401 to a signed-in user — a 2FA step, a password
+ * confirmation — so the status alone cannot mean "signed out". Asking the
+ * profile endpoint with the same token settles it: if that is refused too, the
+ * token itself is gone. Only runs on a 401, so the extra call is rare.
+ */
+async function isAccessTokenRejected(accessToken: string): Promise<boolean> {
+  try {
+    const probe = await fetchApiWithFallback("/user/profile", {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }, {
+      baseUrls: buildLocalApiBaseUrls(API_URL),
+    });
+
+    return probe.status === 401;
+  } catch {
+    // Can't reach the API to confirm: don't sign anybody out on a guess.
+    return false;
+  }
 }
 
 function buildProxyErrorResponse(error: unknown) {
@@ -192,6 +221,14 @@ async function proxyToBackend(
     responseHeaders.delete(header);
   }
   responseHeaders.set("cache-control", "no-store");
+
+  if (
+    upstreamResponse.status === 401 &&
+    typeof token?.accessToken === "string" &&
+    await isAccessTokenRejected(token.accessToken)
+  ) {
+    responseHeaders.set(SESSION_EXPIRED_HEADER, "1");
+  }
 
   const contentType = upstreamResponse.headers.get("content-type") || "";
 

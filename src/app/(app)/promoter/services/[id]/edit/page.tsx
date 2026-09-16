@@ -17,7 +17,7 @@ export default function EditPromotionPage() {
   const handleSubmit = (payload: CreatePromotionRequest) => {
     update.mutate(payload, {
       onSuccess: () => {
-        router.push("/artist/promotions");
+        router.push("/promoter");
       },
     });
   };
@@ -34,7 +34,7 @@ export default function EditPromotionPage() {
     return (
       <div className="space-y-4">
         <Link
-          href="/artist/promotions"
+          href="/promoter"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />

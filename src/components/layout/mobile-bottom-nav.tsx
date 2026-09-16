@@ -275,7 +275,7 @@ export function MobileBottomNav() {
     ? [
         { href: "/artist/upload", label: "Upload Song", icon: Upload },
         { href: "/artist/events/create", label: "New Event", icon: Calendar },
-        { href: "/artist/promotions/create", label: "Promote", icon: Megaphone },
+        { href: "/promotions/requests/new", label: "Promote", icon: Megaphone },
       ]
     : session
       ? [

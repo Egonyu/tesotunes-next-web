@@ -329,7 +329,7 @@ export default function AdminDisputesPage() {
                           <div className="mt-4 rounded-2xl border bg-background/80 p-4">
                             <p className="text-sm font-medium">{guide.title}</p>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              {guide.sellerPrompt}
+                              {guide.buyerPrompt}
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               {riskFlags.length ? (

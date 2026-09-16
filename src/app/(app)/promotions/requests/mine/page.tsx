@@ -136,17 +136,17 @@ export default function ArtistPromotionRequestsPage() {
   const lastPage = data?.last_page ?? 1;
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My PromotionRequests</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Your promotion briefs</h1>
           <p className="text-sm text-muted-foreground">
             Promotion briefs you posted for your songs and albums
           </p>
         </div>
         <Link
-          href="/artist/promotions/requests/create"
+          href="/promotions/requests/new"
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
@@ -171,7 +171,7 @@ export default function ArtistPromotionRequestsPage() {
             Post a brief for a song or album to get promoters applying
           </p>
           <Link
-            href="/artist/promotions/requests/create"
+            href="/promotions/requests/new"
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />

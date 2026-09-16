@@ -207,7 +207,7 @@ export default function CreatePromotionPage() {
     create.mutate(payload, {
       onSuccess: () => {
         toast.success('Service created');
-        router.push('/artist/promotions');
+        router.push('/promoter');
       },
       onError: (err: Error) => toast.error(err.message || 'Failed to create service'),
     });
@@ -218,7 +218,7 @@ export default function CreatePromotionPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/artist/promotions"
+          href="/promoter"
           className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -666,7 +666,7 @@ export default function CreatePromotionPage() {
               Create Service
             </button>
             <Link
-              href="/artist/promotions"
+              href="/promoter"
               className="flex items-center rounded-lg border px-5 py-2.5 text-sm font-medium hover:bg-muted"
             >
               Cancel

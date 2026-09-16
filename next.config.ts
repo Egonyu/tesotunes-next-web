@@ -97,6 +97,21 @@ const nextConfig: NextConfig = {
   // Permanent redirects for old URL formats (pre-rebranding slugs)
   async redirects() {
     return [
+      // ── Promoter workspace moved out of the artist studio ──────
+      // Promoters are not necessarily artists; their tools live at /promoter.
+      // Briefs are posted by content owners from the marketplace.
+      { source: '/artist/promotions', destination: '/promoter', permanent: true },
+      { source: '/artist/promotions/create', destination: '/promoter/services/new', permanent: true },
+      { source: '/artist/promotions/analytics', destination: '/promoter/earnings', permanent: true },
+      { source: '/artist/promotions/profile', destination: '/promoter/profile', permanent: true },
+      { source: '/artist/promotions/orders', destination: '/promoter/orders', permanent: true },
+      { source: '/artist/promotions/orders/:orderId', destination: '/promoter/orders/:orderId', permanent: true },
+      { source: '/artist/promotions/requests', destination: '/promotions/requests/mine', permanent: true },
+      { source: '/artist/promotions/requests/create', destination: '/promotions/requests/new', permanent: true },
+      { source: '/artist/promotions/:id(\\d+)/edit', destination: '/promoter/services/:id/edit', permanent: true },
+      // /store/promotions was a discount-code page the store never had; it
+      // rendered promoter services as coupons.
+      { source: '/store/promotions', destination: '/promotions', permanent: true },
       // ── Retired: the second wallet ─────────────────────────────
       // An artist used to have two pages both titled "Wallet" — this one and
       // /wallet — each with its own balance and its own cash-out, so there was

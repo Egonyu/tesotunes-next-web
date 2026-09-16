@@ -49,6 +49,7 @@ const AUTH_REQUIRED_ROUTE_PREFIXES = [
   '/tickets',
   '/transactions',
   '/wallet',
+  '/promoter',
 ];
 
 const ADMIN_PERMISSION_RULES: Array<{ prefix: string; permissions: string[] }> = [

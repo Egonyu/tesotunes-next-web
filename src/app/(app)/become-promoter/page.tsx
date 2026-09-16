@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   BadgeCheck,
   ChevronLeft,
@@ -66,6 +67,7 @@ function toggle(arr: string[], val: string): string[] {
 
 export default function BecomePromoterPage() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const { data: existing } = useMyPromoterProfileV2();
   const onboard = useOnboardAsPromoter();
 
@@ -93,10 +95,10 @@ export default function BecomePromoterPage() {
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link
-            href="/dashboard"
+            href="/promoter"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Go to dashboard
+            Open promoter workspace
           </Link>
           {existing.slug && (
             <Link
@@ -133,9 +135,12 @@ export default function BecomePromoterPage() {
     };
 
     onboard.mutate(payload, {
-      // Promoters are not necessarily artists, so send them to the universal
-      // activity hub (not the artist-gated studio, which would 403/AccessNotice).
-      onSuccess: () => router.push('/dashboard'),
+      // Promoters have their own workspace outside the artist studio. Refresh
+      // the session first so capability-driven UI knows about the new role.
+      onSuccess: async () => {
+        await updateSession();
+        router.push('/promoter');
+      },
     });
   };
 

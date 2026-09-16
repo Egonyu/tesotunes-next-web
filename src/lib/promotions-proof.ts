@@ -2,8 +2,8 @@ import type { PromotionPlatform, PromotionType } from "@/types/promotions";
 
 type ProofGuide = {
   title: string;
+  promoterPrompt: string;
   buyerPrompt: string;
-  sellerPrompt: string;
   proofExamples: string[];
   checklist: string[];
 };
@@ -11,9 +11,9 @@ type ProofGuide = {
 const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   tiktok: {
     title: "Short-form creator proof",
+    promoterPrompt:
+      "Share the post link, the account handle, when it went live, and any campaign hashtags or sound you used.",
     buyerPrompt:
-      "Ask for the post link, creator handle, posting time, and any relevant campaign hashtags or trend context.",
-    sellerPrompt:
       "Verify the live post, confirm the account and caption match the order, and check that the content stayed up as promised.",
     proofExamples: [
       "Live TikTok URL to the posted content",
@@ -28,9 +28,9 @@ const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   },
   instagram: {
     title: "Instagram placement proof",
+    promoterPrompt:
+      "Share the reel or feed link. For stories, add screenshots before they expire.",
     buyerPrompt:
-      "Expect a reel, feed, or story link plus screenshots for any story-based delivery that may expire.",
-    sellerPrompt:
       "Confirm the placement type, posting window, and whether story content was captured before expiry.",
     proofExamples: [
       "Public reel or feed post URL",
@@ -45,9 +45,9 @@ const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   },
   radio: {
     title: "Radio airplay proof",
+    promoterPrompt:
+      "Share station evidence: a spin log, a recorded clip, or a presenter confirmation with the airtime.",
     buyerPrompt:
-      "Ask for station evidence such as a spin log, studio confirmation, recorded segment, or schedule reference.",
-    sellerPrompt:
       "Verify station identity, time band, and that the proof shows the track or mention actually aired.",
     proofExamples: [
       "Recorded clip of the spin or mention",
@@ -62,9 +62,9 @@ const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   },
   club: {
     title: "DJ and venue proof",
+    promoterPrompt:
+      "Show the venue or event, and where the track, drop or shoutout was used.",
     buyerPrompt:
-      "Expect evidence of the live set context, venue, and where the track, drop, or shoutout was used.",
-    sellerPrompt:
       "Check that the venue or event context is clear and that the proof shows the promised play, shoutout, or slot.",
     proofExamples: [
       "Video clip from the set or venue",
@@ -79,9 +79,9 @@ const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   },
   youtube: {
     title: "Long-form video proof",
+    promoterPrompt:
+      "Share the published video link and the timestamps where the artist or song is featured.",
     buyerPrompt:
-      "Ask for the published video link and timestamps showing where the artist or song is featured.",
-    sellerPrompt:
       "Verify the published video, timestamped segment, and that the feature matches the purchased placement.",
     proofExamples: [
       "Video URL and publish time",
@@ -96,9 +96,9 @@ const PLATFORM_GUIDES: Partial<Record<PromotionPlatform, ProofGuide>> = {
   },
   podcast: {
     title: "Podcast feature proof",
+    promoterPrompt:
+      "Share the episode link and the timestamp of the mention or interview.",
     buyerPrompt:
-      "Expect an episode link, timestamp, and enough context to verify the music mention or interview segment.",
-    sellerPrompt:
       "Confirm the episode, timestamp, and that the mention or feature matches the commercial promise.",
     proofExamples: [
       "Episode link or stream URL",
@@ -118,9 +118,9 @@ const TYPE_FALLBACKS: Partial<Record<PromotionType, ProofGuide>> = {
   dj_shoutout: PLATFORM_GUIDES.club,
   live_stream_promotion: {
     title: "Live stream proof",
+    promoterPrompt:
+      "Share a replay link or screenshots showing the stream, its time, and where the song or mention appeared.",
     buyerPrompt:
-      "Ask for a replay link or screenshots showing the stream, timing, and where the song or mention appeared.",
-    sellerPrompt:
       "Confirm the live session happened, the feature point is visible, and the replay or screenshots are sufficient for verification.",
     proofExamples: [
       "Replay link or VOD reference",
@@ -135,9 +135,9 @@ const TYPE_FALLBACKS: Partial<Record<PromotionType, ProofGuide>> = {
   },
   content_creation: {
     title: "Created-content proof",
+    promoterPrompt:
+      "Share the final asset link, the post link if you published it, and any usage notes from your listing.",
     buyerPrompt:
-      "Expect the final asset link, post link if published, and any usage or reuse notes promised in the listing.",
-    sellerPrompt:
       "Verify the delivered asset matches the agreed content format and includes any publishing evidence if required.",
     proofExamples: [
       "Delivered asset link",
@@ -160,9 +160,9 @@ export function getPromotionProofGuide(
     PLATFORM_GUIDES[platform] ??
     TYPE_FALLBACKS[type] ?? {
       title: "Promotion proof expectations",
+      promoterPrompt:
+        "Share a live link and enough context for the buyer to confirm the service happened as promised.",
       buyerPrompt:
-        "Ask for a live link, visible evidence, and enough context to confirm the service happened as promised.",
-      sellerPrompt:
         "Verify that the proof clearly ties the delivered promotion to the purchased listing and timing.",
       proofExamples: [
         "Public link to the delivered placement",
@@ -176,4 +176,18 @@ export function getPromotionProofGuide(
       ],
     }
   );
+}
+
+/**
+ * The escrow auto-release window as words ("7 days", "36 hours"), from the
+ * API's escrow_release_hours. Returns null when the API didn't send it, so
+ * callers hide the sentence rather than invent a number.
+ */
+export function describeReleaseWindow(hours: number | null | undefined): string | null {
+  if (!hours || hours <= 0) return null;
+  if (hours % 24 === 0) {
+    const days = hours / 24;
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+  return `${hours} hours`;
 }

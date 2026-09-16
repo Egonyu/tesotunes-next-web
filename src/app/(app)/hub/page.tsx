@@ -89,7 +89,7 @@ export default function ActivityHubPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Activity Hub</h1>
           <p className="text-sm text-muted-foreground">
-            Your complete view — wallet, orders, promotionRequests, and earnings in one place.
+            Your complete view — wallet, orders, briefs, and earnings in one place.
           </p>
         </div>
         <div className="flex gap-2">
@@ -222,7 +222,7 @@ export default function ActivityHubPage() {
               </span>
               <h2 className="font-semibold">Promoter earnings</h2>
             </div>
-            <Link href="/artist/promotions/analytics" className="flex items-center gap-1 text-xs text-primary hover:underline">
+            <Link href="/promoter/earnings" className="flex items-center gap-1 text-xs text-primary hover:underline">
               Full analytics <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -287,7 +287,7 @@ export default function ActivityHubPage() {
               <div className="py-10 text-center">
                 <Target className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">No requests posted</p>
-                <Link href="/artist/promotions/requests/create" className="mt-2 block text-xs text-primary hover:underline">Post one now</Link>
+                <Link href="/promotions/requests/new" className="mt-2 block text-xs text-primary hover:underline">Post one now</Link>
               </div>
             ) : (
               <div className="divide-y">
@@ -357,8 +357,8 @@ export default function ActivityHubPage() {
             {[
               { href: '/promotions', icon: ShieldCheck, light: 'bg-violet-50 dark:bg-violet-950/40', text: 'text-violet-500', label: 'Services marketplace', desc: 'Buy promotion services' },
               { href: '/promoters', icon: Users, light: 'bg-sky-50 dark:bg-sky-950/40', text: 'text-sky-500', label: 'Find a promoter', desc: 'Browse by platform and niche' },
-              { href: '/artist/promotions', icon: BarChart3, light: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-500', label: 'Seller dashboard', desc: 'Manage your services' },
-              { href: '/artist/promotions/analytics', icon: TrendingUp, light: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-500', label: 'Promotion analytics', desc: 'Revenue and performance' },
+              { href: '/promoter', icon: BarChart3, light: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-500', label: 'Promoter workspace', desc: 'Manage your services and orders' },
+              { href: '/promoter/earnings', icon: TrendingUp, light: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-500', label: 'Promoter earnings', desc: 'Settled earnings and escrow' },
             ].map(({ href, icon: Icon, light, text, label, desc }) => (
               <Link
                 key={href}

@@ -22,7 +22,8 @@ export type ApplicationStatus =
   | "awarded"
   | "rejected"
   | "withdrawn";
-export type PromotableType = "song" | "album";
+// Matches PromotionRequestController::store (song, album, event).
+export type PromotableType = "song" | "album" | "event";
 
 // ---------------------------------------------------------------------------
 // Shared shapes

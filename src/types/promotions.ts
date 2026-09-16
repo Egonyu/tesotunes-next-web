@@ -94,6 +94,8 @@ export interface PromoterSummary {
   id: number;
   name: string;
   username: string;
+  /** Storefront key for /promoters/{slug}; not always the username. */
+  profile_slug?: string | null;
   avatar_url: string | null;
   is_verified: boolean;
   follower_count: number;
@@ -235,6 +237,8 @@ export interface PromotionListItem {
   content_formats?: PromotionContentFormat[];
   delivery_days_min: number;
   delivery_days_max: number;
+  /** Hours after the promoter's proof before payment releases on its own. */
+  escrow_release_hours?: number;
   platform_specifics?: PromotionPlatformSpecifics;
   rating_average: number;
   rating_count: number;
@@ -271,6 +275,8 @@ export interface OrderVerification {
   verification_notes: string | null;
   verification_files: string[];
   rejection_reason: string | null;
+  /** When payment releases on its own if the buyer does nothing. */
+  auto_release_at?: string | null;
 }
 
 export interface OrderDispute {
@@ -354,6 +360,14 @@ export interface SellerAnalytics {
   net_revenue_credits: number;
   net_revenue_ugx: number;
   settled_orders: number;
+  /** Open orders still waiting for the promoter's proof. */
+  awaiting_delivery: number;
+  /** Open orders whose proof is with the buyer. */
+  awaiting_buyer: number;
+  /** Promoter's share of open orders, held until the buyer accepts. */
+  escrow_ugx: number;
+  escrow_credits: number;
+  escrow_release_hours?: number;
   average_rating: number;
   conversion_rate: number;
   top_performing_promotion: PromotionListItem | null;
@@ -441,10 +455,11 @@ export interface PurchasePromotionRequest {
   idempotency_key?: string;
 }
 
-export interface SubmitVerificationRequest {
-  verification_url: string;
-  verification_notes?: string;
-  verification_files?: string[];
+/** Promoter's proof of delivery. */
+export interface DeliverOrderRequest {
+  delivery_url: string;
+  delivery_notes?: string;
+  delivery_files?: string[];
 }
 
 export interface CreatePromotionRequest {
@@ -484,11 +499,6 @@ export interface ReviewPromotionRequest {
   rating: number;
   comment: string;
   would_recommend: boolean;
-}
-
-export interface VerifyOrderRequest {
-  verified: boolean;
-  notes?: string;
 }
 
 export interface RejectOrderRequest {
@@ -604,8 +614,8 @@ export const PROMOTION_CONTENT_FORMAT_LABELS: Record<PromotionContentFormat, str
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending_verification: "Pending Verification",
-  verification_submitted: "Verification Submitted",
+  pending_verification: "Awaiting delivery",
+  verification_submitted: "Proof sent",
   completed: "Completed",
   disputed: "Disputed",
   refunded: "Refunded",

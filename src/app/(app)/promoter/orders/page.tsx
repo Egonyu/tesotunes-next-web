@@ -1,33 +1,29 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   CheckCircle2,
   Clock,
-  CreditCard,
-  FileText,
   Loader2,
-  MessageSquareWarning,
-  ShieldCheck,
   Users,
   XCircle,
 } from 'lucide-react';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useMyPromotionOrders } from '@/hooks/usePromotions';
 import { OrderCard, PromotionsPagination } from '@/components/promotions';
 
 const STATUS_TABS = [
   { value: '', label: 'All' },
-  { value: 'pending_verification', label: 'Pending' },
-  { value: 'verification_submitted', label: 'Submitted' },
+  { value: 'pending_verification', label: 'Need your proof' },
+  { value: 'verification_submitted', label: 'With the buyer' },
   { value: 'completed', label: 'Completed' },
   { value: 'disputed', label: 'Disputed' },
 ];
 
-export default function ArtistPromotionOrdersPage() {
+export default function PromoterOrdersPage() {
   const router = useRouter();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -39,64 +35,6 @@ export default function ArtistPromotionOrdersPage() {
 
   const orders = data?.data ?? [];
 
-  const summary = useMemo(() => {
-    const totalCredits = orders.reduce((sum, o) => sum + o.total_credits, 0);
-    const totalUgx = orders.reduce((sum, o) => sum + o.total_ugx, 0);
-    return {
-      total: orders.length,
-      pending: orders.filter((o) => o.status === 'pending_verification').length,
-      submitted: orders.filter((o) => o.status === 'verification_submitted').length,
-      completed: orders.filter((o) => o.status === 'completed').length,
-      disputed: orders.filter((o) => o.status === 'disputed').length,
-      totalCredits,
-      totalUgx,
-    };
-  }, [orders]);
-
-  const stats = [
-    {
-      label: 'Total Orders',
-      value: formatNumber(summary.total),
-      icon: FileText,
-      light: 'bg-violet-50 dark:bg-violet-950/40',
-      text: 'text-violet-500',
-    },
-    {
-      label: 'Pending',
-      value: formatNumber(summary.pending),
-      icon: Clock,
-      light: 'bg-amber-50 dark:bg-amber-950/40',
-      text: 'text-amber-500',
-    },
-    {
-      label: 'Submitted',
-      value: formatNumber(summary.submitted),
-      icon: ShieldCheck,
-      light: 'bg-sky-50 dark:bg-sky-950/40',
-      text: 'text-sky-500',
-    },
-    {
-      label: 'Completed',
-      value: formatNumber(summary.completed),
-      icon: CheckCircle2,
-      light: 'bg-emerald-50 dark:bg-emerald-950/40',
-      text: 'text-emerald-500',
-    },
-    {
-      label: 'Credits (cr)',
-      value: formatNumber(summary.totalCredits),
-      icon: CreditCard,
-      light: 'bg-orange-50 dark:bg-orange-950/40',
-      text: 'text-orange-500',
-    },
-    {
-      label: 'Disputed',
-      value: formatNumber(summary.disputed),
-      icon: MessageSquareWarning,
-      light: 'bg-red-50 dark:bg-red-950/40',
-      text: 'text-red-500',
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -104,57 +42,25 @@ export default function ArtistPromotionOrdersPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/artist/promotions"
+            href="/promoter"
             className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Orders</h1>
             <p className="text-sm text-muted-foreground">
-              Review buyer proof and verify delivery
+              Send proof for each order. You&apos;re paid when the buyer accepts it.
             </p>
           </div>
         </div>
         <Link
-          href="/artist/promotions/create"
+          href="/promoter/services/new"
           className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
         >
           Create New Service
         </Link>
       </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {stats.map(({ label, value, icon: Icon, light, text }) => (
-          <div key={label} className="rounded-xl bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">{label}</span>
-              <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', light)}>
-                <Icon className={cn('h-4 w-4', text)} />
-              </span>
-            </div>
-            <p className="text-2xl font-bold">{value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* UGX summary */}
-      {summary.totalUgx > 0 && (
-        <div className="flex items-center gap-3 rounded-xl bg-card shadow-sm p-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-            <CreditCard className="h-4 w-4 text-emerald-500" />
-          </span>
-          <div>
-            <p className="text-sm font-medium">
-              {formatCurrency(summary.totalUgx)} UGX in this queue
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Across all visible orders — released upon verification
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Orders table */}
       <div className="rounded-xl bg-card shadow-sm">
@@ -219,7 +125,7 @@ export default function ArtistPromotionOrdersPage() {
                   View Marketplace
                 </Link>
                 <Link
-                  href="/artist/promotions"
+                  href="/promoter"
                   className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                 >
                   Manage Listings
@@ -233,7 +139,7 @@ export default function ArtistPromotionOrdersPage() {
                   <div
                     key={order.id}
                     className="py-3 first:pt-0 last:pb-0 cursor-pointer hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors"
-                    onClick={() => router.push(`/artist/promotions/orders/${order.id}`)}
+                    onClick={() => router.push(`/promoter/orders/${order.id}`)}
                   >
                     <OrderCard order={order} showBuyer />
                   </div>

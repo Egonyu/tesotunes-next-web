@@ -1,5 +1,6 @@
 import { useSession } from 'next-auth/react';
 import {
+  isPromoterIdentity,
   hasFullStudioAccess,
   holdsSellerCapability,
   type StudioIdentity,
@@ -42,8 +43,8 @@ export function useCreatorAccess(): boolean {
 }
 
 /**
- * Whether this account can open the seller sections — /artist/promotions and
- * /artist/store — which promoters and sellers hold without being artists.
+ * Whether this account can open the seller section — /artist/store — which
+ * sellers hold without being artists.
  */
 export function useSellerAccess(): boolean {
   const identity = useStudioIdentity();
@@ -53,4 +54,20 @@ export function useSellerAccess(): boolean {
   }
 
   return hasFullStudioAccess(identity) || holdsSellerCapability(identity);
+}
+
+/**
+ * Whether this account holds the promoter capability, which is what the
+ * /promoter workspace and the promotions API gate on. Read from the session,
+ * so a promoter who has just onboarded should refresh it (useSession().update)
+ * before relying on this.
+ */
+export function usePromoterAccess(): boolean {
+  const identity = useStudioIdentity();
+
+  if (!identity) {
+    return false;
+  }
+
+  return isPromoterIdentity(identity);
 }

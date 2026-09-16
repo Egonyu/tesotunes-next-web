@@ -155,7 +155,7 @@ export function PostRequestModal({
               <Megaphone className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-base">Post Promotion PromotionRequest</h2>
+              <h2 className="font-bold text-base">Post a promotion brief</h2>
               <p className="text-xs text-muted-foreground capitalize">{promotableType}</p>
             </div>
           </div>

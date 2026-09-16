@@ -849,7 +849,7 @@ const quickActions = [
   { href: '/artist/earnings', label: 'Earnings', description: 'Revenue & withdrawals', icon: DollarSign, color: 'from-amber-500 to-orange-600' },
   { href: '/artist/events', label: 'Events', description: 'Manage your events', icon: Calendar, color: 'from-blue-500 to-cyan-600' },
   { href: '/artist/royalty-splits', label: 'Royalty Splits', description: 'Collaborator shares', icon: Users, color: 'from-pink-500 to-rose-600' },
-  { href: '/artist/promotions', label: 'Promotions', description: 'Sell influence services', icon: Megaphone, color: 'from-indigo-500 to-violet-600' },
+  { href: '/promotions/requests/new', label: 'Promote a release', description: 'Post a brief for promoters', icon: Megaphone, color: 'from-indigo-500 to-violet-600' },
 ] as const;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

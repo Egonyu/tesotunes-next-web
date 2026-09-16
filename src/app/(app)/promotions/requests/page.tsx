@@ -16,7 +16,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
-import { useCreatorAccess } from '@/hooks/useCreatorAccess';
+import { useCreatorAccess, usePromoterAccess } from '@/hooks/useCreatorAccess';
 import { usePromotionRequestsV2, useApplyToPromotionRequest } from '@/hooks/usePromotionsV2';
 import { PROMOTION_REQUEST_STATUS_LABELS } from '@/types/promotions-v2';
 import type { PromotionRequestV2 } from '@/types/promotions-v2';
@@ -43,6 +43,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 function PromotionRequestCard({ opp }: { opp: PromotionRequestV2 }) {
   const [showApply, setShowApply] = useState(false);
+  const isPromoter = usePromoterAccess();
   const [pitch, setPitch] = useState('');
   const [priceUgx, setPriceUgx] = useState('');
   const [priceCredits, setPriceCredits] = useState('');
@@ -152,7 +153,15 @@ function PromotionRequestCard({ opp }: { opp: PromotionRequestV2 }) {
             )}
           </div>
 
-          {opp.status === 'open' && (
+          {opp.status === 'open' && !isPromoter && (
+            <Link
+              href="/become-promoter"
+              className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+            >
+              Become a promoter to apply
+            </Link>
+          )}
+          {opp.status === 'open' && isPromoter && (
             <button
               type="button"
               onClick={() => setShowApply((v) => !v)}
@@ -267,7 +276,7 @@ export default function PromotionRequestsPage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
                 <Target className="h-4 w-4 text-violet-500" />
               </span>
-              <h1 className="text-2xl font-bold tracking-tight">Promotion PromotionRequests</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Promotion briefs</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Artists are looking for promoters. Browse open briefs and apply to the ones that match your audience.
@@ -281,7 +290,7 @@ export default function PromotionRequestsPage() {
               Find promoters
             </Link>
             <Link
-              href={canPost ? "/artist/promotions/requests/create" : "/become-artist"}
+              href={canPost ? "/promotions/requests/new" : "/become-artist"}
               className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               {canPost ? "Post a request" : "Become an artist"}
@@ -330,7 +339,7 @@ export default function PromotionRequestsPage() {
           <p className="font-medium">No open requests right now</p>
           <p className="mt-1 text-sm text-muted-foreground">Be the first to post one for your track</p>
           <Link
-            href={canPost ? "/artist/promotions/requests/create" : "/become-artist"}
+            href={canPost ? "/promotions/requests/new" : "/become-artist"}
             className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             {canPost ? "Post a request" : "Become an artist"}

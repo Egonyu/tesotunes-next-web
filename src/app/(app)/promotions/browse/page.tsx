@@ -25,7 +25,7 @@ import {
   PromotionsEmptyState,
   PromotionsPagination,
 } from "@/components/promotions";
-import { useSellerAccess } from "@/hooks/useCreatorAccess";
+import { usePromoterAccess } from "@/hooks/useCreatorAccess";
 import { usePromotions } from "@/hooks/usePromotions";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { usePromotionsStore } from "@/stores/promotions";
@@ -177,7 +177,7 @@ function buildRecommendationLanes(promotions: PromotionListItem[]): Recommendati
 }
 
 export default function PromotionsBrowsePage() {
-  const canCreate = useSellerAccess();
+  const canCreate = usePromoterAccess();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { filters, setFilter, resetFilters } = usePromotionsStore();
@@ -330,10 +330,10 @@ export default function PromotionsBrowsePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/promotions/requests" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+              <Link href="/promotions/requests/mine" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
                 My requests
               </Link>
-              <Link href={canCreate ? "/artist/promotions/create" : "/become-promoter"} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              <Link href={canCreate ? "/promoter/services/new" : "/become-promoter"} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                 {canCreate ? "List a service" : "Become a promoter"}
               </Link>
               <Link href="/promotions/purchases" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">

@@ -59,7 +59,10 @@ const navItems: NavItem[] = [
   { href: '/referrals', label: 'Referrals', icon: Users, caps: ['artist'] },
   { href: '/artist/events', label: 'Events', icon: Calendar, caps: ['organizer', 'artist'] },
   { href: '/artist/store', label: 'Store', icon: ShoppingBag, caps: ['seller'] },
-  { href: '/artist/promotions', label: 'Promotions', icon: Megaphone, caps: ['promoter', 'seller'] },
+  // Promoter work lives in its own workspace at /promoter; artists buy
+  // promotion by posting briefs from the marketplace.
+  { href: '/promotions/requests/mine', label: 'Promotion requests', icon: Megaphone, caps: ['artist', 'organizer'] },
+  { href: '/promoter', label: 'Promoter workspace', icon: Megaphone, caps: ['promoter'] },
   { href: '/sacco', label: 'SACCO', icon: PiggyBank },
   { href: '/artist/settings', label: 'Settings', icon: Settings },
 ];

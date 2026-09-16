@@ -245,12 +245,13 @@ export function SongGrid({ type, limit = 10, variant = "compact" }: SongGridProp
                       songId={song.id}
                       songTitle={song.title}
                     />
-                    {session?.user && (
+                    {/* Only the song's owner may post a brief for it. */}
+                    {session?.user?.id != null && song.artist?.user_id != null && String(song.artist.user_id) === String(session.user.id) && (
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(
-                            `/artist/promotions/requests/create?promotable_type=song&promotable_id=${song.id}&promotable_title=${encodeURIComponent(song.title)}`
+                            `/promotions/requests/new?promotable_type=song&promotable_id=${song.id}&promotable_title=${encodeURIComponent(song.title)}`
                           );
                         }}
                         className="gap-2"

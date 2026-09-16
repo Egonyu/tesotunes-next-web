@@ -69,6 +69,8 @@ export interface Artist {
   id: number;
   name: string;
   slug: string;
+  /** Owning account (SongResource includes it on the nested artist). */
+  user_id?: number | null;
   bio?: string;
   avatar_url?: string;
   banner_url?: string;

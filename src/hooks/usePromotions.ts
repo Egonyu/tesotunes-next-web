@@ -11,12 +11,11 @@ import { toast } from "sonner";
 import type {
   BrowsePromotionsParams,
   PurchasePromotionRequest,
-  SubmitVerificationRequest,
+  DeliverOrderRequest,
   CreatePromotionRequest,
   UpdatePromotionRequest,
   DisputeOrderRequest,
   ReviewPromotionRequest,
-  VerifyOrderRequest,
   RejectOrderRequest,
   ResolveDisputeRequest,
   PromoterProfile,
@@ -26,6 +25,7 @@ import type {
 } from "@/types/promotions";
 import * as api from "@/lib/promotions-api";
 import { isApiError } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Query Keys (centralised for cache invalidation)
@@ -187,18 +187,17 @@ export function useMyPurchase(orderId: number) {
 }
 
 /** Submit verification */
-export function useSubmitVerification(orderId: number) {
+export function useAcceptDelivery(orderId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: SubmitVerificationRequest) =>
-      api.submitVerification(orderId, data),
+    mutationFn: () => api.acceptDelivery(orderId),
     onSuccess: () => {
-      toast.success("Verification submitted!");
+      toast.success("Delivery accepted. The promoter will be paid.");
       qc.invalidateQueries({ queryKey: promotionKeys.myPurchase(orderId) });
       qc.invalidateQueries({ queryKey: promotionKeys.myPurchases() });
     },
-    onError: () => {
-      toast.error("Failed to submit verification.");
+    onError: (error) => {
+      toast.error(getErrorMessage(error) || "Could not accept this delivery.");
     },
   });
 }
@@ -352,19 +351,18 @@ export function useMyPromotionOrder(orderId: number) {
 }
 
 /** Verify order (seller) */
-export function useVerifyOrder(orderId: number) {
+export function useDeliverOrder(orderId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: VerifyOrderRequest) =>
-      api.verifyOrder(orderId, data),
+    mutationFn: (data: DeliverOrderRequest) => api.deliverOrder(orderId, data),
     onSuccess: () => {
-      toast.success("Order verified! Payment released.");
+      toast.success("Proof submitted. The buyer has been asked to review it.");
       qc.invalidateQueries({ queryKey: sellerOrdersPrefix });
       qc.invalidateQueries({ queryKey: promotionKeys.myOrder(orderId) });
       qc.invalidateQueries({ queryKey: promotionKeys.sellerAnalytics() });
     },
-    onError: () => {
-      toast.error("Failed to verify order.");
+    onError: (error) => {
+      toast.error(getErrorMessage(error) || "Could not submit your proof.");
     },
   });
 }

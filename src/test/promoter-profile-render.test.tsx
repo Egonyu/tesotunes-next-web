@@ -1,5 +1,5 @@
 import { render, waitFor } from "@/test/test-utils";
-import PromoterProfilePage from "@/app/(app)/promoters/[username]/page";
+import PromoterProfilePage from "@/app/(app)/promoters/[username]/PromoterProfileClient";
 
 /**
  * This page could not reach a successful render.

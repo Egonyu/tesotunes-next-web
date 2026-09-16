@@ -27,6 +27,15 @@ export default function robots(): MetadataRoute.Robots {
           '/loyalty',
           '/dashboard',
           '/become-artist/status',
+          // Private promoter and buyer pages; the public side is
+          // /promoters/* and /promotions/*.
+          // Not a bare '/promoter' prefix: that would also block /promoters/*.
+          '/promoter$',
+          '/promoter/',
+          '/promotions/purchases',
+          '/promotions/requests/mine',
+          '/promotions/requests/new',
+          '/hub',
           '/api/',
         ],
       },

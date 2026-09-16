@@ -135,7 +135,7 @@ export default function PromoterProfilePage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/artist/promotions"
+            href="/promoter"
             className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4" />

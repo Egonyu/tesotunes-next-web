@@ -259,7 +259,7 @@ export function PromotionEditor({
   mode,
   initialValues,
   submitLabel,
-  backHref = "/artist/promotions",
+  backHref = "/promoter",
   onSubmit,
   isSubmitting = false,
   status,

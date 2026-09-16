@@ -559,7 +559,7 @@ export const authConfig: NextAuthOptions = {
 
       return enabledProviders.has(account.provider as SocialProviderId);
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (
         account?.provider &&
         account.provider !== "credentials" &&
@@ -621,7 +621,9 @@ export const authConfig: NextAuthOptions = {
         }
       }
 
-      if (token.accessToken && (now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
+      // useSession().update() asks for fresh capabilities now — e.g. right
+      // after onboarding as a promoter — instead of on the next interval.
+      if (token.accessToken && (trigger === 'update' || now - lastRefresh > ROLE_REFRESH_INTERVAL)) {
         let freshData = await fetchFreshUserData(token.accessToken as string);
 
         if (freshData && 'expired' in freshData) {

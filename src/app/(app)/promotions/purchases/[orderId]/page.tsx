@@ -14,7 +14,6 @@ import {
   MessageSquare,
   ShieldCheck,
   Star,
-  Upload,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import { ReviewComposer } from "@/components/reviews/review-composer";
@@ -22,7 +21,7 @@ import {
   useDisputeOrder,
   useMyPurchase,
   useReviewPromotion,
-  useSubmitVerification,
+  useAcceptDelivery,
 } from "@/hooks/usePromotions";
 import { OrderStatusBadge } from "@/components/promotions";
 import { getPromotionProofGuide } from "@/lib/promotions-proof";
@@ -56,13 +55,11 @@ export default function PurchaseDetailPage() {
   const orderId = Number(params.orderId);
   const { data: order, isLoading } = useMyPurchase(orderId);
 
-  const submitVerification = useSubmitVerification(orderId);
+  const acceptDelivery = useAcceptDelivery(orderId);
   const disputeOrder = useDisputeOrder(orderId);
   const reviewPromotion = useReviewPromotion(orderId);
 
-  const [verificationUrl, setVerificationUrl] = useState("");
-  const [verificationNotes, setVerificationNotes] = useState("");
-  const [showVerificationForm, setShowVerificationForm] = useState(false);
+  const [confirmAccept, setConfirmAccept] = useState(false);
 
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeReasonCode, setDisputeReasonCode] =
@@ -82,14 +79,14 @@ export default function PurchaseDetailPage() {
         date: order.created_at,
       },
       {
-        label: "Verification Submitted",
+        label: "Promoter sent proof",
         done:
           order.verification.status === "submitted" ||
           order.verification.status === "verified",
         date: order.verification.submitted_at,
       },
       {
-        label: "Completed",
+        label: "You accepted",
         done: order.status === "completed",
         date: order.completed_at,
       },
@@ -118,9 +115,10 @@ export default function PurchaseDetailPage() {
     );
   }
 
-  const canSubmitVerification =
-    order.status === "pending_verification" &&
-    order.verification.status === "pending";
+  // The promoter submits proof; the buyer accepts it (paying the promoter)
+  // or disputes it.
+  const canAccept =
+    order.status === "verification_submitted" && !order.dispute.is_disputed;
   const canDispute =
     (order.status === "pending_verification" ||
       order.status === "verification_submitted") &&
@@ -128,14 +126,8 @@ export default function PurchaseDetailPage() {
   const canReview = order.status === "completed";
   const proofGuide = getPromotionProofGuide(order.promotion.platform, order.promotion.type);
 
-  const handleSubmitVerification = () => {
-    submitVerification.mutate(
-      {
-        verification_url: verificationUrl,
-        verification_notes: verificationNotes || undefined,
-      },
-      { onSuccess: () => setShowVerificationForm(false) }
-    );
+  const handleAccept = () => {
+    acceptDelivery.mutate(undefined, { onSuccess: () => setConfirmAccept(false) });
   };
 
   const handleDispute = () => {
@@ -315,7 +307,7 @@ export default function PurchaseDetailPage() {
               </div>
 
               <div className="rounded-[24px] border bg-card p-5">
-                <h2 className="text-lg font-semibold">Verification</h2>
+                <h2 className="text-lg font-semibold">Promoter&apos;s proof</h2>
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">Status</span>
@@ -325,13 +317,13 @@ export default function PurchaseDetailPage() {
                   </div>
                   {order.verification.submitted_at && (
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Submitted</span>
+                      <span className="text-muted-foreground">Sent</span>
                       <span>{formatDate(order.verification.submitted_at)}</span>
                     </div>
                   )}
                   {order.verification.verified_at && (
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Verified</span>
+                      <span className="text-muted-foreground">Accepted</span>
                       <span>{formatDate(order.verification.verified_at)}</span>
                     </div>
                   )}
@@ -346,10 +338,15 @@ export default function PurchaseDetailPage() {
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
+                  {order.verification.verification_files?.map((link) => (
+                    <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="block break-all text-sm text-primary hover:underline">
+                      {link}
+                    </a>
+                  ))}
                   {order.verification.verification_notes && (
                     <div className="rounded-2xl border bg-background/70 p-3">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Verification Notes
+                        Promoter&apos;s notes
                       </p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {order.verification.verification_notes}
@@ -387,7 +384,7 @@ export default function PurchaseDetailPage() {
               </div>
 
               <div className="rounded-[24px] border bg-card p-5">
-                <h2 className="text-lg font-semibold">What verification checks</h2>
+                <h2 className="text-lg font-semibold">What to check before accepting</h2>
                 <div className="mt-4 space-y-2">
                   {proofGuide.checklist.map((item) => (
                     <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -518,14 +515,47 @@ export default function PurchaseDetailPage() {
               <section className="rounded-[24px] border bg-card p-5">
                 <h2 className="text-lg font-semibold">Next Best Action</h2>
                 <div className="mt-4 space-y-3">
-                  {canSubmitVerification && !showVerificationForm && (
-                    <button
-                      onClick={() => setShowVerificationForm(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Submit Verification
-                    </button>
+                  {order.status === "pending_verification" && !order.dispute.is_disputed && (
+                    <div className="rounded-2xl border bg-background/70 p-4 text-sm text-muted-foreground">
+                      Waiting for the promoter to deliver. You&apos;ll be asked to review their proof here{order.expected_delivery_at ? `, expected by ${formatDate(order.expected_delivery_at)}` : ""}.
+                    </div>
+                  )}
+                  {canAccept && !confirmAccept && (
+                    <>
+                      <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-sm text-muted-foreground">
+                        The promoter sent proof. Check it above, then accept it or open a dispute.
+                        {order.verification.auto_release_at
+                          ? ` If you do nothing, the promoter is paid after ${formatDate(order.verification.auto_release_at)}.`
+                          : ""}
+                      </div>
+                      <button
+                        onClick={() => setConfirmAccept(true)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Accept delivery
+                      </button>
+                    </>
+                  )}
+                  {canAccept && confirmAccept && (
+                    <div className="space-y-3 rounded-2xl border bg-background/70 p-4">
+                      <p className="text-sm">Accepting releases your payment to the promoter. You can&apos;t dispute this order afterwards.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAccept}
+                          disabled={acceptDelivery.isPending}
+                          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                        >
+                          {acceptDelivery.isPending ? "Accepting..." : "Yes, accept and pay"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmAccept(false)}
+                          className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          Not yet
+                        </button>
+                      </div>
+                    </div>
                   )}
                   {canDispute && !showDisputeForm && (
                     <button
@@ -546,50 +576,12 @@ export default function PurchaseDetailPage() {
                     </button>
                   )}
 
-                  {!canSubmitVerification && !canDispute && !canReview && (
+                  {!canAccept && !canDispute && !canReview && order.status !== "pending_verification" && (
                     <div className="rounded-2xl border bg-background/70 p-4 text-sm text-muted-foreground">
                       This order is currently waiting on the next marketplace state change.
                     </div>
                   )}
                 </div>
-
-                {showVerificationForm && (
-                  <div className="mt-4 space-y-3 rounded-2xl border bg-background/70 p-4">
-                    <h3 className="font-medium">Submit verification proof</h3>
-                    <div className="rounded-xl border bg-card p-3 text-sm text-muted-foreground">
-                      {proofGuide.buyerPrompt}
-                    </div>
-                    <input
-                      type="url"
-                      value={verificationUrl}
-                      onChange={(e) => setVerificationUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                    />
-                    <textarea
-                      value={verificationNotes}
-                      onChange={(e) => setVerificationNotes(e.target.value)}
-                      placeholder="Add context or proof notes..."
-                      rows={3}
-                      className="w-full resize-none rounded-xl border bg-background px-3 py-2 text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSubmitVerification}
-                        disabled={!verificationUrl || submitVerification.isPending}
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-                      >
-                        {submitVerification.isPending ? "Submitting..." : "Submit"}
-                      </button>
-                      <button
-                        onClick={() => setShowVerificationForm(false)}
-                        className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {showDisputeForm && (
                   <div className="mt-4 space-y-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
@@ -668,7 +660,7 @@ export default function PurchaseDetailPage() {
                     <div>
                       <p className="text-sm font-medium">Escrow flow</p>
                       <p className="text-sm text-muted-foreground">
-                        Funds are protected until proof is submitted and delivery is reviewed.
+                        Your payment is held until you accept the promoter&apos;s proof. If you don&apos;t respond in time, it is released to them automatically.
                       </p>
                     </div>
                   </div>
@@ -684,9 +676,9 @@ export default function PurchaseDetailPage() {
                   <div className="flex items-start gap-3">
                     <Clock className="mt-0.5 h-4 w-4 text-amber-500" />
                     <div>
-                      <p className="text-sm font-medium">Time-bound processing</p>
+                      <p className="text-sm font-medium">Admin review</p>
                       <p className="text-sm text-muted-foreground">
-                        Verification and dispute status updates flow back into the admin marketplace queue.
+                        A dispute pauses the payment until an admin decides whether to refund you or pay the promoter.
                       </p>
                     </div>
                   </div>

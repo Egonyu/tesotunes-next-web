@@ -40,11 +40,14 @@ async function fetchAllPages<T>(path: string, label: string): Promise<T[]> {
       const res = await serverFetch<{
         data: T[]
         meta?: { last_page?: number }
+        last_page?: number
       }>(endpoint, { next: { revalidate: 3600 } } as RequestInit)
 
       const results = res.data || []
       all.push(...results)
-      lastPage = res.meta?.last_page ?? page
+      // Laravel paginators put last_page under meta (resources) or at the
+      // top level (a raw paginator, e.g. /promoters/discover).
+      lastPage = res.meta?.last_page ?? res.last_page ?? page
 
       if (page === 1 && results.length === 0) {
         console.warn(`[sitemap] ${label} returned 0 results from ${endpoint}`)
@@ -64,12 +67,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // every page to include the full catalogue. Revalidate every hour; Next.js
   // de-dupes concurrent calls within the same revalidation window so these only
   // hit the API once per hour.
-  const [artists, albums, genres, songs, events] = await Promise.all([
+  const [artists, albums, genres, songs, events, promoters, promotions] = await Promise.all([
     fetchAllPages<{ slug: string; updated_at?: string }>('/artists', 'artists'),
     fetchAllPages<{ slug: string; updated_at?: string }>('/albums', 'albums'),
     fetchList<{ slug: string; updated_at?: string }>('/genres', 'genres'),
     fetchAllPages<{ slug: string; updated_at?: string }>('/songs', 'songs'),
     fetchList<{ id: number; updated_at?: string }>('/events?limit=100&status=published', 'events'),
+    fetchAllPages<{ slug: string; updated_at?: string }>('/promoters/discover', 'promoters'),
+    fetchAllPages<{ slug: string; created_at?: string }>('/promotions?sort=newest', 'promotions'),
   ])
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -91,6 +96,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/store`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
     { url: `${BASE_URL}/fan-clubs`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
     { url: `${BASE_URL}/promoters`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${BASE_URL}/promotions`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.5 },
+    { url: `${BASE_URL}/promotions/requests`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.4 },
+    { url: `${BASE_URL}/become-promoter`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
     { url: `${BASE_URL}/pricing`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE_URL}/become-artist`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
@@ -140,6 +148,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
+  // Public promoter storefronts and their bookable services.
+  const promoterRoutes: MetadataRoute.Sitemap = promoters
+    .filter((p) => p.slug)
+    .map((p) => ({
+      url: `${BASE_URL}/promoters/${p.slug}`,
+      lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.5,
+    }))
+
+  const promotionRoutes: MetadataRoute.Sitemap = promotions
+    .filter((p) => p.slug)
+    .map((p) => ({
+      url: `${BASE_URL}/promotions/${p.slug}`,
+      lastModified: p.created_at ? new Date(p.created_at) : new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.5,
+    }))
+
   return [
     ...staticRoutes,
     ...artistRoutes,
@@ -147,5 +174,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...genreRoutes,
     ...songRoutes,
     ...eventRoutes,
+    ...promoterRoutes,
+    ...promotionRoutes,
   ]
 }

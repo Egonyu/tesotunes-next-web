@@ -35,6 +35,7 @@ import {
   PromotionsPagination,
 } from '@/components/promotions';
 import { PROMOTION_PLATFORM_LABELS, PROMOTION_TYPE_LABELS } from '@/types/promotions';
+import { describeReleaseWindow } from '@/lib/promotions-proof';
 
 const STATUS_TABS = [
   { value: '', label: 'All' },
@@ -46,51 +47,15 @@ const STATUS_TABS = [
 ];
 
 const STAT_CARDS = [
-  {
-    key: 'active_promotions',
-    label: 'Active Services',
-    icon: Megaphone,
-    light: 'bg-violet-50 dark:bg-violet-950/40',
-    text: 'text-violet-500',
-  },
-  {
-    key: 'total_orders',
-    label: 'Total Orders',
-    icon: Users,
-    light: 'bg-sky-50 dark:bg-sky-950/40',
-    text: 'text-sky-500',
-  },
-  {
-    key: 'total_revenue_credits',
-    label: 'Revenue',
-    icon: CreditCard,
-    light: 'bg-emerald-50 dark:bg-emerald-950/40',
-    text: 'text-emerald-500',
-  },
-  {
-    key: 'net_revenue_credits',
-    label: 'Net Revenue',
-    icon: TrendingUp,
-    light: 'bg-orange-50 dark:bg-orange-950/40',
-    text: 'text-orange-500',
-  },
-  {
-    key: 'average_rating',
-    label: 'Avg Rating',
-    icon: Star,
-    light: 'bg-amber-50 dark:bg-amber-950/40',
-    text: 'text-amber-500',
-  },
-  {
-    key: 'settled_orders',
-    label: 'Settled',
-    icon: BarChart3,
-    light: 'bg-teal-50 dark:bg-teal-950/40',
-    text: 'text-teal-500',
-  },
+  { key: "active_promotions", label: "Live services", icon: Megaphone, light: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-500" },
+  { key: "awaiting_delivery", label: "Need your proof", icon: Clock, light: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-500" },
+  { key: "awaiting_buyer", label: "With the buyer", icon: Users, light: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-500" },
+  { key: "net_revenue_ugx", label: "Earned", icon: TrendingUp, light: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-500" },
+  { key: "escrow_ugx", label: "In escrow", icon: CreditCard, light: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-500" },
+  { key: "average_rating", label: "Avg rating", icon: Star, light: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-500" },
 ];
 
-export default function ArtistPromotionsPage() {
+export default function PromoterServicesPage() {
   const router = useRouter();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -111,8 +76,8 @@ export default function ArtistPromotionsPage() {
     if (!analytics) return '—';
     const val = analytics[key as keyof typeof analytics] as number;
     if (key === 'average_rating') return val.toFixed(1);
-    if (key === 'total_revenue_credits' || key === 'net_revenue_credits') {
-      return formatNumber(val) + ' cr';
+    if (key === "net_revenue_ugx" || key === "escrow_ugx") {
+      return formatCurrency(val);
     }
     return formatNumber(val);
   }
@@ -122,26 +87,14 @@ export default function ArtistPromotionsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Promotions</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Your services</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your promotion services and track earnings
+            Earnings reach your wallet once the buyer accepts your proof{describeReleaseWindow(analytics?.escrow_release_hours) ? `, or ${describeReleaseWindow(analytics?.escrow_release_hours)} after you send it` : ""}.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/artist/promotions/profile"
-            className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            My Profile
-          </Link>
-          <Link
-            href="/artist/promotions/orders"
-            className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Orders
-          </Link>
-          <Link
-            href="/artist/promotions/create"
+            href="/promoter/services/new"
             className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
@@ -151,7 +104,7 @@ export default function ArtistPromotionsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {STAT_CARDS.map(({ key, label, icon: Icon, light, text }) => (
           <div key={key} className="rounded-xl bg-card p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
@@ -160,16 +113,12 @@ export default function ArtistPromotionsPage() {
                 <Icon className={cn('h-4 w-4', text)} />
               </span>
             </div>
-            <p className="text-2xl font-bold">{getStatValue(key)}</p>
-            {key === 'total_revenue_credits' && analytics && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatCurrency(analytics.total_revenue_ugx)}
-              </p>
+            <p className="truncate text-xl font-bold sm:text-2xl">{getStatValue(key)}</p>
+            {key === "net_revenue_ugx" && analytics && analytics.net_revenue_credits > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">+ {formatNumber(analytics.net_revenue_credits)} credits</p>
             )}
-            {key === 'net_revenue_credits' && analytics && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatCurrency(analytics.net_revenue_ugx)}
-              </p>
+            {key === "escrow_ugx" && analytics && analytics.escrow_credits > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">+ {formatNumber(analytics.escrow_credits)} credits</p>
             )}
           </div>
         ))}
@@ -218,7 +167,7 @@ export default function ArtistPromotionsPage() {
                   Create your first promotion service to start earning
                 </p>
                 <Link
-                  href="/artist/promotions/create"
+                  href="/promoter/services/new"
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
@@ -321,7 +270,7 @@ export default function ArtistPromotionsPage() {
                               <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </button>
                             <button
-                              onClick={() => router.push(`/artist/promotions/${promo.id}/edit`)}
+                              onClick={() => router.push(`/promoter/services/${promo.id}/edit`)}
                               className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
                             >
                               <Edit2 className="h-3 w-3" />
@@ -351,39 +300,39 @@ export default function ArtistPromotionsPage() {
             <div className="space-y-1">
               {[
                 {
-                  href: '/artist/promotions/create',
+                  href: '/promoter/services/new',
                   icon: Plus,
                   light: 'bg-violet-50 dark:bg-violet-950/40',
                   text: 'text-violet-500',
                   label: 'Create New Service',
                 },
                 {
-                  href: '/artist/promotions/orders',
+                  href: '/promoter/orders',
                   icon: CheckCircle2,
                   light: 'bg-sky-50 dark:bg-sky-950/40',
                   text: 'text-sky-500',
                   label: 'Review Orders',
                 },
                 {
-                  href: '/artist/promotions/profile',
+                  href: '/promoter/profile',
                   icon: Star,
                   light: 'bg-emerald-50 dark:bg-emerald-950/40',
                   text: 'text-emerald-500',
                   label: 'Edit My Profile',
                 },
                 {
-                  href: '/artist/promotions/analytics',
+                  href: '/promoter/earnings',
                   icon: BarChart3,
                   light: 'bg-amber-50 dark:bg-amber-950/40',
                   text: 'text-amber-500',
-                  label: 'View Analytics',
+                  label: "View earnings",
                 },
                 {
-                  href: '/artist/promotions/requests/create',
+                  href: "/promotions/requests",
                   icon: Target,
                   light: 'bg-sky-50 dark:bg-sky-950/40',
                   text: 'text-sky-500',
-                  label: 'Post PromotionRequest',
+                  label: "Find open briefs",
                 },
               ].map(({ href, icon: Icon, light, text, label }) => (
                 <Link

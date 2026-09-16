@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreatePromotionRequest } from '@/hooks/usePromotionsV2';
+import { useSession } from 'next-auth/react';
 import { useMyArtistSongs } from '@/hooks/useArtist';
+import { useArtistEvents } from '@/hooks/useEvents';
+import { hasFullStudioAccess } from '@/lib/studio-access';
 import type { PromotableType } from '@/types/promotions-v2';
 
 const PLATFORMS = [
@@ -40,10 +43,172 @@ function toggle(arr: string[], val: string): string[] {
   return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
 }
 
-interface SongOption {
+interface ContentOption {
   id: number;
   title: string;
-  artwork_url?: string | null;
+  subtitle?: string;
+  image?: string | null;
+}
+
+/**
+ * Only the owner may post a brief for a song or event (the API checks), so
+ * the choices are the account's own releases and events.
+ */
+function ContentPicker({
+  canPickSongs,
+  canPickEvents,
+  selected,
+  onSelect,
+}: {
+  canPickSongs: boolean;
+  canPickEvents: boolean;
+  selected: { type: PromotableType; id: number };
+  onSelect: (type: PromotableType, id: number, title: string) => void;
+}) {
+  const [tab, setTab] = useState<PromotableType>(canPickSongs ? 'song' : 'event');
+
+  return (
+    <div className="space-y-3">
+      {canPickSongs && canPickEvents && (
+        <div className="inline-flex rounded-lg bg-muted p-1">
+          {(['song', 'event'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium',
+                tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground',
+              )}
+            >
+              {value === 'song' ? 'A song' : 'An event'}
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === 'song' && canPickSongs ? (
+        <SongOptions
+          selectedId={selected.type === 'song' ? selected.id : 0}
+          onSelect={(option) => onSelect('song', option.id, option.title)}
+        />
+      ) : (
+        <EventOptions
+          selectedId={selected.type === 'event' ? selected.id : 0}
+          onSelect={(option) => onSelect('event', option.id, option.title)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SongOptions({ selectedId, onSelect }: { selectedId: number; onSelect: (option: ContentOption) => void }) {
+  const { data, isLoading } = useMyArtistSongs({ per_page: 50, status: 'published' });
+  const songs: ContentOption[] = (data?.data ?? []).map(
+    (song: { id: number; title: string; artwork_url?: string | null }) => ({
+      id: song.id,
+      title: song.title,
+      image: song.artwork_url,
+    }),
+  );
+
+  return (
+    <OptionGrid
+      loading={isLoading}
+      options={songs}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={
+        <>
+          No published songs yet.{' '}
+          <Link href="/artist/upload" className="text-primary underline">
+            Upload one first
+          </Link>
+          .
+        </>
+      }
+    />
+  );
+}
+
+function EventOptions({ selectedId, onSelect }: { selectedId: number; onSelect: (option: ContentOption) => void }) {
+  const { data, isLoading } = useArtistEvents({ per_page: 50, status: 'published' });
+  const events: ContentOption[] = (data?.data ?? []).map((event) => ({
+    id: Number(event.id),
+    title: event.title,
+    subtitle: event.starts_at ? new Date(event.starts_at).toLocaleDateString() : undefined,
+    image: event.artwork ?? null,
+  }));
+
+  return (
+    <OptionGrid
+      loading={isLoading}
+      options={events}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={
+        <>
+          No published events yet.{' '}
+          <Link href="/artist/events/create" className="text-primary underline">
+            Create one first
+          </Link>
+          .
+        </>
+      }
+    />
+  );
+}
+
+function OptionGrid({
+  loading,
+  options,
+  selectedId,
+  onSelect,
+  empty,
+}: {
+  loading: boolean;
+  options: ContentOption[];
+  selectedId: number;
+  onSelect: (option: ContentOption) => void;
+  empty: React.ReactNode;
+}) {
+  if (loading) {
+    return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />;
+  }
+
+  if (options.length === 0) {
+    return <p className="text-sm text-muted-foreground">{empty}</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {options.map((option) => {
+        const isSelected = option.id === selectedId;
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onSelect(option)}
+            className={cn(
+              'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
+              isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30 hover:bg-muted/30',
+            )}
+          >
+            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
+              {option.image && <img src={option.image} alt="" className="h-full w-full object-cover" />}
+            </div>
+            <span className="min-w-0">
+              <span className={cn('block truncate text-sm font-medium', isSelected ? 'text-primary' : '')}>
+                {option.title}
+              </span>
+              {option.subtitle && <span className="block text-xs text-muted-foreground">{option.subtitle}</span>}
+            </span>
+            {isSelected && <BadgeCheck className="ml-auto h-4 w-4 shrink-0 text-primary" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function PostPromotionRequestPage() {
@@ -55,12 +220,13 @@ export default function PostPromotionRequestPage() {
   const prefillId = searchParams.get('promotable_id') ? Number(searchParams.get('promotable_id')) : null;
   const prefillTitle = searchParams.get('promotable_title') ?? '';
 
-  const { data: songsData } = useMyArtistSongs({ per_page: 50, status: 'published' });
-  const songs: SongOption[] = (songsData?.data ?? []).map((s: { id: number; title: string; artwork_url?: string | null }) => ({
-    id: s.id,
-    title: s.title,
-    artwork_url: s.artwork_url,
-  }));
+  const { data: session, status: sessionStatus } = useSession();
+  const identity = session?.user as
+    | { role?: string; isArtist?: boolean; isEventOrganizer?: boolean; capabilities?: string[] }
+    | undefined;
+  const isCreator = identity ? hasFullStudioAccess(identity) : false;
+  const canPickSongs = Boolean(identity?.isArtist) || identity?.role === 'artist';
+  const canPickEvents = isCreator;
 
   const [form, setForm] = useState({
     promotable_type: prefillType,
@@ -121,17 +287,45 @@ export default function PostPromotionRequestPage() {
         deliverables: form.deliverables.filter((d) => d.trim()),
       },
       {
-        onSuccess: () => router.push('/promotions/requests'),
+        onSuccess: () => router.push('/promotions/requests/mine'),
       }
     );
   };
 
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isCreator) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <Megaphone className="mx-auto h-10 w-10 text-muted-foreground/50" />
+        <h1 className="mt-4 text-xl font-bold">Briefs are for artists and event organisers</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          A brief asks promoters to push your own song or event. You can still book a promoter&apos;s service directly.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link href="/promotions" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+            Browse services
+          </Link>
+          <Link href="/become-artist" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
+            Become an artist
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/artist/promotions"
+          href="/promotions/requests/mine"
           className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -147,65 +341,46 @@ export default function PostPromotionRequestPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main form */}
         <div className="space-y-5">
-          {/* Song selection */}
-          <div className="rounded-xl bg-card shadow-sm p-5 space-y-4">
+          {/* What to promote */}
+          <div className="rounded-xl bg-card shadow-sm p-4 sm:p-5 space-y-4">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
                 <Music className="h-3.5 w-3.5 text-violet-500" />
               </span>
-              <h2 className="font-semibold">Select a song to promote</h2>
+              <h2 className="font-semibold">What do you want promoted?</h2>
             </div>
 
-            {songs.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {songs.map((song) => {
-                  const selected = form.promotable_id === song.id;
-                  return (
-                    <button
-                      key={song.id}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, promotable_id: song.id, promotable_title: song.title }))}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
-                        selected
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/30 hover:bg-muted/30'
-                      )}
-                    >
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
-                        {song.artwork_url && (
-                          <img src={song.artwork_url} alt={song.title} className="h-full w-full object-cover" />
-                        )}
-                      </div>
-                      <span className={cn('truncate text-sm font-medium', selected ? 'text-primary' : '')}>
-                        {song.title}
-                      </span>
-                      {selected && <BadgeCheck className="ml-auto h-4 w-4 shrink-0 text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : prefillId ? (
+            {prefillId && form.promotable_id === prefillId && prefillTitle ? (
               <div className="flex items-center gap-3 rounded-lg border border-primary bg-primary/5 p-3">
                 <Music className="h-5 w-5 shrink-0 text-primary" />
-                <span className="text-sm font-medium text-primary">{prefillTitle || `Song #${prefillId}`}</span>
-                <BadgeCheck className="ml-auto h-4 w-4 text-primary" />
+                <span className="truncate text-sm font-medium text-primary">{prefillTitle}</span>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, promotable_id: 0, promotable_title: '' }))}
+                  className="ml-auto text-xs text-muted-foreground underline"
+                >
+                  Change
+                </button>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No published songs found.{' '}
-                <Link href="/artist/songs" className="text-primary underline">Upload a song first</Link>.
-              </p>
+              <ContentPicker
+                canPickSongs={canPickSongs}
+                canPickEvents={canPickEvents}
+                selected={{ type: form.promotable_type, id: form.promotable_id }}
+                onSelect={(type, id, title) =>
+                  setForm((f) => ({ ...f, promotable_type: type, promotable_id: id, promotable_title: title }))
+                }
+              />
             )}
           </div>
 
-          {/* PromotionRequest details */}
+          {/* Request details */}
           <div className="rounded-xl bg-card shadow-sm p-5 space-y-4">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40">
                 <Megaphone className="h-3.5 w-3.5 text-sky-500" />
               </span>
-              <h2 className="font-semibold">PromotionRequest details</h2>
+              <h2 className="font-semibold">Request details</h2>
             </div>
 
             <div className="space-y-1.5">
@@ -414,7 +589,7 @@ export default function PostPromotionRequestPage() {
             <div className="space-y-2 text-sm">
               <div className={cn('flex items-center gap-2', form.promotable_id > 0 ? 'text-emerald-500' : 'text-muted-foreground')}>
                 <BadgeCheck className="h-4 w-4 shrink-0" />
-                Song selected
+                Song or event selected
               </div>
               <div className={cn('flex items-center gap-2', form.title.trim().length >= 5 ? 'text-emerald-500' : 'text-muted-foreground')}>
                 <BadgeCheck className="h-4 w-4 shrink-0" />
@@ -441,10 +616,10 @@ export default function PostPromotionRequestPage() {
             </button>
 
             <Link
-              href="/promotions/requests"
+              href="/promotions/requests/mine"
               className="block text-center text-xs text-muted-foreground hover:text-foreground underline"
             >
-              View all promotionRequests
+              Your requests
             </Link>
           </div>
 
@@ -455,7 +630,7 @@ export default function PostPromotionRequestPage() {
               { step: '1', text: 'You post what you need and set a budget range' },
               { step: '2', text: 'Promoters browse and apply with their pitch' },
               { step: '3', text: 'You review applications and award the best fit' },
-              { step: '4', text: 'Promoter delivers — you verify and release payment' },
+              { step: '4', text: 'The promoter delivers and sends proof — you accept it, and they are paid' },
             ].map(({ step, text }) => (
               <div key={step} className="flex items-start gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-50 dark:bg-violet-950/40 text-[10px] font-bold text-violet-500">

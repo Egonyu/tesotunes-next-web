@@ -208,13 +208,9 @@ export default function PromotionPurchasesPage() {
             <Search className="h-4 w-4" />
             Browse more services
           </Link>
-          {/*
-            This used to open /artist/promotions — the seller studio, which
-            middleware gates on the artist role, so a buyer tapping it was
-            bounced to sign-in. A buyer's own briefs are the useful destination.
-          */}
+          {/* A buyer's own briefs, in user space (not the artist studio). */}
           <Link
-            href="/promotions/requests"
+            href="/promotions/requests/mine"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-card px-4 text-sm font-semibold transition-colors hover:bg-muted/50"
           >
             <ExternalLink className="h-4 w-4" />

@@ -74,7 +74,7 @@ export default function AdminPromotionRequestsPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">PromotionRequests</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Promotion briefs</h1>
             <p className="text-sm text-muted-foreground">
               All artist-posted promotion briefs — oversee, close, and review applications
             </p>

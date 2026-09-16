@@ -12,12 +12,11 @@ import type {
   PromoterProfile,
   BrowsePromotionsParams,
   PurchasePromotionRequest,
-  SubmitVerificationRequest,
+  DeliverOrderRequest,
   CreatePromotionRequest,
   UpdatePromotionRequest,
   DisputeOrderRequest,
   ReviewPromotionRequest,
-  VerifyOrderRequest,
   RejectOrderRequest,
   ResolveDisputeRequest,
   UpdatePromoterProfileRequest,
@@ -100,11 +99,10 @@ export function fetchMyPurchase(orderId: number) {
   return apiGet<{ data: PromotionOrder }>(`/my/promotions/purchases/${orderId}`);
 }
 
-/** Submit verification proof for an order */
-export function submitVerification(orderId: number, data: SubmitVerificationRequest) {
+/** Buyer accepts the promoter's proof — releases payment to the promoter */
+export function acceptDelivery(orderId: number) {
   return apiPost<{ success: boolean; message: string }>(
-    `/promotions/orders/${orderId}/submit-verification`,
-    data
+    `/promotions/orders/${orderId}/accept`
   );
 }
 
@@ -187,10 +185,10 @@ export function fetchMyPromotionOrder(orderId: number) {
   return apiGet<{ data: PromotionOrder }>(`/my/promotions/orders/${orderId}`);
 }
 
-/** Verify an order (seller approves) */
-export function verifyOrder(orderId: number, data: VerifyOrderRequest) {
-  return apiPost<{ success: boolean; payment_released: boolean }>(
-    `/promotions/orders/${orderId}/verify`,
+/** Promoter submits proof that the promotion ran */
+export function deliverOrder(orderId: number, data: DeliverOrderRequest) {
+  return apiPost<{ message: string; data: PromotionOrder }>(
+    `/promotions/orders/${orderId}/deliver`,
     data
   );
 }

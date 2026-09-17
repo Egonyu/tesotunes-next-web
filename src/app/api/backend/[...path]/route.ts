@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { API_ORIGIN, API_URL } from "@/lib/api-config";
 import { buildLocalApiBaseUrls, fetchApiWithFallback, isRetryableNetworkError } from "@/lib/api-fallback";
 import { SESSION_EXPIRED_HEADER } from "@/lib/session-expiry";
+import { filterCookieHeader } from "@/lib/proxy-cookies";
 
 const PROXY_RESPONSE_HEADERS_TO_STRIP = [
   "content-encoding",
@@ -182,6 +183,12 @@ async function proxyToBackend(
   headers.delete("host");
   headers.delete("connection");
   headers.delete("content-length");
+  const forwardedCookies = filterCookieHeader(headers.get("cookie"));
+  if (forwardedCookies) {
+    headers.set("cookie", forwardedCookies);
+  } else {
+    headers.delete("cookie");
+  }
   headers.set("accept", headers.get("accept") || "application/json");
   applyCanonicalForwardedHeaders(headers);
 

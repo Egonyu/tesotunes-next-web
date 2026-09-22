@@ -438,6 +438,9 @@ export default function CreatePromotionPage() {
           </div>
 
           {/* Section 3: Audience & delivery */}
+          <details className="rounded-xl border bg-card p-3 sm:p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Audience and timing · {formatNumber(form.estimated_reach)} reach, {form.delivery_days_min}-{form.delivery_days_max} days</summary>
+            <div className="mt-4">
           <div className="rounded-xl bg-card shadow-sm p-5 space-y-4">
             <div className="flex items-center gap-2 pb-1 border-b">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40">
@@ -565,6 +568,9 @@ export default function CreatePromotionPage() {
               </div>
             </div>
           </div>
+
+            </div>
+          </details>
 
           {/* Section 4: Platform specifics */}
           <details className="rounded-xl border bg-card p-3 sm:p-4">

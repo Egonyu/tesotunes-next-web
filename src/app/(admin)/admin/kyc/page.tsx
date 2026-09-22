@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ShieldCheck,
   ShieldX,
@@ -16,11 +17,20 @@ import { cn } from '@/lib/utils';
 import { usePendingKyc, useReviewKyc, type PendingKycUser, type KycDocument } from '@/hooks/useKyc';
 
 export default function AdminKycReviewPage() {
+  const searchParams = useSearchParams();
+  const requestedUserId = Number(searchParams.get('user')) || undefined;
   const [selectedUser, setSelectedUser] = useState<PendingKycUser | null>(null);
-  const { data, isLoading, error } = usePendingKyc(20);
+  const { data, isLoading, error } = usePendingKyc(20, requestedUserId);
   const review = useReviewKyc();
 
   const users = data?.data ?? [];
+
+  useEffect(() => {
+    if (!requestedUserId || selectedUser?.user_id === requestedUserId) return;
+
+    const requestedUser = users.find((user) => user.user_id === requestedUserId);
+    if (requestedUser) setSelectedUser(requestedUser);
+  }, [requestedUserId, selectedUser?.user_id, users]);
 
   return (
     <div className="container mx-auto py-6">

@@ -116,14 +116,14 @@ export function useUploadKycDocument() {
 // Admin hooks
 // ============================================================================
 
-export function usePendingKyc(perPage = 20) {
+export function usePendingKyc(perPage = 20, userId?: number) {
   return useQuery({
-    queryKey: ['kyc', 'admin', 'pending', perPage],
+    queryKey: ['kyc', 'admin', 'pending', perPage, userId],
     queryFn: () =>
       apiGet<{
         data: PendingKycUser[];
         meta: { current_page: number; last_page: number; per_page: number; total: number };
-      }>(`/admin/kyc/pending?per_page=${perPage}`),
+      }>(`/admin/kyc/pending?per_page=${perPage}${userId ? `&user_id=${userId}` : ''}`),
     staleTime: 15_000,
   });
 }

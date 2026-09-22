@@ -170,33 +170,7 @@ export default function AdminPromotionsPage() {
             </p>
           </div>
 
-          {/* The sub-pages used to be five separate entries in the admin
-              sidebar for what is one product. They live here instead. */}
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/promotions/promoters"
-              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Promoters
-            </Link>
-            <Link
-              href="/admin/promotions/requests"
-              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Requests
-            </Link>
-            <Link
-              href="/admin/promotions/analytics"
-              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Analytics
-            </Link>
-            <Link
-              href="/admin/promotions/disputes"
-              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Disputes
-            </Link>
+          <div className="flex shrink-0">
             <Link
               href="/promotions"
               className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"

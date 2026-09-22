@@ -105,7 +105,7 @@ export function PromoterWorkspaceShell({ children }: { children: React.ReactNode
 
       <nav
         aria-label="Promoter workspace"
-        className="-mx-4 mb-6 flex gap-1 overflow-x-auto border-b px-4 [scrollbar-width:none] sm:mx-0 sm:px-0"
+        className="mb-6 grid grid-cols-3 gap-1.5 sm:flex sm:gap-1 sm:border-b"
       >
         {TABS.map(({ href, label, icon: Icon, ...tab }) => {
           const active = isActive(href, 'exact' in tab ? tab.exact : false);
@@ -116,10 +116,10 @@ export function PromoterWorkspaceShell({ children }: { children: React.ReactNode
               href={href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1.5 py-2 text-center text-xs font-medium transition-colors sm:flex-row sm:rounded-none sm:border-x-0 sm:border-t-0 sm:border-b-2 sm:px-3 sm:py-2.5 sm:text-sm',
                 active
-                  ? 'border-primary text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
+                  ? 'border-primary bg-primary/10 text-foreground sm:bg-transparent'
+                  : 'border-border text-muted-foreground hover:text-foreground sm:border-transparent',
               )}
             >
               <Icon className="h-4 w-4" />

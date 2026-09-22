@@ -53,13 +53,14 @@ export function PromotionCard({
       )}
     >
       {/* Featured Image */}
-      <div className="relative aspect-[16/9] bg-muted overflow-hidden">
+      <div className="relative aspect-[4/3] bg-muted overflow-hidden sm:aspect-[16/9]">
         {promotion.featured_image_url ? (
           <Image
             src={promotion.featured_image_url}
             alt={promotion.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            className="object-contain group-hover:scale-[1.02] transition-transform duration-300"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
@@ -91,7 +92,7 @@ export function PromotionCard({
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3">
+      <div className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
         {/* Type label */}
         <span className="text-[11px] font-medium text-primary uppercase tracking-wider">
           {PROMOTION_TYPE_LABELS[promotion.type] ??
@@ -104,7 +105,7 @@ export function PromotionCard({
         </h3>
 
         {/* Short description */}
-        <p className="text-xs text-muted-foreground line-clamp-2">
+        <p className="hidden text-xs text-muted-foreground line-clamp-2 sm:block">
           {promotion.short_description}
         </p>
 
@@ -156,7 +157,7 @@ export function PromotionCard({
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground sm:gap-3 sm:text-xs">
           <span className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
             {promotion.rating_average.toFixed(1)}

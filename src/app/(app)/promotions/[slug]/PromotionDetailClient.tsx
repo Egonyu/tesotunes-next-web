@@ -186,25 +186,26 @@ export default function PromotionDetailPage() {
 
         <section className="overflow-hidden rounded-[28px] border bg-card">
           <div className="grid xl:grid-cols-[minmax(0,1.35fr)_380px]">
-            <div className="relative min-h-[320px] border-b xl:border-b-0 xl:border-r">
+            <div className="min-w-0 border-b xl:border-b-0 xl:border-r">
+              <div className="relative aspect-[16/9] bg-muted sm:aspect-[2/1]">
               {promotion.featured_image_url ? (
-                <Image src={promotion.featured_image_url} alt={promotion.title} fill priority className="object-cover" />
+                <Image src={promotion.featured_image_url} alt={promotion.title} fill priority sizes="(max-width: 1280px) 100vw, 70vw" className="object-contain" />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-primary/5" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
-              <div className="absolute left-0 right-0 top-0 flex flex-wrap gap-2 p-6">
-                <span className="rounded-full bg-background/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">{typeLabel}</span>
-                <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">{platformLabel}</span>
-                {promotion.is_featured && <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">Featured</span>}
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                <h1 className="max-w-3xl text-3xl font-bold tracking-tight md:text-4xl">{promotion.title}</h1>
-                <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">{promotion.short_description}</p>
-                <div className="mt-5 flex flex-wrap gap-3 text-sm text-white/85">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Users className="h-4 w-4" />{formatNumber(promotion.estimated_reach)} reach</span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Clock className="h-4 w-4" />{deliveryText}</span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Star className="h-4 w-4 text-amber-300" />{promotion.rating_average.toFixed(1)} rating</span>
+              <div className="space-y-3 p-4 sm:p-6">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{typeLabel}</span>
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{platformLabel}</span>
+                  {promotion.is_featured && <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">Featured</span>}
+                </div>
+                <h1 className="break-words text-2xl font-bold tracking-tight sm:text-4xl">{promotion.title}</h1>
+                <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{promotion.short_description}</p>
+                <div className="grid grid-cols-3 gap-2 text-xs sm:gap-3 sm:text-sm">
+                  <span className="rounded-lg bg-muted p-2"><Users className="mb-1 h-4 w-4" />{formatNumber(promotion.estimated_reach)} reach</span>
+                  <span className="rounded-lg bg-muted p-2"><Clock className="mb-1 h-4 w-4" />{deliveryText}</span>
+                  <span className="rounded-lg bg-muted p-2"><Star className="mb-1 h-4 w-4 text-amber-500" />{promotion.rating_average.toFixed(1)} rating</span>
                 </div>
               </div>
             </div>

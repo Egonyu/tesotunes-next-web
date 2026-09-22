@@ -256,6 +256,11 @@ export default function PromoterProfilePage() {
 
       {/* Identity */}
       <Card>
+        {promoter.banner_url && (
+          <div className="relative mb-4 aspect-[3/1] min-h-28 overflow-hidden rounded-xl bg-muted">
+            <Image src={promoter.banner_url} alt={`${promoter.display_name} banner`} fill priority sizes="(max-width: 768px) 100vw, 1024px" className="object-contain" />
+          </div>
+        )}
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border bg-muted sm:h-20 sm:w-20">
             {promoter.avatar_url ? (
@@ -453,7 +458,7 @@ export default function PromoterProfilePage() {
         />
         {listings.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
               {listings.map((promotion) => (
                 <PromotionCard key={promotion.id} promotion={promotion} />
               ))}
@@ -478,7 +483,7 @@ export default function PromoterProfilePage() {
         {hasPastWork ? (
           <div className="space-y-4">
             {promoter.portfolio_items?.length ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
                 {promoter.portfolio_items.map((item, index) => (
                   <div
                     key={`${item.title}-${index}`}

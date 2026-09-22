@@ -197,7 +197,7 @@ export default function AdminPromotionsAnalyticsPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-5">
         <StatCard
           icon={<Megaphone className="h-4 w-4" />}
           label="Total promotions"
@@ -245,7 +245,7 @@ export default function AdminPromotionsAnalyticsPage() {
               <Radio className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold">Current marketplace signals</h2>
             </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3">
               <StatCard
                 icon={<Sparkles className="h-4 w-4" />}
                 label="Listings with media"
@@ -269,7 +269,7 @@ export default function AdminPromotionsAnalyticsPage() {
 
           <section className="rounded-[28px] border bg-card p-6">
             <h2 className="text-lg font-semibold">Settlement operations</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
               <StatCard
                 icon={<AlertTriangle className="h-4 w-4" />}
                 label="Refund rate"

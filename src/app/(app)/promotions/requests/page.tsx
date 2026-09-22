@@ -179,7 +179,7 @@ function PromotionRequestCard({ opp }: { opp: PromotionRequestV2 }) {
         <div className="border-t bg-muted/30 p-5 space-y-3">
           <h4 className="text-sm font-semibold">Submit your application</h4>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Proposed price (UGX)</label>
               <input
@@ -284,7 +284,7 @@ export default function PromotionRequestsPage() {
           </div>
           <div className="flex gap-2">
             <Link
-              href="/promoters"
+              href="/promotions?view=promoters"
               className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
             >
               Find promoters

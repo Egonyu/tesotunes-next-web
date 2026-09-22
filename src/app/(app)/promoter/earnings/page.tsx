@@ -94,7 +94,7 @@ export default function PromoterEarningsPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         {cards.map(({ label, note, icon: Icon, tone, ugx, credits }) => (
           <div key={label} className="rounded-xl bg-card p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
@@ -139,7 +139,7 @@ export default function PromoterEarningsPage() {
           <div className="mt-3 flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               {top.featured_image_url && (
-                <img src={top.featured_image_url} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" />
+                <img src={top.featured_image_url} alt="" className="h-14 w-20 shrink-0 rounded-lg bg-muted object-contain" />
               )}
               <div className="min-w-0">
                 <p className="truncate font-medium">{top.title}</p>

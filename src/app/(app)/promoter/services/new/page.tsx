@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { ImageUploadInput } from '@/components/ui/image-upload-input';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
-import { useCreatePromotion } from '@/hooks/usePromotions';
+import { useCreatePromotion, useMyPromoterProfile } from '@/hooks/usePromotions';
+import { useMyPromoterProfileV2 } from '@/hooks/usePromotionsV2';
 import type {
   CreatePromotionRequest,
   PromotionAudienceNiche,
@@ -118,6 +119,10 @@ const labelCls = 'block mb-1.5 text-sm font-medium';
 export default function CreatePromotionPage() {
   const router = useRouter();
   const create = useCreatePromotion();
+  const { data: profile } = useMyPromoterProfile();
+  const { data: audienceProfile } = useMyPromoterProfileV2();
+  const profileApplied = useRef(false);
+  const audienceApplied = useRef(false);
 
   const [form, setForm] = useState<CreatePromotionRequest>(createDefault());
   const [deliverables, setDeliverables] = useState(['']);
@@ -127,6 +132,27 @@ export default function CreatePromotionPage() {
   const [hashtagInput, setHashtagInput] = useState('');
   const [terms, setTerms] = useState('');
   const [platformSpec, setPlatformSpec] = useState({ channel: '', placement: '', proof: '', timing: '' });
+
+  useEffect(() => {
+    if (!profile || profileApplied.current) return;
+    profileApplied.current = true;
+    setForm((current) => ({
+      ...current,
+      platform: profile.platforms?.[0] ?? current.platform,
+      estimated_reach: profile.follower_count || current.estimated_reach,
+      featured_image: profile.banner_url || current.featured_image,
+    }));
+  }, [profile]);
+
+  useEffect(() => {
+    if (!audienceProfile || audienceApplied.current) return;
+    audienceApplied.current = true;
+    const supportedNiches = audienceProfile.niches?.filter((niche): niche is PromotionAudienceNiche =>
+      niche in PROMOTION_AUDIENCE_NICHE_LABELS
+    ) ?? [];
+    setForm((current) => ({ ...current, audience_niches: supportedNiches }));
+    if (audienceProfile.audience_regions?.length) setRegions(audienceProfile.audience_regions);
+  }, [audienceProfile]);
 
   const update = <K extends keyof CreatePromotionRequest>(k: K, v: CreatePromotionRequest[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
@@ -146,13 +172,8 @@ export default function CreatePromotionPage() {
     const checks = [
       form.title.trim(),
       form.short_description.trim(),
-      form.description.trim(),
-      (form.audience_niches ?? []).length > 0,
-      (form.content_formats ?? []).length > 0,
-      normalise(regions).length > 0,
-      normalise(deliverables).length > 0,
-      requirementAction.trim(),
-      terms.trim(),
+      form.price_credits > 0 || form.price_ugx > 0,
+      form.delivery_days_max > 0,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [form, regions, deliverables, requirementAction, terms]);
@@ -169,7 +190,7 @@ export default function CreatePromotionPage() {
     PLATFORM_GUIDANCE[form.platform] ||
     'Keep the promise clear, platform-specific, and measurable for the buyer.';
 
-  const isDisabled = create.isPending || !form.title.trim() || !form.short_description.trim() || !form.description.trim();
+  const isDisabled = create.isPending || !form.title.trim() || !form.short_description.trim();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +203,7 @@ export default function CreatePromotionPage() {
       ...form,
       title: form.title.trim(),
       short_description: form.short_description.trim(),
-      description: form.description.trim(),
+      description: form.description.trim() || [form.short_description.trim(), profile?.audience_summary].filter(Boolean).join('\n\n'),
       audience_regions: normalise(regions),
       deliverables: normalise(deliverables),
       terms: terms.trim() || undefined,
@@ -230,6 +251,14 @@ export default function CreatePromotionPage() {
           </p>
         </div>
       </div>
+
+      {profile && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+          <p className="font-semibold">Starting from {profile.name}&apos;s promoter profile</p>
+          <p className="mt-1 text-muted-foreground">Platform, audience reach and banner are reused. You can change any of them for this service.</p>
+          <Link href="/promoter/profile" className="mt-2 inline-block font-medium text-primary underline">Edit profile</Link>
+        </div>
+      )}
 
       {/* Completion banner */}
       <div className="flex items-center gap-4 rounded-xl bg-card px-5 py-3.5 shadow-sm">
@@ -293,18 +322,23 @@ export default function CreatePromotionPage() {
               />
             </div>
 
-            <div>
-              <label className={labelCls}>Full description *</label>
+            <details className="rounded-lg border p-3">
+              <summary className="cursor-pointer text-sm font-medium">Add a detailed description (optional)</summary>
+              <div className="mt-3">
+              <label className={labelCls}>Full description</label>
               <textarea
                 value={form.description}
                 onChange={(e) => update('description', e.target.value)}
                 className={textareaCls}
                 rows={5}
                 placeholder="How does it work? What does the artist send? How is delivery verified?"
-                required
               />
-            </div>
+              </div>
+            </details>
 
+            <details className="rounded-lg border p-3">
+              <summary className="cursor-pointer text-sm font-medium">{form.featured_image ? 'Change the profile banner for this service' : 'Add a service image (optional)'}</summary>
+              <div className="mt-3">
             <ImageUploadInput
               label="Featured Image"
               value={form.featured_image}
@@ -312,6 +346,8 @@ export default function CreatePromotionPage() {
               uploadType="cover"
               aspectRatio="video"
             />
+              </div>
+            </details>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -531,6 +567,9 @@ export default function CreatePromotionPage() {
           </div>
 
           {/* Section 4: Platform specifics */}
+          <details className="rounded-xl border bg-card p-3 sm:p-4">
+            <summary className="cursor-pointer font-semibold">Add delivery details, requirements and terms (optional)</summary>
+            <div className="mt-4 space-y-4">
           <div className="rounded-xl bg-card shadow-sm p-5 space-y-4">
             <div className="flex items-center gap-2 pb-1 border-b">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-950/40">
@@ -654,6 +693,9 @@ export default function CreatePromotionPage() {
               />
             </div>
           </div>
+
+            </div>
+          </details>
 
           {/* Submit */}
           <div className="flex gap-3">

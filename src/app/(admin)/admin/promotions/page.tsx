@@ -322,7 +322,7 @@ export default function AdminPromotionsPage() {
                         <div className="hidden shrink-0 lg:block">
                           {promo.featured_image_url ? (
                             <div
-                              className="h-full w-44 bg-cover bg-center"
+                              className="h-full w-44 bg-contain bg-center bg-no-repeat bg-muted"
                               style={{ backgroundImage: `url(${promo.featured_image_url})` }}
                             />
                           ) : (
@@ -340,7 +340,7 @@ export default function AdminPromotionsPage() {
                             {/* Mobile thumbnail */}
                             {promo.featured_image_url && (
                               <div
-                                className="h-14 w-14 shrink-0 rounded-xl bg-cover bg-center lg:hidden"
+                                className="h-14 w-14 shrink-0 rounded-xl bg-contain bg-center bg-no-repeat bg-muted lg:hidden"
                                 style={{ backgroundImage: `url(${promo.featured_image_url})` }}
                               />
                             )}

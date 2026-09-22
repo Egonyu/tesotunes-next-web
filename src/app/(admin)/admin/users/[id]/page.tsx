@@ -120,6 +120,16 @@ type UserDetail = {
     };
     wallet: {
       balance_ugx: number;
+      movements: {
+        topups_ugx: number;
+        credits_converted_ugx: number;
+        earnings_credited_ugx: number;
+        credits_purchased_ugx: number;
+        withdrawn_ugx: number;
+        withdrawals_pending_ugx: number;
+        earnings_pending_ugx: number;
+        earnings_cleared_ugx: number;
+      };
       credits: number;
       pin_set: boolean;
       pin_locked_until?: string | null;
@@ -435,7 +445,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <Metric
           label="Wallet"
           value={formatMoney(review.wallet.balance_ugx)}
-          detail={`${review.wallet.credits.toLocaleString()} credits · ${review.wallet.payments.in_flight} payments in flight`}
+          detail={`${review.wallet.credits.toLocaleString()} credits · available now`}
           icon={<Wallet className="h-5 w-5" />}
         />
         <Metric
@@ -557,6 +567,29 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </Panel>
 
+          <Panel title="UGX wallet breakdown" icon={<CreditCard className="h-5 w-5 text-primary" />}>
+            <p className="mb-4 text-sm text-muted-foreground">Recorded UGX wallet movements. Incoming and outgoing amounts are shown separately.</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {[
+                ['Available now', review.wallet.balance_ugx],
+                ['Top-ups', review.wallet.movements.topups_ugx],
+                ['Credits converted to UGX', review.wallet.movements.credits_converted_ugx],
+                ['Earnings credited', review.wallet.movements.earnings_credited_ugx],
+                ['Spent on credits', review.wallet.movements.credits_purchased_ugx],
+                ['Withdrawn', review.wallet.movements.withdrawn_ugx],
+                ['Withdrawal in progress', review.wallet.movements.withdrawals_pending_ugx],
+                ['Earnings pending clearance', review.wallet.movements.earnings_pending_ugx],
+                ['Cleared, awaiting wallet credit', review.wallet.movements.earnings_cleared_ugx],
+              ].map(([label, amount]) => (
+                <div key={String(label)} className="rounded-lg border bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-1 text-base font-semibold tabular-nums">{formatMoney(Number(amount))}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">These recorded movements do not include every wallet purchase or transfer. Use “Available now” for the live balance.</p>
+          </Panel>
+
           <Panel title="Payments, orders and content" icon={<CreditCard className="h-5 w-5 text-primary" />}>
             <div className="grid gap-5 lg:grid-cols-3">
               <div>
@@ -573,10 +606,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   <div className="flex justify-between">
                     <dt>Failed</dt>
                     <dd className="font-medium text-red-600">{review.wallet.payments.failed}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>UGX volume</dt>
-                    <dd className="font-medium">{formatMoney(review.wallet.payments.completed_volume_ugx)}</dd>
                   </div>
                 </dl>
               </div>

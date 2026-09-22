@@ -174,7 +174,7 @@ export default function AdminPromotersV2Page() {
       ) : (
         <div className="space-y-3">
           {promoters.map((promoter) => (
-            <div key={promoter.id} className="rounded-xl bg-card shadow-sm p-5">
+            <div key={promoter.id} className="min-w-0 rounded-xl bg-card p-3 shadow-sm sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4 min-w-0">
                   {/* Avatar */}
@@ -209,7 +209,7 @@ export default function AdminPromotersV2Page() {
                       </span>
                     </div>
 
-                    <p className="mt-0.5 text-sm text-muted-foreground">
+                    <p className="mt-0.5 break-words text-sm text-muted-foreground">
                       {promoter.user?.name} · @{promoter.user?.username ?? promoter.slug} · {promoter.user?.email}
                     </p>
 

@@ -119,7 +119,7 @@ export default function PromoterOrderPage() {
         <div className="flex items-start gap-3">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
             {order.promotion.featured_image_url ? (
-              <Image src={order.promotion.featured_image_url} alt="" fill className="object-cover" />
+              <Image src={order.promotion.featured_image_url} alt="" fill className="object-contain" />
             ) : null}
           </div>
           <div className="min-w-0 flex-1">

@@ -36,6 +36,7 @@ import {
   BadgeCheck,
   Target,
   ShieldAlert,
+  ShieldCheck,
   Languages,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,7 @@ import { usePlayerStore, useUIStore } from '@/stores';
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, requiredPermissions: ['admin.dashboard'] },
   { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
+  { href: '/admin/kyc', label: 'Identity Review', icon: ShieldCheck, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
   { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'song.view', 'song.edit', 'song.upload', 'song.review'] },
   { href: '/admin/albums', label: 'Albums', icon: Disc3, requiredPermissions: ['admin.music', 'album.*'] },
   { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'artist.view', 'artist.edit', 'artist.review'] },

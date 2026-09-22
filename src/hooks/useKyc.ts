@@ -28,6 +28,7 @@ export interface KycDocument {
   rejection_reason: string | null;
   submitted_at: string | null;
   verified_at: string | null;
+  review_url: string | null;
 }
 
 export interface KycStatus {

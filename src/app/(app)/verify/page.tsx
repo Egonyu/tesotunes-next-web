@@ -42,7 +42,7 @@ const STATUS_META: Record<
     tone: "text-blue-500",
     icon: Clock,
     title: "Under review",
-    blurb: "Your documents are in. Our team will review them shortly.",
+    blurb: "Your submitted documents are under review. Upload any required document still missing below.",
   },
   verified: {
     tone: "text-emerald-500",
@@ -159,7 +159,12 @@ export default function VerifyPage() {
   const verifiedCount = required.filter(
     (r) => latestDocFor(r.type, kyc.documents)?.status === "verified",
   ).length;
-  const showUploads = kyc.status !== "verified" && kyc.status !== "pending_review";
+  const hasDocumentsStillToUpload = required.some((requirement) => {
+    const status = latestDocFor(requirement.type, kyc.documents)?.status;
+
+    return status !== "pending" && status !== "verified";
+  });
+  const showUploads = kyc.status !== "verified" && hasDocumentsStillToUpload;
 
   return (
     <div className="mx-auto max-w-2xl py-8">

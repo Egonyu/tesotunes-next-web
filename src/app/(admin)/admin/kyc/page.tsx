@@ -10,6 +10,7 @@ import {
   FileText,
   Clock,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingKyc, useReviewKyc, type PendingKycUser, type KycDocument } from '@/hooks/useKyc';
@@ -155,7 +156,9 @@ function KycReviewDetail({ user, isPending, onDecide }: KycReviewDetailProps) {
         <h4 className="text-sm font-medium mb-3">Required document checklist</h4>
         <ul className="space-y-1 text-sm">
           {user.requirements.required_document_types.map((req) => {
-            const submitted = user.documents.some((d) => d.document_type === req.type);
+            const submitted = user.documents.some(
+              (d) => d.document_type === req.type && ['pending', 'verified'].includes(d.status),
+            );
             return (
               <li key={req.type} className="flex items-center gap-2">
                 <span
@@ -193,7 +196,7 @@ function KycReviewDetail({ user, isPending, onDecide }: KycReviewDetailProps) {
             className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
             <ShieldX className="h-4 w-4" />
-            Reject
+            Request resubmission
           </button>
         </div>
       )}
@@ -250,7 +253,7 @@ function KycReviewDetail({ user, isPending, onDecide }: KycReviewDetailProps) {
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
             >
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldX className="h-4 w-4" />}
-              Confirm reject
+              Send resubmission request
             </button>
             <button
               type="button"
@@ -298,6 +301,17 @@ function KycDocumentRow({ doc }: { doc: KycDocument }) {
         </p>
         {doc.rejection_reason && (
           <p className="text-xs text-red-600 mt-1">{doc.rejection_reason}</p>
+        )}
+        {doc.review_url && (
+          <a
+            href={doc.review_url.replace(/^\/api\//, '/api/backend/')}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            View private document
+            <ExternalLink className="h-3 w-3" />
+          </a>
         )}
       </div>
     </div>

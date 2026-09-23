@@ -7,9 +7,9 @@ import Link from 'next/link';
 
 const PLAN_ICONS: Record<string, typeof Crown> = {
   free: Music2,
-  premium: Crown,
-  artist: Star,
-  label: Building2,
+  emong: Music2,
+  eris: Star,
+  engatuny: Building2,
 };
 
 export default function PricingPage() {

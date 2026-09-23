@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import {
   Languages,
   CheckCircle2,
@@ -21,17 +22,55 @@ import {
   useTranslationTasks,
   useSubmitTranslation,
   useValidationQueue,
+  useClaimGuestWork,
   useSubmitValidation,
   DIALECTS,
   type Verdict,
 } from '@/hooks/useContributions';
 import { EarningsTicker } from '@/components/contributions/earnings-ticker';
+import { GuestLoop } from '@/components/contributions/guest-loop';
 
 type Tab = 'translate' | 'validate' | 'standing';
 
 export default function ContributePage() {
-  const { data: consent, isLoading: consentLoading } = useConsentStatus();
+  const { status } = useSession();
+  const signedIn = status === 'authenticated';
+
+  // Consent is only meaningful once there is an account to attach it to, so the
+  // query stays off for guests rather than 401-ing on arrival.
+  const { data: consent, isLoading: consentLoading } = useConsentStatus(signedIn);
   const recordConsent = useRecordConsent();
+  const claimGuestWork = useClaimGuestWork();
+
+  // Anything translated before signing in is promoted into the real pipeline the
+  // moment an account exists. Runs once per sign-in; failures leave the rows
+  // unclaimed so the next attempt picks them up.
+  const claimed = useRef(false);
+  useEffect(() => {
+    if (signedIn && !claimed.current) {
+      claimed.current = true;
+      claimGuestWork.mutate();
+    }
+  }, [signedIn, claimGuestWork]);
+
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Guests get the loop immediately — no account, no consent wall. The only
+  // people who ever contributed to the prototype did so anonymously, and a gate
+  // on arrival turns them away before they have any reason to care.
+  if (!signedIn) {
+    return (
+      <div className="py-2">
+        <GuestLoop onWantAccount={() => signIn()} />
+      </div>
+    );
+  }
 
   if (consentLoading) {
     return (

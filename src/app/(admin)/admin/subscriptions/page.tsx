@@ -78,6 +78,7 @@ interface SubscriptionPlan {
   duration_days?: number;
   trial_days?: number;
   features: string[];
+  entitlements?: Record<string, boolean | number | string | null>;
   max_downloads_per_day?: number | null;
   max_uploads_per_month?: number | null;
   max_audio_quality_kbps?: number;
@@ -133,6 +134,7 @@ interface PlanFormState {
   eventProcessingFeePercent: string;
   sortOrder: string;
   features: string;
+  entitlements: string;
   hasAds: boolean;
   offlineMode: boolean;
   isActive: boolean;
@@ -153,7 +155,7 @@ const defaultPlanForm = (): PlanFormState => ({
   name: '',
   slug: '',
   description: '',
-  tier: 'premium',
+  tier: 'emong',
   type: 'standard',
   currency: 'UGX',
   interval: 'month',
@@ -173,6 +175,7 @@ const defaultPlanForm = (): PlanFormState => ({
   eventProcessingFeePercent: '',
   sortOrder: '0',
   features: '',
+  entitlements: '',
   hasAds: false,
   offlineMode: true,
   isActive: true,
@@ -185,6 +188,54 @@ const asString = (value: string | number | null | undefined, fallback = '') =>
   value === null || value === undefined ? fallback : String(value);
 const toNumber = (value: string) => Number(value || 0);
 const toNullableNumber = (value: string) => (value.trim() === '' ? null : Number(value));
+
+const DEDICATED_ENTITLEMENT_KEYS = new Set([
+  'streaming.ad_free',
+  'streaming.audio_quality_kbps',
+  'streaming.downloads_per_day',
+  'streaming.offline',
+  'creator.uploads_per_month',
+  'events.platform_commission_percent',
+  'events.processing_fee_percent',
+]);
+
+const serializeEntitlements = (entitlements?: Record<string, boolean | number | string | null>) =>
+  Object.entries(entitlements ?? {})
+    .filter(([key]) => !DEDICATED_ENTITLEMENT_KEYS.has(key))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key} = ${value === null ? 'null' : String(value)}`)
+    .join('\n');
+
+const parseEntitlementValue = (raw: string): boolean | number | string | null => {
+  const value = raw.trim();
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (value === 'null' || value === 'unlimited') return null;
+  if (value !== '' && Number.isFinite(Number(value))) return Number(value);
+  return value;
+};
+
+const parseEntitlements = (input: string): Record<string, boolean | number | string | null> => {
+  const entries: Record<string, boolean | number | string | null> = {};
+
+  input.split(/\r?\n/).forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const separator = trimmed.indexOf('=');
+    if (separator < 1) throw new Error(`Entitlement line ${index + 1} must use key = value.`);
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1);
+    if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(key)) {
+      throw new Error(`Entitlement key "${key}" is invalid.`);
+    }
+    if (DEDICATED_ENTITLEMENT_KEYS.has(key)) {
+      throw new Error(`Use the dedicated ${key} control above instead.`);
+    }
+    entries[key] = parseEntitlementValue(value);
+  });
+
+  return entries;
+};
 
 const normalizeStatsResponse = (response: StatsApiResponse): SubscriptionStats => ({
   total_active: response?.data?.active ?? 0,
@@ -206,7 +257,7 @@ const buildPlanForm = (plan: SubscriptionPlan): PlanFormState => ({
   name: plan.name ?? '',
   slug: plan.slug ?? '',
   description: plan.description ?? '',
-  tier: plan.tier ?? 'premium',
+  tier: plan.tier ?? 'emong',
   type: plan.type ?? 'standard',
   currency: plan.currency ?? 'UGX',
   interval: plan.interval ?? 'month',
@@ -226,6 +277,7 @@ const buildPlanForm = (plan: SubscriptionPlan): PlanFormState => ({
   eventProcessingFeePercent: asString(plan.rates?.event_processing_fee_percent),
   sortOrder: asString(plan.sort_order ?? 0, '0'),
   features: Array.isArray(plan.features) ? plan.features.join('\n') : '',
+  entitlements: serializeEntitlements(plan.entitlements),
   hasAds: Boolean(plan.has_ads),
   offlineMode: Boolean(plan.offline_mode),
   isActive: Boolean(plan.is_active),
@@ -374,6 +426,19 @@ export default function AdminSubscriptionsPage() {
       return;
     }
 
+    let entitlements: Record<string, boolean | number | string | null>;
+    try {
+      entitlements = parseEntitlements(planForm.entitlements);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Check the entitlement rules.');
+      return;
+    }
+
+    if (!Object.keys(entitlements).length) {
+      toast.error('Add at least one entitlement rule.');
+      return;
+    }
+
     savePlanMutation.mutate({
       planId: editingPlan?.id,
       payload: {
@@ -402,6 +467,7 @@ export default function AdminSubscriptionsPage() {
         is_popular: planForm.isPopular,
         sort_order: toNumber(planForm.sortOrder),
         features,
+        entitlements,
         rates: {
           stream_rate_ugx: toNullableNumber(planForm.streamRateUgx),
           credit_to_ugx_rate: toNullableNumber(planForm.creditToUgxRate),
@@ -642,6 +708,7 @@ export default function AdminSubscriptionsPage() {
                         <span>Audio: {plan.max_audio_quality_kbps ?? 320} kbps</span>
                         <span>Downloads: {plan.max_downloads_per_day === null ? 'Unlimited' : plan.max_downloads_per_day ?? 0}/day</span>
                         <span>Uploads: {plan.max_uploads_per_month ?? 0}/month</span>
+                        <span>{Object.keys(plan.entitlements ?? {}).length} entitlement rules</span>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -730,8 +797,8 @@ export default function AdminSubscriptionsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div><label className="mb-1 block text-sm font-medium">Name</label><input type="text" value={planForm.name} onChange={(e) => setPlanForm((current) => ({ ...current, name: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" /></div>
               <div><label className="mb-1 block text-sm font-medium">Slug (optional)</label><input type="text" value={planForm.slug} onChange={(e) => setPlanForm((current) => ({ ...current, slug: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="starter-plus" /></div>
-              <div><label className="mb-1 block text-sm font-medium">Tier</label><select value={planForm.tier} onChange={(e) => setPlanForm((current) => ({ ...current, tier: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2">{['free', 'premium', 'artist', 'label'].map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-              <div><label className="mb-1 block text-sm font-medium">Type</label><select value={planForm.type} onChange={(e) => setPlanForm((current) => ({ ...current, type: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2">{['standard', 'creator', 'enterprise'].map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
+              <div><label className="mb-1 block text-sm font-medium">Tier</label><input type="text" value={planForm.tier} onChange={(e) => setPlanForm((current) => ({ ...current, tier: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="emong" /></div>
+              <div><label className="mb-1 block text-sm font-medium">Audience Type</label><input type="text" value={planForm.type} onChange={(e) => setPlanForm((current) => ({ ...current, type: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="personal, professional, organization…" /></div>
               <div className="md:col-span-2"><label className="mb-1 block text-sm font-medium">Description</label><textarea rows={3} value={planForm.description} onChange={(e) => setPlanForm((current) => ({ ...current, description: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="Say plainly what changes in the user experience after upgrading." /></div>
               <div><label className="mb-1 block text-sm font-medium">Currency</label><input type="text" maxLength={3} value={planForm.currency} onChange={(e) => setPlanForm((current) => ({ ...current, currency: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2 uppercase" /></div>
               <div><label className="mb-1 block text-sm font-medium">Region</label><input type="text" value={planForm.region} onChange={(e) => setPlanForm((current) => ({ ...current, region: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" /></div>
@@ -751,6 +818,18 @@ export default function AdminSubscriptionsPage() {
               <div><label className="mb-1 block text-sm font-medium">Event Commission (%)</label><input type="number" min="0" max="100" step="0.01" value={planForm.eventPlatformCommissionPercent} onChange={(e) => setPlanForm((current) => ({ ...current, eventPlatformCommissionPercent: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="Fallback to event default if blank" /></div>
               <div><label className="mb-1 block text-sm font-medium">Event Processing Fee (%)</label><input type="number" min="0" max="100" step="0.01" value={planForm.eventProcessingFeePercent} onChange={(e) => setPlanForm((current) => ({ ...current, eventProcessingFeePercent: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="Payment handling markup for this package" /></div>
               <div className="md:col-span-2"><label className="mb-1 block text-sm font-medium">Visible Value Points</label><textarea rows={5} value={planForm.features} onChange={(e) => setPlanForm((current) => ({ ...current, features: e.target.value }))} className="w-full rounded-lg border bg-background px-4 py-2" placeholder="One feature per line. Keep these plain and persuasive for first-time subscribers." /></div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">Entitlement Rules</label>
+                <textarea
+                  rows={16}
+                  value={planForm.entitlements}
+                  onChange={(e) => setPlanForm((current) => ({ ...current, entitlements: e.target.value }))}
+                  className="w-full rounded-lg border bg-background px-4 py-2 font-mono text-xs"
+                  placeholder={'streaming.ad_free = true\ncreator.uploads_per_month = 10\nfinance.withdrawal_minimum_ugx = 25000'}
+                  spellCheck={false}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">One rule per line using key = value. Values may be true, false, a number, text, or unlimited. Changes take effect without a deploy.</p>
+              </div>
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

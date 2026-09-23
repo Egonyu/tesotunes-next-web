@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 // Types — aligned with backend SubscriptionController responses
 // ============================================================================
 
-export type SubscriptionPlanSlug = 'free' | 'premium' | 'artist' | 'label';
+export type SubscriptionPlanSlug = 'free' | 'emong' | 'eris' | 'engatuny' | string;
+export type SubscriptionEntitlementValue = boolean | number | string | null;
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'pending_renewal';
 export type BillingCycle = 'monthly' | 'yearly';
 
@@ -24,6 +25,7 @@ export interface SubscriptionPlan {
   currency: string;
   trial_days: number;
   features: string[];
+  entitlements: Record<string, SubscriptionEntitlementValue>;
   limits: {
     downloads_per_day: number | null;
     uploads_per_month: number | null;
@@ -48,6 +50,7 @@ export interface CurrentSubscription {
   auto_renew?: boolean;
   ad_free?: boolean;
   offline_access?: boolean;
+  entitlements: Record<string, SubscriptionEntitlementValue>;
   limits: {
     downloads_per_day: number | null; // null = unlimited
     downloads_today: number;
@@ -263,8 +266,40 @@ export function useSubscriptionPaymentStatus(paymentId: number | null) {
 
 type SubscriptionFeature = 'ad_free' | 'stream_with_ads' | 'offline_access' | 'high_quality' | string;
 
+export function useEntitlement<T extends SubscriptionEntitlementValue>(key: string, fallback: T): T {
+  const { data: sub } = useMySubscription();
+  const value = sub?.entitlements?.[key];
+
+  return (value === undefined ? fallback : value) as T;
+}
+
+export function useEntitlementLimit(key: string, fallback: number | null = 0): number | null {
+  const value = useEntitlement<SubscriptionEntitlementValue>(key, fallback);
+
+  if (value === null) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return parsed < 0 ? null : parsed;
+}
+
 export function useCanAccess(feature: SubscriptionFeature): boolean {
   const { data: sub } = useMySubscription();
+
+  const entitlementKey = {
+    ad_free: 'streaming.ad_free',
+    stream_with_ads: 'streaming.ad_free',
+    offline_access: 'streaming.offline',
+    high_quality: 'streaming.audio_quality_kbps',
+  }[feature] ?? feature;
+  const entitlement = sub?.entitlements?.[entitlementKey];
+
+  if (entitlement !== undefined) {
+    if (feature === 'stream_with_ads') return entitlement !== true;
+    if (feature === 'high_quality') return Number(entitlement) >= 320;
+    if (typeof entitlement === 'boolean') return entitlement;
+    if (typeof entitlement === 'number') return entitlement !== 0;
+    return ['true', 'yes', 'on', 'enabled', 'unlimited'].includes(String(entitlement).toLowerCase());
+  }
 
   switch (feature) {
     case 'ad_free':

@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         country: data.country,
         date_of_birth: data.date_of_birth,
         recaptcha_token: data.recaptcha_token,
+        referral_code: typeof data.referral_code === "string" ? data.referral_code.trim().slice(0, 32) : undefined,
       }),
     });
 
@@ -123,4 +124,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -31,6 +31,7 @@ import {
   ThumbsUp,
   Languages,
   Ticket,
+  Gift,
 } from "lucide-react";
 import { useUIStore } from "@/stores";
 import { useSession, signOut } from "next-auth/react";
@@ -63,6 +64,7 @@ const browseItems = [
 ];
 
 const moduleItems = [
+  { href: "/referrals", label: "Refer & Earn", icon: Gift },
   { href: "/edula", label: "Edula", icon: Rss },
   { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
@@ -137,6 +139,7 @@ export function Sidebar() {
   const { data: contributionsStatus } = useContributionsStatus();
   const g = platformSettings?.general;
   const visibleModuleItems = moduleItems.filter((item) => {
+    if (item.href === "/referrals" && !session?.user) return false;
     if (item.href === "/sacco") return false;
     if (item.href === "/contribute" && !contributionsStatus?.enabled) return false;
     if (item.href === "/store" && !(g?.store_enabled ?? STORE_ENABLED)) return false;

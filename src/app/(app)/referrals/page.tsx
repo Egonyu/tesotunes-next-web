@@ -9,7 +9,6 @@ import {
   Gift, 
   Trophy,
   MessageCircle,
-  QrCode,
   CheckCircle,
   Clock,
   ChevronRight,
@@ -30,17 +29,17 @@ import { Progress } from '@/components/ui/progress';
 import { useReferralDashboard, useReferralLeaderboard, useTrackShare } from '@/hooks/useReferrals';
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-500/20 text-green-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  completed: 'bg-purple-500/20 text-purple-400',
-  churned: 'bg-red-500/20 text-red-400',
+  active: 'bg-green-500/20 text-emerald-700 dark:text-green-400',
+  pending: 'bg-yellow-500/20 text-amber-700 dark:text-yellow-400',
+  completed: 'bg-purple-500/20 text-purple-700 dark:text-purple-400',
+  churned: 'bg-red-500/20 text-red-700 dark:text-red-400',
 };
 
 const tierColors: Record<string, string> = {
   bronze: 'text-amber-600',
-  silver: 'text-gray-400',
-  gold: 'text-yellow-400',
-  platinum: 'text-purple-400',
+  silver: 'text-muted-foreground dark:text-gray-400',
+  gold: 'text-amber-700 dark:text-yellow-400',
+  platinum: 'text-purple-700 dark:text-purple-400',
   diamond: 'text-cyan-400',
 };
 
@@ -53,11 +52,27 @@ export default function ReferralsPage() {
 
   const trackShare = useTrackShare();
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    trackShare.mutate('copy');
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      trackShare.mutate('copy');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const shareFromPhone = async () => {
+    if (!dashboard?.referral_link) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join me on TesoTunes', url: dashboard.referral_link });
+        trackShare.mutate('native');
+        return;
+      } catch { /* The person may cancel the share sheet. */ }
+    }
+    await copyToClipboard(dashboard.referral_link);
   };
 
   const shareToSocial = (platform: 'whatsapp' | 'twitter' | 'facebook') => {
@@ -92,10 +107,10 @@ export default function ReferralsPage() {
       <div className="container mx-auto py-8 max-w-6xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+            <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Unable to load referral data</h3>
-              <p className="text-gray-400">Please try again later or contact support.</p>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Unable to load referral data</h3>
+              <p className="text-muted-foreground dark:text-gray-400">Please try again later or contact support.</p>
             </div>
           </CardContent>
         </Card>
@@ -114,65 +129,65 @@ export default function ReferralsPage() {
     <div className="container mx-auto py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Invite Friends, Earn Rewards</h1>
-        <p className="text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground dark:text-white mb-2">Invite Friends, Earn Rewards</h1>
+        <p className="text-muted-foreground dark:text-gray-400">
           Share TesoTunes with friends and earn credits for every person who joins!
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-500/20 rounded-lg">
-                <Users className="w-5 h-5 text-green-400" />
+                <Users className="w-5 h-5 text-emerald-700 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
-                <p className="text-xs text-gray-400">Total Referrals</p>
+                <p className="text-2xl font-bold text-foreground dark:text-white">{stats.total}</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400">Total Referrals</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-400" />
+                <Clock className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.pending}</p>
-                <p className="text-xs text-gray-400">Pending</p>
+                <p className="text-2xl font-bold text-foreground dark:text-white">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400">Pending</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <CheckCircle className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.completed}</p>
-                <p className="text-xs text-gray-400">Completed</p>
+                <p className="text-2xl font-bold text-foreground dark:text-white">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-500/20 rounded-lg">
-                <Gift className="w-5 h-5 text-purple-400" />
+                <Gift className="w-5 h-5 text-purple-700 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.total_credits_earned.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">Credits Earned</p>
+                <p className="text-2xl font-bold text-foreground dark:text-white">{stats.total_credits_earned.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400">Credits Earned</p>
               </div>
             </div>
           </CardContent>
@@ -190,9 +205,9 @@ export default function ReferralsPage() {
         {/* Left Column - Share Tools */}
         <div className="lg:col-span-2 space-y-6">
           {/* Share Card */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
                 <Share2 className="w-5 h-5" />
                 Share Your Link
               </CardTitle>
@@ -203,7 +218,7 @@ export default function ReferralsPage() {
             <CardContent className="space-y-4">
               {/* Referral Link */}
               <div className="flex gap-2">
-                <div className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white font-mono text-sm truncate">
+                <div className="flex-1 bg-muted dark:bg-zinc-800 border border-border dark:border-zinc-700 rounded-lg px-4 py-3 text-foreground dark:text-white font-mono text-sm truncate">
                   {referral_link}
                 </div>
                 <Button 
@@ -216,23 +231,23 @@ export default function ReferralsPage() {
 
               {/* Referral Code */}
               <div className="flex items-center gap-4">
-                <span className="text-gray-400 text-sm">Or share code:</span>
-                <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 font-mono font-bold text-white">
+                <span className="text-muted-foreground dark:text-gray-400 text-sm">Or share code:</span>
+                <div className="bg-muted dark:bg-zinc-800 border border-border dark:border-zinc-700 rounded-lg px-4 py-2 font-mono font-bold text-foreground dark:text-white">
                   {referral_code}
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => copyToClipboard(referral_code)}
-                  className="border-zinc-700"
+                  className="border-border dark:border-zinc-700"
                 >
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Social Share Buttons */}
-              <div className="pt-4 border-t border-zinc-800">
-                <p className="text-sm text-gray-400 mb-3">Share directly:</p>
+              <div className="pt-4 border-t border-border dark:border-zinc-800">
+                <p className="text-sm text-muted-foreground dark:text-gray-400 mb-3">Share directly:</p>
                 <div className="flex flex-wrap gap-3">
                   <Button 
                     onClick={() => shareToSocial('whatsapp')}
@@ -255,21 +270,17 @@ export default function ReferralsPage() {
                     <Facebook className="w-4 h-4 mr-2" />
                     Facebook
                   </Button>
-                  <Button 
-                    variant="outline"
-                    className="border-zinc-700 flex-1 sm:flex-none"
-                    onClick={() => trackShare.mutate('sms')}
-                  >
+                  <Button variant="outline" className="border-border dark:border-zinc-700 flex-1 sm:flex-none"
+                    onClick={() => {
+                      window.location.href = `sms:?body=${encodeURIComponent(`Join me on TesoTunes: ${referral_link}`)}`;
+                      trackShare.mutate('sms');
+                    }}>
                     <Send className="w-4 h-4 mr-2" />
                     SMS
                   </Button>
-                  <Button 
-                    variant="outline"
-                    className="border-zinc-700 flex-1 sm:flex-none"
-                    onClick={() => trackShare.mutate('qr')}
-                  >
-                    <QrCode className="w-4 h-4 mr-2" />
-                    QR Code
+                  <Button variant="outline" className="border-border dark:border-zinc-700 flex-1 sm:flex-none" onClick={shareFromPhone}>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share link
                   </Button>
                 </div>
               </div>
@@ -278,24 +289,24 @@ export default function ReferralsPage() {
 
           {/* Milestone Progress */}
           {next_milestone && (
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
+                <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
                   Next Milestone
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400">{next_milestone.name}</span>
-                  <span className="text-white font-bold">
+                  <span className="text-muted-foreground dark:text-gray-400">{next_milestone.name}</span>
+                  <span className="text-foreground dark:text-white font-bold">
                     {next_milestone.current_count}/{next_milestone.referrals_required} referrals
                   </span>
                 </div>
                 <Progress value={next_milestone.progress} className="h-3 mb-2" />
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground dark:text-gray-400">
                   {next_milestone.referrals_required - next_milestone.current_count} more to earn{' '}
-                  <span className="text-yellow-400 font-semibold">
+                  <span className="text-amber-700 dark:text-yellow-400 font-semibold">
                     {next_milestone.reward_type === 'credits' 
                       ? `${next_milestone.reward_value} credits`
                       : next_milestone.reward_type}
@@ -306,21 +317,21 @@ export default function ReferralsPage() {
           )}
 
           {/* Recent Referrals */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
                 <Users className="w-5 h-5" />
                 Recent Referrals
               </CardTitle>
               <Link href="/referrals/history">
-                <Button variant="ghost" size="sm" className="text-purple-400">
+                <Button variant="ghost" size="sm" className="text-purple-700 dark:text-purple-400">
                   View All <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
             </CardHeader>
             <CardContent>
               {recent_referrals.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No referrals yet. Share your link to get started!</p>
                 </div>
@@ -329,15 +340,15 @@ export default function ReferralsPage() {
                   {recent_referrals.map((referral) => (
                     <div
                       key={referral.id}
-                      className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/60 dark:bg-zinc-800/50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                           {referral.user.name?.charAt(0) || '?'}
                         </div>
                         <div>
-                          <p className="font-medium text-white">{referral.user.name}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className="font-medium text-foreground dark:text-white">{referral.user.name}</p>
+                          <p className="text-xs text-muted-foreground dark:text-gray-400">
                             Joined {new Date(referral.joined_at).toLocaleDateString()}
                           </p>
                         </div>
@@ -347,7 +358,7 @@ export default function ReferralsPage() {
                           {referral.status}
                         </Badge>
                         {referral.credits_earned > 0 && (
-                          <span className="text-green-400 font-semibold">
+                          <span className="text-emerald-700 dark:text-green-400 font-semibold">
                             +{referral.credits_earned}
                           </span>
                         )}
@@ -368,13 +379,13 @@ export default function ReferralsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <div className="p-2 bg-yellow-500/20 rounded-lg">
-                    <Gift className="w-6 h-6 text-yellow-400" />
+                    <Gift className="w-6 h-6 text-amber-700 dark:text-yellow-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-yellow-400">
+                    <p className="font-semibold text-amber-700 dark:text-yellow-400">
                       {claimable_rewards} Reward{claimable_rewards > 1 ? 's' : ''} Ready!
                     </p>
-                    <p className="text-sm text-gray-400">Claim your earned rewards</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">Claim your earned rewards</p>
                   </div>
                   <Link href="/referrals/rewards">
                     <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black">
@@ -387,32 +398,32 @@ export default function ReferralsPage() {
           )}
 
           {/* Quick Links */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardContent className="p-4 space-y-2">
-              <Link href="/referrals/history" className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 transition-colors">
-                <span className="text-white">View Full History</span>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+              <Link href="/referrals/history" className="flex items-center justify-between p-3 bg-muted/60 dark:bg-zinc-800/50 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors">
+                <span className="text-foreground dark:text-white">View Full History</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground dark:text-gray-400" />
               </Link>
-              <Link href="/referrals/rewards" className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 transition-colors">
-                <span className="text-white">My Rewards & Badges</span>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+              <Link href="/referrals/rewards" className="flex items-center justify-between p-3 bg-muted/60 dark:bg-zinc-800/50 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors">
+                <span className="text-foreground dark:text-white">My Rewards & Badges</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground dark:text-gray-400" />
               </Link>
-              <Link href="/referrals/leaderboard" className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 transition-colors">
-                <span className="text-white">Full Leaderboard</span>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+              <Link href="/referrals/leaderboard" className="flex items-center justify-between p-3 bg-muted/60 dark:bg-zinc-800/50 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors">
+                <span className="text-foreground dark:text-white">Full Leaderboard</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground dark:text-gray-400" />
               </Link>
             </CardContent>
           </Card>
 
           {/* Leaderboard Preview */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-400" />
+              <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
                 Top Referrers
               </CardTitle>
               <Link href="/referrals/leaderboard">
-                <Button variant="ghost" size="sm" className="text-purple-400">
+                <Button variant="ghost" size="sm" className="text-purple-700 dark:text-purple-400">
                   View All
                 </Button>
               </Link>
@@ -425,32 +436,32 @@ export default function ReferralsPage() {
                     className="flex items-center justify-between p-2"
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`w-6 text-center font-bold ${index < 3 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                      <span className={`w-6 text-center font-bold ${index < 3 ? 'text-amber-700 dark:text-yellow-400' : 'text-muted-foreground dark:text-gray-400'}`}>
                         {referrer.rank}
                       </span>
                       <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                         {referrer.name?.charAt(0) || '?'}
                       </div>
-                      <span className="text-white">{referrer.name}</span>
+                      <span className="text-foreground dark:text-white">{referrer.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-sm">{referrer.referrals}</span>
+                      <span className="text-muted-foreground dark:text-gray-400 text-sm">{referrer.referrals}</span>
                       <span className={`text-xs ${tierColors[referrer.tier]}`}>
                         {referrer.tier}
                       </span>
                     </div>
                   </div>
                 )) || (
-                  <p className="text-center text-gray-400 py-4">Loading...</p>
+                  <p className="text-center text-muted-foreground dark:text-gray-400 py-4">Loading...</p>
                 )}
               </div>
             </CardContent>
           </Card>
 
           {/* How It Works */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-white text-lg">How It Works</CardTitle>
+              <CardTitle className="text-foreground dark:text-white text-lg">How It Works</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -459,8 +470,8 @@ export default function ReferralsPage() {
                     1
                   </div>
                   <div>
-                    <p className="font-medium text-white">Share your link</p>
-                    <p className="text-sm text-gray-400">Send to friends via any platform</p>
+                    <p className="font-medium text-foreground dark:text-white">Share your link</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">Send to friends via any platform</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -468,8 +479,8 @@ export default function ReferralsPage() {
                     2
                   </div>
                   <div>
-                    <p className="font-medium text-white">They sign up</p>
-                    <p className="text-sm text-gray-400">They get {joinerCredits.toLocaleString()} bonus credits</p>
+                    <p className="font-medium text-foreground dark:text-white">They sign up</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">They get {joinerCredits.toLocaleString()} bonus credits</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -479,8 +490,8 @@ export default function ReferralsPage() {
                   {/* Was "They become active — you earn 50 credits". The
                       referrer is paid at signup, at the live rate. */}
                   <div>
-                    <p className="font-medium text-white">You get credited</p>
-                    <p className="text-sm text-gray-400">
+                    <p className="font-medium text-foreground dark:text-white">You get credited</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">
                       {referrerCredits > 0
                         ? `You earn ${referrerCredits.toLocaleString()} credits for each signup`
                         : 'Signups count toward your milestones'}
@@ -492,8 +503,8 @@ export default function ReferralsPage() {
                     4
                   </div>
                   <div>
-                    <p className="font-medium text-white">Unlock milestones</p>
-                    <p className="text-sm text-gray-400">Claim bonus credits as more friends join</p>
+                    <p className="font-medium text-foreground dark:text-white">Unlock milestones</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">Claim bonus credits as more friends join</p>
                   </div>
                 </div>
               </div>

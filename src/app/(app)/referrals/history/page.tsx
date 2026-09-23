@@ -36,10 +36,10 @@ export default function ReferralHistoryPage() {
       toast.info('No referral data to export');
       return;
     }
-    const headers = ['Name', 'Email', 'Status', 'Credits Earned', 'Date Joined'];
+    const headers = ['Name', 'Username', 'Status', 'Credits Earned', 'Date Joined'];
     const rows = referrals.map((r: ReferralHistoryItem) => [
       r.user?.name || 'Unknown',
-      r.user?.email || '',
+      r.user?.username || '',
       r.status,
       r.credits_earned ?? 0,
       r.joined_at ? new Date(r.joined_at).toLocaleDateString() : '',
@@ -70,10 +70,10 @@ export default function ReferralHistoryPage() {
       <div className="container mx-auto py-8 max-w-6xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+            <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Unable to load referral history</h3>
-              <p className="text-gray-400">Please try again later or contact support.</p>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Unable to load referral history</h3>
+              <p className="text-muted-foreground dark:text-gray-400">Please try again later or contact support.</p>
             </div>
           </CardContent>
         </Card>
@@ -90,8 +90,8 @@ export default function ReferralHistoryPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Referral History</h1>
-          <p className="text-gray-400">Track all your referrals and their status</p>
+          <h1 className="text-2xl font-bold text-foreground dark:text-white">Referral History</h1>
+          <p className="text-muted-foreground dark:text-gray-400">Track all your referrals and their status</p>
         </div>
         <Button onClick={handleExport} variant="outline" className="border-gray-700">
           <Download className="w-4 h-4 mr-2" />
@@ -101,57 +101,57 @@ export default function ReferralHistoryPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-white">{stats.total}</p>
-            <p className="text-sm text-gray-400">Total</p>
+            <p className="text-2xl font-bold text-foreground dark:text-white">{stats.total}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Total</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-green-500">{stats.active}</p>
-            <p className="text-sm text-gray-400">Active</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Active</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-yellow-500">{stats.pending}</p>
-            <p className="text-sm text-gray-400">Pending</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Pending</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-purple-500">{stats.completed}</p>
-            <p className="text-sm text-gray-400">Completed</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Completed</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-red-500">{stats.churned}</p>
-            <p className="text-sm text-gray-400">Churned</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Churned</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-white">{stats.total_credits.toLocaleString()}</p>
-            <p className="text-sm text-gray-400">Credits Earned</p>
+            <p className="text-2xl font-bold text-foreground dark:text-white">{stats.total_credits.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Credits Earned</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-zinc-900 border-zinc-800 mb-6">
+      <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800 mb-6">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground dark:text-gray-400 w-4 h-4" />
               <Input
                 type="text"
                 placeholder="Search by name..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 bg-zinc-800 border-zinc-700"
+                className="pl-10 bg-muted dark:bg-zinc-800 border-border dark:border-zinc-700"
               />
             </div>
 
@@ -161,7 +161,7 @@ export default function ReferralHistoryPage() {
                 variant={statusFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleStatusFilter('all')}
-                className={statusFilter === 'all' ? '' : 'border-zinc-700'}
+                className={statusFilter === 'all' ? '' : 'border-border dark:border-zinc-700'}
               >
                 All
               </Button>
@@ -169,7 +169,7 @@ export default function ReferralHistoryPage() {
                 variant={statusFilter === 'active' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleStatusFilter('active')}
-                className={statusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-zinc-700'}
+                className={statusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-border dark:border-zinc-700'}
               >
                 Active
               </Button>
@@ -177,7 +177,7 @@ export default function ReferralHistoryPage() {
                 variant={statusFilter === 'pending' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleStatusFilter('pending')}
-                className={statusFilter === 'pending' ? 'bg-yellow-600 hover:bg-yellow-700' : 'border-zinc-700'}
+                className={statusFilter === 'pending' ? 'bg-yellow-600 hover:bg-yellow-700' : 'border-border dark:border-zinc-700'}
               >
                 Pending
               </Button>
@@ -185,7 +185,7 @@ export default function ReferralHistoryPage() {
                 variant={statusFilter === 'churned' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleStatusFilter('churned')}
-                className={statusFilter === 'churned' ? 'bg-red-600 hover:bg-red-700' : 'border-zinc-700'}
+                className={statusFilter === 'churned' ? 'bg-red-600 hover:bg-red-700' : 'border-border dark:border-zinc-700'}
               >
                 Churned
               </Button>
@@ -195,10 +195,10 @@ export default function ReferralHistoryPage() {
       </Card>
 
       {/* Referral List */}
-      <Card className="bg-zinc-900 border-zinc-800">
+      <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
+            <Users className="w-5 h-5 text-purple-700 dark:text-purple-400" />
             All Referrals ({pagination.total})
           </CardTitle>
         </CardHeader>
@@ -208,7 +208,7 @@ export default function ReferralHistoryPage() {
               <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
             </div>
           ) : referrals.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground dark:text-gray-400">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No referrals found matching your criteria</p>
             </div>
@@ -221,29 +221,29 @@ export default function ReferralHistoryPage() {
                 return (
                   <div
                     key={referral.id}
-                    className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-zinc-800/50 rounded-lg gap-4"
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted/60 dark:bg-zinc-800/50 rounded-lg gap-4"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                         {referral.user.name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className="font-medium text-white">{referral.user.name}</p>
-                        <p className="text-sm text-gray-400">{referral.user.email}</p>
+                        <p className="font-medium text-foreground dark:text-white">{referral.user.name}</p>
+                        {referral.user.username && <p className="text-sm text-muted-foreground dark:text-gray-400">@{referral.user.username}</p>}
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <div className="text-gray-400">
-                        Joined: <span className="text-white">{new Date(referral.joined_at).toLocaleDateString()}</span>
+                      <div className="text-muted-foreground dark:text-gray-400">
+                        Joined: <span className="text-foreground dark:text-white">{new Date(referral.joined_at).toLocaleDateString()}</span>
                       </div>
                       {referral.active_days !== undefined && (
-                        <div className="text-gray-400">
-                          Active: <span className="text-white">{referral.active_days} days</span>
+                        <div className="text-muted-foreground dark:text-gray-400">
+                          Active: <span className="text-foreground dark:text-white">{referral.active_days} days</span>
                         </div>
                       )}
                       {referral.subscription_tier && (
-                        <Badge variant="outline" className="border-zinc-700">
+                        <Badge variant="outline" className="border-border dark:border-zinc-700">
                           {referral.subscription_tier}
                         </Badge>
                       )}
@@ -251,7 +251,7 @@ export default function ReferralHistoryPage() {
                         <StatusIcon className="w-3 h-3 mr-1" />
                         {config.label}
                       </Badge>
-                      <div className="font-semibold text-green-400">
+                      <div className="font-semibold text-emerald-700 dark:text-green-400">
                         +{referral.credits_earned} credits
                       </div>
                     </div>
@@ -263,8 +263,8 @@ export default function ReferralHistoryPage() {
 
           {/* Pagination */}
           {pagination.last_page > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-zinc-800">
-              <p className="text-sm text-gray-400">
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-border dark:border-zinc-800">
+              <p className="text-sm text-muted-foreground dark:text-gray-400">
                 Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total)
               </p>
               <div className="flex gap-2">
@@ -273,7 +273,7 @@ export default function ReferralHistoryPage() {
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={pagination.current_page === 1}
-                  className="border-zinc-700"
+                  className="border-border dark:border-zinc-700"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -294,7 +294,7 @@ export default function ReferralHistoryPage() {
                       variant={page === pagination.current_page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className={page === pagination.current_page ? '' : 'border-zinc-700'}
+                      className={page === pagination.current_page ? '' : 'border-border dark:border-zinc-700'}
                     >
                       {page}
                     </Button>
@@ -305,7 +305,7 @@ export default function ReferralHistoryPage() {
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.min(pagination.last_page, p + 1))}
                   disabled={pagination.current_page === pagination.last_page}
-                  className="border-zinc-700"
+                  className="border-border dark:border-zinc-700"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

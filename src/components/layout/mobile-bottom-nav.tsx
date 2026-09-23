@@ -36,6 +36,7 @@ import {
   Megaphone,
   ThumbsUp,
   BadgePlus,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -74,6 +75,7 @@ const browseItems = [
 ];
 
 const moduleItems = [
+  { href: "/referrals", label: "Refer & Earn", icon: Gift },
   { href: "/edula", label: "Edula", icon: Rss },
   { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/events", label: "Events", icon: Calendar },
@@ -233,6 +235,7 @@ export function MobileBottomNav() {
   const mainTabs = hasArtistAccess ? artistMainTabs : defaultMainTabs;
   const g = platformSettings?.general;
   const visibleModuleItems = moduleItems.filter((item) => {
+    if (item.href === "/referrals" && (!session?.user || hasArtistAccess)) return false;
     if (item.href === "/sacco") return false;
     if (item.href === "/store" && !(g?.store_enabled ?? STORE_ENABLED)) return false;
     if (item.href === "/podcasts" && !(g?.podcasts_enabled ?? false)) return false;
@@ -267,6 +270,7 @@ export function MobileBottomNav() {
     { href: "/artist/earnings", label: "Earnings", icon: DollarSign },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/credits", label: "Credits", icon: Coins },
+    { href: "/referrals", label: "Refer & Earn", icon: Gift },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/settings", label: "Settings", icon: Settings },
   ];

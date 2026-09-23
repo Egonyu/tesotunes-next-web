@@ -12,21 +12,21 @@ type TimeFilter = 'weekly' | 'monthly' | 'all_time';
 const tierColors: Record<string, { bg: string; text: string; border: string }> = {
   bronze: { bg: 'bg-amber-700', text: 'text-amber-400', border: 'border-amber-600' },
   silver: { bg: 'bg-gray-500', text: 'text-gray-300', border: 'border-gray-400' },
-  gold: { bg: 'bg-yellow-500', text: 'text-yellow-400', border: 'border-yellow-400' },
-  platinum: { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-400' },
+  gold: { bg: 'bg-yellow-500', text: 'text-amber-700 dark:text-yellow-400', border: 'border-yellow-400' },
+  platinum: { bg: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-400' },
   diamond: { bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-400' },
 };
 
 const getRankIcon = (rank: number) => {
   switch (rank) {
     case 1:
-      return <Crown className="w-6 h-6 text-yellow-400" />;
+      return <Crown className="w-6 h-6 text-amber-700 dark:text-yellow-400" />;
     case 2:
-      return <Medal className="w-6 h-6 text-gray-400" />;
+      return <Medal className="w-6 h-6 text-muted-foreground dark:text-gray-400" />;
     case 3:
       return <Medal className="w-6 h-6 text-amber-600" />;
     default:
-      return <span className="text-lg font-bold text-gray-400">#{rank}</span>;
+      return <span className="text-lg font-bold text-muted-foreground dark:text-gray-400">#{rank}</span>;
   }
 };
 
@@ -53,10 +53,10 @@ export default function LeaderboardPage() {
       <div className="container mx-auto py-8 max-w-4xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+            <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Unable to load leaderboard</h3>
-              <p className="text-gray-400">Please try again later or contact support.</p>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Unable to load leaderboard</h3>
+              <p className="text-muted-foreground dark:text-gray-400">Please try again later or contact support.</p>
             </div>
           </CardContent>
         </Card>
@@ -72,8 +72,8 @@ export default function LeaderboardPage() {
     <div className="container mx-auto py-8 max-w-4xl">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Referral Leaderboard</h1>
-        <p className="text-gray-400">See how you stack up against other referrers</p>
+        <h1 className="text-3xl font-bold text-foreground dark:text-white mb-2">Referral Leaderboard</h1>
+        <p className="text-muted-foreground dark:text-gray-400">See how you stack up against other referrers</p>
       </div>
 
       {/* Time Filter */}
@@ -81,7 +81,7 @@ export default function LeaderboardPage() {
         <Button
           variant={timeFilter === 'weekly' ? 'default' : 'outline'}
           onClick={() => setTimeFilter('weekly')}
-          className={timeFilter === 'weekly' ? '' : 'border-zinc-700'}
+          className={timeFilter === 'weekly' ? '' : 'border-border dark:border-zinc-700'}
         >
           <Calendar className="w-4 h-4 mr-2" />
           This Week
@@ -89,7 +89,7 @@ export default function LeaderboardPage() {
         <Button
           variant={timeFilter === 'monthly' ? 'default' : 'outline'}
           onClick={() => setTimeFilter('monthly')}
-          className={timeFilter === 'monthly' ? '' : 'border-zinc-700'}
+          className={timeFilter === 'monthly' ? '' : 'border-border dark:border-zinc-700'}
         >
           <Calendar className="w-4 h-4 mr-2" />
           This Month
@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
         <Button
           variant={timeFilter === 'all_time' ? 'default' : 'outline'}
           onClick={() => setTimeFilter('all_time')}
-          className={timeFilter === 'all_time' ? '' : 'border-zinc-700'}
+          className={timeFilter === 'all_time' ? '' : 'border-border dark:border-zinc-700'}
         >
           <Trophy className="w-4 h-4 mr-2" />
           All Time
@@ -106,17 +106,17 @@ export default function LeaderboardPage() {
 
       {/* Top 3 Podium */}
       {topThree.length >= 3 && (
-        <Card className="bg-linear-to-b from-purple-900/50 to-zinc-900 border-purple-500/30 mb-8">
+        <Card className="mb-8 border-purple-500/30 bg-linear-to-b from-purple-50 to-card dark:from-purple-900/50 dark:to-zinc-900">
           <CardContent className="pt-8">
-            <div className="flex justify-center items-end gap-4">
+            <div className="grid grid-cols-3 items-end gap-1 sm:gap-4">
               {/* 2nd Place */}
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto bg-linear-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center mb-2 ring-4 ring-gray-500/50">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-linear-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center mb-2 ring-4 ring-gray-500/50">
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
-                <div className="bg-gray-500/20 rounded-lg p-3 min-w-[120px]">
-                  <p className="font-semibold text-white text-sm truncate">{topThree[1]?.name}</p>
-                  <p className="text-gray-400 text-xs">{topThree[1]?.referrals} referrals</p>
+                <div className="min-w-0 rounded-lg bg-gray-500/20 p-1.5 sm:p-3">
+                  <p className="font-semibold text-foreground dark:text-white text-sm truncate">{topThree[1]?.name}</p>
+                  <p className="text-muted-foreground dark:text-gray-400 text-xs">{topThree[1]?.referrals} referrals</p>
                   <Badge className={`${tierColors[topThree[1]?.tier || 'bronze']?.bg || 'bg-amber-700'} text-xs mt-1`}>
                     {topThree[1]?.tier}
                   </Badge>
@@ -126,14 +126,14 @@ export default function LeaderboardPage() {
 
               {/* 1st Place */}
               <div className="text-center -mt-8">
-                <Crown className="w-10 h-10 text-yellow-400 mx-auto mb-2 animate-pulse" />
-                <div className="w-24 h-24 mx-auto bg-linear-to-b from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mb-2 ring-4 ring-yellow-400/50">
+                <Crown className="w-10 h-10 text-amber-700 dark:text-yellow-400 mx-auto mb-2 animate-pulse" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto bg-linear-to-b from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mb-2 ring-4 ring-yellow-400/50">
                   <span className="text-3xl font-bold text-black">1</span>
                 </div>
-                <div className="bg-yellow-500/20 rounded-lg p-3 min-w-[140px]">
-                  <p className="font-semibold text-white truncate">{topThree[0]?.name}</p>
-                  <p className="text-yellow-400 text-sm">{topThree[0]?.referrals} referrals</p>
-                  <p className="text-gray-400 text-xs">{topThree[0]?.credits_earned.toLocaleString()} credits earned</p>
+                <div className="min-w-0 rounded-lg bg-yellow-500/20 p-1.5 sm:p-3">
+                  <p className="font-semibold text-foreground dark:text-white truncate">{topThree[0]?.name}</p>
+                  <p className="text-amber-700 dark:text-yellow-400 text-sm">{topThree[0]?.referrals} referrals</p>
+                  <p className="text-muted-foreground dark:text-gray-400 text-xs">{topThree[0]?.credits_earned.toLocaleString()} credits earned</p>
                   <Badge className={`${tierColors[topThree[0]?.tier || 'bronze']?.bg || 'bg-amber-700'} mt-1`}>
                     {topThree[0]?.tier}
                   </Badge>
@@ -143,12 +143,12 @@ export default function LeaderboardPage() {
 
               {/* 3rd Place */}
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto bg-linear-to-b from-amber-600 to-amber-800 rounded-full flex items-center justify-center mb-2 ring-4 ring-amber-600/50">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-linear-to-b from-amber-600 to-amber-800 rounded-full flex items-center justify-center mb-2 ring-4 ring-amber-600/50">
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
-                <div className="bg-amber-600/20 rounded-lg p-3 min-w-[120px]">
-                  <p className="font-semibold text-white text-sm truncate">{topThree[2]?.name}</p>
-                  <p className="text-gray-400 text-xs">{topThree[2]?.referrals} referrals</p>
+                <div className="min-w-0 rounded-lg bg-amber-600/20 p-1.5 sm:p-3">
+                  <p className="font-semibold text-foreground dark:text-white text-sm truncate">{topThree[2]?.name}</p>
+                  <p className="text-muted-foreground dark:text-gray-400 text-xs">{topThree[2]?.referrals} referrals</p>
                   <Badge className={`${tierColors[topThree[2]?.tier || 'bronze']?.bg || 'bg-amber-700'} text-xs mt-1`}>
                     {topThree[2]?.tier}
                   </Badge>
@@ -167,21 +167,21 @@ export default function LeaderboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-                  <span className="font-bold text-white">{current_user.rank}</span>
+                  <span className="font-bold text-foreground dark:text-white">{current_user.rank}</span>
                 </div>
                 <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
                   {current_user.name?.charAt(0) || 'Y'}
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Your Position</p>
-                  <p className="text-sm text-gray-400">{current_user.referrals} referrals</p>
+                  <p className="font-semibold text-foreground dark:text-white">Your Position</p>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">{current_user.referrals} referrals</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-green-400 font-semibold">+{current_user.credits_earned.toLocaleString()} credits</p>
+                  <p className="text-emerald-700 dark:text-green-400 font-semibold">+{current_user.credits_earned.toLocaleString()} credits</p>
                   {current_user.movement === 'up' && (current_user.movement_value ?? 0) > 0 && (
-                    <p className="text-xs text-green-400 flex items-center justify-end">
+                    <p className="text-xs text-emerald-700 dark:text-green-400 flex items-center justify-end">
                       <TrendingUp className="w-3 h-3 mr-1" />
                       Up {current_user.movement_value} places
                     </p>
@@ -197,16 +197,16 @@ export default function LeaderboardPage() {
       )}
 
       {/* Full Leaderboard */}
-      <Card className="bg-zinc-900 border-zinc-800">
+      <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
+            <Users className="w-5 h-5 text-purple-700 dark:text-purple-400" />
             Full Rankings
           </CardTitle>
         </CardHeader>
         <CardContent>
           {leaderboard.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground dark:text-gray-400">
               <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No referrals yet. Be the first to climb the leaderboard!</p>
             </div>
@@ -222,33 +222,33 @@ export default function LeaderboardPage() {
                     className={`flex items-center justify-between p-4 rounded-lg ${
                       isCurrentUser
                         ? 'bg-purple-600/20 border border-purple-500/50'
-                        : 'bg-zinc-800/50'
+                        : 'bg-muted/60 dark:bg-zinc-800/50'
                     }`}
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 text-center">
                         {getRankIcon(entry.rank)}
                       </div>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-foreground dark:text-white font-semibold ${
                         isCurrentUser ? 'bg-purple-600' : tierColors[tier]?.bg || 'bg-amber-700'
                       }`}>
                         {entry.name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className={`font-medium ${isCurrentUser ? 'text-purple-400' : 'text-white'}`}>
+                        <p className={`font-medium ${isCurrentUser ? 'text-purple-700 dark:text-purple-400' : 'text-foreground dark:text-white'}`}>
                           {entry.name}
                           {isCurrentUser && <span className="text-xs ml-2">(You)</span>}
                         </p>
-                        <p className="text-sm text-gray-400">{entry.referrals} referrals</p>
+                        <p className="text-sm text-muted-foreground dark:text-gray-400">{entry.referrals} referrals</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-sm text-green-400">+{entry.credits_earned.toLocaleString()}</p>
+                        <p className="text-sm text-emerald-700 dark:text-green-400">+{entry.credits_earned.toLocaleString()}</p>
                         {entry.movement && entry.movement !== 'same' && (
                           <p className={`text-xs flex items-center justify-end ${
-                            entry.movement === 'up' ? 'text-green-400' : 'text-red-400'
+                            entry.movement === 'up' ? 'text-emerald-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
                           }`}>
                             {entry.movement === 'up' ? '↑' : '↓'} {entry.movement_value}
                           </p>
@@ -267,7 +267,7 @@ export default function LeaderboardPage() {
           {/* Load More */}
           {leaderboard.length >= limit && (
             <div className="text-center mt-6">
-              <Button variant="outline" className="border-zinc-700" onClick={loadMore}>
+              <Button variant="outline" className="border-border dark:border-zinc-700" onClick={loadMore}>
                 <ChevronDown className="w-4 h-4 mr-2" />
                 Load More
               </Button>

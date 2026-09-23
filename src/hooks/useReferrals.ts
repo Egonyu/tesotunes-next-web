@@ -16,6 +16,7 @@ export interface ReferralStats {
 
 export interface ReferralUser {
   name: string;
+  username?: string;
   avatar: string | null;
 }
 
@@ -60,7 +61,6 @@ export interface ReferralHistoryItem {
     id: number;
     name: string;
     username: string;
-    email: string;
     avatar: string | null;
   };
   status: 'pending' | 'active' | 'completed' | 'churned';
@@ -143,21 +143,14 @@ export interface LeaderboardData {
 }
 
 export interface ReferralCodeData {
-  code: string;
-  link: string;
-  total_uses: number;
-  successful_referrals: number;
-  total_credits_earned: number;
+  referral_code: string;
+  referral_link: string;
 }
 
 export interface CodeValidation {
   valid: boolean;
-  referrer: {
-    name: string;
-    avatar: string | null;
-    is_artist: boolean;
-  };
-  bonus_credits: number;
+  referrer_name: string | null;
+  joiner_credits: number;
 }
 
 // ============================================================================
@@ -219,7 +212,7 @@ export function useReferralHistory(
 
   return useQuery({
     queryKey: ["referrals", "history", status, page, perPage, search],
-    queryFn: () => apiGet<ReferralHistoryResponse>("/referrals/history", { params }),
+    queryFn: () => apiGet<{ data: ReferralHistoryResponse }>("/referrals/history", { params }).then(res => res.data),
     staleTime: 30 * 1000,
   });
 }
@@ -290,7 +283,7 @@ export function useValidateReferralCode(code: string) {
 
 export function useTrackShare() {
   return useMutation({
-    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr') =>
+    mutationFn: (platform: 'whatsapp' | 'twitter' | 'facebook' | 'sms' | 'email' | 'copy' | 'qr' | 'native') =>
       apiPost<void>("/referrals/share", { platform }),
   });
 }

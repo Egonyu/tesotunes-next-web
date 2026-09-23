@@ -58,10 +58,10 @@ export default function ReferralRewardsPage() {
       <div className="container mx-auto py-8 max-w-6xl">
         <Card className="bg-red-500/10 border-red-500/30">
           <CardContent className="p-6 flex items-center gap-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+            <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Unable to load rewards</h3>
-              <p className="text-gray-400">Please try again later or contact support.</p>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Unable to load rewards</h3>
+              <p className="text-muted-foreground dark:text-gray-400">Please try again later or contact support.</p>
             </div>
           </CardContent>
         </Card>
@@ -79,8 +79,8 @@ export default function ReferralRewardsPage() {
     <div className="container mx-auto py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">My Rewards</h1>
-        <p className="text-gray-400">Rewards earned from your referrals</p>
+        <h1 className="text-2xl font-bold text-foreground dark:text-white">My Rewards</h1>
+        <p className="text-muted-foreground dark:text-gray-400">Rewards earned from your referrals</p>
       </div>
 
       {/* Stats Overview */}
@@ -120,9 +120,9 @@ export default function ReferralRewardsPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Claimable Rewards */}
           {claimableMilestones.length > 0 && (
-            <Card className="bg-zinc-900 border-yellow-500/50">
+            <Card className="bg-card dark:bg-zinc-900 border-yellow-500/50">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-400">
+                <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-yellow-400">
                   <Gift className="w-5 h-5" />
                   Ready to Claim ({claimableMilestones.length})
                 </CardTitle>
@@ -131,19 +131,19 @@ export default function ReferralRewardsPage() {
                 {claimableMilestones.map((milestone: ReferralMilestone) => (
                   <div
                     key={milestone.id}
-                    className="flex items-center justify-between p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30"
+                    className="flex flex-col gap-4 p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center text-2xl">
                         {milestoneIcons[milestone.referrals_required] || '🎁'}
                       </div>
                       <div>
-                        <p className="font-semibold text-white">{milestone.name}</p>
-                        <p className="text-sm text-gray-400">{milestone.description}</p>
+                        <p className="font-semibold text-foreground dark:text-white">{milestone.name}</p>
+                        <p className="text-sm text-muted-foreground dark:text-gray-400">{milestone.description}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-yellow-400 font-semibold">
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <span className="text-amber-700 dark:text-yellow-400 font-semibold">
                         {milestone.reward_type === 'credits' ? `${milestone.reward_value} credits` : milestone.reward_type}
                       </span>
                       <Button 
@@ -165,10 +165,10 @@ export default function ReferralRewardsPage() {
           )}
 
           {/* All Milestones */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-purple-400" />
+                <Star className="w-5 h-5 text-purple-700 dark:text-purple-400" />
                 All Milestones
               </CardTitle>
             </CardHeader>
@@ -185,7 +185,7 @@ export default function ReferralRewardsPage() {
                       isEarned
                         ? 'bg-green-500/10 border-green-500/30'
                         : isLocked
-                        ? 'bg-zinc-800/50 border-zinc-700'
+                        ? 'bg-muted/60 dark:bg-zinc-800/50 border-border dark:border-zinc-700'
                         : 'bg-yellow-500/10 border-yellow-500/30'
                     }`}
                   >
@@ -195,30 +195,30 @@ export default function ReferralRewardsPage() {
                           isEarned
                             ? 'bg-green-500'
                             : isLocked
-                            ? 'bg-zinc-700'
+                            ? 'bg-muted dark:bg-zinc-700'
                             : 'bg-yellow-500'
                         }`}
                       >
                         {isLocked ? (
-                          <Lock className="w-6 h-6 text-gray-400" />
+                          <Lock className="w-6 h-6 text-muted-foreground dark:text-gray-400" />
                         ) : (
                           milestoneIcons[milestone.referrals_required] || '🎁'
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className={`font-semibold ${isLocked ? 'text-gray-400' : 'text-white'}`}>
+                          <p className={`font-semibold ${isLocked ? 'text-muted-foreground dark:text-gray-400' : 'text-foreground dark:text-white'}`}>
                             {milestone.name}
                           </p>
                           {isEarned && (
-                            <Badge className="bg-green-500/20 text-green-400">
+                            <Badge className="bg-green-500/20 text-emerald-700 dark:text-green-400">
                               <CheckCircle className="w-3 h-3 mr-1" />
                               {milestone.status === 'claimed' ? 'Claimed' : 'Earned'}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-400 mb-2">{milestone.description}</p>
-                        <div className="flex items-center gap-2 text-sm text-purple-400">
+                        <p className="text-sm text-muted-foreground dark:text-gray-400 mb-2">{milestone.description}</p>
+                        <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400">
                           <Coins className="w-4 h-4" />
                           {milestone.reward_type === 'credits' 
                             ? `${milestone.reward_value} credits` 
@@ -228,10 +228,10 @@ export default function ReferralRewardsPage() {
                         {!isEarned && (
                           <div className="space-y-1 mt-2">
                             <div className="flex justify-between text-xs">
-                              <span className="text-gray-400">
+                              <span className="text-muted-foreground dark:text-gray-400">
                                 {current_referrals} / {milestone.referrals_required} referrals
                               </span>
-                              <span className="text-gray-400">{Math.round(progress)}%</span>
+                              <span className="text-muted-foreground dark:text-gray-400">{Math.round(progress)}%</span>
                             </div>
                             <Progress value={progress} className="h-2" />
                           </div>
@@ -253,10 +253,10 @@ export default function ReferralRewardsPage() {
 
         {/* Badges Sidebar */}
         <div>
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-400" />
+                <Trophy className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
                 Badges Collection
               </CardTitle>
             </CardHeader>
@@ -271,7 +271,7 @@ export default function ReferralRewardsPage() {
                     className={`p-4 rounded-lg ${
                       isEarned
                         ? `bg-linear-to-r ${tierColors[tier]} bg-opacity-20`
-                        : 'bg-zinc-800/50'
+                        : 'bg-muted/60 dark:bg-zinc-800/50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -279,16 +279,16 @@ export default function ReferralRewardsPage() {
                         className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
                           isEarned
                             ? `bg-linear-to-r ${tierColors[tier]}`
-                            : 'bg-zinc-700'
+                            : 'bg-muted dark:bg-zinc-700'
                         }`}
                       >
                         {isEarned ? milestoneIcons[milestone.referrals_required] || '🎁' : <Lock className="w-5 h-5 text-gray-500" />}
                       </div>
                       <div>
-                        <p className={`font-semibold ${isEarned ? 'text-white' : 'text-gray-500'}`}>
+                        <p className={`font-semibold ${isEarned ? 'text-foreground dark:text-white' : 'text-gray-500'}`}>
                           {milestone.name}
                         </p>
-                        <p className="text-xs text-gray-400">{milestone.referrals_required} referrals</p>
+                        <p className="text-xs text-muted-foreground dark:text-gray-400">{milestone.referrals_required} referrals</p>
                         {isEarned && milestone.claimed_at && (
                           <p className="text-xs text-gray-500 mt-1">
                             {new Date(milestone.claimed_at).toLocaleDateString()}
@@ -304,7 +304,7 @@ export default function ReferralRewardsPage() {
 
           {/* Progress to Next Milestone */}
           {lockedMilestones.length > 0 && (
-            <Card className="bg-zinc-900 border-zinc-800 mt-6">
+            <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800 mt-6">
               <CardHeader>
                 <CardTitle className="text-lg">Next Milestone</CardTitle>
               </CardHeader>
@@ -321,12 +321,12 @@ export default function ReferralRewardsPage() {
                           {milestoneIcons[nextMilestone.referrals_required] || '🎁'}
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{nextMilestone.name}</p>
-                          <p className="text-sm text-gray-400">Refer {nextMilestone.referrals_required} friends</p>
+                          <p className="font-semibold text-foreground dark:text-white">{nextMilestone.name}</p>
+                          <p className="text-sm text-muted-foreground dark:text-gray-400">Refer {nextMilestone.referrals_required} friends</p>
                         </div>
                       </div>
                       <Progress value={progress} className="h-3 mb-2" />
-                      <p className="text-sm text-gray-400 text-center">
+                      <p className="text-sm text-muted-foreground dark:text-gray-400 text-center">
                         {nextMilestone.referrals_required - current_referrals} more referrals needed
                       </p>
                     </>

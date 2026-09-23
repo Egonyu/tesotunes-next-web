@@ -35,6 +35,13 @@ jest.mock('@/hooks/usePublicPlatformSettings', () => ({
   usePublicPlatformSettings: () => ({ data: undefined }),
 }));
 
+jest.mock('@/hooks/useReferrals', () => ({
+  useValidateReferralCode: (code: string) => ({
+    data: code ? { valid: true, referrer_name: 'Joan', joiner_credits: 50 } : undefined,
+    isLoading: false,
+  }),
+}));
+
 // Treat google + facebook as enabled so the social-login section renders when
 // next-auth reports those providers.
 jest.mock('@/lib/social-auth', () => ({
@@ -45,6 +52,27 @@ jest.mock('@/lib/social-auth', () => ({
 describe('RegisterPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.history.replaceState({}, '', '/register');
+  });
+
+  it('includes the shared referral code when registering', async () => {
+    window.history.replaceState({}, '', '/register?ref=TESO123');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      text: async () => JSON.stringify({ success: true, data: { id: 1 } }),
+    });
+    render(<RegisterPage />);
+    expect(await screen.findByText('Invited by Joan')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'Invitee', name: 'name' } });
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'invitee@example.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!', name: 'password' } });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!', name: 'password_confirmation' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+    await waitFor(() => {
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body).referral_code).toBe('TESO123');
+    });
   });
 
   it('renders the registration form', () => {

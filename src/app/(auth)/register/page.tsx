@@ -10,6 +10,7 @@ import { registerUser } from "@/lib/register-client";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { getEnabledSocialAuthProvidersForPlatformSettings } from "@/lib/social-auth";
 import { getErrorMessage } from "@/lib/utils";
+import { useValidateReferralCode } from "@/hooks/useReferrals";
 
 export default function RegisterPage() {
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -27,8 +28,14 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [socialProviders, setSocialProviders] = useState<Record<string, { id: string; name: string }> | null>(null);
   const [socialLoadingProvider, setSocialLoadingProvider] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState("");
+  const { data: invitation, isLoading: validatingInvitation } = useValidateReferralCode(referralCode);
 
   const enabledProviders = getEnabledSocialAuthProvidersForPlatformSettings(platformSettings);
+
+  useEffect(() => {
+    setReferralCode(new URLSearchParams(window.location.search).get("ref")?.trim().slice(0, 32) ?? "");
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -71,7 +78,7 @@ export default function RegisterPage() {
 
     try {
       const recaptcha_token = await executeRecaptcha?.("register") ?? "";
-      const result = await registerUser({ ...formData, recaptcha_token });
+      const result = await registerUser({ ...formData, recaptcha_token, referral_code: referralCode || undefined });
 
       if (!result.ok) {
         if (result.status === 422 && result.errors) {
@@ -106,13 +113,22 @@ export default function RegisterPage() {
         Join TesoTunes and start discovering East African music
       </p>
 
+      {referralCode && (
+        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+          <p className="font-semibold">{validatingInvitation ? "Checking your invitation…" : invitation?.valid ? `Invited by ${invitation.referrer_name}` : "Invitation code entered"}</p>
+          <p className="mt-1 text-muted-foreground">{invitation?.valid ? `${invitation.joiner_credits > 0 ? `${invitation.joiner_credits.toLocaleString()} referral credits are available when you join.` : "Your signup will count toward your friend's referrals."}` : invitation && !invitation.valid ? "This code was not found. You can still create an account." : "Your referral code will be included when you register."}</p>
+        </div>
+      )}
+
       {errors.general && (
         <div className="mb-6 p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
           {errors.general[0]}
         </div>
       )}
 
-      {enabledSocialProviders.length > 0 && (
+      {referralCode && <p className="mb-4 text-xs text-muted-foreground">To apply this invitation and its rewards, create your account with email below.</p>}
+
+      {!referralCode && enabledSocialProviders.length > 0 && (
         <div className="mb-6 space-y-3">
           {enabledSocialProviders.map((provider) => (
             <button

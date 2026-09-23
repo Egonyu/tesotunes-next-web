@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   Circle,
+  Gift,
 } from "lucide-react";
 import { cn, formatCurrency, formatNumber, formatDate } from "@/lib/utils";
 import {
@@ -650,6 +651,12 @@ export default function DashboardPage() {
 
       {/* Unified overview — wallet, earnings, plays, Ateso corpus, activity */}
       <DashboardOverviewSection />
+
+      <Link href="/referrals" className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 transition-colors hover:bg-primary/10 sm:p-5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Gift className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1"><span className="block font-semibold">Refer friends, earn rewards</span><span className="block text-sm text-muted-foreground">Get your link, track referrals and claim milestones.</span></span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+      </Link>
 
       {/* Tickets the member has already paid for */}
       <UpcomingTicketsCard />

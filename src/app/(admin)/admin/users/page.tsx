@@ -311,7 +311,7 @@ export default function UsersPage() {
     return (
         <div className="admin-linear-page space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">Users</h1>
                     <p className="text-muted-foreground">
@@ -319,22 +319,22 @@ export default function UsersPage() {
                     </p>
                 </div>
                 {!isModeratorOnly && (
-                    <>
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
                         <Link
                             href="/admin/users/new"
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                            className="flex min-h-10 items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 sm:px-4"
                         >
                             <Plus className="h-4 w-4" />
                             Add User
                         </Link>
                         <Link
                             href="/admin/users/new?mode=organizer"
-                            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted"
+                            className="flex min-h-10 items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-muted sm:px-4"
                         >
                             <Shield className="h-4 w-4" />
                             Add Organizer
                         </Link>
-                    </>
+                    </div>
                 )}
             </div>
 
@@ -400,8 +400,8 @@ export default function UsersPage() {
 
             {/* Bulk Actions */}
             {selectedUsers.length > 0 && !isModeratorOnly && (
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-                    <span className="text-sm font-medium">
+                <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-lg sm:gap-3 sm:p-4">
+                    <span className="mr-auto text-sm font-medium">
                         {selectedUsers.length} selected
                     </span>
                     <button
@@ -443,7 +443,7 @@ export default function UsersPage() {
 
             {/* Table */}
             <div className="rounded-xl border bg-card overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className="hidden overflow-x-auto md:block">
                     <table className="w-full">
                         <thead className="bg-muted/50">
                             <tr>
@@ -451,8 +451,9 @@ export default function UsersPage() {
                                     <input
                                         type="checkbox"
                                         checked={
+                                            users.length > 0 &&
                                             selectedUsers.length ===
-                                            users.length
+                                                users.length
                                         }
                                         onChange={toggleSelectAll}
                                         className="rounded"
@@ -610,11 +611,12 @@ export default function UsersPage() {
                                                 : "Never"}
                                         </td>
                                         <td className="p-4">
-                                            <div className="flex items-center justify-end gap-2">
+                                            <div className="inline-flex items-center justify-end overflow-hidden rounded-md border bg-background">
                                                 <Link
                                                     href={`/admin/users/${user.id}`}
-                                                    className="p-2 hover:bg-muted rounded-lg"
+                                                    className="flex h-9 w-9 items-center justify-center border-r hover:bg-muted"
                                                     title="View"
+                                                    aria-label={`View ${user.full_name || user.name || user.username}`}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Link>
@@ -622,8 +624,9 @@ export default function UsersPage() {
                                                     <>
                                                         <Link
                                                             href={`/admin/users/${user.id}/edit`}
-                                                            className="p-2 hover:bg-muted rounded-lg"
+                                                            className="flex h-9 w-9 items-center justify-center border-r hover:bg-muted"
                                                             title="Edit"
+                                                            aria-label={`Edit ${user.full_name || user.name || user.username}`}
                                                         >
                                                             <Edit className="h-4 w-4" />
                                                         </Link>
@@ -642,8 +645,9 @@ export default function UsersPage() {
                                                             disabled={
                                                                 deleteMutation.isPending
                                                             }
-                                                            className="p-2 hover:bg-muted rounded-lg text-red-500 disabled:opacity-50"
+                                                            className="flex h-9 w-9 items-center justify-center text-red-500 hover:bg-red-500/10 disabled:opacity-50"
                                                             title="Delete"
+                                                            aria-label={`Delete ${user.full_name || user.name || user.username}`}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -658,9 +662,171 @@ export default function UsersPage() {
                     </table>
                 </div>
 
+                <div className="divide-y md:hidden">
+                    {users.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                            No users found
+                        </div>
+                    ) : (
+                        users.map((user) => {
+                            const displayName =
+                                user.full_name || user.name || user.username;
+                            const userStatus =
+                                user.status ||
+                                (user.is_active ? "active" : "inactive");
+
+                            return (
+                                <article key={user.id} className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedUsers.includes(
+                                                user.id,
+                                            )}
+                                            onChange={() =>
+                                                toggleSelect(user.id)
+                                            }
+                                            className="mt-2 rounded"
+                                            aria-label={`Select ${displayName}`}
+                                        />
+                                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
+                                            {pickMediaUrl(
+                                                user.avatar_url,
+                                                user.profile_image_url,
+                                                user.avatar,
+                                            ) ? (
+                                                <SafeImage
+                                                    src={pickMediaUrl(
+                                                        user.avatar_url,
+                                                        user.profile_image_url,
+                                                        user.avatar,
+                                                    )}
+                                                    alt={displayName}
+                                                    width={40}
+                                                    height={40}
+                                                    className="h-full w-full object-cover"
+                                                    fallback={
+                                                        <InitialsAvatar
+                                                            name={displayName}
+                                                            textClassName="text-sm"
+                                                        />
+                                                    }
+                                                />
+                                            ) : (
+                                                <InitialsAvatar
+                                                    name={displayName}
+                                                    textClassName="text-sm"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-medium">
+                                                {displayName}
+                                            </p>
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                @{user.username}
+                                            </p>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <span
+                                                    className={cn(
+                                                        "rounded-full px-2 py-1 text-xs font-medium capitalize",
+                                                        roleStyles[
+                                                            user.role as keyof typeof roleStyles
+                                                        ] || roleStyles.user,
+                                                    )}
+                                                >
+                                                    {(
+                                                        user.role || "user"
+                                                    ).replace("_", " ")}
+                                                </span>
+                                                <span
+                                                    className={cn(
+                                                        "rounded-full px-2 py-1 text-xs font-medium capitalize",
+                                                        statusStyles[
+                                                            userStatus as keyof typeof statusStyles
+                                                        ] ||
+                                                            statusStyles.active,
+                                                    )}
+                                                >
+                                                    {userStatus}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 flex items-end justify-between gap-3 border-t pt-3">
+                                        <div className="text-xs text-muted-foreground">
+                                            <p>
+                                                Joined{" "}
+                                                {user.created_at
+                                                    ? new Date(
+                                                          user.created_at,
+                                                      ).toLocaleDateString()
+                                                    : "—"}
+                                            </p>
+                                            <p>
+                                                Last login{" "}
+                                                {user.last_login_at
+                                                    ? new Date(
+                                                          user.last_login_at,
+                                                      ).toLocaleDateString()
+                                                    : "Never"}
+                                            </p>
+                                        </div>
+                                        <div className="inline-flex shrink-0 overflow-hidden rounded-md border bg-background">
+                                            <Link
+                                                href={`/admin/users/${user.id}`}
+                                                className="flex h-10 w-10 items-center justify-center border-r hover:bg-muted"
+                                                aria-label={`View ${displayName}`}
+                                                title="View"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Link>
+                                            {!isModeratorOnly && (
+                                                <>
+                                                    <Link
+                                                        href={`/admin/users/${user.id}/edit`}
+                                                        className="flex h-10 w-10 items-center justify-center border-r hover:bg-muted"
+                                                        aria-label={`Edit ${displayName}`}
+                                                        title="Edit"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Link>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (
+                                                                confirm(
+                                                                    `Permanently delete ${displayName}? This cannot be undone.`,
+                                                                )
+                                                            ) {
+                                                                deleteMutation.mutate(
+                                                                    user.id,
+                                                                );
+                                                            }
+                                                        }}
+                                                        disabled={
+                                                            deleteMutation.isPending
+                                                        }
+                                                        className="flex h-10 w-10 items-center justify-center text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                                                        aria-label={`Delete ${displayName}`}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })
+                    )}
+                </div>
+
                 {/* Pagination */}
                 {meta && (
-                    <div className="flex items-center justify-between p-4 border-t">
+                    <div className="flex flex-col gap-3 p-4 border-t sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
                             Showing{" "}
                             {(meta.current_page - 1) * (meta.per_page || 20) +
@@ -672,7 +838,7 @@ export default function UsersPage() {
                             )}{" "}
                             of {(meta.total ?? 0).toLocaleString()} users
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <button
                                 onClick={() =>
                                     setCurrentPage((p) => Math.max(1, p - 1))

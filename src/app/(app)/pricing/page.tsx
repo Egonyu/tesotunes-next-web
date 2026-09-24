@@ -13,6 +13,7 @@ import {
     WifiOff,
 } from "lucide-react";
 import {
+    getPlanWalletCashoutMinimum,
     type SubscriptionPlan,
     useMySubscription,
     useSubscriptionPlans,
@@ -99,6 +100,8 @@ export default function PricingPage() {
                         const isCurrentPlan = currentSub?.plan === plan.slug;
                         const price = Number(plan.price_local || plan.price);
                         const isRecommended = plan.is_popular;
+                        const walletCashoutMinimum =
+                            getPlanWalletCashoutMinimum(plan);
 
                         return (
                             <article
@@ -228,6 +231,17 @@ export default function PricingPage() {
                                                   : "Ad-free"}
                                         </dd>
                                     </div>
+                                    {walletCashoutMinimum !== null && (
+                                        <div className="rounded-xl bg-muted/60 p-3">
+                                            <dt className="text-muted-foreground">
+                                                Wallet cash-out
+                                            </dt>
+                                            <dd className="mt-1 font-bold">
+                                                From UGX{" "}
+                                                {walletCashoutMinimum.toLocaleString()}
+                                            </dd>
+                                        </div>
+                                    )}
                                 </dl>
 
                                 <ul className="mt-6 flex-1 space-y-3">

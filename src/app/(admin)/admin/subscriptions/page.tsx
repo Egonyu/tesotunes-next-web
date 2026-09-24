@@ -103,6 +103,11 @@ interface SubscriptionPlansResponse {
   legacy_data?: SubscriptionPlan[];
 }
 
+function walletCashoutMinimumFor(plan: SubscriptionPlan): number | null {
+  const value = plan.entitlements?.['finance.withdrawal_minimum_ugx'];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 interface GrantFormState {
   userId: string;
   planId: string;
@@ -569,6 +574,10 @@ export default function AdminSubscriptionsPage() {
                   <p className="font-medium text-foreground">Admin demos</p>
                   <p className="mt-1">Use the grant flow to simulate experience, especially on plans with trial days, so staff can walk new users through value before payment.</p>
                 </div>
+                <div className="rounded-lg border bg-background/60 p-3 md:col-span-2">
+                  <p className="font-medium text-foreground">Keep the money flows distinct</p>
+                  <p className="mt-1">Package finance.withdrawal_minimum_ugx controls a listener or creator wallet cash-out. Artist earnings payouts stay global in Settings → Payments during the trial period. Pricing and account settings use the same wallet threshold shown here.</p>
+                </div>
               </div>
             </div>
 
@@ -708,6 +717,7 @@ export default function AdminSubscriptionsPage() {
                         <span>Audio: {plan.max_audio_quality_kbps ?? 320} kbps</span>
                         <span>Downloads: {plan.max_downloads_per_day === null ? 'Unlimited' : plan.max_downloads_per_day ?? 0}/day</span>
                         <span>Uploads: {plan.max_uploads_per_month ?? 0}/month</span>
+                        {walletCashoutMinimumFor(plan) !== null && <span>Wallet cash-out: UGX {walletCashoutMinimumFor(plan)?.toLocaleString()}</span>}
                         <span>{Object.keys(plan.entitlements ?? {}).length} entitlement rules</span>
                       </div>
                     </div>
@@ -828,7 +838,7 @@ export default function AdminSubscriptionsPage() {
                   placeholder={'streaming.ad_free = true\ncreator.uploads_per_month = 10\nfinance.withdrawal_minimum_ugx = 25000'}
                   spellCheck={false}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">One rule per line using key = value. Values may be true, false, a number, text, or unlimited. Changes take effect without a deploy.</p>
+                <p className="mt-1 text-xs text-muted-foreground">One rule per line using key = value. Values may be true, false, a number, text, or unlimited. finance.withdrawal_minimum_ugx controls wallet cash-outs; artist payout controls remain in Settings → Payments during the trial. Changes take effect without a deploy.</p>
               </div>
             </div>
 

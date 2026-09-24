@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Check, Crown, Star, Music2, Building2, X, AlertTriangle, RefreshCw, Wifi, WifiOff, Loader2, History, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { cn, getErrorMessage } from '@/lib/utils';
 import {
+  getPlanWalletCashoutMinimum,
   useSubscriptionPlans,
   useMySubscription,
   useSubscribe,
@@ -243,6 +244,7 @@ export default function SubscriptionPage() {
           const Icon = PLAN_ICONS[plan.slug] || Music2;
           const isCurrentPlan = currentSub?.plan === plan.slug;
           const price = plan.price_local || plan.price;
+          const walletCashoutMinimum = getPlanWalletCashoutMinimum(plan);
 
           return (
             <div
@@ -308,6 +310,14 @@ export default function SubscriptionPage() {
                     <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </div>
+                {walletCashoutMinimum !== null && (
+                  <div className="flex justify-between">
+                    <span>Wallet cash-out minimum</span>
+                    <span className="font-medium text-foreground">
+                      UGX {walletCashoutMinimum.toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <ul className="space-y-2 mb-6">

@@ -37,6 +37,11 @@ export interface SubscriptionPlan {
   is_popular: boolean;
 }
 
+export function getPlanWalletCashoutMinimum(plan: Pick<SubscriptionPlan, 'entitlements'>): number | null {
+  const value = plan.entitlements?.['finance.withdrawal_minimum_ugx'];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 export interface CurrentSubscription {
   has_subscription: boolean;
   subscription_id?: number;

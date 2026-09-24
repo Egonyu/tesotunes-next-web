@@ -10,30 +10,54 @@
 
 /* CSS Variables for theming */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 346.8 77.2% 49.8%;
-  --primary-foreground: 355.7 100% 97.3%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 346.8 77.2% 49.8%;
-  --radius: 0.5rem;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 346.8 77.2% 49.8%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 346.8 77.2% 49.8%;
+    --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) {
+    :root:not(.light) {
+        --background: 20 14.3% 4.1%;
+        --foreground: 0 0% 95%;
+        --card: 24 9.8% 10%;
+        --card-foreground: 0 0% 95%;
+        --popover: 0 0% 9%;
+        --popover-foreground: 0 0% 95%;
+        --primary: 346.8 77.2% 49.8%;
+        --primary-foreground: 355.7 100% 97.3%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 15%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 12 6.5% 15.1%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 85.7% 97.3%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 346.8 77.2% 49.8%;
+    }
+}
+
+/* Dark mode via class (next-themes with attribute="class") */
+.dark {
     --background: 20 14.3% 4.1%;
     --foreground: 0 0% 95%;
     --card: 24 9.8% 10%;
@@ -53,135 +77,363 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 346.8 77.2% 49.8%;
-  }
-}
-
-/* Dark mode via class (next-themes with attribute="class") */
-.dark {
-  --background: 20 14.3% 4.1%;
-  --foreground: 0 0% 95%;
-  --card: 24 9.8% 10%;
-  --card-foreground: 0 0% 95%;
-  --popover: 0 0% 9%;
-  --popover-foreground: 0 0% 95%;
-  --primary: 346.8 77.2% 49.8%;
-  --primary-foreground: 355.7 100% 97.3%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 15%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 12 6.5% 15.1%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 85.7% 97.3%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 346.8 77.2% 49.8%;
 }
 
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --font-sans: var(--font-inter);
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-destructive-foreground: hsl(var(--destructive-foreground));
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --font-sans: var(--font-inter);
 }
 
 * {
-  border-color: hsl(var(--border));
+    border-color: hsl(var(--border));
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: var(--font-sans), system-ui, sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.5);
 }
 
 /* Hide scrollbar for carousel */
 .scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 /* Scroll-snap carousel primitives (Spotify-style mobile sliders) */
 .snap-track-x {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .snap-track-x::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 .snap-item-center {
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
-  flex-shrink: 0;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    flex-shrink: 0;
 }
 
 .snap-item-start {
-  scroll-snap-align: start;
-  flex-shrink: 0;
+    scroll-snap-align: start;
+    flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .snap-track-x {
-    scroll-behavior: smooth;
-  }
+    .snap-track-x {
+        scroll-behavior: smooth;
+    }
 }
 
 /* Audio visualizer animation */
 @keyframes pulse-bar {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
+    0%,
+    100% {
+        transform: scaleY(0.3);
+    }
+    50% {
+        transform: scaleY(1);
+    }
 }
 
-.animate-bar-1 { animation: pulse-bar 0.4s ease-in-out infinite; }
-.animate-bar-2 { animation: pulse-bar 0.4s ease-in-out infinite 0.1s; }
-.animate-bar-3 { animation: pulse-bar 0.4s ease-in-out infinite 0.2s; }
+.animate-bar-1 {
+    animation: pulse-bar 0.4s ease-in-out infinite;
+}
+.animate-bar-2 {
+    animation: pulse-bar 0.4s ease-in-out infinite 0.1s;
+}
+.animate-bar-3 {
+    animation: pulse-bar 0.4s ease-in-out infinite 0.2s;
+}
+
+/*
+ * Admin operations surface
+ *
+ * A deliberately dense, flat visual language: three stacked surface values,
+ * a single product accent, hairline borders, 4px-grid spacing, and fast state
+ * changes. Scoped so the public music experience keeps its softer cards.
+ */
+.admin-linear-shell {
+    --admin-base: hsl(var(--background));
+    --admin-surface: hsl(var(--muted) / 0.28);
+    --admin-raised: hsl(var(--card));
+    --admin-hairline: hsl(var(--border) / 0.78);
+    background: var(--admin-surface);
+    letter-spacing: -0.01em;
+}
+
+.admin-linear-shell aside,
+.admin-linear-shell > header,
+.admin-linear-shell main > header {
+    background: var(--admin-base);
+    border-color: var(--admin-hairline);
+    box-shadow: none;
+}
+
+.admin-linear-shell aside nav a {
+    min-height: 36px;
+    border-radius: 6px;
+    transition:
+        color 90ms ease,
+        background-color 90ms ease;
+}
+
+.admin-linear-shell aside nav a:not([class*="bg-primary"]):hover {
+    background: hsl(var(--muted) / 0.72);
+}
+
+.admin-linear-shell main > header {
+    height: 56px;
+}
+
+.admin-linear-shell main > header input {
+    height: 34px;
+    border-color: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    transition:
+        border-color 90ms ease,
+        background-color 90ms ease,
+        box-shadow 90ms ease;
+}
+
+.admin-linear-shell main > header input:focus {
+    border-color: hsl(var(--primary) / 0.45);
+    background: var(--admin-raised);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.12);
+    outline: none;
+}
+
+.admin-linear-page {
+    max-width: 1600px;
+    margin-inline: auto;
+    font-size: 13px;
+}
+
+.admin-linear-page > div:first-child h1 {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+}
+
+.admin-linear-page h2 {
+    letter-spacing: -0.02em;
+}
+
+.admin-linear-page input,
+.admin-linear-page select,
+.admin-linear-page button,
+.admin-linear-page a {
+    transition-duration: 100ms !important;
+    transition-timing-function: ease-out !important;
+}
+
+.admin-linear-page input[type="text"],
+.admin-linear-page input[type="search"],
+.admin-linear-page select {
+    min-height: 36px;
+    border-color: var(--admin-hairline);
+    border-radius: 6px;
+    background: var(--admin-raised);
+    font-size: 13px;
+    box-shadow: none;
+}
+
+.admin-linear-page input[type="text"]:focus,
+.admin-linear-page input[type="search"]:focus,
+.admin-linear-page select:focus {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.12);
+    outline: none;
+}
+
+.admin-linear-page input[type="checkbox"] {
+    accent-color: hsl(var(--primary));
+}
+
+.admin-linear-page :is(button, a).rounded-lg {
+    border-radius: 6px;
+}
+
+.admin-linear-page :is(.rounded-xl, .rounded-2xl, .rounded-3xl) {
+    border-radius: 8px;
+}
+
+.admin-linear-page
+    :is(.shadow-sm, [class*="shadow-black"], [class*="backdrop-blur"]) {
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.admin-linear-page table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-linear-page thead {
+    background: hsl(var(--muted) / 0.44);
+}
+
+.admin-linear-page th {
+    height: 32px;
+    padding: 6px 12px !important;
+    color: hsl(var(--muted-foreground));
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.admin-linear-page td {
+    min-height: 40px;
+    padding: 8px 12px !important;
+    vertical-align: middle;
+}
+
+.admin-linear-page tbody tr {
+    border-color: var(--admin-hairline);
+    transition: background-color 80ms ease;
+}
+
+.admin-linear-page tbody tr:hover {
+    background: hsl(var(--muted) / 0.42) !important;
+}
+
+.admin-linear-page tbody :is(.h-12, .w-12) {
+    width: 36px;
+    height: 36px;
+}
+
+.admin-linear-page tbody :is(.h-10, .w-10) {
+    width: 32px;
+    height: 32px;
+}
+
+.admin-linear-page tbody span.rounded-full {
+    border: 1px solid var(--admin-hairline);
+    background: hsl(var(--muted) / 0.55) !important;
+    color: hsl(var(--foreground) / 0.72) !important;
+}
+
+.admin-linear-page > .grid > .border,
+.admin-linear-page section,
+.admin-linear-page > .rounded-xl.border {
+    border-color: var(--admin-hairline);
+    background: var(--admin-raised);
+    box-shadow: none;
+}
+
+.admin-linear-page > .grid > .border {
+    min-height: 80px;
+    padding: 12px;
+}
+
+.admin-linear-page > .grid > .border p:first-child {
+    font-size: 20px;
+    line-height: 24px;
+    color: hsl(var(--foreground));
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-linear-page > .grid > .border p:last-child {
+    margin-top: 4px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+.admin-linear-page [class*="bg-gradient"] {
+    background-image: none;
+}
+
+.admin-linear-payments section {
+    padding: 16px;
+}
+
+.admin-linear-payments table td:nth-child(2),
+.admin-linear-payments table th:nth-child(2),
+.admin-linear-payments table td:last-child,
+.admin-linear-payments table th:last-child {
+    text-align: right;
+}
+
+@media (max-width: 767px) {
+    .admin-linear-page {
+        font-size: 13px;
+    }
+
+    .admin-linear-page > div:first-child {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .admin-linear-page > div:first-child h1 {
+        font-size: 18px;
+    }
+
+    .admin-linear-page td,
+    .admin-linear-page th {
+        padding-inline: 10px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-linear-shell *,
+    .admin-linear-page * {
+        transition-duration: 0.01ms !important;
+    }
+}

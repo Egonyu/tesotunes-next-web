@@ -1,246 +1,401 @@
-'use client';
+"use client";
 
-import { Check, Crown, Star, Music2, Building2, Wifi, WifiOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSubscriptionPlans, useMySubscription } from '@/hooks/useSubscriptions';
-import Link from 'next/link';
+import Link from "next/link";
+import {
+    ArrowRight,
+    Building2,
+    Check,
+    Music2,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    Wifi,
+    WifiOff,
+} from "lucide-react";
+import {
+    type SubscriptionPlan,
+    useMySubscription,
+    useSubscriptionPlans,
+} from "@/hooks/useSubscriptions";
+import { cn } from "@/lib/utils";
 
-const PLAN_ICONS: Record<string, typeof Crown> = {
-  free: Music2,
-  emong: Music2,
-  eris: Star,
-  engatuny: Building2,
+const PLAN_ICONS: Record<string, typeof Music2> = {
+    free: Music2,
+    emong: Music2,
+    eris: Star,
+    engatuny: Building2,
 };
 
 export default function PricingPage() {
-  const { data: plans, isLoading } = useSubscriptionPlans();
-  const { data: currentSub } = useMySubscription();
+    const { data: plans, isLoading } = useSubscriptionPlans();
+    const { data: currentSub } = useMySubscription();
 
-  if (isLoading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-12 space-y-8">
-        <div className="text-center space-y-3">
-          <div className="h-10 w-64 mx-auto bg-muted rounded-lg animate-pulse" />
-          <div className="h-5 w-96 mx-auto bg-muted rounded-lg animate-pulse" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[500px] bg-muted rounded-xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Choose Your Plan</h1>
-        <p className="text-muted-foreground max-w-lg mx-auto">
-          Start free, then upgrade only when the difference feels real. Enjoy clearer audio,
-          offline listening, fewer limits, and creator tools when you are ready.
-        </p>
-        <div className="mx-auto max-w-3xl rounded-2xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-sm text-muted-foreground">
-          New to online subscriptions? Look for plans with a trial so you can experience the value first before paying long-term.
-        </div>
-      </div>
-
-      {/* Plans Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {plans?.map((plan) => {
-          const Icon = PLAN_ICONS[plan.slug] || Music2;
-          const isCurrentPlan = currentSub?.plan === plan.slug;
-          const price = plan.price_local || plan.price;
-
-          return (
-            <div
-              key={plan.id}
-              className={cn(
-                'relative rounded-xl border p-6 flex flex-col transition-shadow',
-                plan.is_popular && 'border-primary shadow-lg',
-                isCurrentPlan && 'bg-muted/30 ring-2 ring-primary/20'
-              )}
-            >
-              {plan.is_popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
-                  Most Popular
-                </span>
-              )}
-
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-4">
-                  <Icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
-              </div>
-
-              <div className="text-center mb-6">
-                <span className="text-3xl font-bold">
-                  {price === 0 ? 'Free' : `UGX ${Number(price).toLocaleString()}`}
-                </span>
-                {price > 0 && (
-                  <span className="text-muted-foreground text-sm">/month</span>
-                )}
-                {plan.trial_days ? (
-                  <div className="mt-2">
-                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                      {plan.trial_days}-day trial
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Plan Limits */}
-              <div className="space-y-2 mb-4 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>Audio Quality</span>
-                  <span className="font-medium text-foreground">{plan.limits.audio_quality_kbps}kbps</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Downloads/Day</span>
-                  <span className="font-medium text-foreground">
-                    {plan.limits.downloads_per_day === null ? 'Unlimited' : plan.limits.downloads_per_day}
-                  </span>
-                </div>
-                {plan.limits.uploads_per_month !== null && plan.limits.uploads_per_month > 0 && (
-                  <div className="flex justify-between">
-                    <span>Uploads/Month</span>
-                    <span className="font-medium text-foreground">{plan.limits.uploads_per_month}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span>Ads</span>
-                  <span className={cn('font-medium', plan.has_ads ? 'text-orange-500' : 'text-green-500')}>
-                    {plan.has_ads ? 'Yes' : 'No Ads'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Offline</span>
-                  {plan.offline_mode ? (
-                    <Wifi className="h-3.5 w-3.5 text-green-500" />
-                  ) : (
-                    <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
-                </div>
-              </div>
-
-              <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {isCurrentPlan ? (
-                <span className="w-full py-2 rounded-lg border font-medium text-muted-foreground text-center block">
-                  Current Plan
-                </span>
-              ) : plan.slug === 'free' ? (
-                <span className="w-full py-2 rounded-lg border font-medium text-muted-foreground text-center block">
-                  Default
-                </span>
-              ) : (
-                <Link
-                  href="/settings/subscription"
-                  className={cn(
-                    'w-full py-2 rounded-lg font-medium text-center block transition-colors',
-                    plan.is_popular
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : 'border hover:bg-muted'
-                  )}
+    if (isLoading) {
+        return (
+            <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-20">
+                <div
+                    className="mx-auto max-w-2xl space-y-4 text-center"
+                    aria-label="Loading subscription plans"
                 >
-                  {plan.trial_days ? `Start ${plan.trial_days}-day trial` : 'Get Started'}
-                </Link>
-              )}
+                    <div className="mx-auto h-5 w-32 animate-pulse rounded-full bg-muted" />
+                    <div className="mx-auto h-12 w-full max-w-xl animate-pulse rounded-2xl bg-muted" />
+                    <div className="mx-auto h-5 w-4/5 animate-pulse rounded-lg bg-muted" />
+                </div>
+                <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                    {[...Array(4)].map((_, index) => (
+                        <div
+                            key={index}
+                            className="h-[560px] animate-pulse rounded-[2rem] border bg-card"
+                        />
+                    ))}
+                </div>
             </div>
-          );
-        })}
-      </div>
+        );
+    }
 
-      {/* Comparison Table */}
-      {plans && plans.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Feature</th>
-                {plans.map((plan) => (
-                  <th key={plan.id} className="text-center py-3 px-4 font-semibold">
-                    {plan.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="py-3 px-4 text-muted-foreground">Audio Quality</td>
-                {plans.map((plan) => (
-                  <td key={plan.id} className="py-3 px-4 text-center font-medium">
-                    {plan.limits.audio_quality_kbps}kbps
-                  </td>
-                ))}
-              </tr>
-              <tr className="border-b">
-                <td className="py-3 px-4 text-muted-foreground">Daily Downloads</td>
-                {plans.map((plan) => (
-                  <td key={plan.id} className="py-3 px-4 text-center font-medium">
-                    {plan.limits.downloads_per_day === null ? 'Unlimited' : plan.limits.downloads_per_day}
-                  </td>
-                ))}
-              </tr>
-              <tr className="border-b">
-                <td className="py-3 px-4 text-muted-foreground">Monthly Uploads</td>
-                {plans.map((plan) => (
-                  <td key={plan.id} className="py-3 px-4 text-center font-medium">
-                    {plan.limits.uploads_per_month === null || plan.limits.uploads_per_month === 0
-                      ? '—'
-                      : plan.limits.uploads_per_month}
-                  </td>
-                ))}
-              </tr>
-              <tr className="border-b">
-                <td className="py-3 px-4 text-muted-foreground">Ad-Free</td>
-                {plans.map((plan) => (
-                  <td key={plan.id} className="py-3 px-4 text-center">
-                    {plan.has_ads ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <Check className="h-4 w-4 text-green-500 mx-auto" />
-                    )}
-                  </td>
-                ))}
-              </tr>
-              <tr className="border-b">
-                <td className="py-3 px-4 text-muted-foreground">Offline Mode</td>
-                {plans.map((plan) => (
-                  <td key={plan.id} className="py-3 px-4 text-center">
-                    {plan.offline_mode ? (
-                      <Check className="h-4 w-4 text-green-500 mx-auto" />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="py-3 px-4 text-muted-foreground">Price</td>
-                {plans.map((plan) => {
-                  const price = plan.price_local || plan.price;
-                  return (
-                    <td key={plan.id} className="py-3 px-4 text-center font-semibold">
-                      {price === 0 ? 'Free' : `UGX ${Number(price).toLocaleString()}/mo`}
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
+    return (
+        <div className="relative isolate overflow-hidden">
+            <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.16),transparent_62%)]" />
+
+            <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-20">
+                <header className="mx-auto max-w-3xl text-center">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Built for every stage
+                    </div>
+                    <h1 className="mt-6 text-balance text-4xl font-black tracking-[-0.04em] sm:text-5xl lg:text-6xl">
+                        Start with the music.
+                        <span className="block text-primary">
+                            Grow when you&apos;re ready.
+                        </span>
+                    </h1>
+                    <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
+                        Listen, publish, sell and run events from one account.
+                        Begin free, then choose the tools that move your work
+                        forward.
+                    </p>
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                            Clear monthly pricing
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary" />
+                            Change plans as you grow
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary" />
+                            Trial eligible plans first
+                        </span>
+                    </div>
+                </header>
+
+                <section
+                    className="mt-16 grid items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4"
+                    aria-label="Subscription plans"
+                >
+                    {plans?.map((plan) => {
+                        const Icon = PLAN_ICONS[plan.slug] || Music2;
+                        const isCurrentPlan = currentSub?.plan === plan.slug;
+                        const price = Number(plan.price_local || plan.price);
+                        const isRecommended = plan.is_popular;
+
+                        return (
+                            <article
+                                key={plan.id}
+                                className={cn(
+                                    "group relative flex min-h-[560px] flex-col rounded-[2rem] border bg-card/95 p-7 shadow-[0_2px_10px_hsl(var(--foreground)/0.04),0_24px_60px_hsl(var(--foreground)/0.06)] transition duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_8px_20px_hsl(var(--foreground)/0.08),0_32px_80px_hsl(var(--foreground)/0.1)]",
+                                    isRecommended
+                                        ? "border-primary/50 bg-[linear-gradient(160deg,hsl(var(--primary)/0.1),hsl(var(--card))_36%)] shadow-[0_4px_18px_hsl(var(--primary)/0.16),0_32px_80px_hsl(var(--primary)/0.14)] xl:-translate-y-3 xl:hover:-translate-y-5"
+                                        : "border-border/80",
+                                    isCurrentPlan &&
+                                        "ring-2 ring-primary ring-offset-4 ring-offset-background",
+                                )}
+                            >
+                                {isRecommended && (
+                                    <span className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground shadow-lg shadow-primary/25">
+                                        Best balance
+                                    </span>
+                                )}
+
+                                <div className="flex items-start justify-between gap-4">
+                                    <div
+                                        className={cn(
+                                            "flex h-12 w-12 items-center justify-center rounded-2xl border bg-muted/50 transition-transform duration-300 group-hover:scale-105",
+                                            isRecommended &&
+                                                "border-primary/20 bg-primary/10",
+                                        )}
+                                    >
+                                        <Icon
+                                            className={cn(
+                                                "h-5 w-5",
+                                                isRecommended
+                                                    ? "text-primary"
+                                                    : "text-foreground",
+                                            )}
+                                        />
+                                    </div>
+                                    {isCurrentPlan && (
+                                        <span className="rounded-full bg-foreground px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-background">
+                                            Your plan
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="mt-6">
+                                    <h2 className="text-2xl font-bold tracking-tight">
+                                        {plan.name}
+                                    </h2>
+                                    <p className="mt-2 min-h-12 text-sm leading-6 text-muted-foreground">
+                                        {plan.description}
+                                    </p>
+                                </div>
+
+                                <div className="mt-7 border-y border-border/70 py-5">
+                                    <div className="flex items-end gap-1">
+                                        <span className="text-4xl font-black tracking-[-0.04em]">
+                                            {price === 0
+                                                ? "Free"
+                                                : `UGX ${price.toLocaleString()}`}
+                                        </span>
+                                        {price > 0 && (
+                                            <span className="pb-1 text-sm text-muted-foreground">
+                                                /month
+                                            </span>
+                                        )}
+                                    </div>
+                                    {plan.trial_days ? (
+                                        <p className="mt-2 text-sm font-semibold text-primary">
+                                            Try every feature for{" "}
+                                            {plan.trial_days} days
+                                        </p>
+                                    ) : (
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            No payment needed
+                                        </p>
+                                    )}
+                                </div>
+
+                                <dl className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                                    <div className="rounded-xl bg-muted/60 p-3">
+                                        <dt className="text-muted-foreground">
+                                            Audio
+                                        </dt>
+                                        <dd className="mt-1 font-bold">
+                                            {plan.limits.audio_quality_kbps}{" "}
+                                            kbps
+                                        </dd>
+                                    </div>
+                                    <div className="rounded-xl bg-muted/60 p-3">
+                                        <dt className="text-muted-foreground">
+                                            Downloads/day
+                                        </dt>
+                                        <dd className="mt-1 font-bold">
+                                            {plan.limits.downloads_per_day ===
+                                            null
+                                                ? "Unlimited"
+                                                : plan.limits.downloads_per_day}
+                                        </dd>
+                                    </div>
+                                    {plan.limits.uploads_per_month !== null &&
+                                        plan.limits.uploads_per_month > 0 && (
+                                            <div className="rounded-xl bg-muted/60 p-3">
+                                                <dt className="text-muted-foreground">
+                                                    Uploads/month
+                                                </dt>
+                                                <dd className="mt-1 font-bold">
+                                                    {
+                                                        plan.limits
+                                                            .uploads_per_month
+                                                    }
+                                                </dd>
+                                            </div>
+                                        )}
+                                    <div className="rounded-xl bg-muted/60 p-3">
+                                        <dt className="text-muted-foreground">
+                                            Listening
+                                        </dt>
+                                        <dd className="mt-1 flex items-center gap-1.5 font-bold">
+                                            {plan.offline_mode ? (
+                                                <Wifi className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <WifiOff className="h-3.5 w-3.5" />
+                                            )}
+                                            {plan.offline_mode
+                                                ? "Offline"
+                                                : plan.has_ads
+                                                  ? "With ads"
+                                                  : "Ad-free"}
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                <ul className="mt-6 flex-1 space-y-3">
+                                    {plan.features.map((feature) => (
+                                        <li
+                                            key={feature}
+                                            className="flex items-start gap-3 text-sm leading-5"
+                                        >
+                                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                                <Check
+                                                    className="h-3 w-3 text-primary"
+                                                    strokeWidth={3}
+                                                />
+                                            </span>
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <div className="mt-7">
+                                    {isCurrentPlan ? (
+                                        <span className="flex min-h-12 w-full items-center justify-center rounded-xl border bg-muted/40 px-4 text-sm font-semibold text-muted-foreground">
+                                            Current plan
+                                        </span>
+                                    ) : plan.slug === "free" ? (
+                                        <span className="flex min-h-12 w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold text-muted-foreground">
+                                            Included with every account
+                                        </span>
+                                    ) : (
+                                        <Link
+                                            href="/settings/subscription"
+                                            className={cn(
+                                                "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                                                isRecommended
+                                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+                                                    : "border bg-background hover:border-primary/40 hover:bg-primary/5",
+                                            )}
+                                        >
+                                            {plan.trial_days
+                                                ? `Try ${plan.name} free`
+                                                : `Choose ${plan.name}`}
+                                            <ArrowRight className="h-4 w-4" />
+                                        </Link>
+                                    )}
+                                </div>
+                            </article>
+                        );
+                    })}
+                </section>
+
+                {plans && plans.length > 0 && (
+                    <section
+                        className="mt-20 overflow-hidden rounded-[2rem] border bg-card shadow-[0_24px_70px_hsl(var(--foreground)/0.06)]"
+                        aria-labelledby="compare-plans"
+                    >
+                        <div className="border-b px-6 py-6 sm:px-8">
+                            <h2
+                                id="compare-plans"
+                                className="text-2xl font-bold tracking-tight"
+                            >
+                                Compare the essentials
+                            </h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                A quick view of the limits that change most as
+                                you grow.
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[720px] border-collapse text-sm">
+                                <thead>
+                                    <tr className="bg-muted/40">
+                                        <th className="px-6 py-4 text-left font-medium text-muted-foreground">
+                                            Feature
+                                        </th>
+                                        {plans.map((plan) => (
+                                            <th
+                                                key={plan.id}
+                                                className={cn(
+                                                    "px-5 py-4 text-center font-bold",
+                                                    plan.is_popular &&
+                                                        "text-primary",
+                                                )}
+                                            >
+                                                {plan.name}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {[
+                                        {
+                                            label: "Audio quality",
+                                            value: (plan: SubscriptionPlan) =>
+                                                `${plan.limits.audio_quality_kbps} kbps`,
+                                        },
+                                        {
+                                            label: "Daily downloads",
+                                            value: (plan: SubscriptionPlan) =>
+                                                plan.limits
+                                                    .downloads_per_day === null
+                                                    ? "Unlimited"
+                                                    : String(
+                                                          plan.limits
+                                                              .downloads_per_day,
+                                                      ),
+                                        },
+                                        {
+                                            label: "Monthly uploads",
+                                            value: (plan: SubscriptionPlan) =>
+                                                !plan.limits.uploads_per_month
+                                                    ? "—"
+                                                    : String(
+                                                          plan.limits
+                                                              .uploads_per_month,
+                                                      ),
+                                        },
+                                        {
+                                            label: "Ad-free",
+                                            value: (plan: SubscriptionPlan) =>
+                                                plan.has_ads ? "—" : "Included",
+                                        },
+                                        {
+                                            label: "Offline mode",
+                                            value: (plan: SubscriptionPlan) =>
+                                                plan.offline_mode
+                                                    ? "Included"
+                                                    : "—",
+                                        },
+                                        {
+                                            label: "Monthly price",
+                                            value: (plan: SubscriptionPlan) => {
+                                                const planPrice = Number(
+                                                    plan.price_local ||
+                                                        plan.price,
+                                                );
+                                                return planPrice === 0
+                                                    ? "Free"
+                                                    : `UGX ${planPrice.toLocaleString()}`;
+                                            },
+                                        },
+                                    ].map((row) => (
+                                        <tr
+                                            key={row.label}
+                                            className="transition-colors hover:bg-muted/30"
+                                        >
+                                            <td className="px-6 py-4 font-medium text-muted-foreground">
+                                                {row.label}
+                                            </td>
+                                            {plans.map((plan) => (
+                                                <td
+                                                    key={plan.id}
+                                                    className={cn(
+                                                        "px-5 py-4 text-center font-semibold",
+                                                        plan.is_popular &&
+                                                            "bg-primary/[0.035]",
+                                                    )}
+                                                >
+                                                    {row.value(plan)}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                )}
+            </div>
         </div>
-      )}
-    </div>
-  );
+    );
 }

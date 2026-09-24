@@ -1,295 +1,536 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  Music,
-  Disc3,
-  Mic2,
-  ShoppingBag,
-  Calendar,
-  MessageSquare,
-  CreditCard,
-  Wallet,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  Search,
-  LogOut,
-  Menu,
-  PieChart,
-  Headphones,
-  FileText,
-  Megaphone,
-  Coins,
-  BarChart3,
-  Trophy,
-  Tags,
-  Crown,
-  Building2,
-  Star,
-  FolderUp,
-  BadgeCheck,
-  Target,
-  ShieldAlert,
-  ShieldCheck,
-  Languages,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { hasAnyPermission } from '@/lib/permissions';
-import { getEffectiveAdminPermissions } from '@/lib/admin-access';
-import { isAdminRole, isModeratorRole } from '@/lib/roles';
-import { AudioPlayer, PlayerBar, FullScreenPlayer } from '@/components/player';
-import { api } from '@/lib/api';
-import { usePlatformSettings } from '@/hooks/usePlatformSettings';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { InitialsAvatar, SafeImage } from '@/components/ui/safe-image';
-import { ADMIN_REPORTS_ENABLED } from '@/lib/features';
-import { usePlayerStore, useUIStore } from '@/stores';
+    LayoutDashboard,
+    Users,
+    Music,
+    Disc3,
+    Mic2,
+    ShoppingBag,
+    Calendar,
+    MessageSquare,
+    CreditCard,
+    Wallet,
+    Settings,
+    ChevronLeft,
+    ChevronRight,
+    Bell,
+    Search,
+    LogOut,
+    Menu,
+    PieChart,
+    Headphones,
+    FileText,
+    Megaphone,
+    Coins,
+    BarChart3,
+    Trophy,
+    Tags,
+    Crown,
+    Building2,
+    Star,
+    FolderUp,
+    BadgeCheck,
+    Target,
+    ShieldAlert,
+    ShieldCheck,
+    Languages,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { hasAnyPermission } from "@/lib/permissions";
+import { getEffectiveAdminPermissions } from "@/lib/admin-access";
+import { isAdminRole, isModeratorRole } from "@/lib/roles";
+import { AudioPlayer, PlayerBar, FullScreenPlayer } from "@/components/player";
+import { api } from "@/lib/api";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
+import { ADMIN_REPORTS_ENABLED } from "@/lib/features";
+import { usePlayerStore, useUIStore } from "@/stores";
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/users', label: 'Users', icon: Users, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
-  { href: '/admin/kyc', label: 'Identity Review', icon: ShieldCheck, requiredPermissions: ['admin.users', 'user.view', 'user.moderate', 'view-users', 'manage-users'] },
-  { href: '/admin/songs', label: 'Songs', icon: Music, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'song.view', 'song.edit', 'song.upload', 'song.review'] },
-  { href: '/admin/albums', label: 'Albums', icon: Disc3, requiredPermissions: ['admin.music', 'album.*'] },
-  { href: '/admin/artists', label: 'Artists', icon: Mic2, requiredPermissions: ['admin.music', 'music.*', 'music.moderate', 'artist.view', 'artist.edit', 'artist.review'] },
-  { href: '/admin/catalog', label: 'Catalog Intake', icon: FolderUp, requiredPermissions: ['catalog.view', 'catalog.upload'] },
-  { href: '/admin/catalog/claims', label: 'Claim Review', icon: BadgeCheck, requiredPermissions: ['catalog.claim.review'] },
-  { href: '/admin/genres', label: 'Genres', icon: Tags, requiredPermissions: ['admin.music', 'music.*'] },
-  { href: '/admin/featured', label: 'Featured', icon: Star, requiredPermissions: ['admin.music', 'music.*'] },
-  { href: '/admin/podcasts', label: 'Podcasts', icon: Headphones, requiredPermissions: ['admin.music', 'music.*'] },
-  { href: '/admin/store', label: 'Store', icon: ShoppingBag, requiredPermissions: ['manage-store', 'admin.settings'] },
-  { href: '/admin/events', label: 'Events', icon: Calendar, requiredPermissions: ['admin.dashboard', 'admin.music'] },
-  { href: '/admin/awards', label: 'Awards', icon: Trophy, requiredPermissions: ['admin.dashboard', 'admin.music'] },
-  { href: '/admin/contributions', label: 'Ateso Corpus', icon: Languages, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/ads', label: 'Ads Library', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/ad-placements', label: 'Ad Zones', icon: Target, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/rewards', label: 'Rewards', icon: Coins, requiredPermissions: ['admin.dashboard'] },
-  // One product, one entry. Promoters, briefs, disputes and analytics were
-  // five sidebar rows for the same thing; they are tabs on the hub now.
-  { href: '/admin/promotions', label: 'Promoter Market', icon: Megaphone, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/payments', label: 'Payments', icon: Wallet, requiredPermissions: ['admin.payments', 'payment.manage', 'manage-payments'] },
-  { href: '/admin/sacco', label: 'SACCO Ops', icon: CreditCard, requiredPermissions: ['manage-sacco'] },
-  { href: '/admin/sacco/board-meetings', label: 'Governance', icon: Building2, requiredPermissions: ['manage-sacco'] },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: Crown, requiredPermissions: ['admin.settings', 'admin.users'] },
-  { href: '/admin/forums', label: 'Forums', icon: MessageSquare, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/polls', label: 'Polls', icon: BarChart3, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/reports', label: 'Reports', icon: FileText, requiredPermissions: ['admin.reports', 'view-reports', 'manage-reports', 'moderate-content', 'report.handle'] },
-  { href: '/admin/analytics', label: 'Analytics', icon: PieChart, requiredPermissions: ['admin.reports', 'view-analytics'] },
-  { href: '/admin/notifications', label: 'Notifications', icon: Bell, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/observability', label: 'Security', icon: ShieldAlert, requiredPermissions: ['admin.dashboard'] },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, requiredPermissions: ['admin.settings', 'manage-settings'] },
+    {
+        href: "/admin",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/users",
+        label: "Users",
+        icon: Users,
+        requiredPermissions: [
+            "admin.users",
+            "user.view",
+            "user.moderate",
+            "view-users",
+            "manage-users",
+        ],
+    },
+    {
+        href: "/admin/kyc",
+        label: "Identity Review",
+        icon: ShieldCheck,
+        requiredPermissions: [
+            "admin.users",
+            "user.view",
+            "user.moderate",
+            "view-users",
+            "manage-users",
+        ],
+    },
+    {
+        href: "/admin/songs",
+        label: "Songs",
+        icon: Music,
+        requiredPermissions: [
+            "admin.music",
+            "music.*",
+            "music.moderate",
+            "song.view",
+            "song.edit",
+            "song.upload",
+            "song.review",
+        ],
+    },
+    {
+        href: "/admin/albums",
+        label: "Albums",
+        icon: Disc3,
+        requiredPermissions: ["admin.music", "album.*"],
+    },
+    {
+        href: "/admin/artists",
+        label: "Artists",
+        icon: Mic2,
+        requiredPermissions: [
+            "admin.music",
+            "music.*",
+            "music.moderate",
+            "artist.view",
+            "artist.edit",
+            "artist.review",
+        ],
+    },
+    {
+        href: "/admin/catalog",
+        label: "Catalog Intake",
+        icon: FolderUp,
+        requiredPermissions: ["catalog.view", "catalog.upload"],
+    },
+    {
+        href: "/admin/catalog/claims",
+        label: "Claim Review",
+        icon: BadgeCheck,
+        requiredPermissions: ["catalog.claim.review"],
+    },
+    {
+        href: "/admin/genres",
+        label: "Genres",
+        icon: Tags,
+        requiredPermissions: ["admin.music", "music.*"],
+    },
+    {
+        href: "/admin/featured",
+        label: "Featured",
+        icon: Star,
+        requiredPermissions: ["admin.music", "music.*"],
+    },
+    {
+        href: "/admin/podcasts",
+        label: "Podcasts",
+        icon: Headphones,
+        requiredPermissions: ["admin.music", "music.*"],
+    },
+    {
+        href: "/admin/store",
+        label: "Store",
+        icon: ShoppingBag,
+        requiredPermissions: ["manage-store", "admin.settings"],
+    },
+    {
+        href: "/admin/events",
+        label: "Events",
+        icon: Calendar,
+        requiredPermissions: ["admin.dashboard", "admin.music"],
+    },
+    {
+        href: "/admin/awards",
+        label: "Awards",
+        icon: Trophy,
+        requiredPermissions: ["admin.dashboard", "admin.music"],
+    },
+    {
+        href: "/admin/contributions",
+        label: "Ateso Corpus",
+        icon: Languages,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/ads",
+        label: "Ads Library",
+        icon: Megaphone,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/ad-placements",
+        label: "Ad Zones",
+        icon: Target,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/rewards",
+        label: "Rewards",
+        icon: Coins,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    // One product, one entry. Promoters, briefs, disputes and analytics were
+    // five sidebar rows for the same thing; they are tabs on the hub now.
+    {
+        href: "/admin/promotions",
+        label: "Promoter Market",
+        icon: Megaphone,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/payments",
+        label: "Payments",
+        icon: Wallet,
+        requiredPermissions: [
+            "admin.payments",
+            "payment.manage",
+            "manage-payments",
+        ],
+    },
+    {
+        href: "/admin/sacco",
+        label: "SACCO Ops",
+        icon: CreditCard,
+        requiredPermissions: ["manage-sacco"],
+    },
+    {
+        href: "/admin/sacco/board-meetings",
+        label: "Governance",
+        icon: Building2,
+        requiredPermissions: ["manage-sacco"],
+    },
+    {
+        href: "/admin/subscriptions",
+        label: "Subscriptions",
+        icon: Crown,
+        requiredPermissions: ["admin.settings", "admin.users"],
+    },
+    {
+        href: "/admin/forums",
+        label: "Forums",
+        icon: MessageSquare,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/polls",
+        label: "Polls",
+        icon: BarChart3,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/reports",
+        label: "Reports",
+        icon: FileText,
+        requiredPermissions: [
+            "admin.reports",
+            "view-reports",
+            "manage-reports",
+            "moderate-content",
+            "report.handle",
+        ],
+    },
+    {
+        href: "/admin/analytics",
+        label: "Analytics",
+        icon: PieChart,
+        requiredPermissions: ["admin.reports", "view-analytics"],
+    },
+    {
+        href: "/admin/notifications",
+        label: "Notifications",
+        icon: Bell,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/observability",
+        label: "Security",
+        icon: ShieldAlert,
+        requiredPermissions: ["admin.dashboard"],
+    },
+    {
+        href: "/admin/settings",
+        label: "Settings",
+        icon: Settings,
+        requiredPermissions: ["admin.settings", "manage-settings"],
+    },
 ];
 
 function normalizeRole(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? '';
+    return value?.trim().toLowerCase() ?? "";
 }
 
 type AdminLayoutShellProps = {
-  children: React.ReactNode;
-  userName: string;
-  userRole: string;
-  userPermissions?: string[];
+    children: React.ReactNode;
+    userName: string;
+    userRole: string;
+    userPermissions?: string[];
 };
 
 export default function AdminLayoutShell({
-  children,
-  userName,
-  userRole,
-  userPermissions = [],
+    children,
+    userName,
+    userRole,
+    userPermissions = [],
 }: AdminLayoutShellProps) {
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [apiVersion, setApiVersion] = useState<string | null>(null);
-  const { data: platformSettings } = usePlatformSettings();
-  const { currentSong } = usePlayerStore();
-  const { playerMinimized } = useUIStore();
+    const pathname = usePathname();
+    const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [apiVersion, setApiVersion] = useState<string | null>(null);
+    const { data: platformSettings } = usePlatformSettings();
+    const { currentSong } = usePlayerStore();
+    const { playerMinimized } = useUIStore();
 
-  const appearance = platformSettings?.appearance;
-  const adminPanelName = appearance?.admin_panel_name || 'Admin Panel';
-  const adminPanelSubtitle = appearance?.admin_panel_subtitle || 'Platform operations';
-  const adminLogo = appearance?.logo_light || appearance?.logo_dark || '';
-  const adminLogoAlt = appearance?.logo_alt || adminPanelName;
-  const compactLabel = appearance?.logo_compact_label || adminPanelName.charAt(0);
-  const shouldFallbackToRoleVisibility = isAdminRole(userRole) && userPermissions.length === 0;
-  const isSuperAdmin = ['super admin', 'super_admin'].includes(normalizeRole(userRole));
-  const effectiveUserPermissions = getEffectiveAdminPermissions(userRole, userPermissions);
-  const reportsVisible = ADMIN_REPORTS_ENABLED || isModeratorRole(userRole);
+    const appearance = platformSettings?.appearance;
+    const adminPanelName = appearance?.admin_panel_name || "Admin Panel";
+    const adminPanelSubtitle =
+        appearance?.admin_panel_subtitle || "Platform operations";
+    const adminLogo = appearance?.logo_light || appearance?.logo_dark || "";
+    const adminLogoAlt = appearance?.logo_alt || adminPanelName;
+    const compactLabel =
+        appearance?.logo_compact_label || adminPanelName.charAt(0);
+    const shouldFallbackToRoleVisibility =
+        isAdminRole(userRole) && userPermissions.length === 0;
+    const isSuperAdmin = ["super admin", "super_admin"].includes(
+        normalizeRole(userRole),
+    );
+    const effectiveUserPermissions = getEffectiveAdminPermissions(
+        userRole,
+        userPermissions,
+    );
+    const reportsVisible = ADMIN_REPORTS_ENABLED || isModeratorRole(userRole);
 
-  const visibleNavItems = (reportsVisible ? navItems : navItems.filter((item) => item.href !== '/admin/reports'))
-    .filter((item) => {
-      if (isSuperAdmin) return true;
-      if (shouldFallbackToRoleVisibility) return true;
-      const permissions = item.requiredPermissions as string[] | undefined;
-      if (!permissions || permissions.length === 0) return true;
-      return hasAnyPermission(effectiveUserPermissions, permissions);
+    const visibleNavItems = (
+        reportsVisible
+            ? navItems
+            : navItems.filter((item) => item.href !== "/admin/reports")
+    ).filter((item) => {
+        if (isSuperAdmin) return true;
+        if (shouldFallbackToRoleVisibility) return true;
+        const permissions = item.requiredPermissions as string[] | undefined;
+        if (!permissions || permissions.length === 0) return true;
+        return hasAnyPermission(effectiveUserPermissions, permissions);
     });
-  const hasActivePlayer = !!currentSong && !playerMinimized;
+    const hasActivePlayer = !!currentSong && !playerMinimized;
 
-  useEffect(() => {
-    api.get('/health', { timeout: 5000 }).then(res => {
-      const ver = res.headers['x-api-version'] as string | undefined;
-      if (ver) setApiVersion(ver);
-    }).catch(() => {/* silently ignore */});
-  }, []);
+    useEffect(() => {
+        api.get("/health", { timeout: 5000 })
+            .then((res) => {
+                const ver = res.headers["x-api-version"] as string | undefined;
+                if (ver) setApiVersion(ver);
+            })
+            .catch(() => {
+                /* silently ignore */
+            });
+    }, []);
 
-  return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b z-50 flex items-center justify-between px-4">
-        <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-muted rounded-lg">
-          <Menu className="h-5 w-5" />
-        </button>
-        <span className="font-bold">{adminPanelName}</span>
-        <NotificationBell />
-      </header>
+    return (
+        <div className="admin-linear-shell min-h-screen bg-muted/30">
+            <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b z-50 flex items-center justify-between px-4">
+                <button
+                    onClick={() => setMobileOpen(true)}
+                    className="p-2 hover:bg-muted rounded-lg"
+                >
+                    <Menu className="h-5 w-5" />
+                </button>
+                <span className="font-bold">{adminPanelName}</span>
+                <NotificationBell />
+            </header>
 
-      {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-50"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      <aside className={cn(
-        'fixed top-0 left-0 h-full bg-background border-r z-50 transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      )}>
-        <div className="h-16 flex items-center justify-between px-4 border-b">
-          {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="relative h-9 w-9 overflow-hidden rounded-lg bg-primary/10">
-                <SafeImage
-                  src={adminLogo}
-                  alt={adminLogoAlt}
-                  fill
-                  className="object-contain p-1.5"
-                  fallback={<InitialsAvatar name={compactLabel} textClassName="text-sm" className="bg-primary text-primary-foreground" />}
+            {mobileOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-black/50 z-50"
+                    onClick={() => setMobileOpen(false)}
                 />
-              </div>
-              <div className="min-w-0">
-                <span className="block truncate font-bold text-lg">{adminPanelName}</span>
-                <span className="block truncate text-xs text-muted-foreground">{adminPanelSubtitle}</span>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => {
-              setCollapsed(!collapsed);
-              setMobileOpen(false);
-            }}
-            className="p-2 hover:bg-muted rounded-lg hidden lg:block"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-        </div>
+            )}
 
-        <nav
-          className={cn(
-            'p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]',
-            hasActivePlayer
-              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
-              : 'pb-24'
-          )}
-        >
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href ||
-              (item.href !== '/admin' && pathname.startsWith(item.href));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
+            <aside
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                  collapsed && 'justify-center'
+                    "fixed top-0 left-0 h-full bg-background border-r z-50 transition-all duration-300",
+                    collapsed ? "w-16" : "w-64",
+                    mobileOpen
+                        ? "translate-x-0"
+                        : "-translate-x-full lg:translate-x-0",
                 )}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+            >
+                <div className="h-16 flex items-center justify-between px-4 border-b">
+                    {!collapsed && (
+                        <div className="flex items-center gap-3">
+                            <div className="relative h-9 w-9 overflow-hidden rounded-lg bg-primary/10">
+                                <SafeImage
+                                    src={adminLogo}
+                                    alt={adminLogoAlt}
+                                    fill
+                                    className="object-contain p-1.5"
+                                    fallback={
+                                        <InitialsAvatar
+                                            name={compactLabel}
+                                            textClassName="text-sm"
+                                            className="bg-primary text-primary-foreground"
+                                        />
+                                    }
+                                />
+                            </div>
+                            <div className="min-w-0">
+                                <span className="block truncate font-bold text-lg">
+                                    {adminPanelName}
+                                </span>
+                                <span className="block truncate text-xs text-muted-foreground">
+                                    {adminPanelSubtitle}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => {
+                            setCollapsed(!collapsed);
+                            setMobileOpen(false);
+                        }}
+                        className="p-2 hover:bg-muted rounded-lg hidden lg:block"
+                    >
+                        {collapsed ? (
+                            <ChevronRight className="h-4 w-4" />
+                        ) : (
+                            <ChevronLeft className="h-4 w-4" />
+                        )}
+                    </button>
+                </div>
 
-        <div
-          className={cn(
-            'absolute left-0 right-0 p-2 border-t bg-background transition-all',
-            hasActivePlayer
-              ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-[72px]'
-              : 'bottom-0'
-          )}
-        >
-          <Link
-            href="/"
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
-              collapsed && 'justify-center'
-            )}
-          >
-            <LogOut className="h-5 w-5" />
-            {!collapsed && <span className="text-sm font-medium">Exit Admin</span>}
-          </Link>
+                <nav
+                    className={cn(
+                        "p-2 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]",
+                        hasActivePlayer
+                            ? "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28"
+                            : "pb-24",
+                    )}
+                >
+                    {visibleNavItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive =
+                            pathname === item.href ||
+                            (item.href !== "/admin" &&
+                                pathname.startsWith(item.href));
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setMobileOpen(false)}
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                                    isActive
+                                        ? "bg-primary text-primary-foreground"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                                    collapsed && "justify-center",
+                                )}
+                                title={collapsed ? item.label : undefined}
+                            >
+                                <Icon className="h-5 w-5 shrink-0" />
+                                {!collapsed && (
+                                    <span className="text-sm font-medium">
+                                        {item.label}
+                                    </span>
+                                )}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                <div
+                    className={cn(
+                        "absolute left-0 right-0 p-2 border-t bg-background transition-all",
+                        hasActivePlayer
+                            ? "bottom-[calc(9rem+env(safe-area-inset-bottom))] lg:bottom-[72px]"
+                            : "bottom-0",
+                    )}
+                >
+                    <Link
+                        href="/"
+                        className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
+                            collapsed && "justify-center",
+                        )}
+                    >
+                        <LogOut className="h-5 w-5" />
+                        {!collapsed && (
+                            <span className="text-sm font-medium">
+                                Exit Admin
+                            </span>
+                        )}
+                    </Link>
+                </div>
+            </aside>
+
+            <main
+                className={cn(
+                    "min-h-screen transition-all duration-300 pt-16 lg:pt-0",
+                    collapsed ? "lg:pl-16" : "lg:pl-64",
+                )}
+            >
+                <header className="hidden lg:flex h-16 items-center justify-between px-6 bg-background border-b sticky top-0 z-40">
+                    <div className="relative w-96">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search workspace…"
+                            aria-label="Search admin workspace"
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-muted/50"
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        {apiVersion && (
+                            <span
+                                className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-muted text-muted-foreground border"
+                                title="Backend API version"
+                            >
+                                API {apiVersion}
+                            </span>
+                        )}
+                        <NotificationBell />
+                        <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10" />
+                            <div className="text-sm">
+                                <p className="font-medium">{userName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {userRole}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div
+                    className={cn(
+                        "p-6",
+                        hasActivePlayer
+                            ? "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28"
+                            : "pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8",
+                    )}
+                >
+                    {children}
+                </div>
+            </main>
+
+            <AudioPlayer />
+            <PlayerBar />
+            <FullScreenPlayer />
         </div>
-      </aside>
-
-      <main className={cn(
-        'min-h-screen transition-all duration-300 pt-16 lg:pt-0',
-        collapsed ? 'lg:pl-16' : 'lg:pl-64'
-      )}>
-        <header className="hidden lg:flex h-16 items-center justify-between px-6 bg-background border-b sticky top-0 z-40">
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border bg-muted/50"
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            {apiVersion && (
-              <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-muted text-muted-foreground border" title="Backend API version">
-                API {apiVersion}
-              </span>
-            )}
-            <NotificationBell />
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/10" />
-              <div className="text-sm">
-                <p className="font-medium">{userName}</p>
-                <p className="text-xs text-muted-foreground">{userRole}</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div
-          className={cn(
-            'p-6',
-            hasActivePlayer
-              ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28'
-              : 'pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8'
-          )}
-        >
-          {children}
-        </div>
-      </main>
-
-      <AudioPlayer />
-      <PlayerBar />
-      <FullScreenPlayer />
-    </div>
-  );
+    );
 }

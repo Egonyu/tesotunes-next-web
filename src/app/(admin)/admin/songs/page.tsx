@@ -28,6 +28,7 @@ import {
 import { cn, formatResolvedDuration } from "@/lib/utils";
 import { toast } from "sonner";
 import { isModeratorOnlyRole } from "@/lib/roles";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Song {
     id: number;
@@ -110,6 +111,7 @@ export default function SongsPage() {
     const [selectedSongs, setSelectedSongs] = useState<number[]>([]);
     const [playingSong, setPlayingSong] = useState<number | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const debouncedSearch = useDebounce(searchQuery.trim(), 300);
     const queryClient = useQueryClient();
     const { data: session } = useSession();
     const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
@@ -122,7 +124,7 @@ export default function SongsPage() {
                 page: currentPage,
                 status: statusFilter,
                 isrcStatus: isrcFilter,
-                search: searchQuery,
+                search: debouncedSearch,
             },
         ],
         queryFn: () => {
@@ -131,9 +133,10 @@ export default function SongsPage() {
             params.set("per_page", "20");
             if (statusFilter !== "all") params.set("status", statusFilter);
             if (isrcFilter !== "all") params.set("isrc_status", isrcFilter);
-            if (searchQuery) params.set("search", searchQuery);
+            if (debouncedSearch) params.set("search", debouncedSearch);
             return apiGet<SongsResponse>(`/admin/songs?${params.toString()}`);
         },
+        placeholderData: (previousData) => previousData,
     });
 
     const { data: statsData } = useQuery({
@@ -277,7 +280,7 @@ export default function SongsPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-8 gap-4">
+            <div className="admin-stat-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-8 gap-4">
                 <div className="p-4 rounded-xl border bg-card">
                     <p className="text-2xl font-bold">
                         {formatPlays(stats?.total || 0)}

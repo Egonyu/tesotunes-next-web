@@ -370,7 +370,7 @@ body {
     color: hsl(var(--foreground) / 0.72) !important;
 }
 
-.admin-linear-page > .grid > .border,
+.admin-linear-page > .admin-stat-grid > .border,
 .admin-linear-page section,
 .admin-linear-page > .rounded-xl.border {
     border-color: var(--admin-hairline);
@@ -378,19 +378,19 @@ body {
     box-shadow: none;
 }
 
-.admin-linear-page > .grid > .border {
+.admin-linear-page > .admin-stat-grid > .border {
     min-height: 80px;
     padding: 12px;
 }
 
-.admin-linear-page > .grid > .border p:first-child {
+.admin-linear-page > .admin-stat-grid > .border p:first-child {
     font-size: 20px;
     line-height: 24px;
     color: hsl(var(--foreground));
     font-variant-numeric: tabular-nums;
 }
 
-.admin-linear-page > .grid > .border p:last-child {
+.admin-linear-page > .admin-stat-grid > .border p:last-child {
     margin-top: 4px;
     font-size: 11px;
     letter-spacing: 0.02em;

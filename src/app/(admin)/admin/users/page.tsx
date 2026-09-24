@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
 import { isModeratorOnlyRole } from "@/lib/roles";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface User {
     id: number;
@@ -62,12 +63,30 @@ interface UsersStats {
     new_this_week: number;
 }
 
+function readUsers(payload: UsersResponse | undefined): User[] {
+    const rawPayload = payload as Record<string, unknown> | undefined;
+
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray((rawPayload?.data as Record<string, unknown>)?.data)) {
+        return (rawPayload?.data as Record<string, unknown>).data as User[];
+    }
+
+    return [];
+}
+
+function csvCell(value: string | number | null | undefined): string {
+    const text = value == null ? "" : String(value);
+    return `"${text.replaceAll('"', '""')}"`;
+}
+
 export default function UsersPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [isExporting, setIsExporting] = useState(false);
+    const debouncedSearch = useDebounce(searchQuery.trim(), 300);
     const queryClient = useQueryClient();
     const { data: session } = useSession();
     const isModeratorOnly = isModeratorOnlyRole(session?.user?.role);
@@ -75,6 +94,7 @@ export default function UsersPage() {
     const {
         data: usersData,
         isLoading,
+        isFetching,
         error,
     } = useQuery({
         queryKey: [
@@ -84,7 +104,7 @@ export default function UsersPage() {
                 page: currentPage,
                 role: roleFilter,
                 status: statusFilter,
-                search: searchQuery,
+                search: debouncedSearch,
             },
         ],
         queryFn: () => {
@@ -93,9 +113,10 @@ export default function UsersPage() {
             params.set("per_page", "20");
             if (roleFilter !== "all") params.set("role", roleFilter);
             if (statusFilter !== "all") params.set("status", statusFilter);
-            if (searchQuery) params.set("search", searchQuery);
+            if (debouncedSearch) params.set("search", debouncedSearch);
             return apiGet<UsersResponse>(`/admin/users?${params.toString()}`);
         },
+        placeholderData: (previousData) => previousData,
     });
 
     const { data: statsData } = useQuery({
@@ -123,13 +144,41 @@ export default function UsersPage() {
         onError: () => toast.error("Failed to delete user"),
     });
 
+    const bulkBanMutation = useMutation({
+        mutationFn: (userIds: number[]) =>
+            Promise.all(
+                userIds.map((userId) =>
+                    apiPost(`/admin/users/${userId}/ban`, {}),
+                ),
+            ),
+        onSuccess: (_, userIds) => {
+            toast.success(
+                `${userIds.length} ${userIds.length === 1 ? "user" : "users"} banned`,
+            );
+            setSelectedUsers([]);
+            queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+        },
+        onError: () => toast.error("Some users could not be banned"),
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (userIds: number[]) =>
+            Promise.all(
+                userIds.map((userId) => apiDelete(`/admin/users/${userId}`)),
+            ),
+        onSuccess: (_, userIds) => {
+            toast.success(
+                `${userIds.length} ${userIds.length === 1 ? "user" : "users"} deleted`,
+            );
+            setSelectedUsers([]);
+            queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+        },
+        onError: () => toast.error("Some users could not be deleted"),
+    });
+
     // Handle different possible API response shapes
     const rawUsersData = usersData as Record<string, unknown> | undefined;
-    const users: User[] = Array.isArray(usersData?.data)
-        ? usersData.data
-        : Array.isArray((rawUsersData?.data as Record<string, unknown>)?.data)
-          ? ((rawUsersData?.data as Record<string, unknown>).data as User[])
-          : [];
+    const users = readUsers(usersData);
     const meta =
         usersData?.meta ||
         ((rawUsersData?.data as Record<string, unknown>)?.meta as
@@ -167,6 +216,76 @@ export default function UsersPage() {
             setSelectedUsers(selectedUsers.filter((u) => u !== id));
         } else {
             setSelectedUsers([...selectedUsers, id]);
+        }
+    };
+
+    const selectedUserRecords = users.filter((user) =>
+        selectedUsers.includes(user.id),
+    );
+
+    const emailSelectedUsers = () => {
+        const recipients = selectedUserRecords
+            .map((user) => user.email)
+            .filter(Boolean);
+        if (recipients.length === 0) {
+            toast.error("The selected users do not have email addresses");
+            return;
+        }
+
+        window.location.href = `mailto:?bcc=${encodeURIComponent(recipients.join(","))}`;
+    };
+
+    const exportUsers = async () => {
+        setIsExporting(true);
+
+        try {
+            const params = new URLSearchParams({ page: "1", per_page: "1000" });
+            if (roleFilter !== "all") params.set("role", roleFilter);
+            if (statusFilter !== "all") params.set("status", statusFilter);
+            if (debouncedSearch) params.set("search", debouncedSearch);
+
+            const payload = await apiGet<UsersResponse>(
+                `/admin/users?${params.toString()}`,
+            );
+            const exportRows = readUsers(payload);
+            const rows = [
+                [
+                    "ID",
+                    "Name",
+                    "Username",
+                    "Email",
+                    "Role",
+                    "Status",
+                    "Created",
+                    "Last login",
+                ],
+                ...exportRows.map((user) => [
+                    user.id,
+                    user.full_name || user.name,
+                    user.username,
+                    user.email,
+                    user.role || "user",
+                    user.status || (user.is_active ? "active" : "inactive"),
+                    user.created_at,
+                    user.last_login_at,
+                ]),
+            ];
+            const csv = rows
+                .map((row) => row.map(csvCell).join(","))
+                .join("\n");
+            const url = URL.createObjectURL(
+                new Blob([csv], { type: "text/csv;charset=utf-8" }),
+            );
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = `tesotunes-users-${new Date().toISOString().slice(0, 10)}.csv`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+            toast.success(`${exportRows.length} users exported`);
+        } catch {
+            toast.error("Could not export users");
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -231,8 +350,11 @@ export default function UsersPage() {
                             setCurrentPage(1);
                         }}
                         placeholder="Search users..."
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
+                        className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background"
                     />
+                    {isFetching && (
+                        <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                    )}
                 </div>
                 <select
                     value={roleFilter}
@@ -261,9 +383,18 @@ export default function UsersPage() {
                     <option value="suspended">Suspended</option>
                     <option value="banned">Banned</option>
                 </select>
-                <button className="col-span-2 flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted sm:col-span-1">
-                    <Download className="h-4 w-4" />
-                    Export
+                <button
+                    type="button"
+                    onClick={() => void exportUsers()}
+                    disabled={isExporting}
+                    className="col-span-2 flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 sm:col-span-1"
+                >
+                    {isExporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Download className="h-4 w-4" />
+                    )}
+                    {isExporting ? "Exporting" : "Export"}
                 </button>
             </div>
 
@@ -273,15 +404,37 @@ export default function UsersPage() {
                     <span className="text-sm font-medium">
                         {selectedUsers.length} selected
                     </span>
-                    <button className="flex items-center gap-1 px-3 py-1 text-sm bg-background border rounded hover:bg-muted">
+                    <button
+                        type="button"
+                        onClick={emailSelectedUsers}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-background border rounded hover:bg-muted"
+                    >
                         <Mail className="h-4 w-4" />
                         Email
                     </button>
-                    <button className="flex items-center gap-1 px-3 py-1 text-sm bg-background border rounded hover:bg-muted">
+                    <button
+                        type="button"
+                        onClick={() => bulkBanMutation.mutate(selectedUsers)}
+                        disabled={bulkBanMutation.isPending}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-background border rounded hover:bg-muted disabled:opacity-50"
+                    >
                         <UserX className="h-4 w-4" />
-                        Suspend
+                        Ban
                     </button>
-                    <button className="flex items-center gap-1 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (
+                                confirm(
+                                    `Permanently delete ${selectedUsers.length} selected users? This cannot be undone.`,
+                                )
+                            ) {
+                                bulkDeleteMutation.mutate(selectedUsers);
+                            }
+                        }}
+                        disabled={bulkDeleteMutation.isPending}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                    >
                         <Trash2 className="h-4 w-4" />
                         Delete
                     </button>
@@ -475,11 +628,17 @@ export default function UsersPage() {
                                                             <Edit className="h-4 w-4" />
                                                         </Link>
                                                         <button
-                                                            onClick={() =>
-                                                                deleteMutation.mutate(
-                                                                    user.id,
-                                                                )
-                                                            }
+                                                            onClick={() => {
+                                                                if (
+                                                                    confirm(
+                                                                        `Permanently delete ${user.full_name || user.name || user.username}? This cannot be undone.`,
+                                                                    )
+                                                                ) {
+                                                                    deleteMutation.mutate(
+                                                                        user.id,
+                                                                    );
+                                                                }
+                                                            }}
                                                             disabled={
                                                                 deleteMutation.isPending
                                                             }

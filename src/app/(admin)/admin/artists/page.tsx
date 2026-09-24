@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { InitialsAvatar, SafeImage } from "@/components/ui/safe-image";
 import { pickMediaUrl } from "@/lib/media";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Artist {
     id: number;
@@ -63,24 +64,30 @@ export default function ArtistsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [currentPage, setCurrentPage] = useState(1);
+    const debouncedSearch = useDebounce(searchQuery.trim(), 300);
     const queryClient = useQueryClient();
 
     const { data: artistsData, isLoading } = useQuery({
         queryKey: [
             "admin",
             "artists",
-            { page: currentPage, status: statusFilter, search: searchQuery },
+            {
+                page: currentPage,
+                status: statusFilter,
+                search: debouncedSearch,
+            },
         ],
         queryFn: () => {
             const params = new URLSearchParams();
             params.set("page", String(currentPage));
             params.set("per_page", "12");
             if (statusFilter !== "all") params.set("status", statusFilter);
-            if (searchQuery) params.set("search", searchQuery);
+            if (debouncedSearch) params.set("search", debouncedSearch);
             return apiGet<ArtistsResponse>(
                 `/admin/artists?${params.toString()}`,
             );
         },
+        placeholderData: (previousData) => previousData,
     });
 
     const { data: statsData } = useQuery({
@@ -175,7 +182,7 @@ export default function ArtistsPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="admin-stat-grid grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl border bg-card">
                     <p className="text-2xl font-bold">
                         {formatNumber(stats?.total || 0)}

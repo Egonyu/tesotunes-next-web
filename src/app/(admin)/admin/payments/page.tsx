@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -17,6 +17,7 @@ import {
     Wallet,
     XCircle,
 } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface DashboardSummary {
     total: number;
@@ -228,15 +229,15 @@ function StatCard({
 export default function AdminPaymentsPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [search, setSearch] = useState("");
-    const deferredSearch = useDeferredValue(search);
+    const debouncedSearch = useDebounce(search.trim(), 300);
 
     const paymentParams = useMemo(
         () => ({
             status: statusFilter !== "all" ? statusFilter : undefined,
-            search: deferredSearch || undefined,
+            search: debouncedSearch || undefined,
             per_page: 14,
         }),
-        [deferredSearch, statusFilter],
+        [debouncedSearch, statusFilter],
     );
 
     const issuesParams = useMemo(
@@ -264,6 +265,7 @@ export default function AdminPaymentsPage() {
                 { params: paymentParams },
             ),
         refetchInterval: 20000,
+        placeholderData: (previousData) => previousData,
     });
 
     const issuesQuery = useQuery({

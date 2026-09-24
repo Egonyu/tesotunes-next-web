@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
@@ -291,9 +291,12 @@ export default function AdminLayoutShell({
     userPermissions = [],
 }: AdminLayoutShellProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [apiVersion, setApiVersion] = useState<string | null>(null);
+    const [workspaceSearch, setWorkspaceSearch] = useState("");
+    const [workspaceSearchOpen, setWorkspaceSearchOpen] = useState(false);
     const { data: platformSettings } = usePlatformSettings();
     const { currentSong } = usePlayerStore();
     const { playerMinimized } = useUIStore();
@@ -328,6 +331,15 @@ export default function AdminLayoutShell({
         if (!permissions || permissions.length === 0) return true;
         return hasAnyPermission(effectiveUserPermissions, permissions);
     });
+    const workspaceMatches = workspaceSearch.trim()
+        ? visibleNavItems
+              .filter((item) =>
+                  item.label
+                      .toLowerCase()
+                      .includes(workspaceSearch.trim().toLowerCase()),
+              )
+              .slice(0, 6)
+        : [];
     const hasActivePlayer = !!currentSong && !playerMinimized;
 
     useEffect(() => {
@@ -486,13 +498,80 @@ export default function AdminLayoutShell({
             >
                 <header className="hidden lg:flex h-16 items-center justify-between px-6 bg-background border-b sticky top-0 z-40">
                     <div className="relative w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search workspace…"
-                            aria-label="Search admin workspace"
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-muted/50"
-                        />
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                const firstMatch = workspaceMatches[0];
+                                if (firstMatch) {
+                                    router.push(firstMatch.href);
+                                    setWorkspaceSearch("");
+                                    setWorkspaceSearchOpen(false);
+                                }
+                            }}
+                        >
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <input
+                                type="search"
+                                value={workspaceSearch}
+                                onChange={(event) => {
+                                    setWorkspaceSearch(event.target.value);
+                                    setWorkspaceSearchOpen(true);
+                                }}
+                                onFocus={() => setWorkspaceSearchOpen(true)}
+                                onBlur={() =>
+                                    window.setTimeout(
+                                        () => setWorkspaceSearchOpen(false),
+                                        120,
+                                    )
+                                }
+                                onKeyDown={(event) => {
+                                    if (event.key === "Escape")
+                                        setWorkspaceSearchOpen(false);
+                                }}
+                                placeholder="Jump to an admin section…"
+                                aria-label="Search admin workspace"
+                                className="w-full pl-10 pr-4 py-2 rounded-lg border bg-muted/50"
+                            />
+                        </form>
+                        {workspaceSearchOpen && workspaceSearch.trim() && (
+                            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border bg-background p-1 shadow-xl">
+                                {workspaceMatches.length > 0 ? (
+                                    workspaceMatches.map((item) => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <button
+                                                key={item.href}
+                                                type="button"
+                                                onMouseDown={(event) =>
+                                                    event.preventDefault()
+                                                }
+                                                onClick={() => {
+                                                    router.push(item.href);
+                                                    setWorkspaceSearch("");
+                                                    setWorkspaceSearchOpen(
+                                                        false,
+                                                    );
+                                                }}
+                                                className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
+                                            >
+                                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                                <span className="flex-1">
+                                                    {item.label}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Open
+                                                </span>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                                        No admin section matches “
+                                        {workspaceSearch}”
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-4">
                         {apiVersion && (

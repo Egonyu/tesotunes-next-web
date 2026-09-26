@@ -17,16 +17,13 @@ import {
   Send,
   Loader2,
   AlertCircle,
-  Zap,
-  Star,
-  Crown,
-  Timer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useReferralDashboard, useReferralLeaderboard, useTrackShare } from '@/hooks/useReferrals';
+import { getReferralOfferCopy } from '@/lib/referral-copy';
 
 const statusColors: Record<string, string> = {
   active: 'bg-green-500/20 text-emerald-700 dark:text-green-400',
@@ -124,22 +121,23 @@ export default function ReferralsPage() {
   // advertise a rate the platform will not pay.
   const referrerCredits = dashboard.reward_rates?.referrer_credits ?? 0;
   const joinerCredits = dashboard.reward_rates?.joiner_credits ?? 0;
+  const offerCopy = getReferralOfferCopy(referrerCredits, joinerCredits);
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="container mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground dark:text-white mb-2">Invite Friends, Earn Rewards</h1>
-        <p className="text-muted-foreground dark:text-gray-400">
-          Share TesoTunes with friends and earn credits for every person who joins!
+      <div className="mb-6 sm:mb-8">
+        <h1 className="mb-2 text-2xl font-bold text-foreground dark:text-white sm:text-3xl">Invite Friends, Earn Rewards</h1>
+        <p className="max-w-3xl text-sm text-muted-foreground dark:text-gray-400 sm:text-base">
+          {offerCopy.summary}
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 md:grid-cols-4">
         <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="p-2 bg-green-500/20 rounded-lg">
                 <Users className="w-5 h-5 text-emerald-700 dark:text-green-400" />
               </div>
@@ -152,8 +150,8 @@ export default function ReferralsPage() {
         </Card>
 
         <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="p-2 bg-yellow-500/20 rounded-lg">
                 <Clock className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
               </div>
@@ -166,8 +164,8 @@ export default function ReferralsPage() {
         </Card>
 
         <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <CheckCircle className="w-5 h-5 text-blue-400" />
               </div>
@@ -180,8 +178,8 @@ export default function ReferralsPage() {
         </Card>
 
         <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="p-2 bg-purple-500/20 rounded-lg">
                 <Gift className="w-5 h-5 text-purple-700 dark:text-purple-400" />
               </div>
@@ -201,7 +199,7 @@ export default function ReferralsPage() {
           built. */}
 
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         {/* Left Column - Share Tools */}
         <div className="lg:col-span-2 space-y-6">
           {/* Share Card */}
@@ -212,7 +210,7 @@ export default function ReferralsPage() {
                 Share Your Link
               </CardTitle>
               <CardDescription>
-                {joinerCredits > 0 ? `Friends who join get ${joinerCredits.toLocaleString()} bonus credits. You get ${referrerCredits.toLocaleString()} credits per signup.` : 'Share your link and earn credits for every person who joins.'}
+                {offerCopy.summary}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -230,9 +228,9 @@ export default function ReferralsPage() {
               </div>
 
               {/* Referral Code */}
-              <div className="flex items-center gap-4">
-                <span className="text-muted-foreground dark:text-gray-400 text-sm">Or share code:</span>
-                <div className="bg-muted dark:bg-zinc-800 border border-border dark:border-zinc-700 rounded-lg px-4 py-2 font-mono font-bold text-foreground dark:text-white">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <span className="text-sm text-muted-foreground dark:text-gray-400">Or share code:</span>
+                <div className="min-w-0 flex-1 truncate rounded-lg border border-border bg-muted px-4 py-2 font-mono font-bold text-foreground dark:border-zinc-700 dark:bg-zinc-800 dark:text-white sm:flex-none">
                   {referral_code}
                 </div>
                 <Button 
@@ -240,6 +238,7 @@ export default function ReferralsPage() {
                   size="sm"
                   onClick={() => copyToClipboard(referral_code)}
                   className="border-border dark:border-zinc-700"
+                  aria-label="Copy referral code"
                 >
                   <Copy className="w-4 h-4" />
                 </Button>
@@ -248,29 +247,29 @@ export default function ReferralsPage() {
               {/* Social Share Buttons */}
               <div className="pt-4 border-t border-border dark:border-zinc-800">
                 <p className="text-sm text-muted-foreground dark:text-gray-400 mb-3">Share directly:</p>
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
                   <Button 
                     onClick={() => shareToSocial('whatsapp')}
-                    className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+                    className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
                     WhatsApp
                   </Button>
                   <Button 
                     onClick={() => shareToSocial('twitter')}
-                    className="bg-sky-500 hover:bg-sky-600 flex-1 sm:flex-none"
+                    className="w-full bg-sky-500 hover:bg-sky-600 sm:w-auto"
                   >
                     <Twitter className="w-4 h-4 mr-2" />
                     Twitter
                   </Button>
                   <Button 
                     onClick={() => shareToSocial('facebook')}
-                    className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
+                    className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
                   >
                     <Facebook className="w-4 h-4 mr-2" />
                     Facebook
                   </Button>
-                  <Button variant="outline" className="border-border dark:border-zinc-700 flex-1 sm:flex-none"
+                  <Button variant="outline" className="w-full border-border dark:border-zinc-700 sm:w-auto"
                     onClick={() => {
                       window.location.href = `sms:?body=${encodeURIComponent(`Join me on TesoTunes: ${referral_link}`)}`;
                       trackShare.mutate('sms');
@@ -278,7 +277,7 @@ export default function ReferralsPage() {
                     <Send className="w-4 h-4 mr-2" />
                     SMS
                   </Button>
-                  <Button variant="outline" className="border-border dark:border-zinc-700 flex-1 sm:flex-none" onClick={shareFromPhone}>
+                  <Button variant="outline" className="col-span-2 w-full border-border dark:border-zinc-700 sm:w-auto" onClick={shareFromPhone}>
                     <Share2 className="w-4 h-4 mr-2" />
                     Share link
                   </Button>
@@ -318,7 +317,7 @@ export default function ReferralsPage() {
 
           {/* Recent Referrals */}
           <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
                 <Users className="w-5 h-5" />
                 Recent Referrals
@@ -340,20 +339,20 @@ export default function ReferralsPage() {
                   {recent_referrals.map((referral) => (
                     <div
                       key={referral.id}
-                      className="flex items-center justify-between p-3 bg-muted/60 dark:bg-zinc-800/50 rounded-lg"
+                      className="flex flex-col gap-3 rounded-lg bg-muted/60 p-3 dark:bg-zinc-800/50 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 font-semibold text-white">
                           {referral.user.name?.charAt(0) || '?'}
                         </div>
-                        <div>
-                          <p className="font-medium text-foreground dark:text-white">{referral.user.name}</p>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground dark:text-white">{referral.user.name}</p>
                           <p className="text-xs text-muted-foreground dark:text-gray-400">
                             Joined {new Date(referral.joined_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 sm:justify-end">
                         <Badge className={statusColors[referral.status]}>
                           {referral.status}
                         </Badge>
@@ -377,18 +376,18 @@ export default function ReferralsPage() {
           {claimable_rewards > 0 && (
             <Card className="bg-yellow-500/10 border-yellow-500/30">
               <CardContent className="p-4">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="p-2 bg-yellow-500/20 rounded-lg">
                     <Gift className="w-6 h-6 text-amber-700 dark:text-yellow-400" />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-amber-700 dark:text-yellow-400">
                       {claimable_rewards} Reward{claimable_rewards > 1 ? 's' : ''} Ready!
                     </p>
                     <p className="text-sm text-muted-foreground dark:text-gray-400">Claim your earned rewards</p>
                   </div>
-                  <Link href="/referrals/rewards">
-                    <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black">
+                  <Link href="/referrals/rewards" className="w-full sm:w-auto">
+                    <Button size="sm" className="w-full bg-yellow-500 text-black hover:bg-yellow-600 sm:w-auto">
                       Claim
                     </Button>
                   </Link>
@@ -417,7 +416,7 @@ export default function ReferralsPage() {
 
           {/* Leaderboard Preview */}
           <Card className="bg-card dark:bg-zinc-900 border-border dark:border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-700 dark:text-yellow-400" />
                 Top Referrers
@@ -433,18 +432,18 @@ export default function ReferralsPage() {
                 {leaderboardData?.leaderboard.slice(0, 5).map((referrer, index) => (
                   <div
                     key={referrer.user_id}
-                    className="flex items-center justify-between p-2"
+                    className="flex min-w-0 items-center justify-between gap-2 p-2"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                       <span className={`w-6 text-center font-bold ${index < 3 ? 'text-amber-700 dark:text-yellow-400' : 'text-muted-foreground dark:text-gray-400'}`}>
                         {referrer.rank}
                       </span>
-                      <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white">
                         {referrer.name?.charAt(0) || '?'}
                       </div>
-                      <span className="text-foreground dark:text-white">{referrer.name}</span>
+                      <span className="truncate text-sm text-foreground dark:text-white sm:text-base">{referrer.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <span className="text-muted-foreground dark:text-gray-400 text-sm">{referrer.referrals}</span>
                       <span className={`text-xs ${tierColors[referrer.tier]}`}>
                         {referrer.tier}
@@ -480,7 +479,7 @@ export default function ReferralsPage() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground dark:text-white">They sign up</p>
-                    <p className="text-sm text-muted-foreground dark:text-gray-400">They get {joinerCredits.toLocaleString()} bonus credits</p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400">{offerCopy.joinerStep}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -492,9 +491,7 @@ export default function ReferralsPage() {
                   <div>
                     <p className="font-medium text-foreground dark:text-white">You get credited</p>
                     <p className="text-sm text-muted-foreground dark:text-gray-400">
-                      {referrerCredits > 0
-                        ? `You earn ${referrerCredits.toLocaleString()} credits for each signup`
-                        : 'Signups count toward your milestones'}
+                      {offerCopy.referrerStep}
                     </p>
                   </div>
                 </div>

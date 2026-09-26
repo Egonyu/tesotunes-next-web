@@ -66,6 +66,7 @@ describe('RegisterPage', () => {
     expect(await screen.findByText('Invited by Joan')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'Invitee', name: 'name' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'invitee@example.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText(/mobile number/i), { target: { value: '+256700123456', name: 'phone' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!', name: 'password' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!', name: 'password_confirmation' } });
     fireEvent.click(screen.getByRole('checkbox'));
@@ -81,6 +82,7 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Create an account')).toBeInTheDocument();
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/mobile number/i)).toBeRequired();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
@@ -127,6 +129,7 @@ describe('RegisterPage', () => {
 
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'Test User', name: 'name' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@test.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText(/mobile number/i), { target: { value: '+256700123456', name: 'phone' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!', name: 'password' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!', name: 'password_confirmation' } });
 
@@ -144,6 +147,7 @@ describe('RegisterPage', () => {
         body: JSON.stringify({
           name: 'Test User',
           email: 'test@test.com',
+          phone: '+256700123456',
           password: 'Password123!',
           password_confirmation: 'Password123!',
           recaptcha_token: 'test-recaptcha-token',
@@ -173,6 +177,7 @@ describe('RegisterPage', () => {
 
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'Test', name: 'name' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'taken@test.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText(/mobile number/i), { target: { value: '+256700123456', name: 'phone' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!', name: 'password' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!', name: 'password_confirmation' } });
 
@@ -193,6 +198,7 @@ describe('RegisterPage', () => {
 
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'Test', name: 'name' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@test.com', name: 'email' } });
+    fireEvent.change(screen.getByLabelText(/mobile number/i), { target: { value: '+256700123456', name: 'phone' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!', name: 'password' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!', name: 'password_confirmation' } });
 

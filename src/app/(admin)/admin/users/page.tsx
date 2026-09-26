@@ -19,6 +19,7 @@ import {
     UserCheck,
     UserX,
     Mail,
+    Phone,
     Shield,
     Loader2,
 } from "lucide-react";
@@ -34,6 +35,7 @@ interface User {
     name: string;
     full_name?: string;
     email: string;
+    phone?: string | null;
     username: string;
     avatar_url?: string | null;
     avatar?: string | null;
@@ -254,6 +256,7 @@ export default function UsersPage() {
                     "Name",
                     "Username",
                     "Email",
+                    "Mobile",
                     "Role",
                     "Status",
                     "Created",
@@ -264,6 +267,7 @@ export default function UsersPage() {
                     user.full_name || user.name,
                     user.username,
                     user.email,
+                    user.phone,
                     user.role || "user",
                     user.status || (user.is_active ? "active" : "inactive"),
                     user.created_at,
@@ -349,7 +353,7 @@ export default function UsersPage() {
                             setSearchQuery(e.target.value);
                             setCurrentPage(1);
                         }}
-                        placeholder="Search users..."
+                        placeholder="Search name, email or mobile..."
                         className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background"
                     />
                     {isFetching && (
@@ -551,7 +555,7 @@ export default function UsersPage() {
                                                         />
                                                     )}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="font-medium">
                                                         {user.full_name ||
                                                             user.name ||
@@ -560,6 +564,18 @@ export default function UsersPage() {
                                                     <p className="text-sm text-muted-foreground">
                                                         @{user.username}
                                                     </p>
+                                                    <p className="max-w-64 truncate text-xs text-muted-foreground">
+                                                        {user.email}
+                                                    </p>
+                                                    {user.phone && (
+                                                        <a
+                                                            href={`tel:${user.phone}`}
+                                                            className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                                        >
+                                                            <Phone className="h-3 w-3" />
+                                                            {user.phone}
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -726,6 +742,20 @@ export default function UsersPage() {
                                             <p className="truncate text-xs text-muted-foreground">
                                                 @{user.username}
                                             </p>
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                {user.email}
+                                            </p>
+                                            {user.phone && (
+                                                <a
+                                                    href={`tel:${user.phone}`}
+                                                    className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-xs text-primary hover:underline"
+                                                >
+                                                    <Phone className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">
+                                                        {user.phone}
+                                                    </span>
+                                                </a>
+                                            )}
                                             <div className="mt-2 flex flex-wrap items-center gap-2">
                                                 <span
                                                     className={cn(

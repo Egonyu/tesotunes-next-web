@@ -64,6 +64,7 @@ describe("register api route", () => {
       buildRequest({
         name: "Test User",
         email: "test@example.com",
+        phone: "+256700123456",
         password: "Password123!",
         password_confirmation: "Password123!",
       })
@@ -105,6 +106,7 @@ describe("register api route", () => {
       buildRequest({
         name: "Test User",
         email: "test@example.com",
+        phone: "+256700123456",
         password: "Password123!",
         password_confirmation: "Password123!",
         recaptcha_token: "recaptcha-token-value",
@@ -113,6 +115,27 @@ describe("register api route", () => {
 
     const upstreamBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
     expect(upstreamBody.recaptcha_token).toBe("recaptcha-token-value");
+  });
+
+  it("forwards the mobile number to the backend", async () => {
+    const mockFetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ message: "Registration successful.", data: { id: 1 } }),
+        { status: 201, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    global.fetch = mockFetch as typeof fetch;
+
+    await POST(buildRequest({
+      name: "Test User",
+      email: "test@example.com",
+      phone: "+256700123456",
+      password: "Password123!",
+      password_confirmation: "Password123!",
+    }));
+
+    const upstreamBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
+    expect(upstreamBody.phone).toBe("+256700123456");
   });
 
   it("forwards a referral code to the backend", async () => {
@@ -125,6 +148,7 @@ describe("register api route", () => {
     await POST(buildRequest({
       name: "Invited User",
       email: "invited@example.com",
+      phone: "+256700123456",
       password: "Password123!",
       password_confirmation: "Password123!",
       referral_code: "TESO123",
@@ -153,6 +177,7 @@ describe("register api route", () => {
       buildRequest({
         name: "Test User",
         email: "taken@example.com",
+        phone: "+256700123456",
         password: "Password123!",
         password_confirmation: "Password123!",
       })
@@ -176,6 +201,7 @@ describe("register api route", () => {
       buildRequest({
         name: "Test User",
         email: "test@example.com",
+        phone: "+256700123456",
         password: "Password123!",
         password_confirmation: "Password123!",
       })

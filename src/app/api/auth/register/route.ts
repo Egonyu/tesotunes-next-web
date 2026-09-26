@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     // Validate required fields
-    if (!data.name || !data.email || !data.password) {
+    if (!data.name || !data.email || !data.phone || !data.password) {
       return NextResponse.json(
         {
           success: false,
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
           errors: {
             ...(data.name ? {} : { name: ["Name is required"] }),
             ...(data.email ? {} : { email: ["Email is required"] }),
+            ...(data.phone ? {} : { phone: ["Mobile number is required"] }),
             ...(data.password ? {} : { password: ["Password is required"] }),
           },
         },

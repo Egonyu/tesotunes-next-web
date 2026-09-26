@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     password_confirmation: "",
   });
@@ -195,6 +196,30 @@ export default function RegisterPage() {
           />
           {errors.email && (
             <p className="mt-1 text-sm text-destructive">{errors.email[0]}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium mb-2">
+            Mobile number
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="0700 000 000 or +256 700 000 000"
+            required
+            className="w-full px-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            We&apos;ll use this when email isn&apos;t the fastest way to reach you.
+          </p>
+          {errors.phone && (
+            <p className="mt-1 text-sm text-destructive">{errors.phone[0]}</p>
           )}
         </div>
 

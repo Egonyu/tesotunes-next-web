@@ -96,7 +96,7 @@ export function Header() {
             </button>
             <button
               onClick={() => router.push("/settings/subscription")}
-              aria-label="Upgrade to Pro"
+              aria-label="View subscriptions"
               className="flex h-9 w-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10"
             >
               <Sparkles className="h-4.5 w-4.5" />
@@ -224,7 +224,7 @@ export function Header() {
                   onClick={() => router.push("/settings/subscription")}
                 >
                   <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <span>Upgrade Pro</span>
+                  <span>View subscriptions</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"

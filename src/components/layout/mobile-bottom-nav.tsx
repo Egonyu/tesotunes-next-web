@@ -498,7 +498,7 @@ export function MobileBottomNav() {
 
       {/* Floating Bottom Navigation Bar — always at the very bottom */}
       <nav className={cn(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 lg:hidden w-[min(92vw,22rem)]",
+        "fixed bottom-6 left-[50vw] -translate-x-1/2 lg:hidden w-[min(92vw,22rem)]",
         menuOpen ? "z-[60]" : "z-30"
       )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}

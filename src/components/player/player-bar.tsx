@@ -97,7 +97,7 @@ export function PlayerBar() {
   // Minimized: small floating pill above mobile nav
   if (playerMinimized) {
     return (
-      <div className="fixed bottom-[5.5rem] right-4 lg:bottom-4 z-40 flex items-center gap-2 rounded-full bg-background/95 border shadow-lg px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="fixed bottom-[5.5rem] left-[calc(100vw-1rem)] z-40 flex -translate-x-full items-center gap-2 rounded-full border bg-background/95 px-3 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:bottom-4 lg:left-auto lg:right-4 lg:translate-x-0">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
           {currentArtwork ? (
             <Image
@@ -136,7 +136,7 @@ export function PlayerBar() {
   return (
     <>
       {/* Mobile expanded player: horizontal lane beside FAB */}
-      <div className="fixed bottom-[5.5rem] left-[calc(1rem+3.5rem+0.75rem)] right-4 z-40 rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+      <div className="fixed bottom-[5.5rem] left-[calc(1rem+3.5rem+0.75rem)] z-40 w-[calc(100vw-6.25rem)] rounded-2xl border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
 
         {/* Mobile resume prompt */}
         {showResumePrompt && resumePosition && resumePosition > 5 && (

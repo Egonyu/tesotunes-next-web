@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { User, Filter, CheckCircle2, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, CheckCircle2, Sparkles } from "lucide-react";
 import { serverFetch } from "@/lib/api";
 import type { Artist, PaginatedResponse } from "@/types";
 import { pickMediaUrl } from "@/lib/media";
@@ -60,9 +60,9 @@ function ArtistCard({ artist }: { artist: Artist }) {
   return (
     <Link
       href={`/artists/${artist.slug || artist.id}`}
-      className="group p-4 rounded-lg bg-card/50 hover:bg-card transition-colors text-center"
+      className="group min-w-0 rounded-xl bg-card/50 p-2 text-center transition-colors hover:bg-card sm:p-4"
     >
-      <div className="relative mx-auto w-32 h-32 md:w-40 md:h-40 mb-4 overflow-hidden rounded-full bg-muted shadow-md">
+      <div className="relative mx-auto mb-3 aspect-square w-full max-w-32 overflow-hidden rounded-full bg-muted shadow-md md:max-w-40">
         {imageSrc ? (
           <SafeImage
             src={imageSrc}
@@ -102,10 +102,10 @@ function ArtistCard({ artist }: { artist: Artist }) {
 
 function ArtistGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-2 gap-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
       {Array.from({ length: 24 }).map((_, i) => (
-        <div key={i} className="p-4 animate-pulse text-center">
-          <div className="mx-auto w-32 h-32 md:w-40 md:h-40 bg-muted rounded-full mb-4" />
+        <div key={i} className="min-w-0 animate-pulse p-2 text-center sm:p-4">
+          <div className="mx-auto mb-4 aspect-square w-full max-w-32 rounded-full bg-muted md:max-w-40" />
           <div className="h-4 w-3/4 bg-muted rounded mx-auto mb-2" />
           <div className="h-3 w-1/2 bg-muted rounded mx-auto" />
         </div>
@@ -114,8 +114,8 @@ function ArtistGridSkeleton() {
   );
 }
 
-async function ArtistGrid() {
-  const { data: artists } = await getArtists();
+async function ArtistGrid({ page }: { page: number }) {
+  const { data: artists, meta } = await getArtists(page);
   const { data: claimableArtists } = await getClaimableArtists();
 
   if (artists.length === 0 && claimableArtists.length === 0) {
@@ -129,8 +129,8 @@ async function ArtistGrid() {
 
   return (
     <div className="space-y-10">
-      {claimableArtists.length > 0 && (
-        <section className="rounded-3xl border border-primary/20 bg-primary/5 p-6">
+      {page === 1 && claimableArtists.length > 0 && (
+        <section className="rounded-3xl border border-primary/20 bg-primary/5 p-3 sm:p-6">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
@@ -147,7 +147,7 @@ async function ArtistGrid() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-6 md:grid-cols-3 xl:grid-cols-6">
             {claimableArtists.map((artist) => (
               <ArtistCard key={`claimable-${artist.id}`} artist={artist} />
             ))}
@@ -156,34 +156,53 @@ async function ArtistGrid() {
       )}
 
       <section>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-bold">All Artists</h2>
           <Link href="/claim-artist" className="text-sm font-medium text-primary hover:underline">
             Need to claim a profile?
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {artists.map((artist) => (
             <ArtistCard key={artist.id} artist={artist} />
           ))}
         </div>
+        {meta.last_page > 1 && (
+          <nav aria-label="Artists pagination" className="mt-8 flex items-center justify-center gap-3">
+            {meta.current_page > 1 ? (
+              <Link href={`/artists?page=${meta.current_page - 1}`} className="inline-flex items-center gap-1 rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted">
+                <ChevronLeft className="h-4 w-4" /> Previous
+              </Link>
+            ) : <span />}
+            <span className="text-sm text-muted-foreground">Page {meta.current_page} of {meta.last_page}</span>
+            {meta.current_page < meta.last_page ? (
+              <Link href={`/artists?page=${meta.current_page + 1}`} className="inline-flex items-center gap-1 rounded-xl border px-4 py-2 text-sm font-medium hover:bg-muted">
+                Next <ChevronRight className="h-4 w-4" />
+              </Link>
+            ) : <span />}
+          </nav>
+        )}
       </section>
     </div>
   );
 }
 
-export default function ArtistsPage() {
+export default async function ArtistsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams;
+  const parsedPage = Number.parseInt(page || "1", 10);
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
   return (
-    <div className="p-6">
+    <div className="min-w-0 py-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Artists</h1>
           <p className="text-muted-foreground mt-1">
             Discover talented East African artists and musicians
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
           <Link
             href="/claim-artist"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -191,34 +210,12 @@ export default function ArtistsPage() {
             <Sparkles className="h-4 w-4" />
             Claim Artist
           </Link>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors">
-            <Filter className="h-4 w-4" />
-            Filters
-          </button>
         </div>
-      </div>
-
-      {/* Filter Tags */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {["All", "Verified", "Trending", "New", "Most Followed"].map(
-          (filter) => (
-            <button
-              key={filter}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                filter === "All"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted hover:bg-muted/80"
-              }`}
-            >
-              {filter}
-            </button>
-          )
-        )}
       </div>
 
       {/* Artist Grid */}
       <Suspense fallback={<ArtistGridSkeleton />}>
-        <ArtistGrid />
+        <ArtistGrid page={currentPage} />
       </Suspense>
     </div>
   );

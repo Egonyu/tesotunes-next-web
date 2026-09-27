@@ -8,10 +8,10 @@ import {
   Play,
   Pause,
   Share2,
-  MoreHorizontal,
   User,
   Music,
   Disc3,
+  CalendarDays,
   Users,
   TrendingUp,
   CheckCircle,
@@ -129,9 +129,9 @@ export default function ArtistPage({
   const isCurrentArtistPlaying = currentSong?.artist?.id === artist.id && isPlaying;
 
   return (
-    <div className="pb-28">
+    <div className="min-w-0 overflow-hidden pb-28">
       {/* Hero Section */}
-      <div className="relative h-64 md:h-80 lg:h-96">
+      <div className="relative min-h-[22rem] overflow-hidden sm:min-h-80 lg:min-h-96">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/20 to-background">
           {bannerUrl && (
@@ -147,9 +147,9 @@ export default function ArtistPage({
         </div>
 
         {/* Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end gap-6">
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-end sm:gap-6 sm:p-6">
           {/* Profile Image */}
-          <div className="relative h-32 w-32 md:h-48 md:w-48 shrink-0 overflow-hidden rounded-full bg-muted shadow-xl ring-4 ring-background">
+          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-muted shadow-xl ring-4 ring-background sm:h-32 sm:w-32 md:h-48 md:w-48">
             {avatarUrl ? (
               <SafeImage
                 src={avatarUrl}
@@ -172,27 +172,27 @@ export default function ArtistPage({
                 <CheckCircle className="h-4 w-4 text-primary" />
               )}
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold mt-1 mb-4">
+            <h1 className="mb-3 mt-1 break-words text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl md:mb-4 md:text-5xl lg:text-7xl">
               {artist.name}
             </h1>
 
             {/* Stats Row */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground sm:flex sm:flex-wrap sm:items-center sm:text-sm">
               <span className="flex items-center gap-1">
                 <Users className="h-4 w-4" />
                 {formatNumber(artist.follower_count || 0)} followers
               </span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1">
                 <Music className="h-4 w-4" />
                 {artist.total_songs || songs.length} songs
               </span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1">
                 <Disc3 className="h-4 w-4" />
                 {artist.total_albums || albums.length} albums
               </span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1">
                 <TrendingUp className="h-4 w-4" />
                 {formatNumber(artist.total_plays || 0)} plays
@@ -203,13 +203,13 @@ export default function ArtistPage({
       </div>
 
       {/* Actions */}
-      <div className="p-6 flex items-center gap-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 p-4 sm:gap-4 sm:p-6">
         {/* Play Button */}
         <button
           onClick={handlePlayAll}
           disabled={songs.length === 0}
           className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground hover:scale-105 transition-transform shadow-lg",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-transform hover:scale-105 sm:h-14 sm:w-14",
             songs.length === 0 ? "bg-muted cursor-not-allowed" : "bg-primary"
           )}
         >
@@ -224,7 +224,7 @@ export default function ArtistPage({
         <button
           onClick={handleShufflePlay}
           disabled={songs.length === 0}
-          className="p-3 text-muted-foreground hover:text-foreground disabled:opacity-50"
+          className="shrink-0 p-2.5 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:p-3"
           title="Shuffle Play"
         >
           <Shuffle className="h-6 w-6" />
@@ -250,7 +250,8 @@ export default function ArtistPage({
         {/* Share Button */}
         <button
           onClick={() => setShareOpen(true)}
-          className="p-3 text-muted-foreground hover:text-foreground"
+          className="shrink-0 p-2.5 text-muted-foreground hover:text-foreground sm:p-3"
+          aria-label="Share artist"
         >
           <Share2 className="h-6 w-6" />
         </button>
@@ -264,20 +265,28 @@ export default function ArtistPage({
             }
             setTipModalOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-pink-500/30 text-pink-500 font-semibold hover:bg-pink-500/10 transition-colors"
+          className="flex shrink-0 items-center gap-2 rounded-full border-2 border-pink-500/30 px-3 py-2 font-semibold text-pink-500 transition-colors hover:bg-pink-500/10 sm:px-4"
         >
           <Heart className="h-5 w-5" />
           <span className="hidden sm:inline">Tip</span>
         </button>
 
-        <button className="p-3 text-muted-foreground hover:text-foreground">
-          <MoreHorizontal className="h-6 w-6" />
-        </button>
       </div>
+
+      <nav aria-label="Artist profile sections" className="grid grid-cols-2 gap-2 px-1 pb-6 sm:max-w-md sm:px-6">
+        <Link href={`/artists/${slug}/discography`} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border bg-card px-3 py-2.5 text-sm font-semibold hover:border-primary/40 hover:bg-muted">
+          <Disc3 className="h-4 w-4 shrink-0 text-primary" />
+          Discography
+        </Link>
+        <Link href={`/artists/${slug}/events`} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border bg-card px-3 py-2.5 text-sm font-semibold hover:border-primary/40 hover:bg-muted">
+          <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+          Events
+        </Link>
+      </nav>
 
       {/* Genre Badge */}
       {artist.genre && (
-        <div className="px-6 pb-4">
+        <div className="px-1 pb-4 sm:px-6">
           <Link
             href={`/genres/${artist.genre.slug || artist.genre.id}`}
             className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
@@ -288,7 +297,7 @@ export default function ArtistPage({
       )}
 
       {artist.is_placeholder && artist.claim_status === 'unclaimed' && (
-        <section className="px-6 pb-6">
+        <section className="px-1 pb-6 sm:px-6">
           <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-5 dark:bg-amber-950/20">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -310,17 +319,17 @@ export default function ArtistPage({
 
       {/* Bio */}
       {artist.bio && (
-        <section className="px-6 pb-8">
+        <section className="min-w-0 px-1 pb-8 sm:px-6">
           <h2 className="text-xl font-bold mb-3">About</h2>
-          <p className="text-muted-foreground max-w-3xl whitespace-pre-line">{artist.bio}</p>
+          <p className="max-w-3xl whitespace-pre-line break-words text-muted-foreground [overflow-wrap:anywhere]">{artist.bio}</p>
         </section>
       )}
 
       {/* Social Links */}
       {artist.social_links && Object.keys(artist.social_links).length > 0 && (
-        <section className="px-6 pb-8">
+        <section className="min-w-0 px-1 pb-8 sm:px-6">
           <h2 className="text-xl font-bold mb-3">Connect</h2>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
             {Object.entries(artist.social_links).map(([platform, url]) =>
               url && (
                 <a
@@ -328,10 +337,10 @@ export default function ArtistPage({
                   href={url as string}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2.5 transition-colors hover:bg-muted/80 sm:justify-start sm:px-4 sm:py-2"
                 >
-                  <span className="capitalize">{platform}</span>
-                  <ExternalLink className="h-4 w-4" />
+                  <span className="truncate capitalize">{platform.replaceAll('_', ' ')}</span>
+                  <ExternalLink className="h-4 w-4 shrink-0" />
                 </a>
               )
             )}
@@ -341,7 +350,7 @@ export default function ArtistPage({
 
       {/* Popular Songs */}
       {songs.length > 0 && (
-        <section className="px-6 pb-8">
+        <section id="popular" className="min-w-0 px-1 pb-8 sm:px-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Popular</h2>
             {songsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -353,11 +362,13 @@ export default function ArtistPage({
               const isSongPlaying = isCurrentSong && isPlaying;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={song.id}
                   onClick={() => handlePlaySong(song)}
+                  aria-label={`${isSongPlaying ? 'Pause' : 'Play'} ${song.title}`}
                   className={cn(
-                    "flex items-center gap-4 p-2 rounded-lg hover:bg-muted transition-colors group cursor-pointer",
+                    "group flex w-full min-w-0 items-center gap-2 rounded-lg p-2 text-left transition-colors hover:bg-muted sm:gap-4",
                     isCurrentSong && "bg-primary/10"
                   )}
                 >
@@ -418,7 +429,7 @@ export default function ArtistPage({
                   <span className="text-sm text-muted-foreground w-12 text-right">
                           {song.duration_formatted || formatDuration(resolveDurationSeconds(undefined, song.duration_seconds))}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -426,10 +437,10 @@ export default function ArtistPage({
           {/* See All Link */}
           {songs.length > 10 && (
             <Link
-              href={`/artists/${slug}/songs`}
+              href={`/artists/${slug}/discography`}
               className="inline-block mt-4 text-primary hover:underline"
             >
-              See all songs ({songs.length})
+              View full discography
             </Link>
           )}
         </section>
@@ -437,19 +448,22 @@ export default function ArtistPage({
 
       {/* Albums / Discography */}
       {albums.length > 0 && (
-        <section className="px-6 pb-8">
+        <section className="min-w-0 px-1 pb-8 sm:px-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Discography</h2>
-            {albumsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <div className="flex items-center gap-3">
+              {albumsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Link href={`/artists/${slug}/discography`} className="text-sm font-medium text-primary hover:underline">See all</Link>
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {albums.map((album) => {
               const albumArtworkUrl = pickMediaUrl(album.artwork_url);
               return (
                 <Link
                   key={album.id}
                   href={`/albums/${album.slug || album.id}`}
-                  className="group p-3 rounded-lg bg-card/50 hover:bg-card transition-colors"
+                  className="group min-w-0 rounded-xl bg-card/50 p-2 transition-colors hover:bg-card sm:p-3"
                 >
                   <div className="relative aspect-square mb-3 overflow-hidden rounded-md bg-muted">
                     {albumArtworkUrl ? (
@@ -492,7 +506,7 @@ export default function ArtistPage({
 
       {/* Empty State */}
       {songs.length === 0 && albums.length === 0 && !songsLoading && !albumsLoading && (
-        <div className="px-6 py-12 text-center">
+        <div className="px-1 py-12 text-center sm:px-6">
           <Music className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No music yet</h3>
           <p className="text-muted-foreground">
@@ -502,7 +516,7 @@ export default function ArtistPage({
       )}
 
       {/* Comments Section — universal social component */}
-      <section className="px-6 pb-8">
+      <section className="min-w-0 px-1 pb-8 sm:px-6">
         <CommentSection
           commentableType="artist"
           commentableId={artist.id}

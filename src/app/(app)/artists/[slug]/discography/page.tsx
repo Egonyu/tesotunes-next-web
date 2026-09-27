@@ -2,76 +2,31 @@
 
 import { use } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
-import { Disc3, Music, Play, Calendar, Clock, ChevronLeft } from "lucide-react";
-import { apiGet } from "@/lib/api";
-import { formatDuration, formatDate, formatNumber } from "@/lib/utils";
-
-interface Album {
-  id: number;
-  title: string;
-  slug: string;
-  cover_url: string | null;
-  release_date: string;
-  type: "album" | "single" | "ep" | "compilation";
-  tracks_count: number;
-  total_duration: number;
-  play_count: number;
-}
-
-interface ArtistDiscography {
-  artist: {
-    id: number;
-    name: string;
-    slug: string;
-    avatar_url: string | null;
-  };
-  albums: Album[];
-  singles: Album[];
-  eps: Album[];
-  compilations: Album[];
-  total_releases: number;
-}
+import { ChevronLeft, Disc3, Loader2, Music, Play } from "lucide-react";
+import { useArtist, usePublicArtistAlbums } from "@/hooks/api";
+import { formatNumber } from "@/lib/utils";
+import type { Album } from "@/types";
+import { SafeImage } from "@/components/ui/safe-image";
 
 function ReleaseCard({ release }: { release: Album }) {
   return (
-    <Link
-      href={`/albums/${release.slug}`}
-      className="group bg-card rounded-lg border overflow-hidden hover:border-primary transition-colors"
-    >
+    <Link href={`/albums/${release.slug || release.id}`} className="group min-w-0 overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary">
       <div className="relative aspect-square bg-muted">
-        {release.cover_url ? (
-          <Image
-            src={release.cover_url}
-            alt={release.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+        {release.artwork_url ? (
+          <SafeImage src={release.artwork_url} alt={release.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" fallback={<Disc3 className="absolute inset-0 m-auto h-12 w-12 text-muted-foreground" />} />
         ) : (
-          <Disc3 className="absolute inset-0 m-auto h-16 w-16 text-muted-foreground" />
+          <Disc3 className="absolute inset-0 m-auto h-12 w-12 text-muted-foreground" />
         )}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg">
-            <Play className="h-6 w-6 text-primary-foreground ml-1" />
-          </div>
-        </div>
-        <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 text-white text-xs rounded capitalize">
-          {release.type}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary shadow-lg"><Play className="ml-0.5 h-5 w-5 text-primary-foreground" /></span>
         </div>
       </div>
-      <div className="p-4">
-        <h3 className="font-bold truncate group-hover:text-primary transition-colors">
-          {release.title}
-        </h3>
-        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-          <span>{new Date(release.release_date).getFullYear()}</span>
-          <span>•</span>
-          <span>{release.tracks_count} tracks</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          {formatNumber(release.play_count)} plays
+      <div className="min-w-0 p-3 sm:p-4">
+        <h2 className="truncate font-bold transition-colors group-hover:text-primary">{release.title}</h2>
+        <p className="mt-1 truncate text-xs text-muted-foreground sm:text-sm">
+          {release.release_date ? new Date(release.release_date).getFullYear() : "Release"} · {release.total_tracks || 0} tracks
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">{formatNumber(release.play_count || 0)} plays</p>
       </div>
     </Link>
   );
@@ -79,118 +34,45 @@ function ReleaseCard({ release }: { release: Album }) {
 
 export default function ArtistDiscographyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { data: artist, isLoading: artistLoading, isError: artistError } = useArtist(slug);
+  const { data: albumsData, isLoading: albumsLoading } = usePublicArtistAlbums(artist?.id || 0, { enabled: Boolean(artist?.id) });
+  const releases = albumsData?.data ?? [];
 
-  const { data: discography, isLoading } = useQuery({
-    queryKey: ["artist-discography", slug],
-    queryFn: () => apiGet<ArtistDiscography>(`/artists/${slug}/discography`),
-  });
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-64 bg-muted rounded" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="aspect-square bg-muted rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+  if (artistLoading || albumsLoading) {
+    return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (!discography) {
+  if (artistError || !artist) {
     return (
-      <div className="container mx-auto py-16 text-center">
-        <Disc3 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Artist Not Found</h1>
-        <Link href="/browse" className="text-primary hover:underline">
-          Browse Music
-        </Link>
+      <div className="py-16 text-center">
+        <Disc3 className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+        <h1 className="mb-2 text-2xl font-bold">Artist Not Found</h1>
+        <Link href="/artists" className="text-primary hover:underline">Browse artists</Link>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <Link
-          href={`/artists/${slug}`}
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to {discography.artist.name}
+    <div className="min-w-0 py-5 sm:py-8">
+      <header className="mb-6 sm:mb-8">
+        <Link href={`/artists/${slug}`} className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="h-4 w-4" /> Back to {artist.name}
         </Link>
-        <h1 className="text-3xl font-bold">Discography</h1>
-        <p className="text-muted-foreground mt-1">
-          {discography.total_releases} releases
-        </p>
-      </div>
+        <h1 className="break-words text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl">{artist.name}&apos;s discography</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{releases.length} release{releases.length === 1 ? "" : "s"}</p>
+      </header>
 
-      {/* Albums */}
-      {discography.albums.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Disc3 className="h-6 w-6" />
-            Albums
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {discography.albums.map((album) => (
-              <ReleaseCard key={album.id} release={album} />
-            ))}
+      {releases.length > 0 ? (
+        <section>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
+            {releases.map((release) => <ReleaseCard key={release.id} release={release} />)}
           </div>
         </section>
-      )}
-
-      {/* EPs */}
-      {discography.eps.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Music className="h-6 w-6" />
-            EPs
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {discography.eps.map((ep) => (
-              <ReleaseCard key={ep.id} release={ep} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Singles */}
-      {discography.singles.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Singles</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {discography.singles.map((single) => (
-              <ReleaseCard key={single.id} release={single} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Compilations */}
-      {discography.compilations.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Compilations & Features</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {discography.compilations.map((comp) => (
-              <ReleaseCard key={comp.id} release={comp} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Empty State */}
-      {discography.total_releases === 0 && (
-        <div className="text-center py-16 bg-card rounded-lg border">
-          <Music className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-medium mb-2">No releases yet</h2>
-          <p className="text-muted-foreground">
-            This artist hasn't released any music yet.
-          </p>
+      ) : (
+        <div className="rounded-2xl border bg-card px-4 py-14 text-center">
+          <Music className="mx-auto mb-4 h-14 w-14 text-muted-foreground" />
+          <h2 className="mb-2 text-xl font-medium">No releases yet</h2>
+          <p className="text-sm text-muted-foreground">{artist.name} hasn&apos;t released any albums or EPs yet.</p>
         </div>
       )}
     </div>

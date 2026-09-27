@@ -43,7 +43,7 @@ export default function AppLayout({
       {/* Main Content */}
       <div
         className={cn(
-          "min-h-screen transition-all duration-300",
+          "min-h-screen overflow-x-clip transition-all duration-300",
           hasActivePlayer
             ? "pb-44 lg:pb-24" // Mobile: nav(4.5rem) + player(~5rem) + spacing; Desktop: player bar only
             : "pb-20 lg:pb-4", // Floating nav padding (mobile) or minimal (desktop)

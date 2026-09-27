@@ -67,8 +67,8 @@ export function Header() {
         "fixed top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-3 sm:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all",
         // On mobile: full width (left-0 right-0)
         // On desktop: adjust for sidebar
-        "left-0 right-0",
-        "lg:left-16 lg:right-0", // collapsed sidebar on desktop
+        "left-0 w-screen",
+        "lg:left-16 lg:right-0 lg:w-auto", // collapsed sidebar on desktop
         !sidebarCollapsed && "lg:left-64" // expanded sidebar on desktop
       )}
     >

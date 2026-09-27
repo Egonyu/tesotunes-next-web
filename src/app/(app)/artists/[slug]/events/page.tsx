@@ -10,13 +10,11 @@ import {
   Clock,
   Ticket,
   ChevronLeft,
-  ExternalLink,
-  Music,
   Users,
-  Star,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import { formatDate, formatNumber } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
+import { FollowButton } from "@/components/social/FollowButton";
 
 interface Event {
   id: number;
@@ -69,12 +67,12 @@ function EventCard({ event }: { event: Event }) {
   const isCancelled = event.status === "cancelled";
 
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className={`flex flex-col md:flex-row gap-4 p-4 bg-card rounded-lg border hover:border-primary transition-colors ${
+    <article
+      className={`flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 transition-colors hover:border-primary sm:p-4 md:flex-row ${
         isPast || isCancelled ? "opacity-60" : ""
       }`}
     >
+      <Link href={`/events/${event.id}`} className="flex min-w-0 flex-1 flex-col gap-3 sm:gap-4 md:flex-row">
       {/* Date Block */}
       <div className="flex-shrink-0 w-20 h-20 bg-primary/10 rounded-lg flex flex-col items-center justify-center">
         <span className="text-2xl font-bold text-primary">
@@ -123,7 +121,7 @@ function EventCard({ event }: { event: Event }) {
           )}
         </div>
 
-        <h3 className="font-bold text-lg mb-2">{event.title}</h3>
+        <h3 className="mb-2 break-words text-lg font-bold [overflow-wrap:anywhere]">{event.title}</h3>
 
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -148,29 +146,23 @@ function EventCard({ event }: { event: Event }) {
           </p>
         )}
       </div>
+      </Link>
 
       {/* Actions */}
-      {!isPast && !isCancelled && (
-        <div className="flex flex-col gap-2 justify-center">
-          {event.tickets_url && (
+      {!isPast && !isCancelled && event.tickets_url && (
+        <div className="flex shrink-0 flex-col justify-center gap-2">
             <a
               href={event.tickets_url}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
             >
               <Ticket className="h-4 w-4" />
               Get Tickets
             </a>
-          )}
-          <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted">
-            <Star className="h-4 w-4" />
-            Interested
-          </button>
         </div>
       )}
-    </Link>
+    </article>
   );
 }
 
@@ -208,7 +200,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="min-w-0 py-5 sm:py-8">
       {/* Header */}
       <div className="mb-8">
         <Link
@@ -218,7 +210,7 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
           <ChevronLeft className="h-4 w-4" />
           Back to {eventsData.artist.name}
         </Link>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
+        <h1 className="flex min-w-0 items-center gap-3 break-words text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl">
           <Calendar className="h-8 w-8" />
           Events & Shows
         </h1>
@@ -259,9 +251,9 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
           <p className="text-muted-foreground mb-6">
             Follow {eventsData.artist.name} to get notified about upcoming events
           </p>
-          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg">
-            Follow Artist
-          </button>
+          <div className="mt-5 flex justify-center">
+            <FollowButton followableType="artist" followableId={eventsData.artist.id} showCount={false} />
+          </div>
         </div>
       )}
 
@@ -272,9 +264,9 @@ export default function ArtistEventsPage({ params }: { params: Promise<{ slug: s
           <p className="text-muted-foreground mb-4">
             Get notified when {eventsData.artist.name} announces new events
           </p>
-          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg">
-            Turn on Notifications
-          </button>
+          <div className="flex justify-center">
+            <FollowButton followableType="artist" followableId={eventsData.artist.id} showCount={false} />
+          </div>
         </div>
       )}
     </div>

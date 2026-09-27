@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { KeyRound, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api';
-import { useChangeWalletPin, useWalletPinStatus } from '@/hooks/useWalletPin';
+import {
+  useChangeWalletPin,
+  useResetWalletPin,
+  useWalletPinStatus,
+} from '@/hooks/useWalletPin';
 import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 
 /**
@@ -14,10 +18,13 @@ import { WalletPinModal } from '@/components/wallet/wallet-pin-modal';
 export function WalletPinSettings() {
   const { data: status, isLoading } = useWalletPinStatus();
   const changePin = useChangeWalletPin();
+  const resetPin = useResetWalletPin();
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [changing, setChanging] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
+  const [password, setPassword] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
@@ -46,24 +53,58 @@ export function WalletPinSettings() {
     }
   };
 
+  const clearForm = () => {
+    setCurrentPin('');
+    setPassword('');
+    setNewPin('');
+    setConfirmPin('');
+  };
+
+  const submitReset = async () => {
+    if (newPin !== confirmPin) {
+      toast.error('The two new PINs do not match.');
+      return;
+    }
+
+    try {
+      await resetPin.mutateAsync({ password, pin: newPin });
+      toast.success('Wallet PIN reset. Use your new PIN for the next wallet action.');
+      setResetting(false);
+      clearForm();
+    } catch (e) {
+      const data = isApiError(e)
+        ? (e.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined)
+        : undefined;
+      const first = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+      toast.error(first ?? data?.message ?? 'Could not reset your PIN.');
+    }
+  };
+
   const pinInput = (
     label: string,
     value: string,
     onChange: (v: string) => void,
-  ) => (
-    <div>
-      <label className="mb-1 block text-sm text-muted-foreground">{label}</label>
-      <input
-        type="password"
-        inputMode="numeric"
-        maxLength={length}
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, length))}
-        className="w-full rounded-lg border bg-background px-3 py-2 tracking-[0.5em]"
-        placeholder={'•'.repeat(length)}
-      />
-    </div>
-  );
+  ) => {
+    const id = `wallet-${label.toLowerCase().replaceAll(' ', '-')}`;
+
+    return (
+      <div>
+        <label htmlFor={id} className="mb-1 block text-sm text-muted-foreground">
+          {label}
+        </label>
+        <input
+          id={id}
+          type="password"
+          inputMode="numeric"
+          maxLength={length}
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, length))}
+          className="w-full rounded-lg border bg-background px-3 py-2 tracking-[0.5em]"
+          placeholder={'•'.repeat(length)}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-xl border bg-card p-6">
@@ -120,7 +161,60 @@ export function WalletPinSettings() {
               Save new PIN
             </button>
             <button
-              onClick={() => setChanging(false)}
+              onClick={() => {
+                setChanging(false);
+                clearForm();
+              }}
+              className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : resetting ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+            Forgot your PIN? Confirm your account password, then choose a new one. You do not
+            need the old PIN.
+          </div>
+          <div>
+            <label
+              htmlFor="wallet-account-password"
+              className="mb-1 block text-sm text-muted-foreground"
+            >
+              Account password
+            </label>
+            <input
+              id="wallet-account-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border bg-background px-3 py-2"
+              placeholder="Enter your account password"
+            />
+          </div>
+          {pinInput('New PIN', newPin, setNewPin)}
+          {pinInput('Confirm new PIN', confirmPin, setConfirmPin)}
+          <div className="flex flex-col gap-2 pt-1 sm:flex-row">
+            <button
+              onClick={submitReset}
+              disabled={
+                resetPin.isPending ||
+                !password ||
+                newPin.length !== length ||
+                confirmPin.length !== length
+              }
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            >
+              {resetPin.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Reset PIN securely
+            </button>
+            <button
+              onClick={() => {
+                setResetting(false);
+                clearForm();
+              }}
               className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
             >
               Cancel
@@ -128,12 +222,20 @@ export function WalletPinSettings() {
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setChanging(true)}
-          className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          Change PIN
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            onClick={() => setChanging(true)}
+            className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Change PIN
+          </button>
+          <button
+            onClick={() => setResetting(true)}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            Forgot PIN?
+          </button>
+        </div>
       )}
 
       <WalletPinModal

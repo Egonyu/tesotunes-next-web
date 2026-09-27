@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Mail, Phone, Globe, MapPin, Calendar, Loader2 } from 'lucide-react';
 import { useSettings, useUpdateAllSettings } from '@/hooks/useSettings';
 import { toast } from 'sonner';
+import { SubscriptionSummary } from '@/components/settings/subscription-summary';
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -56,6 +57,8 @@ export default function SettingsPage() {
           Manage your account settings and preferences.
         </p>
       </div>
+
+      <SubscriptionSummary />
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Account Information */}

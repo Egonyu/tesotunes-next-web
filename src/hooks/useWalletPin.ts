@@ -80,6 +80,20 @@ export function useChangeWalletPin() {
   });
 }
 
+export function useResetWalletPin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { password: string; pin: string }) =>
+      apiPost<{ message: string }>('/wallet/pin/reset', {
+        password: input.password,
+        pin: input.pin,
+        pin_confirmation: input.pin,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wallet', 'pin'] }),
+  });
+}
+
 export function useLockWallet() {
   const queryClient = useQueryClient();
 

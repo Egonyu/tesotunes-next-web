@@ -71,9 +71,9 @@ function StatCard({
 
 function PromotionCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
-      <div className="aspect-[16/9] animate-pulse bg-muted" />
-      <div className="space-y-3 p-4">
+    <div className="grid grid-cols-[104px_minmax(0,1fr)] overflow-hidden rounded-2xl border bg-card sm:grid-cols-[180px_minmax(0,1fr)]">
+      <div className="min-h-[172px] animate-pulse bg-muted sm:min-h-[190px]" />
+      <div className="space-y-3 p-3 sm:p-4">
         <div className="h-3 w-24 animate-pulse rounded bg-muted" />
         <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
         <div className="h-3 w-full animate-pulse rounded bg-muted" />
@@ -438,7 +438,7 @@ export default function PromotionsBrowsePage({ embedded = false }: { embedded?: 
                   </div>
                 </div>
               ) : isLoading ? (
-                <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
+                <div className="mt-6 grid grid-cols-1 gap-3">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <PromotionCardSkeleton key={index} />
                   ))}
@@ -458,16 +458,16 @@ export default function PromotionsBrowsePage({ embedded = false }: { embedded?: 
                       Reset filters
                     </button>
                     <Link
-                      href="/become-promoter"
+                      href={canCreate ? "/promoter/services/new" : "/become-promoter"}
                       className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                      Become a promoter
+                      {canCreate ? "Add promotion service" : "Become a promoter"}
                     </Link>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
+                  <div className="mt-6 grid grid-cols-1 gap-3">
                     {promotions.map((promotion: PromotionListItem) => (
                       <PromotionCard
                         key={promotion.id}

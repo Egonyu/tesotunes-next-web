@@ -46,6 +46,7 @@ import { usePlayerStore, useUIStore } from "@/stores";
 import { STORE_ENABLED } from "@/lib/features";
 import { useNavigationAvailability } from "@/hooks/useNavigationAvailability";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { isPromoterIdentity } from "@/lib/studio-access";
 
 const defaultMainTabs = [
   { href: "/", label: "Home", icon: Home },
@@ -218,10 +219,11 @@ export function MobileBottomNav() {
    * authority here and the API call only ever adds to it.
    */
   const sessionUser = session?.user as
-    | { isArtist?: boolean; isEventOrganizer?: boolean }
+    | { role?: string; isArtist?: boolean; isEventOrganizer?: boolean; capabilities?: string[] }
     | undefined;
   const isArtistBySession = Boolean(sessionUser?.isArtist) || Boolean(sessionUser?.isEventOrganizer);
   const hasArtistAccess = isArtist || isAdmin || isArtistBySession;
+  const hasPromoterAccess = sessionUser ? isPromoterIdentity(sessionUser) : false;
 
   /**
    * An approved application that the session has not caught up with yet. The
@@ -397,28 +399,30 @@ export function MobileBottomNav() {
               )}
 
               {session ? (
-                !hasArtistAccess && !isAdmin && !artistApprovedPendingSession && (
+                !isAdmin && !artistApprovedPendingSession && (
                   <div className="border-t border-border/70 pt-3 dark:border-white/12">
                     <div className="grid gap-2 sm:grid-cols-2">
+                      {!hasArtistAccess && (
+                        <Link
+                          href="/become-artist"
+                          onClick={closeMenu}
+                          className="flex items-center gap-3 rounded-2xl bg-linear-to-r from-primary via-rose-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(220,38,90,0.28)]"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <span>Become an Artist</span>
+                        </Link>
+                      )}
                       <Link
-                        href="/become-artist"
-                        onClick={closeMenu}
-                        className="flex items-center gap-3 rounded-2xl bg-linear-to-r from-primary via-rose-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(220,38,90,0.28)]"
-                      >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                        <span>Become an Artist</span>
-                      </Link>
-                      <Link
-                        href="/become-promoter"
+                        href={hasPromoterAccess ? "/promoter/services/new" : "/become-promoter"}
                         onClick={closeMenu}
                         className="flex items-center gap-3 rounded-2xl bg-linear-to-r from-indigo-500 via-blue-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)]"
                       >
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
                           <Megaphone className="h-4 w-4" />
                         </div>
-                        <span>Become a Promoter</span>
+                        <span>{hasPromoterAccess ? "Add Promotion Service" : "Become a Promoter"}</span>
                       </Link>
                     </div>
                   </div>

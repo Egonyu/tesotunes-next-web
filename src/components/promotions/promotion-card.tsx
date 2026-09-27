@@ -48,19 +48,19 @@ export function PromotionCard({
     <Link
       href={href || `/promotions/${promotion.slug}`}
       className={cn(
-        "group block bg-card rounded-xl border hover:border-primary/50 transition-all hover:shadow-lg overflow-hidden",
+        "group grid min-w-0 grid-cols-[104px_minmax(0,1fr)] overflow-hidden rounded-2xl border bg-card transition-all hover:border-primary/50 hover:shadow-lg sm:grid-cols-[180px_minmax(0,1fr)]",
         className
       )}
     >
       {/* Featured Image */}
-      <div className="relative aspect-[4/3] bg-muted overflow-hidden sm:aspect-[16/9]">
+      <div className="relative min-h-[172px] overflow-hidden bg-muted sm:min-h-[190px]">
         {promotion.featured_image_url ? (
           <Image
             src={promotion.featured_image_url}
             alt={promotion.title}
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className="object-contain group-hover:scale-[1.02] transition-transform duration-300"
+            sizes="(max-width: 640px) 104px, 180px"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
@@ -69,7 +69,7 @@ export function PromotionCard({
         )}
 
         {/* Badges */}
-        <div className="absolute top-2 left-2 flex gap-1.5">
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
           {promotion.is_featured && (
             <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
               Featured
@@ -83,8 +83,8 @@ export function PromotionCard({
         </div>
 
         {/* Platform badge */}
-        <div className="absolute top-2 right-2">
-          <span className="bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-sm">
+        <div className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)]">
+          <span className="block truncate rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
             {PROMOTION_PLATFORM_LABELS[promotion.platform] ??
               labelFromSlug(promotion.platform)}
           </span>
@@ -92,7 +92,7 @@ export function PromotionCard({
       </div>
 
       {/* Content */}
-      <div className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
+      <div className="flex min-w-0 flex-col gap-2 p-3 sm:gap-2.5 sm:p-4">
         {/* Type label */}
         <span className="text-[11px] font-medium text-primary uppercase tracking-wider">
           {PROMOTION_TYPE_LABELS[promotion.type] ??
@@ -100,17 +100,17 @@ export function PromotionCard({
         </span>
 
         {/* Title */}
-        <h3 className="font-semibold text-sm line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+        <h3 className="line-clamp-2 break-words text-sm font-semibold leading-tight transition-colors group-hover:text-primary sm:text-base">
           {promotion.title}
         </h3>
 
         {/* Short description */}
-        <p className="hidden text-xs text-muted-foreground line-clamp-2 sm:block">
+        <p className="line-clamp-2 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
           {promotion.short_description}
         </p>
 
         {(promotion.audience_niches?.length || promotion.content_formats?.length) && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="hidden flex-wrap gap-1.5 sm:flex">
             {(promotion.audience_niches ?? []).slice(0, 2).map((niche) => (
               <span
                 key={niche}
@@ -133,7 +133,7 @@ export function PromotionCard({
         )}
 
         {/* Promoter */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="relative h-6 w-6 rounded-full overflow-hidden bg-muted shrink-0">
             {promotion.promoter.avatar_url ? (
               <Image
@@ -157,29 +157,29 @@ export function PromotionCard({
         </div>
 
         {/* Stats row */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground sm:gap-3 sm:text-xs">
-          <span className="flex items-center gap-1">
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-muted-foreground sm:flex sm:flex-wrap sm:gap-3 sm:text-xs">
+          <span className="flex min-w-0 items-center gap-1">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
             {promotion.rating_average.toFixed(1)}
             <span className="text-muted-foreground/60">
               ({promotion.rating_count})
             </span>
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex min-w-0 items-center gap-1">
             <Users className="h-3.5 w-3.5" />
             {formatNumber(promotion.estimated_reach)}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="col-span-2 flex min-w-0 items-center gap-1 sm:col-span-1">
             <Clock className="h-3.5 w-3.5" />
             {deliveryText}
           </span>
         </div>
 
         {/* Price */}
-        <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex flex-col">
+        <div className="mt-auto flex min-w-0 items-end justify-between gap-2 border-t pt-2">
+          <div className="flex min-w-0 flex-col">
             {promotion.accepts_credits && (
-              <span className="text-sm font-bold text-primary">
+              <span className="truncate text-sm font-bold text-primary">
                 {formatNumber(promotion.price_credits)} credits
               </span>
             )}
@@ -189,7 +189,7 @@ export function PromotionCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground sm:text-xs">
             <TrendingUp className="h-3 w-3" />
             {promotion.completed_orders} sold
           </div>

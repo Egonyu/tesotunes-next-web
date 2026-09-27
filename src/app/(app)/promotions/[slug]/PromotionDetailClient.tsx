@@ -47,10 +47,10 @@ function nice(value: string | null | undefined) {
 
 function Stat({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-2xl border bg-card px-4 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+    <div className="min-w-0 overflow-hidden rounded-2xl border bg-card p-3 sm:p-4">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-[11px] sm:tracking-[0.2em]">{label}</p>
+      <p className="mt-2 break-words text-base font-bold [overflow-wrap:anywhere] sm:text-xl">{value}</p>
+      <p className="mt-1 break-words text-[11px] text-muted-foreground [overflow-wrap:anywhere] sm:text-xs">{note}</p>
     </div>
   );
 }
@@ -177,8 +177,8 @@ export default function PromotionDetailPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="space-y-8">
+    <div className="container mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
+      <div className="space-y-5 sm:space-y-8">
         <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           {selectedEvent ? "Back to Event Promotions" : "Back to Promotions"}
@@ -194,24 +194,24 @@ export default function PromotionDetailPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-primary/5" />
               )}
               </div>
-              <div className="space-y-3 p-4 sm:p-6">
+              <div className="min-w-0 space-y-3 p-4 sm:p-6">
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{typeLabel}</span>
                   <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{platformLabel}</span>
                   {promotion.is_featured && <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">Featured</span>}
                 </div>
                 <h1 className="break-words text-2xl font-bold tracking-tight sm:text-4xl">{promotion.title}</h1>
-                <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{promotion.short_description}</p>
+                <p className="max-w-2xl break-words text-sm text-muted-foreground [overflow-wrap:anywhere] sm:text-base">{promotion.short_description}</p>
                 <div className="grid grid-cols-3 gap-2 text-xs sm:gap-3 sm:text-sm">
-                  <span className="rounded-lg bg-muted p-2"><Users className="mb-1 h-4 w-4" />{formatNumber(promotion.estimated_reach)} reach</span>
-                  <span className="rounded-lg bg-muted p-2"><Clock className="mb-1 h-4 w-4" />{deliveryText}</span>
-                  <span className="rounded-lg bg-muted p-2"><Star className="mb-1 h-4 w-4 text-amber-500" />{promotion.rating_average.toFixed(1)} rating</span>
+                  <span className="min-w-0 break-words rounded-lg bg-muted p-2 [overflow-wrap:anywhere]"><Users className="mb-1 h-4 w-4" />{formatNumber(promotion.estimated_reach)} reach</span>
+                  <span className="min-w-0 break-words rounded-lg bg-muted p-2 [overflow-wrap:anywhere]"><Clock className="mb-1 h-4 w-4" />{deliveryText}</span>
+                  <span className="min-w-0 break-words rounded-lg bg-muted p-2 [overflow-wrap:anywhere]"><Star className="mb-1 h-4 w-4 text-amber-500" />{promotion.rating_average.toFixed(1)} rating</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="rounded-[24px] border bg-background/70 p-5">
+            <div className="min-w-0 p-4 sm:p-6">
+              <div className="min-w-0 overflow-hidden rounded-[24px] border bg-background/70 p-4 sm:p-5">
                 <div className="flex items-center gap-3">
                   <div className="relative h-12 w-12 overflow-hidden rounded-full bg-muted">
                     {promotion.promoter.avatar_url ? (
@@ -225,7 +225,7 @@ export default function PromotionDetailPage() {
                       <Link href={`/promoters/${promotion.promoter.profile_slug ?? promotion.promoter.username}`} className="truncate font-semibold hover:text-primary">{promotion.promoter.name}</Link>
                       {promotion.promoter.is_verified && <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />}
                     </div>
-                    <p className="text-sm text-muted-foreground">@{promotion.promoter.username} · {formatNumber(promotion.promoter.follower_count)} followers</p>
+                    <p className="truncate text-sm text-muted-foreground">@{promotion.promoter.username} · {formatNumber(promotion.promoter.follower_count)} followers</p>
                   </div>
                 </div>
 
@@ -246,16 +246,16 @@ export default function PromotionDetailPage() {
           </div>
         </section>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_380px]">
-          <div className="space-y-6">
-            <section className="grid gap-4 md:grid-cols-4">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_380px] lg:gap-8">
+          <div className="min-w-0 space-y-5 sm:space-y-6">
+            <section className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
               <Stat label="Audience" value={formatNumber(promotion.estimated_reach)} note="Estimated reach" />
               <Stat label="Delivery" value={deliveryText} note="Typical turnaround" />
               <Stat label="Reviews" value={formatNumber(promotion.rating_count)} note={`${promotion.rating_average.toFixed(1)} avg rating`} />
               <Stat label="Orders" value={formatNumber(promotion.total_orders)} note={`${formatNumber(promotion.completed_orders)} completed`} />
             </section>
 
-            <section className="rounded-[24px] border bg-card p-5">
+            <section className="min-w-0 overflow-hidden rounded-[24px] border bg-card p-4 sm:p-5">
               <div className="border-b">
                 <div className="flex gap-6 overflow-x-auto">
                   {tabs.map((tab) => (
@@ -270,17 +270,17 @@ export default function PromotionDetailPage() {
                 </div>
               </div>
 
-              <div className="min-h-[260px] pt-5">
+              <div className="min-w-0 min-h-[260px] pt-5">
                 {activeTab === "overview" && (
                   <div className="space-y-5">
                     <div>
                       <h2 className="text-lg font-semibold">About this service</h2>
-                      <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{promotion.description}</p>
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground [overflow-wrap:anywhere]">{promotion.description}</p>
                     </div>
                     {promotion.terms && (
                       <div className="rounded-2xl border bg-background/70 p-4">
                         <h3 className="text-sm font-semibold">Terms and expectations</h3>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{promotion.terms}</p>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{promotion.terms}</p>
                       </div>
                     )}
                     {promotion.platform_specifics &&
@@ -295,7 +295,7 @@ export default function PromotionDetailPage() {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                                   Channel
                                 </p>
-                                <p className="mt-1 text-sm text-foreground">
+                                <p className="mt-1 break-words text-sm text-foreground [overflow-wrap:anywhere]">
                                   {promotion.platform_specifics.channel}
                                 </p>
                               </div>
@@ -305,7 +305,7 @@ export default function PromotionDetailPage() {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                                   Placement
                                 </p>
-                                <p className="mt-1 text-sm text-foreground">
+                                <p className="mt-1 break-words text-sm text-foreground [overflow-wrap:anywhere]">
                                   {promotion.platform_specifics.placement}
                                 </p>
                               </div>
@@ -315,7 +315,7 @@ export default function PromotionDetailPage() {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                                   Timing
                                 </p>
-                                <p className="mt-1 text-sm text-foreground">
+                                <p className="mt-1 break-words text-sm text-foreground [overflow-wrap:anywhere]">
                                   {promotion.platform_specifics.timing}
                                 </p>
                               </div>
@@ -325,7 +325,7 @@ export default function PromotionDetailPage() {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                                   Proof expectation
                                 </p>
-                                <p className="mt-1 text-sm text-foreground">
+                                <p className="mt-1 break-words text-sm text-foreground [overflow-wrap:anywhere]">
                                   {promotion.platform_specifics.proof}
                                 </p>
                               </div>
@@ -338,7 +338,7 @@ export default function PromotionDetailPage() {
 
                 {activeTab === "fit" && (
                   <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border bg-background/70 p-4">
+                    <div className="min-w-0 overflow-hidden rounded-2xl border bg-background/70 p-4">
                       <div className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Audience Niches</h3></div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {(promotion.audience_niches ?? []).length > 0 ? (
@@ -350,7 +350,7 @@ export default function PromotionDetailPage() {
                         )}
                       </div>
                     </div>
-                    <div className="rounded-2xl border bg-background/70 p-4">
+                    <div className="min-w-0 overflow-hidden rounded-2xl border bg-background/70 p-4">
                       <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Audience Regions</h3></div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {(promotion.audience_regions ?? []).length > 0 ? (
@@ -362,7 +362,7 @@ export default function PromotionDetailPage() {
                         )}
                       </div>
                     </div>
-                    <div className="rounded-2xl border bg-background/70 p-4">
+                    <div className="min-w-0 overflow-hidden rounded-2xl border bg-background/70 p-4">
                       <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><h3 className="text-sm font-semibold">Formats</h3></div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {(promotion.content_formats ?? []).length > 0 ? (
@@ -377,7 +377,7 @@ export default function PromotionDetailPage() {
                     {promotion.requirements && (
                       <div className="rounded-2xl border bg-background/70 p-4 md:col-span-3">
                         <h3 className="text-sm font-semibold">Requirements from the promoter</h3>
-                        <p className="mt-2 text-sm text-muted-foreground">{promotion.requirements.action}</p>
+                        <p className="mt-2 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{promotion.requirements.action}</p>
                         {promotion.requirements.duration_hours && <p className="mt-2 text-xs text-muted-foreground">Duration expectation: {promotion.requirements.duration_hours} hours</p>}
                         {promotion.requirements.hashtags?.length ? (
                           <div className="mt-3 flex flex-wrap gap-2">
@@ -400,7 +400,7 @@ export default function PromotionDetailPage() {
                           {promotion.deliverables.map((item, index) => (
                             <li key={index} className="flex items-start gap-3 text-sm">
                               <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                              <span className="text-muted-foreground">{item}</span>
+                              <span className="min-w-0 break-words text-muted-foreground [overflow-wrap:anywhere]">{item}</span>
                             </li>
                           ))}
                         </ul>
@@ -418,7 +418,7 @@ export default function PromotionDetailPage() {
                           {proofGuide.proofExamples.map((item) => (
                             <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
                               <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                              <span>{item}</span>
+                              <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item}</span>
                             </div>
                           ))}
                         </div>
@@ -429,7 +429,7 @@ export default function PromotionDetailPage() {
                           {proofGuide.checklist.map((item) => (
                             <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
                               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                              <span>{item}</span>
+                              <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item}</span>
                             </div>
                           ))}
                         </div>
@@ -450,9 +450,9 @@ export default function PromotionDetailPage() {
             </section>
           </div>
 
-          <aside className="space-y-4">
+          <aside className="min-w-0 space-y-4">
             <div className="sticky top-24 space-y-4">
-              <section className="rounded-[24px] border bg-card p-6">
+              <section className="min-w-0 overflow-hidden rounded-[24px] border bg-card p-4 sm:p-6">
                 <div className="space-y-1">
                   {promotion.accepts_credits && <div className="flex items-center gap-2"><Coins className="h-5 w-5 text-primary" /><span className="text-2xl font-bold text-primary">{formatNumber(promotion.price_credits)}</span><span className="text-sm text-muted-foreground">credits</span></div>}
                   {promotion.accepts_ugx && <div className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-muted-foreground" /><span className="text-lg font-semibold">{formatCurrency(promotion.price_ugx)}</span></div>}
@@ -494,7 +494,7 @@ export default function PromotionDetailPage() {
                 )}
               </section>
 
-              <section className="rounded-[24px] border bg-card p-5">
+              <section className="min-w-0 overflow-hidden rounded-[24px] border bg-card p-4 sm:p-5">
                 <h2 className="text-lg font-semibold">Trust and delivery</h2>
                 <div className="mt-4 space-y-3">
                   <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-500" /><div><p className="text-sm font-medium">Escrow protection</p><p className="text-sm text-muted-foreground">Your payment is held until you accept the promoter&apos;s proof{describeReleaseWindow(promotion.escrow_release_hours) ? `, or ${describeReleaseWindow(promotion.escrow_release_hours)} after they send it if you don't respond` : ""}.</p></div></div>

@@ -17,6 +17,7 @@ import { cn, formatNumber } from '@/lib/utils';
 import { usePromotersV2 } from '@/hooks/usePromotionsV2';
 import type { PromoterTier } from '@/types/promotions-v2';
 import { PROMOTER_TIER_LABELS } from '@/types/promotions-v2';
+import { usePromoterAccess } from '@/hooks/useCreatorAccess';
 
 const PLATFORMS = [
   { value: '', label: 'All Platforms' },
@@ -57,6 +58,7 @@ const TIER_COLORS: Record<PromoterTier, { bg: string; text: string; border: stri
 };
 
 export default function PromotersDiscoveryPage({ embedded = false }: { embedded?: boolean }) {
+  const canCreateService = usePromoterAccess();
   const [search, setSearch] = useState('');
   const [platform, setPlatform] = useState('');
   const [niche, setNiche] = useState('');
@@ -224,10 +226,10 @@ export default function PromotersDiscoveryPage({ embedded = false }: { embedded?
             <p className="font-medium">No promoters found</p>
             <p className="mt-1 text-sm text-muted-foreground">Try different filters or be the first to join</p>
             <Link
-              href="/become-promoter"
+              href={canCreateService ? '/promoter/services/new' : '/become-promoter'}
               className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Become a promoter
+              {canCreateService ? 'Add promotion service' : 'Become a promoter'}
             </Link>
           </div>
         ) : (
@@ -237,10 +239,10 @@ export default function PromotersDiscoveryPage({ embedded = false }: { embedded?
                 {total > 0 ? `${formatNumber(total)} promoter${total === 1 ? '' : 's'}` : `${promoters.length} result${promoters.length === 1 ? '' : 's'}`}
               </p>
               <Link
-                href="/become-promoter"
+                href={canCreateService ? '/promoter/services/new' : '/become-promoter'}
                 className="text-xs font-medium text-primary hover:underline"
               >
-                + Become a promoter
+                {canCreateService ? '+ Add a service' : '+ Become a promoter'}
               </Link>
             </div>
 
@@ -370,10 +372,10 @@ export default function PromotersDiscoveryPage({ embedded = false }: { embedded?
           List your services and earn UGX + credits promoting music. No artist role required.
         </p>
         <Link
-          href="/become-promoter"
+          href={canCreateService ? '/promoter/services/new' : '/become-promoter'}
           className="mt-4 inline-block rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
-          Become a promoter
+          {canCreateService ? 'Add another service' : 'Become a promoter'}
         </Link>
       </div>
     </div>

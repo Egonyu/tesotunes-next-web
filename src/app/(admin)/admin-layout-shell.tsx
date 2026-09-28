@@ -206,6 +206,16 @@ const navItems = [
         ],
     },
     {
+        href: "/admin/payouts",
+        label: "Payout Approvals",
+        icon: Wallet,
+        requiredPermissions: [
+            "admin.payments",
+            "payment.manage",
+            "manage-payments",
+        ],
+    },
+    {
         href: "/admin/sacco",
         label: "SACCO Ops",
         icon: CreditCard,

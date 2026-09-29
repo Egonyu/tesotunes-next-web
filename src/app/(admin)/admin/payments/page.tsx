@@ -341,17 +341,18 @@ export default function AdminPaymentsPage() {
             </header>
 
             <section className="grid items-stretch gap-4 xl:grid-cols-[1.35fr_1fr]">
-                <div className="relative overflow-hidden rounded-[28px] bg-slate-950 p-6 text-white shadow-[0_2px_5px_rgba(0,0,0,.12),0_24px_70px_rgba(15,23,42,.22)] sm:p-8">
-                    <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/15 blur-3xl" />
+                <div className="relative overflow-hidden rounded-[28px] border border-emerald-200/80 bg-[#f1fbf7] p-6 text-slate-950 shadow-[0_2px_5px_rgba(15,23,42,.05),0_24px_70px_rgba(16,185,129,.10)] sm:p-8">
+                    <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-200/45 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-emerald-200/55 blur-3xl" />
                     <div className="relative flex flex-col gap-7 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <div className="flex items-center gap-2 text-sm text-slate-300">
+                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                 <span
                                     className={cn(
                                         "h-2 w-2 rounded-full",
                                         balance?.available
-                                            ? "bg-emerald-400 shadow-[0_0_0_5px_rgba(52,211,153,.12)]"
-                                            : "bg-rose-400",
+                                            ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.14)]"
+                                            : "bg-rose-500",
                                     )}
                                 />
                                 ZengaPay live balance
@@ -366,15 +367,15 @@ export default function AdminPaymentsPage() {
                                         )
                                       : "Unavailable"}
                             </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                                 {balance?.change_24h !== null &&
                                 balance?.change_24h !== undefined ? (
                                     <span
                                         className={cn(
                                             "inline-flex items-center gap-1",
                                             balance.change_24h >= 0
-                                                ? "text-emerald-300"
-                                                : "text-rose-300",
+                                                ? "font-medium text-emerald-700"
+                                                : "font-medium text-rose-700",
                                         )}
                                     >
                                         {balance.change_24h >= 0 ? (
@@ -399,8 +400,8 @@ export default function AdminPaymentsPage() {
                                 </span>
                             </div>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[.06] px-4 py-3 text-right backdrop-blur">
-                            <p className="text-xs uppercase tracking-[.16em] text-slate-400">
+                        <div className="rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-right shadow-sm backdrop-blur">
+                            <p className="text-xs font-semibold uppercase tracking-[.16em] text-slate-600">
                                 Pending coverage
                             </p>
                             <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -408,19 +409,19 @@ export default function AdminPaymentsPage() {
                                     ? "No exposure"
                                     : `${coverage.toFixed(1)}×`}
                             </p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-slate-600">
                                 {formatMoney(pendingExposure)} queued
                             </p>
                         </div>
                     </div>
-                    <div className="relative mt-3 text-emerald-300">
+                    <div className="relative mt-3 text-emerald-600">
                         <Sparkline
                             values={(balance?.history ?? []).map((point) =>
                                 Number(point.balance),
                             )}
                         />
                     </div>
-                    <div className="relative mt-3 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-slate-400">
+                    <div className="relative mt-3 flex items-center justify-between border-t border-emerald-200/80 pt-4 text-xs font-medium text-slate-600">
                         <span>Seven-day provider liquidity</span>
                         <span>{balance?.history?.length ?? 0} snapshots</span>
                     </div>

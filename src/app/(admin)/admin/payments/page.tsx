@@ -341,9 +341,7 @@ export default function AdminPaymentsPage() {
             </header>
 
             <section className="grid items-stretch gap-4 xl:grid-cols-[1.35fr_1fr]">
-                <div className="relative overflow-hidden rounded-[28px] border border-emerald-200/80 bg-[#f1fbf7] p-6 text-slate-950 shadow-[0_2px_5px_rgba(15,23,42,.05),0_24px_70px_rgba(16,185,129,.10)] sm:p-8">
-                    <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-200/45 blur-3xl" />
-                    <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-emerald-200/55 blur-3xl" />
+                <div className="relative overflow-hidden rounded-[28px] border border-emerald-200/80 bg-[#f1fbf7] p-6 text-slate-950 shadow-[0_2px_5px_rgba(15,23,42,.05),0_18px_45px_rgba(15,23,42,.06)] sm:p-8">
                     <div className="relative flex flex-col gap-7 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">

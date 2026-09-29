@@ -201,7 +201,7 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium mb-2">
-            Mobile number
+            Phone number
           </label>
           <input
             id="phone"
@@ -211,13 +211,10 @@ export default function RegisterPage() {
             autoComplete="tel"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="0700 000 000 or +256 700 000 000"
+            placeholder="Enter phone number"
             required
             className="w-full px-4 py-2.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            We&apos;ll use this when email isn&apos;t the fastest way to reach you.
-          </p>
           {errors.phone && (
             <p className="mt-1 text-sm text-destructive">{errors.phone[0]}</p>
           )}

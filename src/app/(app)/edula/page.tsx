@@ -109,7 +109,9 @@ export default function EdulaPage() {
     };
     const chooseIdentity = (identity: string | undefined) =>
         identity &&
-        /^(feed:[a-f\d-]{36}|(?:song|episode|post):[1-9]\d*)$/i.test(identity)
+        /^(feed:[a-f\d-]{36}|(?:song|episode|post|event|poll|product|brief|corpus):[1-9]\d*|project:ateso)$/i.test(
+            identity,
+        )
             ? identity
             : null;
     const save = async (identity: string | undefined) => {
@@ -217,7 +219,8 @@ export default function EdulaPage() {
     const event = entries.find(
         (entry) =>
             entry.source === "feed_item" &&
-            entry.data.presentation?.kind === "event",
+            entry.data.presentation?.kind === "event" &&
+            entry.data.presentation?.state !== "ended",
     );
     const eventPresentation =
         event?.source === "feed_item" ? event.data.presentation : null;
@@ -382,7 +385,7 @@ export default function EdulaPage() {
                                       ? "From the creators and people you follow"
                                       : view === "interests"
                                         ? "Only the categories you chose"
-                                        : "Public activity · Last 30 days · Newest first"}
+                                        : "Public activity · All publication dates · Newest first"}
                             </span>
                             {view === "for-you" && <span>Fresh first</span>}
                         </div>
@@ -788,7 +791,8 @@ export default function EdulaPage() {
                                 {feed.meta?.window_limited && (
                                     <p className={s.endNote}>
                                         This is a bounded selection. Explore
-                                        individual sections for more.
+                                        Latest to browse the full public
+                                        history.
                                     </p>
                                 )}
                             </>

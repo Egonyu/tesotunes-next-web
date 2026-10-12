@@ -477,6 +477,128 @@
     gap: 9px;
     margin-top: 15px;
 }
+.songWave {
+    margin-top: 14px;
+    width: 100%;
+    max-width: 440px;
+}
+.waveTrack {
+    position: relative;
+    height: 48px;
+    border-radius: 8px;
+}
+.waveTrack svg {
+    display: block;
+    width: 100%;
+    height: 44px;
+    overflow: visible;
+}
+.waveTrack rect {
+    fill: hsl(var(--foreground) / 0.16);
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.waveTrack rect[data-played="true"] {
+    fill: hsl(var(--primary));
+}
+.songWave[data-playing="true"][data-visualizer="true"] rect {
+    animation: edula-wave 850ms ease-in-out infinite alternate;
+}
+.waveTrack input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 48px;
+    opacity: 0;
+    cursor: pointer;
+}
+.waveTrack input:disabled {
+    cursor: default;
+}
+.waveTrack:has(input:focus-visible) {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 4px;
+}
+.waveTimes {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    color: var(--ed-muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+.waveTimes span:nth-child(2) {
+    opacity: 0.8;
+}
+@keyframes edula-wave {
+    from {
+        transform: scaleY(0.45);
+    }
+    to {
+        transform: scaleY(1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .songWave[data-playing="true"] rect {
+        animation: none;
+    }
+}
+.contentState {
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    background: var(--ed-soft);
+    color: var(--ed-muted);
+}
+.corpusPair {
+    margin-top: 16px;
+    border-left: 2px solid hsl(var(--primary));
+    padding-left: 16px;
+}
+.corpusPair > div + div {
+    margin-top: 18px;
+}
+.corpusPair small {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ed-muted);
+    margin-bottom: 7px;
+}
+.corpusPair p {
+    font-size: 19px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+.corpusPair > div + div p {
+    font-size: 15px;
+    color: var(--ed-muted);
+}
+.corpusCredit {
+    margin-top: 16px;
+    font-size: 10px;
+    color: var(--ed-muted);
+    overflow-wrap: anywhere;
+}
+.projectStats {
+    display: flex;
+    gap: 26px;
+    margin-top: 19px;
+    padding-block: 14px;
+    border-block: 1px solid var(--ed-line);
+}
+.projectStats strong {
+    display: block;
+    font-size: 22px;
+    color: var(--ed-ink);
+}
+.projectStats span {
+    font-size: 11px;
+    color: var(--ed-muted);
+}
 .roundPlay {
     width: 38px;
     height: 38px;

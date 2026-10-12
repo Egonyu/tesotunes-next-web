@@ -137,6 +137,7 @@ export type FeedModule =
   | 'forum'
   | 'podcasts'
   | 'promotions'
+  | 'ateso'
   | 'platform';
 
 export type FeedItemType =
@@ -181,6 +182,9 @@ export type FeedItemType =
   | 'podcast_milestone'
   // Promotions
   | 'promotion_request_posted'
+  | 'promotion_service_listed'
+  | 'corpus_pair_accepted'
+  | 'ateso_project'
   // Social
   | 'user_post'
   | 'user_activity'
@@ -294,6 +298,7 @@ export const MODULE_STYLES: Record<
   forum:    { color: '#6366F1', icon: '💬', label: 'Forum' },
   podcasts: { color: '#8B5CF6', icon: '🎙️', label: 'Podcasts' },
   promotions: { color: '#E51B4C', icon: '📣', label: 'Opportunities' },
+  ateso: { color: '#635BBD', icon: '💬', label: 'Ateso' },
   platform: { color: '#6B7280', icon: '📢', label: 'Platform' },
 };
 

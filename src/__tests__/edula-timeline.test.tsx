@@ -180,14 +180,14 @@ test("empty interests remain empty and are saved on this device", async () => {
     );
 });
 
-test("Latest requests chronological activity and not a discovery fallback", async () => {
+test("Latest requests chronological public history including old publications", async () => {
     mockGet.mockResolvedValue(response());
     mount();
     await screen.findByRole("heading", { name: "A quiet moment." });
     fireEvent.click(screen.getByRole("tab", { name: "Latest" }));
     expect(
         await screen.findByText(
-            "Public activity · Last 30 days · Newest first",
+            "Public activity · All publication dates · Newest first",
         ),
     ).toBeInTheDocument();
     await waitFor(() =>

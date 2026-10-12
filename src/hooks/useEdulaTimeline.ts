@@ -30,7 +30,7 @@ export interface TimelineResponse {
         recent_count: number;
         discovery_count: number;
         fresh_hours: number;
-        window_days: number;
+        window_days: number | null;
         window_limited: boolean;
     };
     pulse: { type: string; count: number; period: string }[];

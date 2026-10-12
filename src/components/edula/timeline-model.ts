@@ -33,7 +33,7 @@ export const TIMELINE_CATEGORIES: {
     {
         key: "promotions",
         label: "Opportunities",
-        description: "Promotion briefs and work",
+        description: "Promotion services, briefs and work",
     },
     {
         key: "awards",
@@ -41,6 +41,11 @@ export const TIMELINE_CATEGORIES: {
         description: "Recognition and celebrations",
     },
     { key: "social", label: "People", description: "Community posts" },
+    {
+        key: "ateso",
+        label: "Ateso",
+        description: "Accepted translations and corpus contributions",
+    },
     {
         key: "platform",
         label: "TesoTunes",
@@ -56,6 +61,9 @@ export interface TimelinePresentation {
         | "event"
         | "product"
         | "promotion"
+        | "service"
+        | "corpus"
+        | "translation"
         | "update";
     title: string;
     href?: string;
@@ -76,6 +84,16 @@ export interface TimelinePresentation {
     deadline_at?: string | null;
     platforms?: string[];
     is_free?: boolean;
+    waveform?: number[];
+    state?: "open" | "closed" | "upcoming" | "ended";
+    delivery_days?: number | null;
+    ateso_text?: string;
+    english_text?: string;
+    dialect?: string | null;
+    license?: string;
+    pair_uuid?: string;
+    accepted_pairs?: number;
+    open_tasks?: number;
 }
 
 export interface TimelinePreferences {

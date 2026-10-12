@@ -123,6 +123,33 @@ test("single choice votes use the real response endpoint and question identity",
     ).toBeInTheDocument();
 });
 
+test("a closed poll is readable but never offers a vote or claims a future closing time", async () => {
+    mockGet.mockResolvedValue(
+        data({ status: "closed", ends_at: "2020-01-01" }),
+    );
+    mount();
+    expect(
+        await screen.findByText("Voting closed", { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+        screen.queryByRole("button", { name: "Vote", exact: true }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByText("70%")).toBeInTheDocument();
+});
+
+test("an expired active poll cannot be voted on and does not reveal hidden results", async () => {
+    mockGet.mockResolvedValue(
+        data({ ends_at: "2020-01-01", show_results_before_completion: false }),
+    );
+    mount();
+    await screen.findByText("Traditional");
+    expect(
+        screen.queryByRole("button", { name: "Vote", exact: true }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("70%")).not.toBeInTheDocument();
+});
+
 test("restricted results are not shown before a response", async () => {
     mockGet.mockResolvedValue(data());
     mount();

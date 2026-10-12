@@ -29,6 +29,7 @@ import { usePlayerStore } from "@/stores/player";
 import { usePoll, useVotePoll, transformPoll } from "@/hooks/usePolls";
 import { SafeImage } from "@/components/ui/safe-image";
 import { RichText } from "./rich-text";
+import { TimelineSongWave } from "./timeline-song-wave";
 import type { Song } from "@/types";
 import type { FeedItem } from "@/types/edula";
 import {
@@ -82,9 +83,19 @@ function PollBody({
         poll.questions.length === 1 &&
         poll.questions[0].question_type === "multiple_choice" &&
         !poll.questions[0].allow_multiple;
+    const rawEnd = (query.data as Record<string, unknown> | undefined)?.ends_at;
+    const end =
+        presentation.ends_at ?? (typeof rawEnd === "string" ? rawEnd : null);
+    const closed =
+        presentation.state === "closed" ||
+        poll?.status === "closed" ||
+        (!!end &&
+            Number.isFinite(Date.parse(end)) &&
+            Date.parse(end) <= Date.now());
     const canVote =
         singleChoice &&
         poll.status === "active" &&
+        !closed &&
         !poll.hasVoted &&
         !submitted;
     const showResults =
@@ -185,9 +196,11 @@ function PollBody({
                     <div className={s.pollMeta}>
                         <span>
                             {poll.totalVotes} responses
-                            {presentation.ends_at
-                                ? ` · Closes ${relativeDate(presentation.ends_at)}`
-                                : ""}
+                            {closed
+                                ? " · Voting closed"
+                                : presentation.ends_at
+                                  ? ` · Closes ${relativeDate(presentation.ends_at)}`
+                                  : ""}
                         </span>
                         <Link href={href}>
                             Open poll{" "}
@@ -277,6 +290,9 @@ export function TimelineActivityCard({
         event: "Event",
         product: "Marketplace",
         promotion: "Open brief",
+        service: "Promotion service",
+        corpus: "Ateso corpus",
+        translation: "Ateso project",
         update: "Community update",
     };
     const labels = {
@@ -286,6 +302,9 @@ export function TimelineActivityCard({
         event: "View event",
         product: "View product",
         promotion: "View brief",
+        service: "View service",
+        corpus: "Help translate",
+        translation: "Try a translation",
         update: "Explore",
     };
     const actorHref =
@@ -447,6 +466,17 @@ export function TimelineActivityCard({
                                     </div>
                                 )
                             )}
+                            {p.song_id && (
+                                <TimelineSongWave
+                                    songId={p.song_id}
+                                    title={p.title}
+                                    seconds={
+                                        p.duration_seconds ??
+                                        item.media?.duration_seconds
+                                    }
+                                    peaks={p.waveform}
+                                />
+                            )}
                         </div>
                     </div>
                 ) : p.kind === "podcast" ? (
@@ -526,6 +556,11 @@ export function TimelineActivityCard({
                             )}
                         </div>
                         <h3 className={s.cardTitle}>{p.title}</h3>
+                        {p.state === "ended" && (
+                            <span className={s.contentState}>
+                                Past event · Explore the event page
+                            </span>
+                        )}
                         <div className={s.detailRows}>
                             {date && (
                                 <span>
@@ -556,7 +591,7 @@ export function TimelineActivityCard({
                             </div>
                         )}
                     </>
-                ) : p.kind === "product" ? (
+                ) : p.kind === "product" || p.kind === "service" ? (
                     <div className={s.productRow}>
                         <div className={s.productImage}>
                             <SafeImage
@@ -585,10 +620,24 @@ export function TimelineActivityCard({
                                     {p.price_credits.toLocaleString()} credits
                                 </p>
                             )}
+                            {p.kind === "service" && p.platforms?.length ? (
+                                <div className={s.tags}>
+                                    {p.platforms.map((platform) => (
+                                        <span key={platform}>{platform}</span>
+                                    ))}
+                                </div>
+                            ) : null}
+                            {p.kind === "service" && p.delivery_days ? (
+                                <p className={s.subtitle}>
+                                    Delivery within {p.delivery_days} days
+                                </p>
+                            ) : null}
                             {href && (
                                 <div className={s.actions}>
                                     <Link href={href} className={s.secondary}>
-                                        View product
+                                        {p.kind === "service"
+                                            ? "View promotion service"
+                                            : "View product"}
                                         <ArrowUpRight size={14} />
                                     </Link>
                                 </div>
@@ -602,6 +651,11 @@ export function TimelineActivityCard({
                                 An opportunity in the community
                             </p>
                             <h3 className={s.cardTitle}>{p.title}</h3>
+                            {p.state === "closed" && (
+                                <span className={s.contentState}>
+                                    Applications closed · Past opportunity
+                                </span>
+                            )}
                             {budget && (
                                 <p className={s.budget}>
                                     <Wallet size={15} />
@@ -615,7 +669,7 @@ export function TimelineActivityCard({
                                     ))}
                                 </div>
                             ) : null}
-                            {p.deadline_at && (
+                            {p.deadline_at && p.state !== "closed" && (
                                 <p className={s.subtitle}>
                                     Applications close{" "}
                                     {relativeDate(p.deadline_at)}
@@ -630,6 +684,74 @@ export function TimelineActivityCard({
                                 </Link>
                             </div>
                         )}
+                    </>
+                ) : p.kind === "corpus" ? (
+                    <>
+                        <h3 className={s.cardTitle}>{p.title}</h3>
+                        <div className={s.corpusPair}>
+                            <div>
+                                <small>Ateso</small>
+                                <p lang="teo">{p.ateso_text}</p>
+                            </div>
+                            <div>
+                                <small>English</small>
+                                <p lang="en">{p.english_text}</p>
+                            </div>
+                        </div>
+                        {p.dialect && (
+                            <div className={s.tags}>
+                                <span>{p.dialect}</span>
+                                <span>Accepted community translation</span>
+                            </div>
+                        )}
+                        <p className={s.corpusCredit}>
+                            TesoTunes / Iteso community · {p.license} · Pair{" "}
+                            {p.pair_uuid?.slice(0, 8)} · Wording may vary by
+                            dialect.
+                        </p>
+                        {href && (
+                            <div className={s.actions}>
+                                <Link href={href} className={s.secondary}>
+                                    Add your own words
+                                    <ArrowUpRight size={14} />
+                                </Link>
+                            </div>
+                        )}
+                    </>
+                ) : p.kind === "translation" ? (
+                    <>
+                        <h3 className={s.cardTitle}>{p.title}</h3>
+                        <p className={s.subtitle}>
+                            Try the translator, judge its answer, or help grow
+                            the community corpus. Every accepted pair adds
+                            something real.
+                        </p>
+                        <div className={s.projectStats}>
+                            <div>
+                                <strong>
+                                    {(p.accepted_pairs ?? 0).toLocaleString()}
+                                </strong>
+                                <span>Accepted pairs</span>
+                            </div>
+                            <div>
+                                <strong>
+                                    {(p.open_tasks ?? 0).toLocaleString()}
+                                </strong>
+                                <span>Open translation tasks</span>
+                            </div>
+                        </div>
+                        {href && (
+                            <div className={s.actions}>
+                                <Link href={href} className={s.primary}>
+                                    Try a translation
+                                    <ArrowUpRight size={14} />
+                                </Link>
+                            </div>
+                        )}
+                        <p className={s.corpusCredit}>
+                            Corrections enter review. Credits apply to accepted
+                            work, not instant model answers.
+                        </p>
                     </>
                 ) : (
                     <>

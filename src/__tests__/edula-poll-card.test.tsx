@@ -129,7 +129,7 @@ test("a closed poll is readable but never offers a vote or claims a future closi
     );
     mount();
     expect(
-        await screen.findByText("Voting closed", { exact: false }),
+        await screen.findByText("Voting closed · Past poll"),
     ).toBeInTheDocument();
     expect(
         screen.queryByRole("button", { name: "Vote", exact: true }),
@@ -180,4 +180,23 @@ test("multi-question surveys open the full flow instead of submitting a partial 
     expect(
         screen.queryByRole("button", { name: "Vote", exact: true }),
     ).not.toBeInTheDocument();
+});
+
+test("closed multi-select polls also show their historical state", async () => {
+    const payload = data();
+    mockGet.mockResolvedValue(
+        data({
+            status: "closed",
+            questions: [{ ...payload.data.questions[0], allow_multiple: true }],
+        }),
+    );
+    mount();
+    expect(
+        await screen.findByText("Voting closed · Past poll"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Open poll" })).toHaveLength(2);
+    expect(
+        screen.queryByRole("button", { name: "Vote", exact: true }),
+    ).not.toBeInTheDocument();
+    expect(mockPost).not.toHaveBeenCalled();
 });

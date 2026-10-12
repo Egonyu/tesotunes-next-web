@@ -133,6 +133,11 @@ function PollBody({
     return (
         <>
             <h3 className={s.cardTitle}>{presentation.title}</h3>
+            {closed && (
+                <span className={s.contentState}>
+                    Voting closed · Past poll
+                </span>
+            )}
             {query.isLoading && pollId ? (
                 <p className={s.subtitle} role="status">
                     Loading the poll…

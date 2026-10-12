@@ -34,7 +34,12 @@ const feedNav = [
 
 
 
-export default function EdulaLayout({
+export default function EdulaLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  return pathname === '/edula' ? <>{children}</> : <EdulaLegacyLayout>{children}</EdulaLegacyLayout>;
+}
+
+function EdulaLegacyLayout({
   children,
 }: {
   children: React.ReactNode;

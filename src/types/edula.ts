@@ -22,6 +22,7 @@ export interface PostMedia {
 }
 
 export interface Post {
+  identity?: string;
   id: number;
   uuid?: string;
   author: PostAuthor;
@@ -61,6 +62,8 @@ export interface FeedResponse {
 }
 
 export interface FeedItem {
+  identity?: string;
+  presentation?: import('@/components/edula/timeline-model').TimelinePresentation;
   id: number;
   uuid: string;
   type: FeedItemType;
@@ -94,6 +97,7 @@ export interface FeedItem {
 }
 
 export interface FeedActor {
+  href?: string | null;
   id: number | null;
   name: string;
   avatar_url: string | null;
@@ -132,6 +136,7 @@ export type FeedModule =
   | 'loyalty'
   | 'forum'
   | 'podcasts'
+  | 'promotions'
   | 'platform';
 
 export type FeedItemType =
@@ -288,6 +293,7 @@ export const MODULE_STYLES: Record<
   loyalty:  { color: '#EC4899', icon: '⭐', label: 'Loyalty' },
   forum:    { color: '#6366F1', icon: '💬', label: 'Forum' },
   podcasts: { color: '#8B5CF6', icon: '🎙️', label: 'Podcasts' },
+  promotions: { color: '#E51B4C', icon: '📣', label: 'Opportunities' },
   platform: { color: '#6B7280', icon: '📢', label: 'Platform' },
 };
 

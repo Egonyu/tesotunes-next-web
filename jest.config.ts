@@ -6,6 +6,7 @@ const config: Config = {
   projects: [
     {
       displayName: 'unit',
+      roots: ['<rootDir>/src'],
       testEnvironment: 'jsdom',
       setupFilesAfterEnv: ['<rootDir>/src/test/setup.tsx'],
       testMatch: [
@@ -13,10 +14,10 @@ const config: Config = {
         '<rootDir>/src/test/**/*.test.(ts|tsx)',
       ],
       moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
         '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
-        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
         '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/test/__mocks__/fileMock.js',
       },
       transform: {
@@ -40,12 +41,14 @@ const config: Config = {
     },
     {
       displayName: 'integration',
+      roots: ['<rootDir>/src'],
       testEnvironment: 'node',
       testTimeout: 30000,
       testMatch: [
         '<rootDir>/src/__tests__/**/*.test.ts',
       ],
       moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
         '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
@@ -67,10 +70,10 @@ const config: Config = {
     },
   ],
   moduleNameMapper: {
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tesotunes/sdk$': '<rootDir>/../../packages/tesotunes-sdk/src',
     '^@tesotunes/sdk/(.*)$': '<rootDir>/../../packages/tesotunes-sdk/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/test/__mocks__/fileMock.js',
   },
   transform: {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiDelete } from "@/lib/api";
+import { usePlayerStore } from "@/stores/player";
+import type { Song } from "@/types";
 import { resolveDurationSeconds } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,31 +9,8 @@ import {
   Play, Pause, SkipForward, SkipBack, Shuffle, Repeat,
   Trash2, GripVertical, Music, Clock, X, ListMusic
 } from "lucide-react";
-import { useState } from "react";
 
-interface QueueTrack {
-  id: string;
-  title: string;
-  artist: {
-    name: string;
-    slug: string;
-  };
-  album?: {
-    title: string;
-    slug: string;
-    artwork_url: string;
-  };
-  duration_seconds?: number;
-  is_playing?: boolean;
-}
-
-interface QueueData {
-  now_playing: QueueTrack | null;
-  queue: QueueTrack[];
-  history: QueueTrack[];
-  shuffle: boolean;
-  repeat: "off" | "all" | "one";
-}
+type QueueTrack = Song;
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -125,7 +102,7 @@ function QueueTrackRow({
 }
 
 function NowPlayingCard({ track }: { track: QueueTrack }) {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const { isPlaying, pause, resume, previous, next } = usePlayerStore();
 
   return (
     <div className="bg-linear-to-br from-purple-900/50 to-pink-900/30 rounded-2xl p-6 mb-8">
@@ -173,11 +150,12 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={previous} aria-label="Previous" className="p-2 text-gray-400 hover:text-white transition-colors">
             <SkipBack className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={isPlaying ? pause : resume}
+            aria-label={isPlaying ? "Pause" : "Play"}
             className="p-4 bg-white rounded-full text-black hover:scale-105 transition-transform"
           >
             {isPlaying ? (
@@ -186,7 +164,7 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
               <Play className="w-6 h-6" fill="black" />
             )}
           </button>
-          <button className="p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={next} aria-label="Next" className="p-2 text-gray-400 hover:text-white transition-colors">
             <SkipForward className="w-5 h-5" />
           </button>
         </div>
@@ -196,65 +174,16 @@ function NowPlayingCard({ track }: { track: QueueTrack }) {
 }
 
 export default function QueuePage() {
-  const queryClient = useQueryClient();
-
-  const { data: queueData, isLoading } = useQuery({
-    queryKey: ["queue"],
-    queryFn: () => apiGet<QueueData>("/music/queue"),
-  });
-
-  const clearQueueMutation = useMutation({
-    mutationFn: () => apiDelete("/music/queue"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-    },
-  });
-
-  const removeFromQueueMutation = useMutation({
-    mutationFn: (trackId: string) => apiDelete(`/music/queue/${trackId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-    },
-  });
-
-  const playTrackMutation = useMutation({
-    mutationFn: (trackId: string) => apiPost(`/music/queue/play/${trackId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-    },
-  });
-
-  const toggleShuffleMutation = useMutation({
-    mutationFn: () => apiPost("/music/queue/shuffle"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-    },
-  });
-
-  const cycleRepeatMutation = useMutation({
-    mutationFn: () => apiPost("/music/queue/repeat"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-b from-gray-900 to-black p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-800 rounded w-32" />
-            <div className="h-40 bg-gray-800 rounded-2xl" />
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-800 rounded-lg" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const { currentSong, queue, queueIndex, isShuffled, repeatMode,
+    play, clearQueue, removeFromQueue, toggleShuffle, toggleRepeat } = usePlayerStore();
+  const upcoming = queue.slice(currentSong ? queueIndex + 1 : 0);
+  const queueData = {
+    now_playing: currentSong,
+    queue: upcoming,
+    history: currentSong ? queue.slice(0, queueIndex).reverse() : [],
+    shuffle: isShuffled,
+    repeat: repeatMode,
+  };
 
   const hasQueue = queueData?.queue && queueData.queue.length > 0;
   const hasHistory = queueData?.history && queueData.history.length > 0;
@@ -272,7 +201,7 @@ export default function QueuePage() {
           <div className="flex items-center gap-2">
             {/* Shuffle Button */}
             <button
-              onClick={() => toggleShuffleMutation.mutate()}
+              onClick={() => toggleShuffle()}
               className={`p-2 rounded-full transition-colors ${
                 queueData?.shuffle
                   ? "text-green-500 bg-green-500/20"
@@ -285,7 +214,7 @@ export default function QueuePage() {
 
             {/* Repeat Button */}
             <button
-              onClick={() => cycleRepeatMutation.mutate()}
+              onClick={() => toggleRepeat()}
               className={`p-2 rounded-full transition-colors relative ${
                 queueData?.repeat !== "off"
                   ? "text-green-500 bg-green-500/20"
@@ -304,7 +233,7 @@ export default function QueuePage() {
             {/* Clear Queue */}
             {hasQueue && (
               <button
-                onClick={() => clearQueueMutation.mutate()}
+                onClick={() => clearQueue()}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
@@ -337,8 +266,8 @@ export default function QueuePage() {
                   key={`${track.id}-${index}`}
                   track={track}
                   index={index}
-                  onRemove={() => removeFromQueueMutation.mutate(track.id)}
-                  onPlay={() => playTrackMutation.mutate(track.id)}
+                  onRemove={() => removeFromQueue((currentSong ? queueIndex + 1 : 0) + index)}
+                  onPlay={() => play(track, queue)}
                 />
               ))}
             </div>
@@ -378,7 +307,7 @@ export default function QueuePage() {
                   track={track}
                   index={index}
                   showDragHandle={false}
-                  onPlay={() => playTrackMutation.mutate(track.id)}
+                  onPlay={() => play(track, queue)}
                 />
               ))}
             </div>

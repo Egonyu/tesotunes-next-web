@@ -75,13 +75,17 @@ export const usePlayerStore = create<PlayerState>()(
 
       // Actions
       play: (song, queue) => {
-        const newQueue = queue || [song];
-        const index = newQueue.findIndex((s) => s.id === song.id);
+        const originalQueue = queue?.length ? [...queue] : [song];
+        if (!originalQueue.some((s) => s.id === song.id)) originalQueue.unshift(song);
+        const index = originalQueue.findIndex((s) => s.id === song.id);
+        const newQueue = get().isShuffled
+          ? [song, ...shuffleArray(originalQueue.filter((_, i) => i !== index))]
+          : originalQueue;
         set({
           currentSong: song,
           queue: newQueue,
-          originalQueue: newQueue,
-          queueIndex: index >= 0 ? index : 0,
+          originalQueue,
+          queueIndex: get().isShuffled ? 0 : index,
           isPlaying: true,
           currentTime: 0,
         });
@@ -92,7 +96,7 @@ export const usePlayerStore = create<PlayerState>()(
       resume: () => set({ isPlaying: true }),
 
       next: () => {
-        const { queue, queueIndex, repeatMode, isShuffled } = get();
+        const { queue, queueIndex, repeatMode } = get();
         if (queue.length === 0) return;
 
         let nextIndex = queueIndex + 1;
@@ -183,14 +187,15 @@ export const usePlayerStore = create<PlayerState>()(
           });
         } else {
           // Shuffle queue
-          const shuffled = shuffleArray(queue);
-          const currentIndex = shuffled.findIndex(
-            (s) => s.id === currentSong?.id
-          );
+          const currentIndex = queue.findIndex((s) => s.id === currentSong?.id);
+          const shuffled = currentIndex >= 0
+            ? [queue[currentIndex], ...shuffleArray(queue.filter((_, i) => i !== currentIndex))]
+            : shuffleArray(queue);
           set({
             isShuffled: true,
             queue: shuffled,
-            queueIndex: currentIndex >= 0 ? currentIndex : 0,
+            originalQueue: [...queue],
+            queueIndex: 0,
           });
         }
       },

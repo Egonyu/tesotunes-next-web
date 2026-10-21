@@ -21,6 +21,7 @@ import {
     Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUIStore } from "@/stores/ui";
 import { apiDelete, apiPost, apiPostForm } from "@/lib/api";
 import type { FeedModule, Post } from "@/types/edula";
 import { useEdulaTimeline, type TimelineView } from "@/hooks/useEdulaTimeline";
@@ -47,6 +48,12 @@ export default function EdulaPage() {
     const { data: session, status } = useSession();
     const authenticated = !!session?.user;
     const userId = session?.user?.id ?? "guest";
+    const { activeModal, closeModal } = useUIStore();
+    useEffect(() => {
+        if (activeModal !== "edula-compose") return;
+        setDialog(authenticated ? "compose" : "signin");
+        closeModal();
+    }, [activeModal, authenticated, closeModal]);
     const client = useQueryClient();
     const [view, setView] = useState<TimelineView>("for-you");
     const [module, setModule] = useState<FeedModule | "all">("all");

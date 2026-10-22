@@ -381,7 +381,7 @@ export function MobileBottomNav() {
         >
           {/* Menu Panel — slides up from bottom */}
           <div
-            className="absolute bottom-[calc(var(--mobile-dock-height,4rem)+0.75rem)] left-4 right-4 rounded-2xl border border-black/10 bg-white/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/12 dark:bg-[#070d17]/98 dark:shadow-[0_24px_56px_rgba(0,0,0,0.65)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-[calc(var(--mobile-dock-height,4rem)+2.25rem)] left-4 right-4 rounded-2xl border border-black/10 bg-white/95 shadow-[0_20px_48px_rgba(0,0,0,0.35)] dark:border-white/12 dark:bg-[#070d17]/98 dark:shadow-[0_24px_56px_rgba(0,0,0,0.65)] backdrop-blur-xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div
@@ -557,7 +557,7 @@ export function MobileBottomNav() {
         ref={dockRef}
         aria-label="Mobile navigation"
         className={cn(
-          "fixed inset-x-0 bottom-0 border-t bg-background pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden",
+          "fixed bottom-6 left-1/2 w-[min(92vw,22rem)] -translate-x-1/2 overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white/90 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.1] dark:bg-[#070d17]/96 dark:shadow-[0_14px_36px_rgba(0,0,0,0.55)] lg:hidden",
           menuOpen ? "z-[60]" : "z-30",
         )}
       >
